@@ -51,7 +51,7 @@ export function TaskDetailPanel({ windowMode = false }: { windowMode?: boolean }
   const subtasksDone = subtasks.filter(isDone).length;
   const overdue = !!task.due && !isDone(task) && task.due < selectedDate;
   return (
-    <div className="fixed inset-0 z-40 bg-white overflow-auto">
+    <div className={'fixed inset-0 z-40 bg-white overflow-auto' + (windowMode ? '' : ' md:left-57')}> {/* clears the 228px (w-57) desktop sidebar rail */}
       <div className="max-w-[860px] mx-auto px-8 py-8">
         <div className="flex items-center justify-between mb-6">
           {windowMode ? (
