@@ -58,8 +58,8 @@ export function ClientsView() {
     selectedLastWorked,
   } = useClientsData();
   return (
-    <div className="flex-1 flex overflow-hidden">
-      <div className="w-[260px] shrink-0 border-r border-[#E5E7EB] px-[14px] py-[18px] overflow-auto">
+    <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
+      <div className="shrink-0 border-b md:border-b-0 md:border-r border-[#E5E7EB] p-[14px] md:px-[14px] md:py-[18px] overflow-auto max-h-[38vh] md:max-h-none md:w-[260px]">
         {clients.map((c) => {
           const cnt = clientOpenCounts[c.id] ?? 0;
           const active = c.id === selectedClient;
@@ -84,8 +84,8 @@ export function ClientsView() {
           <span className="text-[15px] leading-none">+</span> Add client
         </button>
       </div>
-      <div className="flex-1 overflow-auto px-9 py-[30px]">
-        <div className="flex items-center gap-[14px] mb-7">
+      <div className="flex-1 overflow-auto px-5 py-6 md:px-9 md:py-[30px]">
+        <div className="flex items-center flex-wrap gap-[14px] mb-7">
           <span className="w-[11px] h-[11px] rounded-full" style={{ background: selectedColor }} />
           <h1 className="text-[24px] font-bold m-0">{selectedName}</h1>
           <span className="text-[14px] text-[#6E7781]">{selectedLastWorked}</span>
