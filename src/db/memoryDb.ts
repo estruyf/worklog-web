@@ -46,12 +46,12 @@ export class MemoryDb {
       .sort(byCreatedThenTitle);
   }
 
-  /** Every task (open + done) — used to build the webview snapshot. */
+  /** Every task (open + done) — used to build the app state. */
   getAllTasks(): Task[] {
     return [...this.tasks].sort(byCreatedThenTitle);
   }
 
-  /** Every worklog entry — used to build the webview snapshot. */
+  /** Every worklog entry — used to build the app state. */
   getAllWorklog(): WorklogEntry[] {
     return [...this.worklog].sort((a, b) => a.date.localeCompare(b.date) || a.clientId.localeCompare(b.clientId));
   }

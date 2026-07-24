@@ -3,8 +3,8 @@
 // parses it, and renders — no GitHub token ever reaches the browser.
 
 import type { APIRoute } from 'astro';
-import { getToken } from '../../host/session';
-import { loadRepo, GitHubError } from '../../host/github';
+import { getToken } from '../../server/session';
+import { loadRepo, GitHubError } from '../../server/github';
 
 export const prerender = false;
 

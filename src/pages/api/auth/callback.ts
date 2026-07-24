@@ -3,7 +3,7 @@
 // user to the app. State is verified against the cookie set in login.ts.
 
 import type { APIRoute } from 'astro';
-import { appOrigin, getEnv, OAUTH_STATE_COOKIE, setToken } from '../../../host/session';
+import { appOrigin, getEnv, OAUTH_STATE_COOKIE, setToken } from '../../../server/session';
 
 export const prerender = false;
 

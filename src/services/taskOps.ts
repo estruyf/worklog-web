@@ -1,6 +1,6 @@
 // Task mutation services: status change (with close/reopen + cascade), parent
 // assignment, and delete (cascade). All operate on markdown; the watcher/rebuild
-// refreshes the cache + webview afterwards.
+// refreshes the cache + app state afterwards.
 
 import { Store } from "../store";
 import type { Task, TaskNote } from "../model/types";

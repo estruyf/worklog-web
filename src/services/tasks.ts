@@ -1,4 +1,4 @@
-// Task/client creation services shared by the webview panel and the palette
+// Task/client creation services shared across the app
 // commands. All writes go to markdown; the watcher/rebuild then refreshes views.
 
 import { Store } from '../store';

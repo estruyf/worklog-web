@@ -3,7 +3,7 @@
 // random state we stash in a short-lived cookie to check on callback.
 
 import type { APIRoute } from 'astro';
-import { appOrigin, getEnv, OAUTH_STATE_COOKIE } from '../../../host/session';
+import { appOrigin, getEnv, OAUTH_STATE_COOKIE } from '../../../server/session';
 
 export const prerender = false;
 

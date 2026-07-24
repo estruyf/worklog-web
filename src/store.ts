@@ -1,8 +1,8 @@
-// Browser replacement for the extension's `Store`. Owns the in-memory db and the
-// Workspace, runs rebuilds (re-parse the file map), and exposes the same surface
-// the ported services use: `store.db`, `store.ws`, `store.getConfig()`,
-// `store.rebuild()`. `onDidChange` lets the host re-derive the snapshot and the
-// dirty-file committer arm its debounce after every persisted edit.
+// The domain store. Owns the in-memory db and the Workspace, runs rebuilds
+// (re-parse the file map), and exposes the surface the services use: `store.db`,
+// `store.ws`, `store.getConfig()`, `store.rebuild()`. `onDidChange` lets the data
+// layer (worklogStore) re-derive app state and arm its debounced committer after
+// every persisted edit.
 
 import { MemoryDb } from './db/memoryDb';
 import { rebuild } from './workspace/indexer';
