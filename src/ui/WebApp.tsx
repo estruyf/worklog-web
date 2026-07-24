@@ -8,7 +8,7 @@
 import React from 'react';
 import { WorklogApp } from './WorklogApp';
 import { TaskPage } from './TaskPage';
-import { worklogStore } from '../data/worklogStore';
+import { worklogStore, type RecoveryInfo } from '../data/worklogStore';
 import { navigateToDashboard, useRoute } from './router';
 import { RepoPicker } from './RepoPicker';
 import './styles.css';
@@ -37,15 +37,21 @@ export default function WebApp() {
   const initialRepo = React.useMemo(readLastRepo, []);
   const [phase, setPhase] = React.useState<Phase>(initialRepo ? { kind: 'loading', label: `Loading ${initialRepo.owner}/${initialRepo.repo}…` } : { kind: 'picker' });
   const [repo, setRepo] = React.useState<RepoRef | undefined>(initialRepo);
+  const [recovery, setRecovery] = React.useState<RecoveryInfo | null>(null);
 
   const open = React.useCallback((ref: RepoRef) => {
     setRepo(ref);
+    setRecovery(null);
     setPhase({ kind: 'loading', label: `Loading ${ref.owner}/${ref.repo}…` });
     localStorage.setItem(LAST_REPO_KEY, JSON.stringify(ref));
 
     worklogStore
       .open(ref.owner, ref.repo, ref.branch)
-      .then(() => setPhase({ kind: 'ready' }))
+      .then(() => {
+        setPhase({ kind: 'ready' });
+        // If unsynced edits from a previous session were recovered, ask the user.
+        setRecovery(worklogStore.getRecovery());
+      })
       .catch((err) => setPhase({ kind: 'error', message: err instanceof Error ? err.message : String(err) }));
   }, []);
 
@@ -81,10 +87,66 @@ export default function WebApp() {
     return <ErrorScreen message={phase.message} onRetry={() => repo && open(repo)} onSwitch={switchRepo} />;
   }
 
-  return route.name === 'task' ? (
-    <TaskPage taskId={route.taskId} />
-  ) : (
-    <WorklogApp repoProps={{ repo, onSwitchRepo: switchRepo, onSignOut: signOut }} />
+  const restore = React.useCallback(() => {
+    worklogStore.restorePending().finally(() => setRecovery(null));
+  }, []);
+  const discard = React.useCallback(() => {
+    worklogStore.discardPending().finally(() => setRecovery(null));
+  }, []);
+
+  return (
+    <>
+      {route.name === 'task' ? (
+        <TaskPage taskId={route.taskId} />
+      ) : (
+        <WorklogApp repoProps={{ repo, onSwitchRepo: switchRepo, onSignOut: signOut }} />
+      )}
+      {recovery && <RecoveryPrompt info={recovery} onRestore={restore} onDiscard={discard} />}
+    </>
+  );
+}
+
+/** Format an epoch-millis timestamp as a short, human-friendly age. */
+function timeAgo(ms: number): string {
+  const secs = Math.max(0, Math.round((Date.now() - ms) / 1000));
+  if (secs < 60) return 'just now';
+  const mins = Math.round(secs / 60);
+  if (mins < 60) return `${mins} minute${mins === 1 ? '' : 's'} ago`;
+  const hours = Math.round(mins / 60);
+  if (hours < 24) return `${hours} hour${hours === 1 ? '' : 's'} ago`;
+  const days = Math.round(hours / 24);
+  return `${days} day${days === 1 ? '' : 's'} ago`;
+}
+
+/** Offered on open when unsynced edits from a previous session were recovered from
+ *  local storage. Restore merges them back in (ready to sync); Discard drops them. */
+function RecoveryPrompt({ info, onRestore, onDiscard }: { info: RecoveryInfo; onRestore: () => void; onDiscard: () => void }) {
+  const { fileCount, savedAt, baseChanged } = info;
+  return (
+    <div className="fixed inset-0 bg-[rgba(30,33,40,0.45)] flex items-start justify-center pt-[12vh] z-60">
+      <div className="bg-white rounded-[14px] w-115 max-w-[92vw] px-7.5 pt-6.5 pb-6 shadow-[0_20px_60px_rgba(0,0,0,0.3)]">
+        <h2 className="text-[20px] font-bold m-0 mb-3">Recover unsynced changes?</h2>
+        <p className="text-[14px] text-[#57606a] m-0 mb-2 leading-relaxed">
+          {fileCount === 1 ? '1 file was' : `${fileCount} files were`} edited but never synced to GitHub before this tab was
+          closed, saved locally {timeAgo(savedAt)}.
+        </p>
+        {baseChanged && (
+          <p className="text-[13px] text-[#9a6700] bg-[#FFF8C5] border border-[#EBDFA8] rounded-[9px] px-3 py-2 m-0 mb-2">
+            Heads up: this branch changed on GitHub since then. Restoring will re-apply your local edits on top of the
+            latest version.
+          </p>
+        )}
+        <p className="text-[13px] text-[#8a9099] m-0 mb-5.5">Restore to continue where you left off, then sync when ready.</p>
+        <div className="flex justify-end gap-2.5">
+          <button onClick={onDiscard} className="px-5 py-2.5 border border-[#E5E7EB] rounded-[9px] bg-[#F1F2F4] text-[14px] font-semibold cursor-pointer">
+            Discard
+          </button>
+          <button onClick={onRestore} className="px-5.5 py-2.5 rounded-[9px] text-[14px] font-semibold border border-[#E2BE2E] bg-[#F4CF4D] text-[#3A2E05] cursor-pointer">
+            Restore changes
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 

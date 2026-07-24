@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { useData, useUi, WorklogProvider } from './context';
-import { useSearchData } from './hooks';
+import { useSearchData, useUnsavedGuard } from './hooks';
 import { ClientFormModal, Toast, SearchOverlay, Sidebar, TaskDetailPanel, TaskFormModal } from './components';
 import type { SidebarRepoProps } from './components/Sidebar';
 import { EmptyClientsView } from './views/EmptyClientsView';
@@ -40,6 +40,9 @@ function Shell({ repoProps }: { repoProps?: SidebarRepoProps }) {
   const { snap, toast, loading, noClients, openModalFromShortcut, closeModal, openLogForm } = useData();
   const { view, searchOpen, modalOpen, detailId, clientModalOpen, setSearchOpen, setDetailId, setClientModalOpen, searchSel, setSearchSel } = useUi();
   const searchData = useSearchData();
+
+  // Warn before leaving with unsynced edits (they're also mirrored for recovery).
+  useUnsavedGuard();
 
   // Latest state/actions for the global key handler, so it can stay subscribed
   // once instead of re-binding on every keystroke.

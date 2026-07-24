@@ -27,6 +27,17 @@ import { removeWorklog, setEventWorklog, setWorklog } from '../services/worklog'
 import { updateSettings, type SettingsFields } from '../services/settings';
 import type { WorklogState } from '../ui/state';
 import { DEFAULT_AUTO_SYNC } from '../workspace/paths';
+import { clearPending, loadPending, repoKeyOf, savePending, type PendingSnapshot } from './pendingStore';
+
+/** Summary of recoverable unsynced changes found on open, for the UI prompt. */
+export interface RecoveryInfo {
+  /** Epoch millis the changes were last saved locally. */
+  savedAt: number;
+  /** Number of files with unsynced changes. */
+  fileCount: number;
+  /** True when the branch moved on GitHub since the changes were saved. */
+  baseChanged: boolean;
+}
 
 export interface WorklogSnapshot {
   data: WorklogState | null;
@@ -68,6 +79,9 @@ class WorklogStore {
   private loaded = false;
   private committing = false;
   private commitTimer: ReturnType<typeof setTimeout> | undefined;
+  private persistTimer: ReturnType<typeof setTimeout> | undefined;
+  // A recovered snapshot loaded on open, held until the user restores or discards it.
+  private recovered?: PendingSnapshot;
 
   private subscribers = new Set<Subscriber>();
   private toastListeners = new Set<ToastListener>();
@@ -81,6 +95,7 @@ class WorklogStore {
     this.store.onDidChange(() => {
       this.updateSnapshot({ data: this.deriveState(), gitPending: this.fm.dirty.size > 0 });
       this.scheduleCommit();
+      this.schedulePersist();
     });
   }
 
@@ -132,6 +147,61 @@ class WorklogStore {
     await this.store.rebuild('open');
     this.loaded = true;
     this.updateSnapshot({ data: this.deriveState(), loading: false, gitPending: false });
+    await this.loadRecovery();
+  }
+
+  /** Look for a locally-saved snapshot of unsynced edits for the freshly-opened
+   *  repo. Held (not applied) so the UI can offer Restore or Discard. */
+  private async loadRecovery(): Promise<void> {
+    this.recovered = undefined;
+    if (!this.repo) {
+      return;
+    }
+    const saved = await loadPending(this.repoKey());
+    if (saved && saved.dirty.length > 0) {
+      this.recovered = saved;
+    }
+  }
+
+  /** Summary of recoverable unsynced changes, or `null` if there are none. */
+  getRecovery(): RecoveryInfo | null {
+    if (!this.recovered || !this.repo) {
+      return null;
+    }
+    return {
+      savedAt: this.recovered.savedAt,
+      fileCount: this.recovered.dirty.length,
+      baseChanged: this.recovered.baseCommitSha !== this.repo.baseCommitSha,
+    };
+  }
+
+  /** Re-apply the recovered snapshot's dirty files over the loaded repo and mark
+   *  them for the next sync. Rebuilds the domain model from the merged tree. */
+  async restorePending(): Promise<void> {
+    const saved = this.recovered;
+    if (!saved) {
+      return;
+    }
+    this.recovered = undefined;
+    for (const path of saved.dirty) {
+      if (Object.prototype.hasOwnProperty.call(saved.binary, path)) {
+        this.fm.binary.set(path, base64ToBytes(saved.binary[path]));
+      } else {
+        this.fm.text.set(path, saved.text[path] ?? '');
+      }
+      this.fm.markDirty(path);
+    }
+    // Re-parse the merged file map; onDidChange refreshes the snapshot, re-persists
+    // and arms auto-sync.
+    await this.store.rebuild('restore');
+  }
+
+  /** Drop the recovered snapshot without applying it, and delete it from storage. */
+  async discardPending(): Promise<void> {
+    this.recovered = undefined;
+    if (this.repo) {
+      await clearPending(this.repoKey());
+    }
   }
 
   /** Reload the current repo from GitHub, discarding uncommitted in-memory edits. */
@@ -189,6 +259,8 @@ class WorklogStore {
       const result = (await res.json()) as { commitSha: string };
       this.repo.baseCommitSha = result.commitSha;
       this.fm.clearDirty();
+      this.clearPersistTimer();
+      void clearPending(this.repoKey());
       this.updateSnapshot({ gitPending: false });
       if (!silent) {
         this.emitToast('Changes synced', 'success');
@@ -273,8 +345,12 @@ class WorklogStore {
   }
 
   /** Save a pasted/dropped/picked image and return the markdown ref to insert. */
-  saveImage(dataBase64: string, ext: string): Promise<string> {
-    return saveImageAsset(this.store, dataBase64, ext);
+  async saveImage(dataBase64: string, ext: string): Promise<string> {
+    const ref = await saveImageAsset(this.store, dataBase64, ext);
+    // Image bytes are written straight to the file map (no store rebuild), so mirror
+    // them for recovery here too — the referencing edit will follow and re-persist.
+    this.schedulePersist();
+    return ref;
   }
 
   // ---- internals ------------------------------------------------------------
@@ -366,6 +442,59 @@ class WorklogStore {
       clearTimeout(this.commitTimer);
       this.commitTimer = undefined;
     }
+  }
+
+  private repoKey(): string {
+    if (!this.repo) {
+      return '';
+    }
+    return repoKeyOf(this.repo.owner, this.repo.repo, this.repo.branch);
+  }
+
+  /** Debounce a write of the dirty files to IndexedDB so a burst of edits
+   *  coalesces into a single mirror. Runs regardless of the auto-sync setting —
+   *  this is crash/close recovery, not a commit. */
+  private schedulePersist(): void {
+    this.clearPersistTimer();
+    this.persistTimer = setTimeout(() => void this.persistNow(), 800);
+  }
+
+  private clearPersistTimer(): void {
+    if (this.persistTimer) {
+      clearTimeout(this.persistTimer);
+      this.persistTimer = undefined;
+    }
+  }
+
+  /** Mirror the current dirty files to IndexedDB. A no-op when nothing is dirty —
+   *  clearing the store happens only on a successful sync or an explicit discard,
+   *  so a freshly-loaded (clean) repo never wipes a recoverable snapshot. */
+  private async persistNow(): Promise<void> {
+    this.clearPersistTimer();
+    if (!this.repo || this.fm.dirty.size === 0) {
+      return;
+    }
+    const text: Record<string, string> = {};
+    const binary: Record<string, string> = {};
+    for (const path of this.fm.dirty) {
+      if (this.fm.binary.has(path)) {
+        binary[path] = bytesToBase64(this.fm.binary.get(path)!);
+      } else {
+        text[path] = this.fm.text.get(path) ?? '';
+      }
+    }
+    const snapshot: PendingSnapshot = {
+      repoKey: this.repoKey(),
+      owner: this.repo.owner,
+      repo: this.repo.repo,
+      branch: this.repo.branch,
+      baseCommitSha: this.repo.baseCommitSha,
+      savedAt: Date.now(),
+      text,
+      binary,
+      dirty: [...this.fm.dirty],
+    };
+    await savePending(snapshot);
   }
 }
 
