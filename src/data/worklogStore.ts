@@ -24,9 +24,9 @@ import {
   type TaskFields,
 } from '../services/taskOps';
 import { removeWorklog, setEventWorklog, setWorklog } from '../services/worklog';
+import { updateSettings, type SettingsFields } from '../services/settings';
 import type { WorklogState } from '../ui/state';
-
-const AUTO_COMMIT_DELAY_MS = 60_000;
+import { DEFAULT_AUTO_SYNC } from '../workspace/paths';
 
 export interface WorklogSnapshot {
   data: WorklogState | null;
@@ -51,8 +51,15 @@ interface LoadResponse {
   sha: Record<string, string>;
 }
 
+export type ToastTone = 'loading' | 'success' | 'info' | 'error';
+
+export interface ToastMessage {
+  message: string;
+  tone: ToastTone;
+}
+
 type Subscriber = () => void;
-type ErrorListener = (message: string) => void;
+type ToastListener = (toast: ToastMessage | null) => void;
 
 class WorklogStore {
   private store = new Store();
@@ -63,7 +70,7 @@ class WorklogStore {
   private commitTimer: ReturnType<typeof setTimeout> | undefined;
 
   private subscribers = new Set<Subscriber>();
-  private errorListeners = new Set<ErrorListener>();
+  private toastListeners = new Set<ToastListener>();
   // Cached immutable snapshot: `getSnapshot` must return a stable reference between
   // changes so `useSyncExternalStore` doesn't loop. Rebuilt only on transitions.
   private snapshot: WorklogSnapshot = { data: null, loading: false, gitPending: false };
@@ -86,10 +93,11 @@ class WorklogStore {
 
   getSnapshot = (): WorklogSnapshot => this.snapshot;
 
-  /** Subscribe to action failures (surfaced as a toast). Returns an unsubscribe. */
-  onError(listener: ErrorListener): () => void {
-    this.errorListeners.add(listener);
-    return () => this.errorListeners.delete(listener);
+  /** Subscribe to transient toast notifications: sync status and action failures.
+   *  The listener receives `null` to dismiss. Returns an unsubscribe. */
+  onToast(listener: ToastListener): () => void {
+    this.toastListeners.add(listener);
+    return () => this.toastListeners.delete(listener);
   }
 
   // ---- app-shell API --------------------------------------------------------
@@ -116,7 +124,7 @@ class WorklogStore {
     const res = await fetch(`/api/load?${params}`);
     if (!res.ok) {
       this.updateSnapshot({ loading: false });
-      this.emitError(`Could not load ${owner}/${repo}: ${await res.text()}`);
+      this.emitToast(`Could not load ${owner}/${repo}: ${await res.text()}`, 'error');
       throw new Error('load failed');
     }
     const data = (await res.json()) as LoadResponse;
@@ -133,14 +141,25 @@ class WorklogStore {
     }
   }
 
-  /** Commit dirty files now (used by the Sync button and the debounce). */
-  async sync(): Promise<void> {
-    if (!this.repo || this.committing || this.fm.dirty.size === 0) {
+  /** Commit dirty files now. Used by the Sync button (loud: shows status toasts)
+   *  and the background debounce (silent: only surfaces errors). */
+  async sync(options: { silent?: boolean } = {}): Promise<void> {
+    const { silent = false } = options;
+    if (!this.repo || this.committing) {
+      return;
+    }
+    if (this.fm.dirty.size === 0) {
+      if (!silent) {
+        this.emitToast('Everything is up to date', 'info');
+      }
       return;
     }
     this.clearCommitTimer();
     this.committing = true;
     this.updateSnapshot({ loading: true });
+    if (!silent) {
+      this.emitToast('Syncing changes…', 'loading');
+    }
     try {
       const files = [...this.fm.dirty].map((path) => {
         if (this.fm.binary.has(path)) {
@@ -155,10 +174,13 @@ class WorklogStore {
         body: JSON.stringify({ ...this.repo, message, files }),
       });
       if (res.status === 409) {
-        // Branch moved: refresh the base sha and retry once on the next tick.
+        // Branch moved: refresh the base sha and retry once on the next tick. This
+        // is a retry of an in-flight sync (manual or auto), so it runs regardless
+        // of the auto-sync setting.
         await this.refreshBaseSha();
         this.committing = false;
-        this.scheduleCommit(0);
+        this.clearCommitTimer();
+        this.commitTimer = setTimeout(() => void this.sync({ silent }), 0);
         return;
       }
       if (!res.ok) {
@@ -168,8 +190,12 @@ class WorklogStore {
       this.repo.baseCommitSha = result.commitSha;
       this.fm.clearDirty();
       this.updateSnapshot({ gitPending: false });
+      if (!silent) {
+        this.emitToast('Changes synced', 'success');
+      }
     } catch (err) {
-      this.emitError(`Sync failed: ${err instanceof Error ? err.message : String(err)}`);
+      // Failures surface even for background syncs.
+      this.emitToast(`Sync failed: ${err instanceof Error ? err.message : String(err)}`, 'error');
     } finally {
       this.committing = false;
       this.updateSnapshot({ loading: false });
@@ -200,6 +226,10 @@ class WorklogStore {
 
   updateClient(id: string, fields: { name?: string; color?: string }): Promise<void> {
     return this.run(() => updateClient(this.store, id, fields));
+  }
+
+  updateSettings(fields: SettingsFields): Promise<void> {
+    return this.run(() => updateSettings(this.store, fields));
   }
 
   closeTask(taskId: string, date?: string): Promise<void> {
@@ -254,7 +284,7 @@ class WorklogStore {
     try {
       await action();
     } catch (err) {
-      this.emitError(err instanceof Error ? err.message : String(err));
+      this.emitToast(err instanceof Error ? err.message : String(err), 'error');
     }
   }
 
@@ -267,6 +297,7 @@ class WorklogStore {
       today: today(),
       hoursPerDay: config.hoursPerDay,
       weekStart: config.weekStart,
+      autoSync: config.autoSync,
       assetsBase,
       statuses: config.statuses,
       clients: this.store.db.getClients(),
@@ -310,18 +341,24 @@ class WorklogStore {
     }
   }
 
-  private emitError(message: string): void {
-    for (const l of this.errorListeners) {
-      l(message);
+  private emitToast(message: string, tone: ToastTone): void {
+    const toast: ToastMessage = { message, tone };
+    for (const l of this.toastListeners) {
+      l(toast);
     }
   }
 
-  private scheduleCommit(delay = AUTO_COMMIT_DELAY_MS): void {
-    if (this.committing) {
+  /** Arm the debounced auto-commit, but only when auto-sync is enabled in config.
+   *  The delay comes from `autoSync.delayMinutes`; a burst of edits coalesces into
+   *  a single sync. Manual "Git sync" and 409 retries bypass this. */
+  private scheduleCommit(): void {
+    const autoSync = this.store.getConfig()?.autoSync ?? DEFAULT_AUTO_SYNC;
+    if (!autoSync.enabled || this.committing) {
       return;
     }
     this.clearCommitTimer();
-    this.commitTimer = setTimeout(() => void this.sync(), delay);
+    const delay = Math.max(1, autoSync.delayMinutes) * 60_000;
+    this.commitTimer = setTimeout(() => void this.sync({ silent: true }), delay);
   }
 
   private clearCommitTimer(): void {

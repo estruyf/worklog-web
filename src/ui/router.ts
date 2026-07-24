@@ -13,7 +13,7 @@ import type { AppView } from './model';
 const APP_BASE = '/app';
 
 // The routable dashboard views. `day` lives at the base path; the rest hang off it.
-const VIEWS: AppView[] = ['day', 'calendar', 'clients', 'insights', 'archive'];
+const VIEWS: AppView[] = ['day', 'calendar', 'clients', 'insights', 'archive', 'settings'];
 
 export type Route =
   | { name: 'view'; view: AppView }

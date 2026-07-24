@@ -4,7 +4,7 @@
 
 /** The top-level tabs the shell can display. Search is not a view — it opens as
  * an overlay (see SearchOverlay) on top of whichever view is active. */
-export type AppView = "day" | "calendar" | "clients" | "insights" | "archive";
+export type AppView = "day" | "calendar" | "clients" | "insights" | "archive" | "settings";
 
 /** Resolved status display, computed from a StatusDef + completion state. */
 export interface StatusMeta {

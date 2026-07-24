@@ -7,11 +7,23 @@
 // writeText / ensureDir` free functions and the same `Workspace` path helpers,
 // so they need no changes beyond treating a "Uri" as a plain path string.
 
-import type { Client, DaylogConfig, StatusDef } from '../model/types';
+import type { AutoSyncConfig, Client, DaylogConfig, StatusDef } from '../model/types';
 import { DEFAULT_STATUSES } from '../model/status';
 
 export const DEFAULT_HOURS_PER_DAY = 8;
 export const DEFAULT_WEEK_START = 0; // Sunday
+export const DEFAULT_AUTO_SYNC: AutoSyncConfig = { enabled: false, delayMinutes: 5 };
+
+/** Normalize a config `autoSync` block, clamping the delay to a sane minimum and
+ *  falling back to the defaults for missing/invalid fields. */
+export function parseAutoSync(value: unknown): AutoSyncConfig {
+  const raw = (value ?? {}) as Partial<AutoSyncConfig>;
+  const delay =
+    typeof raw.delayMinutes === 'number' && Number.isFinite(raw.delayMinutes) && raw.delayMinutes >= 1
+      ? raw.delayMinutes
+      : DEFAULT_AUTO_SYNC.delayMinutes;
+  return { enabled: raw.enabled === true, delayMinutes: delay };
+}
 
 const DAY_NAMES = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 
@@ -132,7 +144,7 @@ export class Workspace {
   async loadConfig(): Promise<DaylogConfig> {
     const raw = await readText(this.configFile);
     if (raw === undefined) {
-      return { hoursPerDay: DEFAULT_HOURS_PER_DAY, weekStart: DEFAULT_WEEK_START, clients: [], statuses: DEFAULT_STATUSES };
+      return { hoursPerDay: DEFAULT_HOURS_PER_DAY, weekStart: DEFAULT_WEEK_START, clients: [], statuses: DEFAULT_STATUSES, autoSync: { ...DEFAULT_AUTO_SYNC } };
     }
     try {
       const parsed = JSON.parse(raw) as Partial<DaylogConfig>;
@@ -144,9 +156,10 @@ export class Workspace {
         weekStart: parseWeekStart(parsed.weekStart),
         clients: Array.isArray(parsed.clients) ? parsed.clients.filter((c): c is Client => !!c && !!c.id) : [],
         statuses: statuses.length ? statuses : DEFAULT_STATUSES,
+        autoSync: parseAutoSync(parsed.autoSync),
       };
     } catch {
-      return { hoursPerDay: DEFAULT_HOURS_PER_DAY, weekStart: DEFAULT_WEEK_START, clients: [], statuses: DEFAULT_STATUSES };
+      return { hoursPerDay: DEFAULT_HOURS_PER_DAY, weekStart: DEFAULT_WEEK_START, clients: [], statuses: DEFAULT_STATUSES, autoSync: { ...DEFAULT_AUTO_SYNC } };
     }
   }
 

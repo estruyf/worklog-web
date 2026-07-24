@@ -6,11 +6,11 @@
 
 import React from 'react';
 import { useData, useUi, WorklogProvider } from './context';
-import { ClientFormModal, ErrorToast, TaskDetailPanel, TaskFormModal } from './components';
+import { ClientFormModal, Toast, TaskDetailPanel, TaskFormModal } from './components';
 import { navigateToDashboard } from './router';
 
 function TaskPageShell({ taskId }: { taskId: string }) {
-  const { snap, error } = useData();
+  const { snap, toast } = useData();
   const { setDetailId, modalOpen, clientModalOpen } = useUi();
 
   // Pin the detail view to this task once the app mounts / the route changes.
@@ -42,7 +42,7 @@ function TaskPageShell({ taskId }: { taskId: string }) {
       {modalOpen && <TaskFormModal />}
       {clientModalOpen && <ClientFormModal />}
 
-      <ErrorToast message={error} />
+      <Toast toast={toast} />
     </div>
   );
 }

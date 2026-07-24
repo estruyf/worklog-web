@@ -3,7 +3,7 @@
 // is small, so the UI holds everything and derives Today / reporting / search /
 // insights client-side — no per-view round trips. Kept DOM- and dependency-free.
 
-import type { Client, StatusDef, Task, WorklogEntry } from "../model/types";
+import type { AutoSyncConfig, Client, StatusDef, Task, WorklogEntry } from "../model/types";
 
 /**
  * The full app state, re-derived on every edit and read by the UI through the
@@ -13,6 +13,7 @@ export interface WorklogState {
   today: string; // local YYYY-MM-DD, computed at derive time
   hoursPerDay: number;
   weekStart: number; // first weekday of the calendar grid: 0 = Sunday … 6 = Saturday
+  autoSync: AutoSyncConfig; // background Git-sync behaviour after logging time
   assetsBase: string; // base URL for resolving image refs in Markdown
 
   statuses: StatusDef[];

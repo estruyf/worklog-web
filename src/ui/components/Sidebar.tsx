@@ -9,6 +9,7 @@ import {
   MenuIcon,
   PlusIcon,
   SearchIcon,
+  SettingsIcon,
   XIcon,
 } from 'lucide-react';
 import type { AppView } from '../model';
@@ -215,6 +216,19 @@ function SidebarContent({ onNavigate, repoProps }: { onNavigate?: () => void; re
           <FolderSyncIcon size={15} />
           Git sync
           {gitPending && <span className="ml-auto w-[9px] h-[9px] rounded-full bg-[#E2BE2E]" />}
+        </button>
+
+        <button
+          onClick={() => go('settings')}
+          className={
+            actionClass +
+            (view === 'settings'
+              ? ' border-[#EAD27A] bg-[#FBEFC0] text-[#3A2E05]'
+              : ' border-transparent text-[#3C4149] hover:bg-[#F6F7F9]')
+          }
+        >
+          <SettingsIcon size={15} strokeWidth={1.5} />
+          Settings
         </button>
       </div>
 

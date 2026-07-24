@@ -7,4 +7,4 @@ export { TaskFormModal } from './TaskFormModal';
 export { TaskDetailPanel } from './TaskDetailPanel';
 export { ClientFormModal } from './ClientFormModal';
 export { SearchOverlay } from './SearchOverlay';
-export { ErrorToast } from './ErrorToast';
+export { Toast } from './Toast';

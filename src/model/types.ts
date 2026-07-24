@@ -69,10 +69,19 @@ export interface Client {
   color?: string;
 }
 
+/** Automatic Git sync after logging time, so a timesheet doesn't sit unpushed. */
+export interface AutoSyncConfig {
+  /** When on, changes are committed and pushed automatically in the background. */
+  enabled: boolean;
+  /** Minutes to wait after the last change before syncing; edits coalesce into one. */
+  delayMinutes: number;
+}
+
 export interface DaylogConfig {
   hoursPerDay: number;
   /** First day of the week for the calendar grid: 0 = Sunday … 6 = Saturday. */
   weekStart: number;
   clients: Client[];
   statuses: StatusDef[];
+  autoSync: AutoSyncConfig;
 }

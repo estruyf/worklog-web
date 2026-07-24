@@ -12,7 +12,7 @@ import {
   isEventWorklogClientId,
 } from "../../model/worklog";
 import type { WorklogState } from "../state";
-import { worklogStore } from "../../data/worklogStore";
+import { worklogStore, type ToastMessage } from "../../data/worklogStore";
 import { navigateToTask } from "../router";
 import type { StatusMetaFn, LogState, WorklogRow } from "../model";
 import {
@@ -31,7 +31,7 @@ type Ui = ReturnType<typeof useWorklogUiState>;
 export function useWorklogModel(
   snap: WorklogState | null,
   ui: Ui,
-  error: string,
+  toast: ToastMessage | null,
   gitPending = false,
   loading = false,
 ) {
@@ -42,6 +42,7 @@ export function useWorklogModel(
   const today = snap?.today ?? "";
   const hoursPerDay = snap?.hoursPerDay ?? 0;
   const weekStart = snap?.weekStart ?? 0;
+  const autoSync = snap?.autoSync ?? { enabled: false, delayMinutes: 5 };
   const assetsBase = snap?.assetsBase ?? "";
   const { selectedDate } = ui;
 
@@ -446,6 +447,12 @@ export function useWorklogModel(
   };
   const triggerGitSync = () => worklogStore.sync();
 
+  const saveSettings = (fields: {
+    hoursPerDay?: number;
+    weekStart?: number;
+    autoSync?: { enabled?: boolean; delayMinutes?: number };
+  }) => worklogStore.updateSettings(fields);
+
   // The "log time" form state, bundled from the individual UI-state fields so the
   // Today view can treat it as one value with one setter.
   const logState: LogState = {
@@ -471,7 +478,7 @@ export function useWorklogModel(
 
   return {
     snap,
-    error,
+    toast,
     loading,
     today,
     tasks,
@@ -480,6 +487,7 @@ export function useWorklogModel(
     statuses,
     hoursPerDay,
     weekStart,
+    autoSync,
     assetsBase,
     noClients: clients.length === 0,
     colorOf,
@@ -515,6 +523,7 @@ export function useWorklogModel(
     saveLog,
     removeLog,
     triggerGitSync,
+    saveSettings,
     gitPending,
     logState,
     setLogState,

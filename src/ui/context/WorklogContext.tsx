@@ -38,7 +38,7 @@ export function WorklogProvider({ children }: { children: React.ReactNode }) {
   const ui = useWorklogUiState();
 
   // Live app state read straight from the store.
-  const { snap, error, gitPending, loading } = useWorklogState();
+  const { snap, toast, gitPending, loading } = useWorklogState();
 
   // The URL owns the active dashboard view; mirror it into UI state so the sidebar
   // highlight and view rendering follow navigation and browser back/forward.
@@ -104,7 +104,7 @@ export function WorklogProvider({ children }: { children: React.ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ui.detailId]);
 
-  const data = useWorklogModel(snap, ui, error, gitPending, loading);
+  const data = useWorklogModel(snap, ui, toast, gitPending, loading);
 
   return (
     <UiContext.Provider value={ui}>

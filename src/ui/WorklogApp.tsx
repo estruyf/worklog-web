@@ -6,7 +6,7 @@
 import React from 'react';
 import { useData, useUi, WorklogProvider } from './context';
 import { useSearchData } from './hooks';
-import { ClientFormModal, ErrorToast, SearchOverlay, Sidebar, TaskDetailPanel, TaskFormModal } from './components';
+import { ClientFormModal, Toast, SearchOverlay, Sidebar, TaskDetailPanel, TaskFormModal } from './components';
 import type { SidebarRepoProps } from './components/Sidebar';
 import { EmptyClientsView } from './views/EmptyClientsView';
 import { ROUTES } from './views/routes';
@@ -37,7 +37,7 @@ function isEditableTarget(target: EventTarget | null): boolean {
 }
 
 function Shell({ repoProps }: { repoProps?: SidebarRepoProps }) {
-  const { snap, error, loading, noClients, openModalFromShortcut, closeModal, openLogForm } = useData();
+  const { snap, toast, loading, noClients, openModalFromShortcut, closeModal, openLogForm } = useData();
   const { view, searchOpen, modalOpen, detailId, clientModalOpen, setSearchOpen, setDetailId, setClientModalOpen, searchSel, setSearchSel } = useUi();
   const searchData = useSearchData();
 
@@ -146,7 +146,7 @@ function Shell({ repoProps }: { repoProps?: SidebarRepoProps }) {
       {detailId && <TaskDetailPanel />}
       {clientModalOpen && <ClientFormModal />}
 
-      <ErrorToast message={error} />
+      <Toast toast={toast} />
     </div>
   );
 }
