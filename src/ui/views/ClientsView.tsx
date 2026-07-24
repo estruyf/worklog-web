@@ -1,4 +1,5 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import type { Client } from '../../model/types';
 import type { WorklogRow } from '../model';
 import { WorklogTaskRow } from '../components';
 import { useData, useUi } from '../context';
@@ -43,6 +44,83 @@ function useClientsData() {
   };
 }
 
+/** Mobile-only client picker: a dropdown showing each client's colour dot,
+ * name and open-task count. Replaces the sidebar list on narrow screens. */
+function MobileClientDropdown({
+  clients,
+  selectedClient,
+  selectedName,
+  clientOpenCounts,
+  colorOf,
+  onSelect,
+  onAdd,
+}: {
+  clients: Client[];
+  selectedClient: string;
+  selectedName: string;
+  clientOpenCounts: Record<string, number>;
+  colorOf: (id: string) => string;
+  onSelect: (id: string) => void;
+  onAdd: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDocClick = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', onDocClick);
+    return () => document.removeEventListener('mousedown', onDocClick);
+  }, [open]);
+
+  return (
+    <div ref={ref} className="md:hidden relative shrink-0 border-b border-[#E5E7EB] p-[14px]">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="flex items-center justify-between w-full px-3 py-[11px] border border-[#D0D7DE] rounded-[9px] bg-white cursor-pointer"
+      >
+        <span className="flex items-center gap-[9px] min-w-0">
+          <span className="w-[9px] h-[9px] rounded-full shrink-0" style={{ background: colorOf(selectedClient) }} />
+          <span className="font-semibold text-[15px] truncate">{selectedName || 'Select client'}</span>
+        </span>
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#57606A" strokeWidth="1.6" className={'shrink-0 transition-transform ' + (open ? 'rotate-180' : '')}>
+          <path d="M4 6l4 4 4-4" />
+        </svg>
+      </button>
+      {open && (
+        <div className="absolute left-[14px] right-[14px] top-[calc(100%-4px)] z-20 max-h-[50vh] overflow-auto border border-[#E5E7EB] rounded-[10px] bg-white shadow-lg py-[6px]">
+          {clients.map((c) => {
+            const cnt = clientOpenCounts[c.id] ?? 0;
+            const active = c.id === selectedClient;
+            return (
+              <div
+                key={c.id}
+                onClick={() => { onSelect(c.id); setOpen(false); }}
+                className={'flex items-center justify-between px-3 py-[10px] mx-[6px] rounded-lg cursor-pointer ' + (active ? 'bg-[#FBEFC0]' : 'hover:bg-[#F6F7F9]')}
+              >
+                <span className="flex items-center gap-[9px] min-w-0">
+                  <span className="w-[9px] h-[9px] rounded-full shrink-0" style={{ background: colorOf(c.id) }} />
+                  <span className="font-semibold text-[14px] truncate">{c.name}</span>
+                </span>
+                <span className="text-[#9AA0A6] text-[13px]">{cnt}</span>
+              </div>
+            );
+          })}
+          <div
+            onClick={() => { onAdd(); setOpen(false); }}
+            className="flex items-center gap-[6px] mx-[6px] mt-[6px] px-3 py-[10px] border border-dashed border-[#CDD3DA] rounded-lg text-[#57606A] text-[13px] cursor-pointer hover:border-[#E2BE2E] hover:text-[#3A2E05]"
+          >
+            <span className="text-[15px] leading-none">+</span> Add client
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function ClientsView() {
   const { statusMeta, openDetail, openClientEditor, colorOf } = useData();
   const { selectedClient, setSelectedClient } = useUi();
@@ -59,7 +137,16 @@ export function ClientsView() {
   } = useClientsData();
   return (
     <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
-      <div className="shrink-0 border-b md:border-b-0 md:border-r border-[#E5E7EB] p-[14px] md:px-[14px] md:py-[18px] overflow-auto max-h-[38vh] md:max-h-none md:w-[260px]">
+      <MobileClientDropdown
+        clients={clients}
+        selectedClient={selectedClient}
+        selectedName={selectedName}
+        clientOpenCounts={clientOpenCounts}
+        colorOf={colorOf}
+        onSelect={setSelectedClient}
+        onAdd={() => openClientEditor()}
+      />
+      <div className="hidden md:block shrink-0 md:border-r border-[#E5E7EB] md:px-[14px] md:py-[18px] overflow-auto md:max-h-none md:w-[260px]">
         {clients.map((c) => {
           const cnt = clientOpenCounts[c.id] ?? 0;
           const active = c.id === selectedClient;
