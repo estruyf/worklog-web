@@ -111,8 +111,12 @@ export function RepoPicker({ onPick, lastRepo }: { onPick: (ref: RepoRef) => voi
   return (
     <div style={wrap}>
       <div style={panel}>
-        <h1 style={{ margin: '0 0 4px', fontSize: 24, color: '#1f2328' }}>Choose a timesheet repository</h1>
-        <p style={{ margin: '0 0 18px', color: '#57606a', fontSize: 14 }}>
+        <div style={brand}>
+          <img src="/worklog-logo-outline.svg" alt="" width={28} height={28} style={{ borderRadius: 6 }} />
+          <span style={{ fontWeight: 700, fontSize: 18, color: '#1f2328' }}>Worklog</span>
+        </div>
+        <h1 style={{ margin: '0 0 4px', fontSize: 24, color: '#1f2328' }}>Choose a worklog repository</h1>
+        <p style={{ margin: '0 0 18px', color: '#6e7781', fontSize: 14 }}>
           Pick the repo that holds your Worklog files (<code>.worklog/config.json</code>, <code>clients/</code>, <code>worklog/</code>, <code>archive/</code>).
         </p>
 
@@ -134,12 +138,12 @@ export function RepoPicker({ onPick, lastRepo }: { onPick: (ref: RepoRef) => voi
 
         <button type="button" style={initToggle} onClick={() => setShowInit((v) => !v)} aria-expanded={showInit}>
           <span style={{ fontWeight: 600 }}>＋ Initialize a new project</span>
-          <span style={{ color: '#8b949e', fontSize: 18, lineHeight: 1 }}>{showInit ? '−' : '+'}</span>
+          <span style={{ color: '#8a9099', fontSize: 18, lineHeight: 1 }}>{showInit ? '−' : '+'}</span>
         </button>
 
         {showInit && (
           <form onSubmit={submitInit} style={initPanel}>
-            <p style={{ margin: '0 0 10px', color: '#57606a', fontSize: 13 }}>
+            <p style={{ margin: '0 0 10px', color: '#6e7781', fontSize: 13 }}>
               Scaffold an empty Worklog project (<code>.worklog/config.json</code> plus <code>clients/</code>, <code>worklog/</code> and{' '}
               <code>archive/</code>) into a new or existing repository.
             </p>
@@ -162,7 +166,7 @@ export function RepoPicker({ onPick, lastRepo }: { onPick: (ref: RepoRef) => voi
                   style={{ ...input, marginBottom: 10 }}
                   disabled={initBusy}
                 />
-                <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#57606a', marginBottom: 12 }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#6e7781', marginBottom: 12 }}>
                   <input type="checkbox" checked={newPrivate} onChange={(e) => setNewPrivate(e.target.checked)} disabled={initBusy} />
                   Private repository
                 </label>
@@ -177,7 +181,7 @@ export function RepoPicker({ onPick, lastRepo }: { onPick: (ref: RepoRef) => voi
               />
             )}
 
-            {initError && <div style={{ color: '#cf222e', fontSize: 13, marginBottom: 10 }}>{initError}</div>}
+            {initError && <div style={{ color: '#dc2626', fontSize: 13, marginBottom: 10 }}>{initError}</div>}
 
             <button type="submit" style={{ ...goBtn, padding: '9px 16px', opacity: initBusy ? 0.7 : 1 }} disabled={initBusy}>
               {initBusy ? 'Initializing…' : 'Initialize & open'}
@@ -187,8 +191,8 @@ export function RepoPicker({ onPick, lastRepo }: { onPick: (ref: RepoRef) => voi
 
         <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search your repositories…" style={{ ...input, marginBottom: 10 }} />
 
-        {error && <div style={{ color: '#cf222e', fontSize: 13, marginBottom: 10 }}>{error}</div>}
-        {!repos && !error && <div style={{ color: '#8b949e', fontSize: 14, padding: '20px 0' }}>Loading your repositories…</div>}
+        {error && <div style={{ color: '#dc2626', fontSize: 13, marginBottom: 10 }}>{error}</div>}
+        {!repos && !error && <div style={{ color: '#8a9099', fontSize: 14, padding: '20px 0' }}>Loading your repositories…</div>}
 
         <div style={list}>
           {filtered.map((r) => (
@@ -196,26 +200,27 @@ export function RepoPicker({ onPick, lastRepo }: { onPick: (ref: RepoRef) => voi
               <span style={{ fontWeight: 600, color: '#1f2328' }}>{r.fullName}</span>
               <span style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                 {r.private && <span style={badge}>private</span>}
-                <span style={{ color: '#8b949e', fontSize: 12 }}>{r.defaultBranch}</span>
+                <span style={{ color: '#8a9099', fontSize: 12 }}>{r.defaultBranch}</span>
               </span>
             </button>
           ))}
-          {repos && filtered.length === 0 && <div style={{ color: '#8b949e', fontSize: 14, padding: '16px 0' }}>No repositories match “{query}”.</div>}
+          {repos && filtered.length === 0 && <div style={{ color: '#8a9099', fontSize: 14, padding: '16px 0' }}>No repositories match “{query}”.</div>}
         </div>
       </div>
     </div>
   );
 }
 
-const wrap: React.CSSProperties = { minHeight: '100vh', display: 'grid', placeItems: 'center', background: 'linear-gradient(180deg,#f6f8fa,#eef1f5)', padding: 24 };
-const panel: React.CSSProperties = { background: '#fff', border: '1px solid #d0d7de', borderRadius: 16, padding: 30, width: 'min(560px, 94vw)', boxShadow: '0 8px 30px rgba(31,35,40,.08)' };
+const wrap: React.CSSProperties = { minHeight: '100vh', display: 'grid', placeItems: 'center', background: 'linear-gradient(180deg,#f6f7f9,#eef0f2)', padding: 24 };
+const panel: React.CSSProperties = { background: '#fff', border: '1px solid #e5e7eb', borderRadius: 16, padding: 30, width: 'min(560px, 94vw)', boxShadow: '0 8px 30px rgba(31,35,40,.08)' };
+const brand: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 18 };
 const input: React.CSSProperties = { flex: 1, width: '100%', padding: '9px 12px', border: '1px solid #d0d7de', borderRadius: 8, fontSize: 14, color: '#1f2328' };
-const goBtn: React.CSSProperties = { background: '#1f6feb', color: '#fff', border: 'none', padding: '0 16px', borderRadius: 8, fontWeight: 600, cursor: 'pointer' };
-const lastBtn: React.CSSProperties = { display: 'block', width: '100%', textAlign: 'left', background: '#eef4ff', border: '1px solid #cfe0ff', color: '#1f4fb0', padding: '10px 12px', borderRadius: 8, fontWeight: 600, cursor: 'pointer', marginBottom: 12 };
-const initToggle: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', background: '#f6f8fa', border: '1px solid #d0d7de', color: '#1f2328', padding: '10px 12px', borderRadius: 8, cursor: 'pointer', marginBottom: 10, fontSize: 14 };
-const initPanel: React.CSSProperties = { border: '1px solid #d0d7de', borderRadius: 10, padding: 14, marginBottom: 12, background: '#fbfcfd' };
-const segOn: React.CSSProperties = { flex: 1, padding: '7px 10px', border: '1px solid #1f6feb', background: '#1f6feb', color: '#fff', borderRadius: 8, fontWeight: 600, fontSize: 13, cursor: 'pointer' };
+const goBtn: React.CSSProperties = { background: '#f4cf4d', color: '#3a2e05', border: '1px solid #e2be2e', padding: '0 16px', borderRadius: 8, fontWeight: 600, cursor: 'pointer' };
+const lastBtn: React.CSSProperties = { display: 'block', width: '100%', textAlign: 'left', background: '#fbefc0', border: '1px solid #e2be2e', color: '#3a2e05', padding: '10px 12px', borderRadius: 8, fontWeight: 600, cursor: 'pointer', marginBottom: 12 };
+const initToggle: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', background: '#f6f7f9', border: '1px solid #e5e7eb', color: '#1f2328', padding: '10px 12px', borderRadius: 8, cursor: 'pointer', marginBottom: 10, fontSize: 14 };
+const initPanel: React.CSSProperties = { border: '1px solid #e5e7eb', borderRadius: 10, padding: 14, marginBottom: 12, background: '#fbfbfc' };
+const segOn: React.CSSProperties = { flex: 1, padding: '7px 10px', border: '1px solid #e2be2e', background: '#fbefc0', color: '#3a2e05', borderRadius: 8, fontWeight: 600, fontSize: 13, cursor: 'pointer' };
 const segOff: React.CSSProperties = { flex: 1, padding: '7px 10px', border: '1px solid #d0d7de', background: '#fff', color: '#57606a', borderRadius: 8, fontWeight: 600, fontSize: 13, cursor: 'pointer' };
 const list: React.CSSProperties = { maxHeight: 360, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6 };
-const row: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', border: '1px solid #eaeef2', borderRadius: 8, background: '#fff', cursor: 'pointer', textAlign: 'left' };
-const badge: React.CSSProperties = { fontSize: 11, background: '#eaeef2', color: '#57606a', padding: '1px 6px', borderRadius: 20 };
+const row: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', border: '1px solid #e5e7eb', borderRadius: 8, background: '#fff', cursor: 'pointer', textAlign: 'left' };
+const badge: React.CSSProperties = { fontSize: 11, background: '#f1f2f4', color: '#57606a', padding: '1px 6px', borderRadius: 20 };

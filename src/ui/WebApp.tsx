@@ -93,7 +93,7 @@ function Splash({ label }: { label: string }) {
     <div style={splashStyle}>
       <div className="spinner" />
       <div style={{ color: '#57606a', fontSize: 15 }}>{label}</div>
-      <style>{`.spinner{width:30px;height:30px;border:3px solid #d0d7de;border-top-color:#1f6feb;border-radius:50%;animation:spin .8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+      <style>{`.spinner{width:30px;height:30px;border:3px solid #e5e7eb;border-top-color:#e2be2e;border-radius:50%;animation:spin .8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   );
 }
@@ -120,7 +120,7 @@ function ErrorScreen({ message, onRetry, onSwitch }: { message: string; onRetry:
 function NotFoundScreen({ onHome }: { onHome: () => void }) {
   return (
     <div style={{ ...splashStyle, padding: 24, textAlign: 'center' }}>
-      <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.08em', color: '#8b949e' }}>404</div>
+      <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.08em', color: '#8a9099' }}>404</div>
       <h2 style={{ margin: 0, color: '#1f2328' }}>Page not found</h2>
       <p style={{ color: '#57606a', maxWidth: 420 }}>This page doesn’t exist. It may have been removed or the link was mistyped.</p>
       <button onClick={onHome} style={btnPrimary}>Back to Worklog</button>
@@ -137,5 +137,5 @@ const splashStyle: React.CSSProperties = {
   justifyContent: 'center',
   background: '#fff',
 };
-const btnPrimary: React.CSSProperties = { background: '#1f6feb', color: '#fff', border: 'none', padding: '9px 16px', borderRadius: 8, fontWeight: 600, cursor: 'pointer' };
-const btnSecondary: React.CSSProperties = { background: '#eaeef2', color: '#1f2328', border: 'none', padding: '9px 16px', borderRadius: 8, fontWeight: 600, cursor: 'pointer' };
+const btnPrimary: React.CSSProperties = { background: '#f4cf4d', color: '#3a2e05', border: '1px solid #e2be2e', padding: '9px 16px', borderRadius: 8, fontWeight: 600, cursor: 'pointer' };
+const btnSecondary: React.CSSProperties = { background: '#f1f2f4', color: '#1f2328', border: '1px solid #e5e7eb', padding: '9px 16px', borderRadius: 8, fontWeight: 600, cursor: 'pointer' };
