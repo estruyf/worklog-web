@@ -1,0 +1,15 @@
+{
+  "extends": "astro/tsconfigs/strict",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "jsxImportSource": "react",
+    "baseUrl": ".",
+    "paths": {
+      "@core/*": ["src/worklog-core/*"],
+      "@host/*": ["src/host/*"],
+      "@webview/*": ["src/webview/*"]
+    }
+  },
+  "include": ["src", "env.d.ts", ".astro/types.d.ts"],
+  "exclude": ["dist", "node_modules"]
+}

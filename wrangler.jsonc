@@ -1,0 +1,18 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "worklog-web",
+  "main": "./dist/_worker.js/index.js",
+  "compatibility_date": "2025-05-05",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS"
+  },
+  "observability": {
+    "enabled": true
+  }
+  // Secrets (do NOT commit): set with `wrangler secret put`:
+  //   wrangler secret put GITHUB_CLIENT_ID
+  //   wrangler secret put GITHUB_CLIENT_SECRET
+  //   wrangler secret put APP_BASE_URL   (optional; e.g. https://worklog.example.com)
+}

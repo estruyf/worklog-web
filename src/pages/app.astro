@@ -1,0 +1,16 @@
+---
+import Layout from '../layouts/Layout.astro';
+import WebApp from '../components/WebApp';
+import { TOKEN_COOKIE } from '../host/session';
+
+export const prerender = false;
+
+// Gate the app on the presence of a session cookie; API calls re-verify the token.
+if (!Astro.cookies.get(TOKEN_COOKIE)?.value) {
+  return Astro.redirect('/');
+}
+---
+
+<Layout title="Worklog">
+  <WebApp client:only="react" />
+</Layout>

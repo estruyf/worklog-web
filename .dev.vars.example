@@ -1,0 +1,8 @@
+# Copy to `.dev.vars` for local `astro dev` (Cloudflare platformProxy reads it).
+# Create a GitHub OAuth App at https://github.com/settings/developers with:
+#   Homepage URL:              http://localhost:4321
+#   Authorization callback URL: http://localhost:4321/api/auth/callback
+GITHUB_CLIENT_ID=your_client_id
+GITHUB_CLIENT_SECRET=your_client_secret
+# Optional: force the OAuth redirect/base URL (defaults to the request origin).
+# APP_BASE_URL=http://localhost:4321

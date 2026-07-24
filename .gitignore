@@ -1,0 +1,16 @@
+# build output
+dist/
+.astro/
+.wrangler/
+
+# dependencies
+node_modules/
+
+# env / secrets
+.dev.vars
+.env
+.env.*
+!.env.example
+
+# os
+.DS_Store
