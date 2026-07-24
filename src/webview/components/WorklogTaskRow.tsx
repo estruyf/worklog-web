@@ -1,5 +1,5 @@
 import React from 'react';
-import { WorklogRow } from '../model';
+import type { WorklogRow } from '../model';
 import { BriefcaseIcon, GlobeIcon, SquareArrowOutUpRight } from 'lucide-react';
 import { fmtShort } from '../utils';
 

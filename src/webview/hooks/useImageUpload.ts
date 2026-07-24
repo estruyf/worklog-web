@@ -4,7 +4,7 @@
 // we correlate back to the pending promise.
 
 import { useCallback, useEffect, useRef } from 'react';
-import { HostMessage } from '../protocol';
+import type { HostMessage } from '../protocol';
 import { onHostMessage, post } from '../vscodeApi';
 
 /** File types we let the user attach; others are rejected before upload. */

@@ -2,7 +2,7 @@
 // extension; the VS Code `pickClient` quick-pick is dropped (the web UI picks the
 // client in a form), and paths are plain repo-relative strings.
 
-import { Client } from '../model/types';
+import type { Client } from '../model/types';
 import { Workspace, readText, writeText, ensureDir } from '../workspace/paths';
 
 /** Append a serialized task block to a client file, creating it if needed. */

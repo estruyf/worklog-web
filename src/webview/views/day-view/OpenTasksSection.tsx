@@ -1,6 +1,6 @@
 import React from 'react';
-import { ClientTaskGroup } from '../../model';
-import { WorklogEntry } from '../../../model/types';
+import type { ClientTaskGroup } from '../../model';
+import type { WorklogEntry } from '../../../model/types';
 import { GroupCard } from './GroupCard';
 
 type OpenTasksSectionProps = {

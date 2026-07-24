@@ -1,6 +1,6 @@
 import React from 'react';
-import { Task } from '../../../model/types';
-import { StatusMetaFn } from '../../model';
+import type { Task } from '../../../model/types';
+import type { StatusMetaFn } from '../../model';
 import { clientIdOf, linksOf } from '../../utils';
 
 type DoneTasksSectionProps = {

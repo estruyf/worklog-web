@@ -7,7 +7,7 @@
 // writeText / ensureDir` free functions and the same `Workspace` path helpers,
 // so they need no changes beyond treating a "Uri" as a plain path string.
 
-import { Client, DaylogConfig, StatusDef } from '../model/types';
+import type { Client, DaylogConfig, StatusDef } from '../model/types';
 import { DEFAULT_STATUSES } from '../model/status';
 
 export const DEFAULT_HOURS_PER_DAY = 8;

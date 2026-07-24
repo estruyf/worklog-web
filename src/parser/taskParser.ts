@@ -2,7 +2,7 @@
 // markdown string -> structured Task records, and back. No VS Code / fs deps so
 // it is trivially unit-testable and reusable by both full and incremental paths.
 
-import { Task, TaskLink, TaskNote } from "../model/types";
+import type { Task, TaskLink, TaskNote } from "../model/types";
 
 export interface ParsedTaskFile {
   /** Display name from the `# H1`, if present. */

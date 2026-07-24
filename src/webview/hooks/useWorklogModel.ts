@@ -4,16 +4,16 @@
 // derivations (groups, monthly rolls, search) live in each view's own data hook.
 
 import { useCallback, useMemo } from "react";
-import { Client, StatusDef, Task } from "../../model/types";
+import type { Client, StatusDef, Task } from "../../model/types";
 import {
   eventWorklogClientId,
   eventTypeFromClientId,
   formatEventTypeLabel,
   isEventWorklogClientId,
 } from "../../model/worklog";
-import { Snapshot } from "../protocol";
+import type { Snapshot } from "../protocol";
 import { post } from "../vscodeApi";
-import { StatusMetaFn, LogState, WorklogRow } from "../model";
+import type { StatusMetaFn, LogState, WorklogRow } from "../model";
 import {
   PALETTE,
   clientIdOf,

@@ -7,7 +7,7 @@
 import { MemoryDb } from './db/memoryDb';
 import { rebuild } from './workspace/indexer';
 import { Workspace } from './workspace/paths';
-import { DaylogConfig } from './model/types';
+import type { DaylogConfig } from './model/types';
 
 type Listener = () => void;
 

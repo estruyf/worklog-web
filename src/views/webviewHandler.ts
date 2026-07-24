@@ -18,7 +18,7 @@ import {
   updateTask,
 } from '../services/taskOps';
 import { removeWorklog, setEventWorklog, setWorklog } from '../services/worklog';
-import { HostMessage, WebviewMessage } from '../webview/protocol';
+import type { HostMessage, WebviewMessage } from '../webview/protocol';
 
 export interface HandlerCtx {
   post: (message: HostMessage) => void;

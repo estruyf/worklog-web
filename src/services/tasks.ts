@@ -2,7 +2,7 @@
 // commands. All writes go to markdown; the watcher/rebuild then refreshes views.
 
 import { Store } from '../store';
-import { Client, Task } from '../model/types';
+import type { Client, Task } from '../model/types';
 import { newTaskId } from '../parser/ids';
 import { serializeTask } from '../parser/taskParser';
 import { today } from '../util/date';

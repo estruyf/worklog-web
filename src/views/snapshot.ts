@@ -3,7 +3,7 @@
 // same store.
 
 import { Store } from "../store";
-import { Snapshot } from "../webview/protocol";
+import type { Snapshot } from "../webview/protocol";
 import { today } from "../util/date";
 
 export function buildSnapshot(store: Store, assetsBase: string): Snapshot {

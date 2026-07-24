@@ -2,7 +2,7 @@
 // source their own data from context, so the shell just looks up the active one.
 
 import React from 'react';
-import { AppView } from '../model';
+import type { AppView } from '../model';
 import { DayView } from './DayView';
 import { CalendarView } from './CalendarView';
 import { ClientsView } from './ClientsView';

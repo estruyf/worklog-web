@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
-import { Client } from '../../../model/types';
-import { LogState } from '../../model';
+import type { Client } from '../../../model/types';
+import type { LogState } from '../../model';
 
 type LogFormProps = {
   logState: LogState;

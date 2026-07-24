@@ -3,7 +3,7 @@
 // the component can seed its own view/modal state.
 
 import { useEffect, useState } from 'react';
-import { AppTab, HostMessage, Snapshot } from '../protocol';
+import type { AppTab, HostMessage, Snapshot } from '../protocol';
 import { onHostMessage, post } from '../vscodeApi';
 
 interface HostHandlers {

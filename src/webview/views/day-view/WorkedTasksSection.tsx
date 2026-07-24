@@ -1,5 +1,5 @@
 import React from 'react';
-import { ClientTaskGroup } from '../../model';
+import type { ClientTaskGroup } from '../../model';
 import { GroupCard } from './GroupCard';
 
 export function WorkedTasksSection({ isTodaySel, workedGroups }: { isTodaySel: boolean; workedGroups: ClientTaskGroup[] }) {

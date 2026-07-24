@@ -1,7 +1,7 @@
 // Pure task adapters — no closure over component state, so they can live at
 // module scope and be shared without reallocating per render.
 
-import { Task } from '../../model/types';
+import type { Task } from '../../model/types';
 
 export function clientIdOf(t: Task): string {
   return t.clientIds[0];

@@ -3,7 +3,7 @@
 // refreshes the cache + webview afterwards.
 
 import { Store } from "../store";
-import { Task, TaskNote } from "../model/types";
+import type { Task, TaskNote } from "../model/types";
 import {
   inProgressStatusId,
   isTerminalStatus,

@@ -2,7 +2,7 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { WorklogApp } from './WorklogApp';
 import { TaskWindow } from './TaskWindow';
-import { WebviewInit } from './protocol';
+import type { WebviewInit } from './protocol';
 import './styles.css';
 
 // The host injects boot config (see views/webviewHtml.ts): the dashboard renders

@@ -1,6 +1,6 @@
 import React from 'react';
 import { eventTypeFromClientId, formatEventTypeLabel, isEventWorklogClientId } from '../../../model/worklog';
-import { WorklogEntry } from '../../../model/types';
+import type { WorklogEntry } from '../../../model/types';
 
 type LoggedSectionProps = {
   dayLogs: WorklogEntry[];

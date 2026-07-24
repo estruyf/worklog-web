@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { isEventWorklogClientId } from '../../model/worklog';
-import { ClientTaskGroup } from '../model';
+import type { ClientTaskGroup } from '../model';
 import { useData, useUi } from '../context';
 import { clientIdOf, isDone, workedOnDate } from '../utils';
 import {

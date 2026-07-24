@@ -1,6 +1,6 @@
 import React from 'react';
 import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { MonthlyRow } from '../../model';
+import type { MonthlyRow } from '../../model';
 
 /** Horizontal bar chart of hours per client for the selected month. Each bar is
  * tinted with the client's own accent color (already resolved on the row). */

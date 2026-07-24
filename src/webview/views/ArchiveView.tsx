@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { ArchiveGroup } from '../model';
+import type { ArchiveGroup } from '../model';
 import { useData } from '../context';
 import { clientIdOf, fmtShort, isDone } from '../utils';
 

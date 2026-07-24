@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { WorklogEntry } from '../../model/types';
+import type { WorklogEntry } from '../../model/types';
 import { eventTypeFromClientId, formatEventTypeLabel, isEventWorklogClientId } from '../../model/worklog';
 import { useData, useUi } from '../context';
 import { monthLabel, WEEKDAYS } from '../utils';

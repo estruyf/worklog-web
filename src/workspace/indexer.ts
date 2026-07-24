@@ -5,7 +5,7 @@ import { MemoryDb } from '../db/memoryDb';
 import { parseTaskFile } from '../parser/taskParser';
 import { parseWorklogFile } from '../parser/worklogParser';
 import { Workspace, fileMap, stem, dirName } from './paths';
-import { Client, Task, WorklogEntry } from '../model/types';
+import type { Client, Task, WorklogEntry } from '../model/types';
 import { isEventWorklogClientId } from '../model/worklog';
 
 export interface RebuildResult {

@@ -132,7 +132,7 @@ function ErrorScreen({ message, onRetry, onSwitch }: { message: string; onRetry:
 function RepoControl({ repo, onSwitch }: { repo: RepoRef; onSwitch: () => void }) {
   const [open, setOpen] = React.useState(false);
   return (
-    <div style={{ position: 'fixed', top: 10, right: 14, zIndex: 60 }}>
+    <div style={{ position: 'fixed', bottom: 12, right: 14, zIndex: 60, display: 'flex', flexDirection: 'column-reverse', alignItems: 'flex-end' }}>
       <button onClick={() => setOpen((v) => !v)} style={repoPill} title="Repository">
         <span style={{ opacity: 0.6 }}>repo</span> {repo.owner}/{repo.repo}
       </button>
@@ -161,5 +161,5 @@ const splashStyle: React.CSSProperties = {
 const btnPrimary: React.CSSProperties = { background: '#1f6feb', color: '#fff', border: 'none', padding: '9px 16px', borderRadius: 8, fontWeight: 600, cursor: 'pointer' };
 const btnSecondary: React.CSSProperties = { background: '#eaeef2', color: '#1f2328', border: 'none', padding: '9px 16px', borderRadius: 8, fontWeight: 600, cursor: 'pointer' };
 const repoPill: React.CSSProperties = { background: '#fff', border: '1px solid #d0d7de', borderRadius: 8, padding: '5px 10px', fontSize: 12.5, cursor: 'pointer', boxShadow: '0 1px 3px rgba(31,35,40,.08)', color: '#1f2328' };
-const repoMenu: React.CSSProperties = { marginTop: 6, background: '#fff', border: '1px solid #d0d7de', borderRadius: 10, boxShadow: '0 8px 24px rgba(31,35,40,.12)', overflow: 'hidden', minWidth: 200 };
+const repoMenu: React.CSSProperties = { marginBottom: 6, background: '#fff', border: '1px solid #d0d7de', borderRadius: 10, boxShadow: '0 8px 24px rgba(31,35,40,.12)', overflow: 'hidden', minWidth: 200 };
 const menuItem: React.CSSProperties = { display: 'block', padding: '9px 12px', fontSize: 13, textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', color: '#1f2328', textDecoration: 'none' };

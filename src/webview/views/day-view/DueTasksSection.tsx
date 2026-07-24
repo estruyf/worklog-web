@@ -1,6 +1,6 @@
 import React from 'react';
 import { WorklogTaskRow } from '../../components';
-import { WorklogRow } from '../../model';
+import type { WorklogRow } from '../../model';
 
 export function DueTasksSection({ dueRows }: { dueRows: WorklogRow[] }) {
   if (dueRows.length === 0) {

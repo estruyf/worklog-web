@@ -10,7 +10,7 @@
 import React, { createContext, useContext } from 'react';
 import { useSnapshot, useWorklogUiState, useWorklogModel } from '../hooks';
 import { clientIdOf, defaultTaskClientId, isDone } from '../utils';
-import { Snapshot } from '../protocol';
+import type { Snapshot } from '../protocol';
 
 type UiState = ReturnType<typeof useWorklogUiState>;
 type WorklogData = ReturnType<typeof useWorklogModel>;

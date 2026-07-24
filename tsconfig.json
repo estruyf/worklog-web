@@ -3,6 +3,7 @@
   "compilerOptions": {
     "jsx": "react-jsx",
     "jsxImportSource": "react",
+    "verbatimModuleSyntax": true,
     "baseUrl": ".",
     "paths": {
       "@core/*": ["src/worklog-core/*"],

@@ -1,6 +1,6 @@
 import React from 'react';
 import { WorklogTaskRow } from '../../components';
-import { ClientTaskGroup } from '../../model';
+import type { ClientTaskGroup } from '../../model';
 
 type GroupCardProps = {
   group: ClientTaskGroup;

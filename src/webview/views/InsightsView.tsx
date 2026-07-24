@@ -1,9 +1,9 @@
 import React, { useMemo } from 'react';
-import { MonthlyRow } from '../model';
+import type { MonthlyRow } from '../model';
 import { useData, useUi } from '../context';
 import { monthLabel, num } from '../utils';
 import { HoursByClientChart } from '../components/charts/HoursByClientChart';
-import { MonthlyTrendChart, TrendPoint } from '../components/charts/MonthlyTrendChart';
+import { MonthlyTrendChart, type TrendPoint } from '../components/charts/MonthlyTrendChart';
 import { isEventWorklogClientId } from '../../model/worklog';
 
 /** Rolls up the selected month's worklog into per-client hours/days rows. */

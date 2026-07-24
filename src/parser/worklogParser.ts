@@ -1,7 +1,7 @@
 // Pure parser for worklog ledger files (see spec §3.4).
 // Line format: `- <YYYY-MM-DD> <client-id> <hours> [— <note>]`
 
-import { WorklogEntry } from "../model/types";
+import type { WorklogEntry } from "../model/types";
 
 // `- 2026-06-25 acme 4 — morning, social feed`
 // The note separator is an em dash (—) optionally surrounded by spaces; we also

@@ -2,7 +2,7 @@
 // supply the defaults and the "which id is terminal" logic that drives the
 // close → archive behaviour.
 
-import { StatusDef } from './types';
+import type { StatusDef } from './types';
 
 export const DEFAULT_STATUSES: StatusDef[] = [
   { id: 'open', label: 'Open' },

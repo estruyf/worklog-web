@@ -4,7 +4,7 @@
 // rebuild re-parses the file map and calls {@link load}. Exposes exactly the
 // query surface the ported services, snapshot builder, and views consume.
 
-import { Client, Task, WorklogEntry } from '../model/types';
+import type { Client, Task, WorklogEntry } from '../model/types';
 
 export class MemoryDb {
   private clients: Client[] = [];

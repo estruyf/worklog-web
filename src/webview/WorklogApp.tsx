@@ -10,7 +10,7 @@ import { ClientFormModal, ErrorToast, NavBar, SearchOverlay, TaskDetailPanel, Ta
 import { EmptyClientsView } from './views/EmptyClientsView';
 import { ROUTES } from './views/routes';
 import { onHostMessage, post } from './vscodeApi';
-import { HostMessage } from './protocol';
+import type { HostMessage } from './protocol';
 
 /** Lightweight replacement for vscrui's Loader — a top-of-page progress bar. */
 function Loader({ overlay = false }: { overlay?: boolean }) {

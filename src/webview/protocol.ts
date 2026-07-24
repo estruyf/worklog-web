@@ -1,7 +1,7 @@
 // Shared message + snapshot contracts between the extension host and the React
 // webview. Must stay DOM-free and dependency-free so both build targets compile it.
 
-import { Client, StatusDef, Task, WorklogEntry } from "../model/types";
+import type { Client, StatusDef, Task, WorklogEntry } from "../model/types";
 
 export type AppTab = "day" | "clients" | "calendar" | "search" | "insights";
 

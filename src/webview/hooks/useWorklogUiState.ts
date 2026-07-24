@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { AppView, SearchScope } from "../model";
+import type { AppView, SearchScope } from "../model";
 
 export function useWorklogUiState() {
   const [view, setView] = useState<AppView>("day");

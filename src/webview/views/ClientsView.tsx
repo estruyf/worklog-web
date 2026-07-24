@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { WorklogRow } from '../model';
+import type { WorklogRow } from '../model';
 import { WorklogTaskRow } from '../components';
 import { useData, useUi } from '../context';
 import { clientIdOf, fmtLong, fmtShort, isDone } from '../utils';
