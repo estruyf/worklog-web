@@ -73,6 +73,13 @@ export default function WebApp() {
     setPhase({ kind: 'picker' });
   }, []);
 
+  const signOut = React.useCallback(() => {
+    localStorage.removeItem(LAST_REPO_KEY);
+    fetch('/api/auth/logout', { method: 'POST' }).finally(() => {
+      window.location.href = '/';
+    });
+  }, []);
+
   if (phase.kind === 'picker') {
     return <RepoPicker onPick={open} lastRepo={readLastRepo()} />;
   }
@@ -83,11 +90,10 @@ export default function WebApp() {
     return <ErrorScreen message={phase.message} onRetry={() => repo && open(repo)} onSwitch={switchRepo} />;
   }
 
-  return (
-    <>
-      {taskId ? <TaskWindow taskId={taskId} /> : <WorklogApp />}
-      {!taskId && <RepoControl repo={repo!} onSwitch={switchRepo} />}
-    </>
+  return taskId ? (
+    <TaskWindow taskId={taskId} />
+  ) : (
+    <WorklogApp repoProps={{ repo, onSwitchRepo: switchRepo, onSignOut: signOut }} />
   );
 }
 
@@ -129,26 +135,6 @@ function ErrorScreen({ message, onRetry, onSwitch }: { message: string; onRetry:
   );
 }
 
-function RepoControl({ repo, onSwitch }: { repo: RepoRef; onSwitch: () => void }) {
-  const [open, setOpen] = React.useState(false);
-  return (
-    <div style={{ position: 'fixed', bottom: 12, right: 14, zIndex: 60, display: 'flex', flexDirection: 'column-reverse', alignItems: 'flex-end' }}>
-      <button onClick={() => setOpen((v) => !v)} style={repoPill} title="Repository">
-        <span style={{ opacity: 0.6 }}>repo</span> {repo.owner}/{repo.repo}
-      </button>
-      {open && (
-        <div style={repoMenu} onMouseLeave={() => setOpen(false)}>
-          <button style={menuItem} onClick={onSwitch}>Switch repository…</button>
-          <a style={menuItem} href={`https://github.com/${repo.owner}/${repo.repo}`} target="_blank" rel="noopener">Open on GitHub ↗</a>
-          <form method="post" action="/api/auth/logout" onSubmit={() => localStorage.removeItem(LAST_REPO_KEY)}>
-            <button style={{ ...menuItem, width: '100%', color: '#cf222e' }} type="submit" formAction="/api/auth/logout">Sign out</button>
-          </form>
-        </div>
-      )}
-    </div>
-  );
-}
-
 const splashStyle: React.CSSProperties = {
   minHeight: '100vh',
   display: 'flex',
@@ -160,6 +146,3 @@ const splashStyle: React.CSSProperties = {
 };
 const btnPrimary: React.CSSProperties = { background: '#1f6feb', color: '#fff', border: 'none', padding: '9px 16px', borderRadius: 8, fontWeight: 600, cursor: 'pointer' };
 const btnSecondary: React.CSSProperties = { background: '#eaeef2', color: '#1f2328', border: 'none', padding: '9px 16px', borderRadius: 8, fontWeight: 600, cursor: 'pointer' };
-const repoPill: React.CSSProperties = { background: '#fff', border: '1px solid #d0d7de', borderRadius: 8, padding: '5px 10px', fontSize: 12.5, cursor: 'pointer', boxShadow: '0 1px 3px rgba(31,35,40,.08)', color: '#1f2328' };
-const repoMenu: React.CSSProperties = { marginBottom: 6, background: '#fff', border: '1px solid #d0d7de', borderRadius: 10, boxShadow: '0 8px 24px rgba(31,35,40,.12)', overflow: 'hidden', minWidth: 200 };
-const menuItem: React.CSSProperties = { display: 'block', padding: '9px 12px', fontSize: 13, textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', color: '#1f2328', textDecoration: 'none' };

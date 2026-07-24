@@ -2,7 +2,7 @@
 export { Icon } from './icons';
 export type { IconName } from './icons';
 export { WorklogTaskRow } from './WorklogTaskRow';
-export { NavBar } from './NavBar';
+export { Sidebar } from './Sidebar';
 export { TaskFormModal } from './TaskFormModal';
 export { TaskDetailPanel } from './TaskDetailPanel';
 export { ClientFormModal } from './ClientFormModal';

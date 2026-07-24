@@ -54,7 +54,6 @@ export type WebviewMessage =
   | { type: "ready" }
   | { type: "gitSync" }
   | { type: "logDay" }
-  | { type: "reloadWebview" }
   | {
       type: "createTask";
       title: string;

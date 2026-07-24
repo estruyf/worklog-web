@@ -6,7 +6,8 @@
 import React from 'react';
 import { useData, useUi, WorklogProvider } from './context';
 import { useSearchData } from './hooks';
-import { ClientFormModal, ErrorToast, NavBar, SearchOverlay, TaskDetailPanel, TaskFormModal } from './components';
+import { ClientFormModal, ErrorToast, SearchOverlay, Sidebar, TaskDetailPanel, TaskFormModal } from './components';
+import type { SidebarRepoProps } from './components/Sidebar';
 import { EmptyClientsView } from './views/EmptyClientsView';
 import { ROUTES } from './views/routes';
 import { onHostMessage, post } from './vscodeApi';
@@ -37,7 +38,7 @@ function isEditableTarget(target: EventTarget | null): boolean {
   );
 }
 
-function Shell() {
+function Shell({ repoProps }: { repoProps?: SidebarRepoProps }) {
   const { snap, error, noClients, openModalFromShortcut, closeModal, openLogForm } = useData();
   const { view, searchOpen, modalOpen, detailId, clientModalOpen, setSearchOpen, setDetailId, setClientModalOpen, searchSel, setSearchSel } = useUi();
   const searchData = useSearchData();
@@ -61,11 +62,6 @@ function Shell() {
       const meta = e.metaKey || e.ctrlKey;
       const key = e.key.toLowerCase();
 
-      if (meta && key === 'r') {
-        e.preventDefault();
-        post({ type: 'reloadWebview' });
-        return;
-      }
       if (meta && (key === 's' || key === 'f')) {
         e.preventDefault();
         setSearchOpen(true);
@@ -150,14 +146,16 @@ function Shell() {
   const ActiveView = ROUTES[view];
 
   return (
-    <div className="flex min-h-screen flex-col bg-white text-[#1F2328] antialiased" style={{ fontFamily: "'Inter', -apple-system, system-ui, sans-serif" }}>
+    <div className="flex min-h-screen flex-col md:flex-row bg-white text-[#1F2328] antialiased" style={{ fontFamily: "'Inter', -apple-system, system-ui, sans-serif" }}>
       <style>{`::selection{background:#FBEFC0}`}</style>
 
       {loading && <Loader overlay={false} />}
 
-      <NavBar />
+      <Sidebar {...repoProps} />
 
-      {noClients ? <EmptyClientsView /> : <ActiveView />}
+      <main className="flex flex-1 min-w-0 flex-col">
+        {noClients ? <EmptyClientsView /> : <ActiveView />}
+      </main>
 
       {searchOpen && <SearchOverlay />}
       {modalOpen && <TaskFormModal />}
@@ -169,10 +167,10 @@ function Shell() {
   );
 }
 
-export function WorklogApp() {
+export function WorklogApp({ repoProps }: { repoProps?: SidebarRepoProps } = {}) {
   return (
     <WorklogProvider>
-      <Shell />
+      <Shell repoProps={repoProps} />
     </WorklogProvider>
   );
 }

@@ -3,9 +3,9 @@
 // VS Code-specific actions are delegated to injected callbacks so this stays
 // runtime-agnostic. The data mutations call the exact same services.
 
-import { Store } from '../store';
-import { createClient, createTask, updateClient } from '../services/tasks';
-import { saveImageAsset } from '../services/assets';
+import { Store } from "../store";
+import { createClient, createTask, updateClient } from "../services/tasks";
+import { saveImageAsset } from "../services/assets";
 import {
   addTaskNote,
   closeTaskById,
@@ -16,9 +16,13 @@ import {
   setTaskStatus,
   toggleTaskWorkedOn,
   updateTask,
-} from '../services/taskOps';
-import { removeWorklog, setEventWorklog, setWorklog } from '../services/worklog';
-import type { HostMessage, WebviewMessage } from '../webview/protocol';
+} from "../services/taskOps";
+import {
+  removeWorklog,
+  setEventWorklog,
+  setWorklog,
+} from "../services/worklog";
+import type { HostMessage, WebviewMessage } from "../webview/protocol";
 
 export interface HandlerCtx {
   post: (message: HostMessage) => void;
@@ -40,16 +44,13 @@ export async function handleWebviewMessage(
   const { post } = ctx;
   try {
     switch (message.type) {
-      case 'gitSync':
+      case "gitSync":
         ctx.triggerSync();
         break;
-      case 'logDay':
+      case "logDay":
         // The web UI logs time through the inline Day-view form; nothing to do.
         break;
-      case 'reloadWebview':
-        ctx.reload();
-        break;
-      case 'createTask':
+      case "createTask":
         await createTask(store, {
           title: message.title,
           clientId: message.clientId,
@@ -59,9 +60,9 @@ export async function handleWebviewMessage(
           due: message.due,
           tags: message.tags,
         });
-        post({ type: 'actionDone', message: `Added “${message.title}”.` });
+        post({ type: "actionDone", message: `Added “${message.title}”.` });
         break;
-      case 'updateTask':
+      case "updateTask":
         await updateTask(store, message.taskId, {
           title: message.title,
           clientId: message.clientId,
@@ -71,106 +72,162 @@ export async function handleWebviewMessage(
           due: message.due,
           tags: message.tags,
         });
-        post({ type: 'actionDone', message: 'Task updated.' });
+        post({ type: "actionDone", message: "Task updated." });
         break;
-      case 'createClient':
+      case "createClient":
         await createClient(store, { name: message.name, color: message.color });
-        post({ type: 'actionDone', message: 'Client added.' });
+        post({ type: "actionDone", message: "Client added." });
         break;
-      case 'updateClient':
-        await updateClient(store, message.id, { name: message.name, color: message.color });
-        post({ type: 'actionDone', message: 'Client updated.' });
+      case "updateClient":
+        await updateClient(store, message.id, {
+          name: message.name,
+          color: message.color,
+        });
+        post({ type: "actionDone", message: "Client updated." });
         break;
-      case 'closeTask': {
+      case "closeTask": {
         const closed = await closeTaskById(store, message.taskId, message.date);
-        post({ type: 'actionDone', message: `Closed “${closed.title}”.` });
+        post({ type: "actionDone", message: `Closed “${closed.title}”.` });
         break;
       }
-      case 'setCompletedDate': {
-        const updated = await setTaskCompletedDate(store, message.taskId, message.date);
-        post({ type: 'actionDone', message: `Updated completion date for “${updated.title}” to ${message.date}.` });
+      case "setCompletedDate": {
+        const updated = await setTaskCompletedDate(
+          store,
+          message.taskId,
+          message.date,
+        );
+        post({
+          type: "actionDone",
+          message: `Updated completion date for “${updated.title}” to ${message.date}.`,
+        });
         break;
       }
-      case 'toggleWorked': {
-        const updated = await toggleTaskWorkedOn(store, message.taskId, message.date);
+      case "toggleWorked": {
+        const updated = await toggleTaskWorkedOn(
+          store,
+          message.taskId,
+          message.date,
+        );
         const marked = updated.workedOn?.includes(message.date) === true;
         post({
-          type: 'actionDone',
+          type: "actionDone",
           message: marked
             ? `Marked “${updated.title}” as worked on ${message.date}.`
             : `Removed worked marker for “${updated.title}” on ${message.date}.`,
         });
         break;
       }
-      case 'setStatus': {
-        const updated = await setTaskStatus(store, message.taskId, message.statusId);
-        post({ type: 'actionDone', message: `“${updated.title}” → ${message.statusId}.` });
+      case "setStatus": {
+        const updated = await setTaskStatus(
+          store,
+          message.taskId,
+          message.statusId,
+        );
+        post({
+          type: "actionDone",
+          message: `“${updated.title}” → ${message.statusId}.`,
+        });
         break;
       }
-      case 'setParent':
+      case "setParent":
         await setTaskParent(store, message.taskId, message.parentId);
-        post({ type: 'actionDone', message: message.parentId ? 'Parent set.' : 'Parent cleared.' });
+        post({
+          type: "actionDone",
+          message: message.parentId ? "Parent set." : "Parent cleared.",
+        });
         break;
-      case 'createParent': {
+      case "createParent": {
         const child = store.db.getTask(message.childId);
         if (child) {
-          const parent = await createTask(store, { title: message.title, clientId: child.clientIds[0] });
+          const parent = await createTask(store, {
+            title: message.title,
+            clientId: child.clientIds[0],
+          });
           await setTaskParent(store, child.id, parent.id);
-          post({ type: 'actionDone', message: `Parent “${parent.title}” added.` });
+          post({
+            type: "actionDone",
+            message: `Parent “${parent.title}” added.`,
+          });
         }
         break;
       }
-      case 'deleteTask': {
+      case "deleteTask": {
         const { removed } = await deleteTaskCascade(store, message.taskId);
-        post({ type: 'actionDone', message: `Removed ${removed} task${removed === 1 ? '' : 's'}.` });
+        post({
+          type: "actionDone",
+          message: `Removed ${removed} task${removed === 1 ? "" : "s"}.`,
+        });
         break;
       }
-      case 'addNote':
+      case "addNote":
         await addTaskNote(store, message.taskId, message.text);
-        post({ type: 'actionDone', message: 'Note added.' });
+        post({ type: "actionDone", message: "Note added." });
         break;
-      case 'deleteNote':
+      case "deleteNote":
         await deleteTaskNote(store, message.taskId, message.index);
-        post({ type: 'actionDone', message: 'Note removed.' });
+        post({ type: "actionDone", message: "Note removed." });
         break;
-      case 'setWorklog':
-        await setWorklog(store, message.date, message.clientId, message.hours, message.note);
-        post({ type: 'actionDone', message: 'Time logged.' });
+      case "setWorklog":
+        await setWorklog(
+          store,
+          message.date,
+          message.clientId,
+          message.hours,
+          message.note,
+        );
+        post({ type: "actionDone", message: "Time logged." });
         break;
-      case 'setEventWorklog':
-        await setEventWorklog(store, message.date, message.eventType, message.hours, message.note);
-        post({ type: 'actionDone', message: 'Day event logged.' });
+      case "setEventWorklog":
+        await setEventWorklog(
+          store,
+          message.date,
+          message.eventType,
+          message.hours,
+          message.note,
+        );
+        post({ type: "actionDone", message: "Day event logged." });
         break;
-      case 'removeWorklog':
+      case "removeWorklog":
         await removeWorklog(store, message.date, message.clientId);
-        post({ type: 'actionDone', message: 'Time entry removed.' });
+        post({ type: "actionDone", message: "Time entry removed." });
         break;
-      case 'openSource': {
+      case "openSource": {
         const url = ctx.sourceUrl(message.taskId);
         if (url) {
           ctx.openExternal(url);
         }
         break;
       }
-      case 'openTaskWindow': {
+      case "openTaskWindow": {
         // Open the standalone task view in a new tab.
         ctx.openExternal(`?task=${encodeURIComponent(message.taskId)}`);
         break;
       }
-      case 'openLink':
+      case "openLink":
         ctx.openExternal(message.url);
         break;
-      case 'saveImage': {
+      case "saveImage": {
         try {
-          const ref = await saveImageAsset(store, message.dataBase64, message.ext);
-          post({ type: 'imageSaved', requestId: message.requestId, ref });
+          const ref = await saveImageAsset(
+            store,
+            message.dataBase64,
+            message.ext,
+          );
+          post({ type: "imageSaved", requestId: message.requestId, ref });
         } catch (err) {
-          post({ type: 'imageSaved', requestId: message.requestId, error: err instanceof Error ? err.message : String(err) });
+          post({
+            type: "imageSaved",
+            requestId: message.requestId,
+            error: err instanceof Error ? err.message : String(err),
+          });
         }
         break;
       }
     }
   } catch (err) {
-    post({ type: 'actionError', message: err instanceof Error ? err.message : String(err) });
+    post({
+      type: "actionError",
+      message: err instanceof Error ? err.message : String(err),
+    });
   }
 }
