@@ -5,6 +5,31 @@ interface Props {
   title?: string;
 }
 const { title = 'Worklog' } = Astro.props;
+
+// iOS/Safari doesn't auto-generate PWA splash screens (unlike Android), so we
+// point `apple-touch-startup-image` at a pre-rendered image per device. Each
+// entry is [cssWidth, cssHeight, devicePixelRatio, pixelWidth, pixelHeight];
+// portrait only, matching the manifest's `portrait-primary` orientation.
+const iosSplash: [number, number, number, number, number][] = [
+  [375, 667, 2, 750, 1334],
+  [414, 896, 2, 828, 1792],
+  [360, 780, 3, 1080, 2340],
+  [375, 812, 3, 1125, 2436],
+  [390, 844, 3, 1170, 2532],
+  [393, 852, 3, 1179, 2556],
+  [402, 874, 3, 1206, 2622],
+  [414, 736, 3, 1242, 2208],
+  [414, 896, 3, 1242, 2688],
+  [428, 926, 3, 1284, 2778],
+  [430, 932, 3, 1290, 2796],
+  [440, 956, 3, 1320, 2868],
+  [768, 1024, 2, 1536, 2048],
+  [810, 1080, 2, 1620, 2160],
+  [820, 1180, 2, 1640, 2360],
+  [834, 1112, 2, 1668, 2224],
+  [834, 1194, 2, 1668, 2388],
+  [1024, 1366, 2, 2048, 2732],
+];
 ---
 
 <!doctype html>
@@ -21,6 +46,15 @@ const { title = 'Worklog' } = Astro.props;
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Worklog" />
+    {
+      iosSplash.map(([cw, ch, dpr, pw, ph]) => (
+        <link
+          rel="apple-touch-startup-image"
+          media={`screen and (device-width: ${cw}px) and (device-height: ${ch}px) and (-webkit-device-pixel-ratio: ${dpr}) and (orientation: portrait)`}
+          href={`/splash/splash-${pw}x${ph}.png`}
+        />
+      ))
+    }
     <Font cssVariable="--font-inter" preload />
     <Font cssVariable="--font-jetbrains-mono" />
   </head>
