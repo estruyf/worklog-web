@@ -104,7 +104,7 @@ export function InsightsView() {
       <div className="max-w-[820px] mx-auto">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-[24px] font-bold m-0">Insights</h1>
-          <select value={month} onChange={(e) => setMonth(e.target.value)} className="px-3 py-2 border border-[#D0D7DE] rounded-lg text-[14px] bg-white cursor-pointer">
+          <select value={month} onChange={(e) => setMonth(e.target.value)} className="px-3 py-2 border border-neutral-525 rounded-lg text-[14px] bg-white cursor-pointer">
             {monthsList.map((m) => (
               <option key={m} value={m}>
                 {monthLabel(m)}
@@ -114,31 +114,31 @@ export function InsightsView() {
         </div>
 
         <div className="grid grid-cols-3 gap-[14px] mb-[26px]">
-          <div className="bg-[#F4F5F7] rounded-[11px] px-5 py-[18px]">
-            <div className="text-[13px] text-[#6E7781] mb-2">Clients</div>
+          <div className="bg-neutral-225 rounded-[11px] px-5 py-[18px]">
+            <div className="text-[13px] text-neutral-675 mb-2">Clients</div>
             <div className="text-[28px] font-bold">{clientCount}</div>
           </div>
-          <div className="bg-[#F4F5F7] rounded-[11px] px-5 py-[18px]">
-            <div className="text-[13px] text-[#6E7781] mb-2">Total hours</div>
+          <div className="bg-neutral-225 rounded-[11px] px-5 py-[18px]">
+            <div className="text-[13px] text-neutral-675 mb-2">Total hours</div>
             <div className="text-[28px] font-bold">{totalHours}</div>
           </div>
-          <div className="bg-[#F4F5F7] rounded-[11px] px-5 py-[18px]">
-            <div className="text-[13px] text-[#6E7781] mb-2">Total days</div>
+          <div className="bg-neutral-225 rounded-[11px] px-5 py-[18px]">
+            <div className="text-[13px] text-neutral-675 mb-2">Total days</div>
             <div className="text-[28px] font-bold">{totalDays}</div>
           </div>
         </div>
 
         <HoursByClientChart rows={monthlyRows} />
 
-        <div className="border border-[#E5E7EB] rounded-[11px] overflow-hidden">
-          <div className="grid grid-cols-[1.4fr_0.7fr_0.7fr_2.6fr] gap-3 px-[18px] py-3 bg-[#F8F9FA] border-b border-[#E5E7EB] text-[11px] font-bold tracking-[0.05em] text-[#6E7781]">
+        <div className="border border-neutral-400 rounded-[11px] overflow-hidden">
+          <div className="grid grid-cols-[1.4fr_0.7fr_0.7fr_2.6fr] gap-3 px-[18px] py-3 bg-neutral-150 border-b border-neutral-400 text-[11px] font-bold tracking-[0.05em] text-neutral-675">
             <span>CLIENT</span>
             <span className="text-right">HOURS</span>
             <span className="text-right">DAYS</span>
             <span className="pl-[14px]">DATES</span>
           </div>
           {monthlyRows.map((r, i) => (
-            <div key={i} className="grid grid-cols-[1.4fr_0.7fr_0.7fr_2.6fr] gap-3 px-[18px] py-[13px] border-b border-[#F0F1F3] items-center text-[14px]">
+            <div key={i} className="grid grid-cols-[1.4fr_0.7fr_0.7fr_2.6fr] gap-3 px-[18px] py-[13px] border-b border-neutral-275 items-center text-[14px]">
               <span className="flex items-center gap-[9px]">
                 <span className="w-[9px] h-[9px] rounded-full" style={{ background: r.color }} />
                 {r.name}
@@ -148,17 +148,17 @@ export function InsightsView() {
               <div className="pl-[14px] flex flex-wrap gap-2">
                 {r.dates.map((d, idx) => (
                   <span key={d.date}>
-                    <a onClick={() => onOpenDate(d.date)} className="text-[#2D6CDF] cursor-pointer tabular-nums hover:underline">
+                    <a onClick={() => onOpenDate(d.date)} className="text-info cursor-pointer tabular-nums hover:underline">
                       {d.label}
                     </a>
-                    {idx < r.dates.length - 1 && <span className="text-[#6E7781]">,</span>}
+                    {idx < r.dates.length - 1 && <span className="text-neutral-675">,</span>}
                   </span>
                 ))}
               </div>
             </div>
           ))}
-          {monthlyRows.length === 0 && <div className="px-[18px] py-[13px] text-[14px] text-[#9AA0A6] italic">No time logged this month.</div>}
-          <div className="grid grid-cols-[1.4fr_0.7fr_0.7fr_2.6fr] gap-3 px-[18px] py-[13px] bg-[#FBFBFC] text-[14px] font-bold">
+          {monthlyRows.length === 0 && <div className="px-[18px] py-[13px] text-[14px] text-neutral-625 italic">No time logged this month.</div>}
+          <div className="grid grid-cols-[1.4fr_0.7fr_0.7fr_2.6fr] gap-3 px-[18px] py-[13px] bg-neutral-75 text-[14px] font-bold">
             <span>Total</span>
             <span className="text-right tabular-nums">{totalHours}</span>
             <span className="text-right tabular-nums">{totalDays}</span>
@@ -167,15 +167,15 @@ export function InsightsView() {
         </div>
 
         {eventRows.length > 0 && (
-          <div className="border border-[#E5E7EB] rounded-[11px] overflow-hidden mt-[18px]">
-            <div className="grid grid-cols-[1.4fr_0.7fr_0.7fr_2.6fr] gap-3 px-[18px] py-3 bg-[#F8F9FA] border-b border-[#E5E7EB] text-[11px] font-bold tracking-[0.05em] text-[#6E7781]">
+          <div className="border border-neutral-400 rounded-[11px] overflow-hidden mt-[18px]">
+            <div className="grid grid-cols-[1.4fr_0.7fr_0.7fr_2.6fr] gap-3 px-[18px] py-3 bg-neutral-150 border-b border-neutral-400 text-[11px] font-bold tracking-[0.05em] text-neutral-675">
               <span>EVENT</span>
               <span className="text-right">HOURS</span>
               <span className="text-right">DAYS</span>
               <span className="pl-[14px]">DATES</span>
             </div>
             {eventRows.map((r, i) => (
-              <div key={i} className="grid grid-cols-[1.4fr_0.7fr_0.7fr_2.6fr] gap-3 px-[18px] py-[13px] border-b border-[#F0F1F3] items-center text-[14px]">
+              <div key={i} className="grid grid-cols-[1.4fr_0.7fr_0.7fr_2.6fr] gap-3 px-[18px] py-[13px] border-b border-neutral-275 items-center text-[14px]">
                 <span className="flex items-center gap-[9px]">
                   <span className="w-[9px] h-[9px] rounded-full" style={{ background: r.color }} />
                   {r.name}
@@ -185,16 +185,16 @@ export function InsightsView() {
                 <div className="pl-[14px] flex flex-wrap gap-2">
                   {r.dates.map((d, idx) => (
                     <span key={d.date}>
-                      <a onClick={() => onOpenDate(d.date)} className="text-[#2D6CDF] cursor-pointer tabular-nums hover:underline">
+                      <a onClick={() => onOpenDate(d.date)} className="text-info cursor-pointer tabular-nums hover:underline">
                         {d.label}
                       </a>
-                      {idx < r.dates.length - 1 && <span className="text-[#6E7781]">,</span>}
+                      {idx < r.dates.length - 1 && <span className="text-neutral-675">,</span>}
                     </span>
                   ))}
                 </div>
               </div>
             ))}
-            <div className="grid grid-cols-[1.4fr_0.7fr_0.7fr_2.6fr] gap-3 px-[18px] py-[13px] bg-[#FBFBFC] text-[14px] font-bold">
+            <div className="grid grid-cols-[1.4fr_0.7fr_0.7fr_2.6fr] gap-3 px-[18px] py-[13px] bg-neutral-75 text-[14px] font-bold">
               <span>Total events</span>
               <span className="text-right tabular-nums">{eventTotalHours}</span>
               <span className="text-right tabular-nums">{eventTotalDays}</span>
@@ -202,7 +202,7 @@ export function InsightsView() {
             </div>
           </div>
         )}
-        <div className="text-[13px] text-[#9AA0A6] mt-[14px]">Days derived as hours / {hoursPerDay} (hoursPerDay). Click a date to open that day.</div>
+        <div className="text-[13px] text-neutral-625 mt-[14px]">Days derived as hours / {hoursPerDay} (hoursPerDay). Click a date to open that day.</div>
 
         <MonthlyTrendChart data={trend} selectedMonth={month} />
       </div>

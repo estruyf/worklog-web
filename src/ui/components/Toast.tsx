@@ -2,15 +2,15 @@ import React from 'react';
 import type { ToastMessage } from '../../data/worklogStore';
 
 const TONE_CLASS: Record<ToastMessage['tone'], string> = {
-  loading: 'bg-white border-[#E5E7EB] text-[#3C4149]',
-  info: 'bg-white border-[#E5E7EB] text-[#3C4149]',
-  success: 'bg-[#ECFDF3] border-[#BBF7D0] text-[#15803D]',
-  error: 'bg-[#FEF2F2] border-[#F0C9C9] text-[#DC2626]',
+  loading: 'bg-white border-neutral-400 text-neutral-750',
+  info: 'bg-white border-neutral-400 text-neutral-750',
+  success: 'bg-success-75 border-success-150 text-success-600',
+  error: 'bg-danger-75 border-danger-225 text-danger-675',
 };
 
 /** Spinning ring shown while a sync is in flight. */
 function Spinner() {
-  return <span className="w-[13px] h-[13px] shrink-0 rounded-full border-2 border-[#D0D7DE] border-t-[#2D6CDF] animate-spin" />;
+  return <span className="w-[13px] h-[13px] shrink-0 rounded-full border-2 border-neutral-525 border-t-info animate-spin" />;
 }
 
 /** Check glyph shown on a completed sync. */

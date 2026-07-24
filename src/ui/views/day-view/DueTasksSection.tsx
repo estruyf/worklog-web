@@ -9,8 +9,8 @@ export function DueTasksSection({ dueRows }: { dueRows: WorklogRow[] }) {
 
   return (
     <>
-      <div className="text-[11px] font-bold tracking-[0.06em] text-[#6E7781] mb-3">DUE THIS DAY</div>
-      <div className="border border-[#ECEEF1] rounded-[14px] bg-white mb-[34px] px-2 py-[6px]">
+      <div className="text-[11px] font-bold tracking-[0.06em] text-neutral-675 mb-3">DUE THIS DAY</div>
+      <div className="border border-neutral-375 rounded-[14px] bg-white mb-[34px] px-2 py-[6px]">
         {dueRows.map((row) => (
           <WorklogTaskRow key={row.id} row={row} />
         ))}

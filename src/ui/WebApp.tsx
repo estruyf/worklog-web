@@ -123,25 +123,25 @@ function timeAgo(ms: number): string {
 function RecoveryPrompt({ info, onRestore, onDiscard }: { info: RecoveryInfo; onRestore: () => void; onDiscard: () => void }) {
   const { fileCount, savedAt, baseChanged } = info;
   return (
-    <div className="fixed inset-0 bg-[rgba(30,33,40,0.45)] flex items-start justify-center pt-[12vh] z-60">
+    <div className="fixed inset-0 bg-overlay flex items-start justify-center pt-[12vh] z-60">
       <div className="bg-white rounded-[14px] w-115 max-w-[92vw] px-7.5 pt-6.5 pb-6 shadow-[0_20px_60px_rgba(0,0,0,0.3)]">
         <h2 className="text-[20px] font-bold m-0 mb-3">Recover unsynced changes?</h2>
-        <p className="text-[14px] text-[#57606a] m-0 mb-2 leading-relaxed">
+        <p className="text-[14px] text-neutral-700 m-0 mb-2 leading-relaxed">
           {fileCount === 1 ? '1 file was' : `${fileCount} files were`} edited but never synced to GitHub before this tab was
           closed, saved locally {timeAgo(savedAt)}.
         </p>
         {baseChanged && (
-          <p className="text-[13px] text-[#9a6700] bg-[#FFF8C5] border border-[#EBDFA8] rounded-[9px] px-3 py-2 m-0 mb-2">
+          <p className="text-[13px] text-brand-600 bg-brand-150 border border-brand-375 rounded-[9px] px-3 py-2 m-0 mb-2">
             Heads up: this branch changed on GitHub since then. Restoring will re-apply your local edits on top of the
             latest version.
           </p>
         )}
-        <p className="text-[13px] text-[#8a9099] m-0 mb-5.5">Restore to continue where you left off, then sync when ready.</p>
+        <p className="text-[13px] text-neutral-650 m-0 mb-5.5">Restore to continue where you left off, then sync when ready.</p>
         <div className="flex justify-end gap-2.5">
-          <button onClick={onDiscard} className="px-5 py-2.5 border border-[#E5E7EB] rounded-[9px] bg-[#F1F2F4] text-[14px] font-semibold cursor-pointer">
+          <button onClick={onDiscard} className="px-5 py-2.5 border border-neutral-400 rounded-[9px] bg-neutral-250 text-[14px] font-semibold cursor-pointer">
             Discard
           </button>
-          <button onClick={onRestore} className="px-5.5 py-2.5 rounded-[9px] text-[14px] font-semibold border border-[#E2BE2E] bg-[#F4CF4D] text-[#3A2E05] cursor-pointer">
+          <button onClick={onRestore} className="px-5.5 py-2.5 rounded-[9px] text-[14px] font-semibold border border-brand-500 bg-brand-450 text-brand-800 cursor-pointer">
             Restore changes
           </button>
         </div>
@@ -153,8 +153,8 @@ function RecoveryPrompt({ info, onRestore, onDiscard }: { info: RecoveryInfo; on
 function Splash({ label }: { label: string }) {
   return (
     <div className={splashCls}>
-      <div className="w-7.5 h-7.5 border-[3px] border-[#e5e7eb] border-t-[#e2be2e] rounded-full animate-spin" />
-      <div className="text-[15px] text-[#57606a]">{label}</div>
+      <div className="w-7.5 h-7.5 border-[3px] border-neutral-400 border-t-brand-500 rounded-full animate-spin" />
+      <div className="text-[15px] text-neutral-700">{label}</div>
     </div>
   );
 }
@@ -164,8 +164,8 @@ function ErrorScreen({ message, onRetry, onSwitch }: { message: string; onRetry:
   return (
     <div className={`${splashCls} p-6 text-center`}>
       <div className="text-[40px]">😕</div>
-      <h2 className="m-0 text-[#1f2328]">Couldn’t open this repository</h2>
-      <p className="max-w-115 text-[#57606a]">
+      <h2 className="m-0 text-neutral-825">Couldn’t open this repository</h2>
+      <p className="max-w-115 text-neutral-700">
         {looksMissing
           ? 'This repo may not have a Worklog layout (a .worklog/config.json plus clients/, worklog/ and archive/ folders), or the branch was not found.'
           : message}
@@ -181,14 +181,14 @@ function ErrorScreen({ message, onRetry, onSwitch }: { message: string; onRetry:
 function NotFoundScreen({ onHome }: { onHome: () => void }) {
   return (
     <div className={`${splashCls} p-6 text-center`}>
-      <div className="text-[13px] font-bold tracking-[0.08em] text-[#8a9099]">404</div>
-      <h2 className="m-0 text-[#1f2328]">Page not found</h2>
-      <p className="max-w-105 text-[#57606a]">This page doesn’t exist. It may have been removed or the link was mistyped.</p>
+      <div className="text-[13px] font-bold tracking-[0.08em] text-neutral-650">404</div>
+      <h2 className="m-0 text-neutral-825">Page not found</h2>
+      <p className="max-w-105 text-neutral-700">This page doesn’t exist. It may have been removed or the link was mistyped.</p>
       <button onClick={onHome} className={btnPrimaryCls}>Back to Worklog</button>
     </div>
   );
 }
 
 const splashCls = 'min-h-screen flex flex-col gap-4 items-center justify-center bg-white';
-const btnPrimaryCls = 'bg-[#f4cf4d] text-[#3a2e05] border border-[#e2be2e] px-4 py-[9px] rounded-lg font-semibold cursor-pointer';
-const btnSecondaryCls = 'bg-[#f1f2f4] text-[#1f2328] border border-[#e5e7eb] px-4 py-[9px] rounded-lg font-semibold cursor-pointer';
+const btnPrimaryCls = 'bg-brand-450 text-brand-800 border border-brand-500 px-4 py-[9px] rounded-lg font-semibold cursor-pointer';
+const btnSecondaryCls = 'bg-neutral-250 text-neutral-825 border border-neutral-400 px-4 py-[9px] rounded-lg font-semibold cursor-pointer';

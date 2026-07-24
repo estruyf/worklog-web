@@ -84,8 +84,8 @@ const brandGlyph = <img src="/worklog-logo-outline.svg" alt="" width="20" height
 const navItemClass = (active: boolean) =>
   'flex items-center gap-[10px] w-full px-[12px] py-[9px] rounded-[8px] text-[13.5px] cursor-pointer text-left transition-colors ' +
   (active
-    ? 'font-semibold bg-[#FBEFC0] border border-[#EAD27A] text-[#3A2E05]'
-    : 'font-medium bg-transparent border border-transparent text-[#3C4149] hover:bg-[#F6F7F9]');
+    ? 'font-semibold bg-brand-225 border border-brand-425 text-brand-800'
+    : 'font-medium bg-transparent border border-transparent text-neutral-750 hover:bg-neutral-200');
 
 /** Full-width sidebar action button (Search / Git sync). */
 const actionClass =
@@ -97,26 +97,26 @@ function RepoFooter({ repo, onSwitchRepo, onSignOut }: SidebarRepoProps) {
     return null;
   }
   return (
-    <div className="flex flex-col gap-[3px] px-[10px] pb-4 pt-3 border-t border-[#EFF1F3]">
-      <div className="text-[10.5px] font-semibold tracking-[0.06em] text-[#8A9099] px-[3px] mb-[3px]">REPOSITORY</div>
+    <div className="flex flex-col gap-[3px] px-[10px] pb-4 pt-3 border-t border-neutral-300">
+      <div className="text-[10.5px] font-semibold tracking-[0.06em] text-neutral-650 px-[3px] mb-[3px]">REPOSITORY</div>
 
       <button
         onClick={onSwitchRepo}
-        className={actionClass + ' border-[#E5E7EB] bg-white text-[#3C4149] hover:bg-[#F6F7F9]'}
+        className={actionClass + ' border-neutral-400 bg-white text-neutral-750 hover:bg-neutral-200'}
         title="Switch repository"
       >
         <span className="truncate">
-          <span className="text-[#8A9099]">{repo.owner}/</span>
+          <span className="text-neutral-650">{repo.owner}/</span>
           <span className="font-semibold">{repo.repo}</span>
         </span>
-        <ChevronsUpDownIcon size={14} className="ml-auto shrink-0 text-[#8A9099]" />
+        <ChevronsUpDownIcon size={14} className="ml-auto shrink-0 text-neutral-650" />
       </button>
 
       <a
         href={`https://github.com/${repo.owner}/${repo.repo}`}
         target="_blank"
         rel="noopener noreferrer"
-        className={actionClass + ' no-underline border-transparent text-[#3C4149] hover:bg-[#F6F7F9]'}
+        className={actionClass + ' no-underline border-transparent text-neutral-750 hover:bg-neutral-200'}
       >
         <GithubIcon size={15} />
         Open on GitHub
@@ -124,7 +124,7 @@ function RepoFooter({ repo, onSwitchRepo, onSignOut }: SidebarRepoProps) {
 
       <button
         onClick={onSignOut}
-        className={actionClass + ' border-transparent text-[#CF222E] hover:bg-[#FBEAEA]'}
+        className={actionClass + ' border-transparent text-danger-700 hover:bg-danger-100'}
       >
         <LogOutIcon size={15} />
         Sign out
@@ -170,7 +170,7 @@ function SidebarContent({ onNavigate, repoProps }: { onNavigate?: () => void; re
                 onNewTask();
                 onNavigate?.();
               }}
-              className="flex items-center justify-center gap-[7px] w-full px-[14px] py-[9px] rounded-[8px] text-[13px] font-semibold cursor-pointer border border-[#E2BE2E] bg-[#F4CF4D] text-[#3A2E05] hover:bg-[#F2C835]"
+              className="flex items-center justify-center gap-[7px] w-full px-[14px] py-[9px] rounded-[8px] text-[13px] font-semibold cursor-pointer border border-brand-500 bg-brand-450 text-brand-800 hover:bg-brand-475"
             >
               <PlusIcon size={15} />
               New task
@@ -190,8 +190,8 @@ function SidebarContent({ onNavigate, repoProps }: { onNavigate?: () => void; re
 
       <div className="flex-1" />
 
-      <div className="flex flex-col gap-[3px] px-[10px] pb-4 pt-3 border-t border-[#EFF1F3]">
-        <button onClick={openSearch} className={actionClass + ' border-transparent text-[#3C4149] hover:bg-[#F6F7F9]'}>
+      <div className="flex flex-col gap-[3px] px-[10px] pb-4 pt-3 border-t border-neutral-300">
+        <button onClick={openSearch} className={actionClass + ' border-transparent text-neutral-750 hover:bg-neutral-200'}>
           <SearchIcon size={15} />
           Search
         </button>
@@ -204,8 +204,8 @@ function SidebarContent({ onNavigate, repoProps }: { onNavigate?: () => void; re
           className={
             actionClass +
             (gitPending
-              ? ' border-[#E2BE2E] bg-[#FBEFC0] text-[#3A2E05] hover:bg-[#F8E7A2]'
-              : ' border-transparent text-[#3C4149] hover:bg-[#F6F7F9]')
+              ? ' border-brand-500 bg-brand-225 text-brand-800 hover:bg-brand-325'
+              : ' border-transparent text-neutral-750 hover:bg-neutral-200')
           }
           title={
             gitPending
@@ -215,7 +215,7 @@ function SidebarContent({ onNavigate, repoProps }: { onNavigate?: () => void; re
         >
           <FolderSyncIcon size={15} />
           Git sync
-          {gitPending && <span className="ml-auto w-[9px] h-[9px] rounded-full bg-[#E2BE2E]" />}
+          {gitPending && <span className="ml-auto w-[9px] h-[9px] rounded-full bg-brand-500" />}
         </button>
 
         <button
@@ -223,8 +223,8 @@ function SidebarContent({ onNavigate, repoProps }: { onNavigate?: () => void; re
           className={
             actionClass +
             (view === 'settings'
-              ? ' border-[#EAD27A] bg-[#FBEFC0] text-[#3A2E05]'
-              : ' border-transparent text-[#3C4149] hover:bg-[#F6F7F9]')
+              ? ' border-brand-425 bg-brand-225 text-brand-800'
+              : ' border-transparent text-neutral-750 hover:bg-neutral-200')
           }
         >
           <SettingsIcon size={15} strokeWidth={1.5} />
@@ -264,10 +264,10 @@ export function Sidebar(repoProps: SidebarRepoProps = {}) {
   return (
     <>
       {/* Mobile top bar */}
-      <div className="flex md:hidden items-center gap-2 h-[52px] px-3 border-b border-[#E5E7EB] shrink-0 sticky top-0 z-40 bg-white">
+      <div className="flex md:hidden items-center gap-2 h-[52px] px-3 border-b border-neutral-400 shrink-0 sticky top-0 z-40 bg-white">
         <button
           onClick={() => setOpen(true)}
-          className="flex items-center justify-center w-[36px] h-[36px] rounded-[8px] border border-[#D0D7DE] bg-white text-[#3C4149] cursor-pointer hover:bg-[#F6F7F9]"
+          className="flex items-center justify-center w-[36px] h-[36px] rounded-[8px] border border-neutral-525 bg-white text-neutral-750 cursor-pointer hover:bg-neutral-200"
           aria-label="Open navigation"
         >
           <MenuIcon size={18} />
@@ -287,7 +287,7 @@ export function Sidebar(repoProps: SidebarRepoProps = {}) {
         {!noClients && (
           <button
             onClick={onNewTask}
-            className="flex items-center justify-center gap-[6px] px-[12px] h-[36px] rounded-[8px] text-[13px] font-semibold cursor-pointer border border-[#E2BE2E] bg-[#F4CF4D] text-[#3A2E05] hover:bg-[#F2C835]"
+            className="flex items-center justify-center gap-[6px] px-[12px] h-[36px] rounded-[8px] text-[13px] font-semibold cursor-pointer border border-brand-500 bg-brand-450 text-brand-800 hover:bg-brand-475"
           >
             <PlusIcon size={15} />
             New
@@ -296,7 +296,7 @@ export function Sidebar(repoProps: SidebarRepoProps = {}) {
       </div>
 
       {/* Desktop static rail */}
-      <aside className="hidden md:flex w-[228px] shrink-0 border-r border-[#E5E7EB] bg-white">
+      <aside className="hidden md:flex w-[228px] shrink-0 border-r border-neutral-400 bg-white">
         <div className="w-full">
           <SidebarContent repoProps={repoProps} />
         </div>
@@ -308,13 +308,13 @@ export function Sidebar(repoProps: SidebarRepoProps = {}) {
       )}
       <aside
         className={
-          'md:hidden fixed inset-y-0 left-0 z-50 w-[248px] bg-white border-r border-[#E5E7EB] shadow-xl transition-transform duration-200 ease-out ' +
+          'md:hidden fixed inset-y-0 left-0 z-50 w-[248px] bg-white border-r border-neutral-400 shadow-xl transition-transform duration-200 ease-out ' +
           (open ? 'translate-x-0' : '-translate-x-full')
         }
       >
         <button
           onClick={() => setOpen(false)}
-          className="absolute top-[13px] right-[12px] flex items-center justify-center w-[30px] h-[30px] rounded-[8px] text-[#57606A] cursor-pointer hover:bg-[#F6F7F9]"
+          className="absolute top-[13px] right-[12px] flex items-center justify-center w-[30px] h-[30px] rounded-[8px] text-neutral-700 cursor-pointer hover:bg-neutral-200"
           aria-label="Close navigation"
         >
           <XIcon size={17} />

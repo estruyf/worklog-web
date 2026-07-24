@@ -95,14 +95,14 @@ export function CalendarView() {
           <h1 className="text-[24px] font-bold m-0 tracking-[-0.01em]">Calendar</h1>
           <div className="hidden md:block flex-1" />
           <div className="flex items-center gap-3">
-            <button onClick={() => setCursor(shiftMonth(cursor, -1))} title="Previous month" className="w-7 h-7 border border-[#E5E7EB] rounded-md bg-white text-[#57606A] cursor-pointer flex items-center justify-center hover:bg-[#F6F7F9]">
+            <button onClick={() => setCursor(shiftMonth(cursor, -1))} title="Previous month" className="w-7 h-7 border border-neutral-400 rounded-md bg-white text-neutral-700 cursor-pointer flex items-center justify-center hover:bg-neutral-200">
               {'<'}
             </button>
             <div className="flex-1 md:flex-none text-[15px] font-semibold md:min-w-[110px] text-center">{monthLabel(cursor)}</div>
-            <button onClick={() => setCursor(shiftMonth(cursor, 1))} title="Next month" className="w-7 h-7 border border-[#E5E7EB] rounded-md bg-white text-[#57606A] cursor-pointer flex items-center justify-center hover:bg-[#F6F7F9]">
+            <button onClick={() => setCursor(shiftMonth(cursor, 1))} title="Next month" className="w-7 h-7 border border-neutral-400 rounded-md bg-white text-neutral-700 cursor-pointer flex items-center justify-center hover:bg-neutral-200">
               {'>'}
             </button>
-            <button onClick={() => { openDay(today); setCursor(ymOf(today)); }} className="text-[12px] text-[#2D6CDF] border border-[#D0D7DE] rounded-md bg-white cursor-pointer px-[10px] py-[5px] hover:bg-[#F6F7F9]">
+            <button onClick={() => { openDay(today); setCursor(ymOf(today)); }} className="text-[12px] text-info border border-neutral-525 rounded-md bg-white cursor-pointer px-[10px] py-[5px] hover:bg-neutral-200">
               Today
             </button>
           </div>
@@ -110,7 +110,7 @@ export function CalendarView() {
 
         <div className="grid grid-cols-7 gap-[6px] mb-2">
           {weekdays.map((w) => (
-            <div key={w} className="text-[11px] font-bold tracking-[0.06em] text-[#6E7781] text-center py-1">
+            <div key={w} className="text-[11px] font-bold tracking-[0.06em] text-neutral-675 text-center py-1">
               {w.toUpperCase()}
             </div>
           ))}
@@ -119,7 +119,7 @@ export function CalendarView() {
         <div className="grid grid-cols-7 gap-[6px]">
           {cells.map((date, i) => {
             if (!date) {
-              return <div key={`pad-${i}`} className="min-h-[84px] rounded-[10px] bg-[#FAFBFC]" />;
+              return <div key={`pad-${i}`} className="min-h-[84px] rounded-[10px] bg-neutral-100" />;
             }
             const day = Number(date.slice(8, 10));
             const logs = logsByDate.get(date) ?? [];
@@ -133,14 +133,14 @@ export function CalendarView() {
                 className={
                   'min-h-[84px] rounded-[10px] border p-[7px] text-left cursor-pointer flex flex-col gap-[6px] transition-colors ' +
                   (isSel
-                    ? 'border-[#E2BE2E] bg-[#FBEFC0]'
-                    : 'border-[#ECEEF1] bg-white hover:bg-[#F6F7F9] hover:border-[#DDE1E6]')
+                    ? 'border-brand-500 bg-brand-225'
+                    : 'border-neutral-375 bg-white hover:bg-neutral-200 hover:border-neutral-475')
                 }
               >
                 <span
                   className={
                     'text-[13px] leading-none w-[22px] h-[22px] flex items-center justify-center rounded-full self-start ' +
-                    (isToday ? 'bg-[#1F2328] text-white font-semibold' : 'text-[#3C4149] font-medium')
+                    (isToday ? 'bg-neutral-825 text-white font-semibold' : 'text-neutral-750 font-medium')
                   }
                 >
                   {day}
@@ -160,10 +160,10 @@ export function CalendarView() {
                           className="w-[7px] h-[7px] rounded-full shrink-0"
                           style={{ background: isEventWorklogClientId(l.clientId) ? EVENT_COLOR : colorOf(l.clientId) }}
                         />
-                        <span className="text-[11px] text-[#3C4149] truncate">{labelFor(l.clientId, clientName)}</span>
+                        <span className="text-[11px] text-neutral-750 truncate">{labelFor(l.clientId, clientName)}</span>
                       </span>
                     ))}
-                    {logs.length > 3 && <span className="text-[10.5px] text-[#8A9099] pl-[12px]">+{logs.length - 3} more</span>}
+                    {logs.length > 3 && <span className="text-[10.5px] text-neutral-650 pl-[12px]">+{logs.length - 3} more</span>}
                   </span>
                 )}
               </button>
@@ -176,7 +176,7 @@ export function CalendarView() {
             {legend.map((e) => (
               <span key={e.id} className="flex items-center gap-[6px]">
                 <span className="w-[11px] h-[11px] rounded-full shrink-0" style={{ background: e.color }} />
-                <span className="text-[12px] text-[#3C4149]">{e.label}</span>
+                <span className="text-[12px] text-neutral-750">{e.label}</span>
               </span>
             ))}
           </div>

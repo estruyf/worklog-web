@@ -15,8 +15,8 @@ export function MonthlyTrendChart({ data, selectedMonth }: { data: TrendPoint[];
   }
   const chartData = data.map((d) => ({ ...d, label: monthLabel(d.month) }));
   return (
-    <div className="border border-[#E5E7EB] rounded-[11px] px-[18px] py-[18px] mt-[26px]">
-      <div className="text-[11px] font-bold tracking-[0.05em] text-[#6E7781] mb-[14px]">HOURS PER MONTH</div>
+    <div className="border border-neutral-400 rounded-[11px] px-[18px] py-[18px] mt-[26px]">
+      <div className="text-[11px] font-bold tracking-[0.05em] text-neutral-675 mb-[14px]">HOURS PER MONTH</div>
       <ResponsiveContainer width="100%" height={200}>
         <BarChart data={chartData} margin={{ top: 4, right: 8, bottom: 0, left: -16 }}>
           <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#6E7781' }} axisLine={{ stroke: '#E5E7EB' }} tickLine={false} interval="preserveStartEnd" />

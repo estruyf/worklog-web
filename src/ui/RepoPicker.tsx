@@ -109,20 +109,20 @@ export function RepoPicker({ onPick, lastRepo }: { onPick: (ref: RepoRef) => voi
   };
 
   return (
-    <div className="min-h-screen grid place-items-center p-6 bg-[linear-gradient(180deg,#f6f7f9,#eef0f2)]">
-      <div className="bg-white border border-[#e5e7eb] rounded-2xl p-[30px] w-[min(560px,94vw)] shadow-[0_8px_30px_rgba(31,35,40,0.08)]">
+    <div className="min-h-screen grid place-items-center p-6 bg-[linear-gradient(180deg,var(--color-neutral-200),var(--color-neutral-325))]">
+      <div className="bg-white border border-neutral-400 rounded-2xl p-[30px] w-[min(560px,94vw)] shadow-[0_8px_30px_rgba(31,35,40,0.08)]">
         <div className="flex items-center gap-2 mb-[18px]">
           <img src="/worklog-logo-outline.svg" alt="" width={28} height={28} className="rounded-md" />
-          <span className="font-bold text-[18px] text-[#1f2328]">Worklog</span>
+          <span className="font-bold text-[18px] text-neutral-825">Worklog</span>
         </div>
-        <h1 className="m-0 mb-1 text-[24px] text-[#1f2328]">Choose a worklog repository</h1>
-        <p className="m-0 mb-[18px] text-[14px] text-[#6e7781]">
+        <h1 className="m-0 mb-1 text-[24px] text-neutral-825">Choose a worklog repository</h1>
+        <p className="m-0 mb-[18px] text-[14px] text-neutral-675">
           Pick the repo that holds your Worklog files (<code>.worklog/config.json</code>, <code>clients/</code>, <code>worklog/</code>, <code>archive/</code>).
         </p>
 
         {lastRepo && (
           <button
-            className="block w-full text-left bg-[#fbefc0] border border-[#e2be2e] text-[#3a2e05] px-3 py-[10px] rounded-lg font-semibold cursor-pointer mb-3"
+            className="block w-full text-left bg-brand-225 border border-brand-500 text-brand-800 px-3 py-[10px] rounded-lg font-semibold cursor-pointer mb-3"
             onClick={() => onPick(lastRepo)}
           >
             ↩ Reopen {lastRepo.owner}/{lastRepo.repo}
@@ -141,17 +141,17 @@ export function RepoPicker({ onPick, lastRepo }: { onPick: (ref: RepoRef) => voi
 
         <button
           type="button"
-          className="flex justify-between items-center w-full bg-[#f6f7f9] border border-[#e5e7eb] text-[#1f2328] px-3 py-[10px] rounded-lg cursor-pointer mb-[10px] text-[14px]"
+          className="flex justify-between items-center w-full bg-neutral-200 border border-neutral-400 text-neutral-825 px-3 py-[10px] rounded-lg cursor-pointer mb-[10px] text-[14px]"
           onClick={() => setShowInit((v) => !v)}
           aria-expanded={showInit}
         >
           <span className="font-semibold">＋ Initialize a new project</span>
-          <span className="text-[18px] leading-none text-[#8a9099]">{showInit ? '−' : '+'}</span>
+          <span className="text-[18px] leading-none text-neutral-650">{showInit ? '−' : '+'}</span>
         </button>
 
         {showInit && (
-          <form onSubmit={submitInit} className="border border-[#e5e7eb] rounded-[10px] p-[14px] mb-3 bg-[#fbfbfc]">
-            <p className="m-0 mb-[10px] text-[13px] text-[#6e7781]">
+          <form onSubmit={submitInit} className="border border-neutral-400 rounded-[10px] p-[14px] mb-3 bg-neutral-75">
+            <p className="m-0 mb-[10px] text-[13px] text-neutral-675">
               Scaffold an empty Worklog project (<code>.worklog/config.json</code> plus <code>clients/</code>, <code>worklog/</code> and{' '}
               <code>archive/</code>) into a new or existing repository.
             </p>
@@ -174,7 +174,7 @@ export function RepoPicker({ onPick, lastRepo }: { onPick: (ref: RepoRef) => voi
                   className={`${inputCls} mb-[10px]`}
                   disabled={initBusy}
                 />
-                <label className="flex items-center gap-2 text-[13px] text-[#6e7781] mb-3">
+                <label className="flex items-center gap-2 text-[13px] text-neutral-675 mb-3">
                   <input type="checkbox" checked={newPrivate} onChange={(e) => setNewPrivate(e.target.checked)} disabled={initBusy} />
                   Private repository
                 </label>
@@ -189,7 +189,7 @@ export function RepoPicker({ onPick, lastRepo }: { onPick: (ref: RepoRef) => voi
               />
             )}
 
-            {initError && <div className="text-[13px] text-[#dc2626] mb-[10px]">{initError}</div>}
+            {initError && <div className="text-[13px] text-danger-675 mb-[10px]">{initError}</div>}
 
             <button type="submit" className={`${goBtnCls} py-[9px] disabled:opacity-70`} disabled={initBusy}>
               {initBusy ? 'Initializing…' : 'Initialize & open'}
@@ -204,24 +204,24 @@ export function RepoPicker({ onPick, lastRepo }: { onPick: (ref: RepoRef) => voi
           className={`${inputCls} mb-[10px]`}
         />
 
-        {error && <div className="text-[13px] text-[#dc2626] mb-[10px]">{error}</div>}
-        {!repos && !error && <div className="text-[14px] text-[#8a9099] py-5">Loading your repositories…</div>}
+        {error && <div className="text-[13px] text-danger-675 mb-[10px]">{error}</div>}
+        {!repos && !error && <div className="text-[14px] text-neutral-650 py-5">Loading your repositories…</div>}
 
         <div className="max-h-[360px] overflow-y-auto flex flex-col gap-[6px]">
           {filtered.map((r) => (
             <button
               key={r.fullName}
-              className="flex justify-between items-center px-3 py-[10px] border border-[#e5e7eb] rounded-lg bg-white cursor-pointer text-left"
+              className="flex justify-between items-center px-3 py-[10px] border border-neutral-400 rounded-lg bg-white cursor-pointer text-left"
               onClick={() => onPick({ owner: r.owner, repo: r.name, branch: r.defaultBranch })}
             >
-              <span className="font-semibold text-[#1f2328]">{r.fullName}</span>
+              <span className="font-semibold text-neutral-825">{r.fullName}</span>
               <span className="flex items-center gap-2">
-                {r.private && <span className="text-[11px] bg-[#f1f2f4] text-[#57606a] px-[6px] py-px rounded-[20px]">private</span>}
-                <span className="text-[12px] text-[#8a9099]">{r.defaultBranch}</span>
+                {r.private && <span className="text-[11px] bg-neutral-250 text-neutral-700 px-[6px] py-px rounded-[20px]">private</span>}
+                <span className="text-[12px] text-neutral-650">{r.defaultBranch}</span>
               </span>
             </button>
           ))}
-          {repos && filtered.length === 0 && <div className="text-[14px] text-[#8a9099] py-4">No repositories match “{query}”.</div>}
+          {repos && filtered.length === 0 && <div className="text-[14px] text-neutral-650 py-4">No repositories match “{query}”.</div>}
         </div>
       </div>
     </div>
@@ -229,7 +229,7 @@ export function RepoPicker({ onPick, lastRepo }: { onPick: (ref: RepoRef) => voi
 }
 
 // Shared class sets for the repeated form controls.
-const inputCls = 'flex-1 w-full px-3 py-[9px] border border-[#d0d7de] rounded-lg text-[14px] text-[#1f2328]';
-const goBtnCls = 'bg-[#f4cf4d] text-[#3a2e05] border border-[#e2be2e] px-4 rounded-lg font-semibold cursor-pointer';
-const segOnCls = 'flex-1 px-[10px] py-[7px] border border-[#e2be2e] bg-[#fbefc0] text-[#3a2e05] rounded-lg font-semibold text-[13px] cursor-pointer';
-const segOffCls = 'flex-1 px-[10px] py-[7px] border border-[#d0d7de] bg-white text-[#57606a] rounded-lg font-semibold text-[13px] cursor-pointer';
+const inputCls = 'flex-1 w-full px-3 py-[9px] border border-neutral-525 rounded-lg text-[14px] text-neutral-825';
+const goBtnCls = 'bg-brand-450 text-brand-800 border border-brand-500 px-4 rounded-lg font-semibold cursor-pointer';
+const segOnCls = 'flex-1 px-[10px] py-[7px] border border-brand-500 bg-brand-225 text-brand-800 rounded-lg font-semibold text-[13px] cursor-pointer';
+const segOffCls = 'flex-1 px-[10px] py-[7px] border border-neutral-525 bg-white text-neutral-700 rounded-lg font-semibold text-[13px] cursor-pointer';

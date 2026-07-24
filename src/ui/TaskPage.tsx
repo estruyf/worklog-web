@@ -25,15 +25,15 @@ function TaskPageShell({ taskId }: { taskId: string }) {
   const exists = snap.tasks.some((t) => t.id === taskId);
 
   return (
-    <div className="min-h-screen bg-white text-[#1F2328] antialiased" style={{ fontFamily: "'Inter', -apple-system, system-ui, sans-serif" }}>
+    <div className="min-h-screen bg-white text-neutral-825 antialiased" style={{ fontFamily: "'Inter', -apple-system, system-ui, sans-serif" }}>
       <style>{`::selection{background:#FBEFC0}`}</style>
 
       {exists ? (
         <TaskDetailPanel routed />
       ) : (
-        <div className="flex min-h-screen flex-col items-center justify-center gap-4 text-[14px] text-[#6E7781]">
+        <div className="flex min-h-screen flex-col items-center justify-center gap-4 text-[14px] text-neutral-675">
           This task no longer exists.
-          <button onClick={navigateToDashboard} className="text-[#2D6CDF] hover:underline cursor-pointer bg-transparent border-none">
+          <button onClick={navigateToDashboard} className="text-info hover:underline cursor-pointer bg-transparent border-none">
             ‹ Back to Worklog
           </button>
         </div>

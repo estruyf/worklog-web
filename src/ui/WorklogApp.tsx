@@ -16,7 +16,7 @@ function Loader({ overlay = false }: { overlay?: boolean }) {
   return (
     <div className={overlay ? 'fixed inset-0 z-50 bg-black/5' : 'fixed inset-x-0 top-0 z-50'} aria-busy="true" aria-label="Loading">
       <div className="h-[3px] w-full overflow-hidden bg-transparent">
-        <div className="h-full w-1/3 animate-[worklog-slide_1.1s_ease-in-out_infinite] bg-[#2D6CDF]" />
+        <div className="h-full w-1/3 animate-[worklog-slide_1.1s_ease-in-out_infinite] bg-info" />
       </div>
       <style>{`@keyframes worklog-slide{0%{transform:translateX(-100%)}100%{transform:translateX(400%)}}`}</style>
     </div>
@@ -133,7 +133,7 @@ function Shell({ repoProps }: { repoProps?: SidebarRepoProps }) {
   const ActiveView = ROUTES[view];
 
   return (
-    <div className="flex min-h-screen flex-col md:flex-row bg-white text-[#1F2328] antialiased" style={{ fontFamily: "'Inter', -apple-system, system-ui, sans-serif" }}>
+    <div className="flex min-h-screen flex-col md:flex-row bg-white text-neutral-825 antialiased" style={{ fontFamily: "'Inter', -apple-system, system-ui, sans-serif" }}>
       <style>{`::selection{background:#FBEFC0}`}</style>
 
       {loading && <Loader overlay={false} />}

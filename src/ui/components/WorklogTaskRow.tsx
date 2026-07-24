@@ -9,10 +9,10 @@ function ProgressChip({ progress, barWidth }: { progress: NonNullable<WorklogRow
   return (
     <span
       title={`${progress.done} of ${progress.total} subtasks done`}
-      className="shrink-0 flex items-center gap-[6px] text-[11px] text-[#6E7781] tabular-nums"
+      className="shrink-0 flex items-center gap-[6px] text-[11px] text-neutral-675 tabular-nums"
     >
-      <span className="h-[5px] rounded-full bg-[#ECEEF1] overflow-hidden" style={{ width: barWidth }}>
-        <span className="block h-full bg-[#16A34A]" style={{ width: `${progress.total ? (progress.done / progress.total) * 100 : 0}%` }} />
+      <span className="h-[5px] rounded-full bg-neutral-375 overflow-hidden" style={{ width: barWidth }}>
+        <span className="block h-full bg-success-500" style={{ width: `${progress.total ? (progress.done / progress.total) * 100 : 0}%` }} />
       </span>
       {progress.done}/{progress.total}
     </span>
@@ -25,7 +25,7 @@ function DueChip({ due, overdue }: { due: string; overdue: boolean }) {
       title={overdue ? `Overdue — was due ${due}` : `Due ${due}`}
       className={
         'shrink-0 flex items-center gap-[4px] text-[11px] font-semibold px-[7px] py-[2px] rounded-full ' +
-        (overdue ? 'text-[#DC2626] bg-[#FEF2F2] border border-[#F5C9C9]' : 'text-[#6E7781] bg-[#F1F2F4] border border-[#E5E7EB]')
+        (overdue ? 'text-danger-675 bg-danger-75 border border-danger-200' : 'text-neutral-675 bg-neutral-250 border border-neutral-400')
       }
     >
       <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6">
@@ -41,7 +41,7 @@ function TagChips({ tags }: { tags: string[] }) {
   return (
     <>
       {tags.map((tag) => (
-        <span key={tag} className="shrink-0 text-[11px] text-[#4B5563] bg-[#F1F2F4] border border-[#E5E7EB] rounded-full px-[8px] py-[2px]">
+        <span key={tag} className="shrink-0 text-[11px] text-neutral-725 bg-neutral-250 border border-neutral-400 rounded-full px-[8px] py-[2px]">
           {tag}
         </span>
       ))}
@@ -51,7 +51,7 @@ function TagChips({ tags }: { tags: string[] }) {
 
 function LinkChip({ link, size }: { link: string; size: number }) {
   return (
-    <a href={link} target="_blank" rel="noreferrer noopener" className="text-[#9AA0A6] shrink-0 leading-[0] hover:text-[#2D6CDF]" title={link}>
+    <a href={link} target="_blank" rel="noreferrer noopener" className="text-neutral-625 shrink-0 leading-[0] hover:text-info" title={link}>
       <GlobeIcon style={{ width: size, height: size }} />
     </a>
   );
@@ -69,17 +69,17 @@ export const WorklogTaskRow = React.memo(function WorklogTaskRow({ row }: { row:
   return (
     <div
       key={row.id}
-      className="group py-2 px-2.5 rounded-lg hover:bg-[#F7F8FA]"
+      className="group py-2 px-2.5 rounded-lg hover:bg-neutral-175"
       style={{ paddingLeft: row.pad }}
     >
       <div className="flex items-center gap-[11px]">
-        <button onClick={row.onDone} title="Mark done" className="w-[17px] h-[17px] shrink-0 border-[1.5px] border-[#C9CFD6] rounded-full bg-white cursor-pointer p-0 hover:border-[#16A34A]" />
+        <button onClick={row.onDone} title="Mark done" className="w-[17px] h-[17px] shrink-0 border-[1.5px] border-neutral-575 rounded-full bg-white cursor-pointer p-0 hover:border-success-500" />
         <button
           onClick={row.onWorked}
           title={row.workedTitle}
           className={
             'w-[17px] h-[17px] shrink-0 rounded-full cursor-pointer p-0 flex items-center justify-center ' +
-            (row.worked ? 'border border-[#A96800] text-[#A96800] bg-[#FBEFC0] hover:bg-[#F9E7A3]' : 'border-[1.5px] border-[#D7B770] bg-white hover:border-[#A96800] text-[#D7B770] hover:text-[#A96800]')
+            (row.worked ? 'border border-brand-575 text-brand-575 bg-brand-225 hover:bg-brand-300' : 'border-[1.5px] border-brand-525 bg-white hover:border-brand-575 text-brand-525 hover:text-brand-575')
           }
         >
           <BriefcaseIcon className={`w-[10px] h-[10px]`} />
@@ -103,7 +103,7 @@ export const WorklogTaskRow = React.memo(function WorklogTaskRow({ row }: { row:
             }
           }}
           title="View task · middle-click to open in a new tab"
-          className="text-[14.5px] text-[#1F2328] flex-1 min-w-0 text-left bg-transparent border-none cursor-pointer p-0 hover:underline whitespace-normal leading-[1.35] md:whitespace-nowrap md:overflow-hidden md:text-ellipsis md:leading-normal"
+          className="text-[14.5px] text-neutral-825 flex-1 min-w-0 text-left bg-transparent border-none cursor-pointer p-0 hover:underline whitespace-normal leading-[1.35] md:whitespace-nowrap md:overflow-hidden md:text-ellipsis md:leading-normal"
         >
           {row.title}
         </button>
@@ -115,16 +115,16 @@ export const WorklogTaskRow = React.memo(function WorklogTaskRow({ row }: { row:
         </div>
         {/* Hover actions — desktop only. */}
         <div className="hidden md:flex items-center gap-[6px] shrink-0 opacity-0 pointer-events-none transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 group-hover:pointer-events-auto group-focus-within:pointer-events-auto">
-          <button onClick={row.onView} className="px-[8px] py-[5px] border border-[#E5E7EB] rounded-[7px] bg-white text-[#3C4149] text-[12px] font-medium cursor-pointer hover:bg-[#F6F7F9]">
+          <button onClick={row.onView} className="px-[8px] py-[5px] border border-neutral-400 rounded-[7px] bg-white text-neutral-750 text-[12px] font-medium cursor-pointer hover:bg-neutral-200">
             View
           </button>
-          <button onClick={row.onOpenTab} title="Open in a separate tab" className="px-[8px] py-[5px] border border-[#E5E7EB] rounded-[7px] bg-white text-[#3C4149] leading-[0] cursor-pointer hover:bg-[#F6F7F9]">
+          <button onClick={row.onOpenTab} title="Open in a separate tab" className="px-[8px] py-[5px] border border-neutral-400 rounded-[7px] bg-white text-neutral-750 leading-[0] cursor-pointer hover:bg-neutral-200">
             <SquareArrowOutUpRight className="w-[14px] h-[14px]" />
           </button>
-          <button onClick={row.onEdit} className="px-[8px] py-[5px] border border-[#E5E7EB] rounded-[7px] bg-white text-[#3C4149] text-[12px] font-medium cursor-pointer hover:bg-[#F6F7F9]">
+          <button onClick={row.onEdit} className="px-[8px] py-[5px] border border-neutral-400 rounded-[7px] bg-white text-neutral-750 text-[12px] font-medium cursor-pointer hover:bg-neutral-200">
             Edit
           </button>
-          <button onClick={row.onDelete} className="px-[8px] py-[5px] border border-[#F0C9C9] rounded-[7px] bg-white text-[#DC2626] text-[12px] font-medium cursor-pointer hover:bg-[#FEF2F2]">
+          <button onClick={row.onDelete} className="px-[8px] py-[5px] border border-danger-225 rounded-[7px] bg-white text-danger-675 text-[12px] font-medium cursor-pointer hover:bg-danger-75">
             Delete
           </button>
         </div>

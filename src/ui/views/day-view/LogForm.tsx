@@ -47,25 +47,25 @@ export function LogForm({ logState, setLogState, saveLog, removeLog, clients, co
   }, [clientPickerOpen]);
 
   return (
-    <div className="px-5 py-[18px] bg-[#FBFBFC] border border-[#E5E7EB] rounded-xl mb-[34px]">
+    <div className="px-5 py-[18px] bg-neutral-75 border border-neutral-400 rounded-xl mb-[34px]">
       <div className="flex items-center justify-between mb-4">
         <div className="text-[13px] font-semibold">{logState.editing ? 'Edit logged time' : 'Log time'}</div>
         <button
           onClick={() => setLogState({ ...logState, open: false })}
-          className="bg-none border-none text-[17px] text-[#9AA0A6] cursor-pointer leading-none"
+          className="bg-none border-none text-[17px] text-neutral-625 cursor-pointer leading-none"
         >
           ×
         </button>
       </div>
       <div className="flex flex-wrap items-end gap-[14px]">
         <div>
-          <div className="text-[11px] text-[#6E7781] mb-[6px]">Type</div>
+          <div className="text-[11px] text-neutral-675 mb-[6px]">Type</div>
           <div className="flex gap-[6px]">
             <button
               onClick={() => setLogState({ ...logState, isEvent: false })}
               className={
                 'px-3 py-[7px] rounded-[7px] text-[13px] cursor-pointer border ' +
-                (!logState.isEvent ? 'border-[#E2BE2E] bg-[#FBEFC0] font-semibold' : 'border-[#D0D7DE] bg-white font-normal')
+                (!logState.isEvent ? 'border-brand-500 bg-brand-225 font-semibold' : 'border-neutral-525 bg-white font-normal')
               }
             >
               Client
@@ -74,7 +74,7 @@ export function LogForm({ logState, setLogState, saveLog, removeLog, clients, co
               onClick={() => setLogState({ ...logState, isEvent: true })}
               className={
                 'px-3 py-[7px] rounded-[7px] text-[13px] cursor-pointer border ' +
-                (logState.isEvent ? 'border-[#E2BE2E] bg-[#FBEFC0] font-semibold' : 'border-[#D0D7DE] bg-white font-normal')
+                (logState.isEvent ? 'border-brand-500 bg-brand-225 font-semibold' : 'border-neutral-525 bg-white font-normal')
               }
             >
               Event
@@ -84,11 +84,11 @@ export function LogForm({ logState, setLogState, saveLog, removeLog, clients, co
         <div>
           {logState.isEvent ? (
             <>
-              <div className="text-[11px] text-[#6E7781] mb-[6px]">Event</div>
+              <div className="text-[11px] text-neutral-675 mb-[6px]">Event</div>
               <select
                 value={logState.eventType}
                 onChange={(e) => setLogState({ ...logState, eventType: e.target.value })}
-                className="px-3 py-[9px] border border-[#D0D7DE] rounded-lg text-[13px] bg-white"
+                className="px-3 py-[9px] border border-neutral-525 rounded-lg text-[13px] bg-white"
               >
                 <option value="vacation">Vacation</option>
                 <option value="out-of-office">Out of office</option>
@@ -99,27 +99,27 @@ export function LogForm({ logState, setLogState, saveLog, removeLog, clients, co
             </>
           ) : (
             <>
-              <div className="text-[11px] text-[#6E7781] mb-[6px]">Client</div>
+              <div className="text-[11px] text-neutral-675 mb-[6px]">Client</div>
               <div ref={clientPickerRef} className="relative min-w-[220px]">
                 <button
                   onClick={() => setClientPickerOpen((v) => !v)}
-                  className="w-full flex items-center justify-between gap-3 px-3 py-[9px] border border-[#D0D7DE] rounded-lg bg-white text-[13px] cursor-pointer"
+                  className="w-full flex items-center justify-between gap-3 px-3 py-[9px] border border-neutral-525 rounded-lg bg-white text-[13px] cursor-pointer"
                 >
                   <span className="flex items-center gap-2 min-w-0">
                     <span className="w-2 h-2 rounded-full shrink-0" style={{ background: selectedClient ? colorOf(selectedClient.id) : '#9AA0A6' }} />
-                    <span className="truncate font-semibold text-[#1F2328]">{selectedClient?.name || 'Select client'}</span>
+                    <span className="truncate font-semibold text-neutral-825">{selectedClient?.name || 'Select client'}</span>
                   </span>
-                  <span className="text-[#6E7781]" aria-hidden="true">
+                  <span className="text-neutral-675" aria-hidden="true">
                     {clientPickerOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                   </span>
                 </button>
                 {clientPickerOpen && (
-                  <div className="absolute left-0 top-full mt-2 w-[280px] max-w-[80vw] border border-[#D0D7DE] rounded-[10px] bg-white shadow-[0_14px_30px_rgba(0,0,0,0.14)] p-2 z-20">
+                  <div className="absolute left-0 top-full mt-2 w-[280px] max-w-[80vw] border border-neutral-525 rounded-[10px] bg-white shadow-[0_14px_30px_rgba(0,0,0,0.14)] p-2 z-20">
                     <input
                       value={clientQuery}
                       onChange={(e) => setClientQuery(e.target.value)}
                       placeholder="Search client"
-                      className="w-full px-3 py-[8px] border border-[#E5E7EB] rounded-[8px] text-[13px] mb-2 outline-none"
+                      className="w-full px-3 py-[8px] border border-neutral-400 rounded-[8px] text-[13px] mb-2 outline-none"
                     />
                     <div className="max-h-[180px] overflow-auto pr-1">
                       {filteredClients.map((c) => {
@@ -134,7 +134,7 @@ export function LogForm({ logState, setLogState, saveLog, removeLog, clients, co
                             }}
                             className={
                               'w-full flex items-center gap-2 px-3 py-2 rounded-[8px] text-[13px] text-left cursor-pointer mb-1 border ' +
-                              (active ? 'border-[#E2BE2E] bg-[#FBEFC0] font-semibold text-[#3A2E05]' : 'border-transparent bg-white text-[#1F2328] hover:bg-[#F4F5F7]')
+                              (active ? 'border-brand-500 bg-brand-225 font-semibold text-brand-800' : 'border-transparent bg-white text-neutral-825 hover:bg-neutral-225')
                             }
                           >
                             <span className="w-2 h-2 rounded-full shrink-0" style={{ background: colorOf(c.id) }} />
@@ -142,7 +142,7 @@ export function LogForm({ logState, setLogState, saveLog, removeLog, clients, co
                           </button>
                         );
                       })}
-                      {filteredClients.length === 0 && <div className="px-3 py-2 text-[12px] italic text-[#8A9099]">No clients found</div>}
+                      {filteredClients.length === 0 && <div className="px-3 py-2 text-[12px] italic text-neutral-650">No clients found</div>}
                     </div>
                   </div>
                 )}
@@ -151,7 +151,7 @@ export function LogForm({ logState, setLogState, saveLog, removeLog, clients, co
           )}
         </div>
         <div>
-          <div className="text-[11px] text-[#6E7781] mb-[6px]">Amount</div>
+          <div className="text-[11px] text-neutral-675 mb-[6px]">Amount</div>
           <div className="flex gap-[6px]">
             {[
               { t: 'full', label: 'Full day' },
@@ -165,7 +165,7 @@ export function LogForm({ logState, setLogState, saveLog, removeLog, clients, co
                   onClick={() => setLogState({ ...logState, type: t })}
                   className={
                     'px-3 py-[7px] rounded-[7px] text-[13px] cursor-pointer border ' +
-                    (active ? 'border-[#E2BE2E] bg-[#FBEFC0] font-semibold' : 'border-[#D0D7DE] bg-white font-normal')
+                    (active ? 'border-brand-500 bg-brand-225 font-semibold' : 'border-neutral-525 bg-white font-normal')
                   }
                 >
                   {label}
@@ -176,31 +176,31 @@ export function LogForm({ logState, setLogState, saveLog, removeLog, clients, co
         </div>
         {logState.type === 'hours' && (
           <div className="w-24">
-            <div className="text-[11px] text-[#6E7781] mb-[6px]">Hours</div>
+            <div className="text-[11px] text-neutral-675 mb-[6px]">Hours</div>
             <input
               value={logState.hours}
               onChange={(e) => setLogState({ ...logState, hours: e.target.value })}
               type="number"
               min="0"
               step="0.5"
-              className="w-full px-3 py-[9px] border border-[#D0D7DE] rounded-lg text-[13px]"
+              className="w-full px-3 py-[9px] border border-neutral-525 rounded-lg text-[13px]"
             />
           </div>
         )}
         <div className="flex-1 min-w-[180px]">
-          <div className="text-[11px] text-[#6E7781] mb-[6px]">Note (optional)</div>
+          <div className="text-[11px] text-neutral-675 mb-[6px]">Note (optional)</div>
           <input
             value={logState.note}
             onChange={(e) => setLogState({ ...logState, note: e.target.value })}
             placeholder="what you worked on"
-            className="w-full px-3 py-[9px] border border-[#D0D7DE] rounded-lg text-[13px]"
+            className="w-full px-3 py-[9px] border border-neutral-525 rounded-lg text-[13px]"
           />
         </div>
-        <button onClick={saveLog} className="px-[18px] py-[9px] border border-[#E2BE2E] rounded-lg bg-[#F4CF4D] text-[#3A2E05] font-semibold text-[13px] cursor-pointer">
+        <button onClick={saveLog} className="px-[18px] py-[9px] border border-brand-500 rounded-lg bg-brand-450 text-brand-800 font-semibold text-[13px] cursor-pointer">
           {logState.editing ? 'Save' : 'Log'}
         </button>
         {logState.editing && (
-          <button onClick={removeLog} title="Remove this entry" className="px-[14px] py-[9px] border border-[#F0C9C9] rounded-lg bg-white text-[#DC2626] font-medium text-[13px] cursor-pointer">
+          <button onClick={removeLog} title="Remove this entry" className="px-[14px] py-[9px] border border-danger-225 rounded-lg bg-white text-danger-675 font-medium text-[13px] cursor-pointer">
             Remove
           </button>
         )}
