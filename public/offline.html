@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#1f6feb" />
+    <title>Worklog — Offline</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        font-family: -apple-system, system-ui, "Segoe UI", sans-serif;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        text-align: center;
+        padding: 2rem;
+        background: #ffffff;
+        color: #1f2328;
+      }
+      @media (prefers-color-scheme: dark) {
+        body { background: #0d1117; color: #e6edf3; }
+      }
+      img { width: 96px; height: 96px; }
+      h1 { font-size: 1.25rem; margin: 1rem 0 0.5rem; }
+      p { margin: 0 0 1.5rem; opacity: 0.75; max-width: 32ch; }
+      button {
+        font: inherit;
+        padding: 0.5rem 1.25rem;
+        border: none;
+        border-radius: 6px;
+        background: #1f6feb;
+        color: #fff;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <div>
+      <img src="/worklog-192x192.png" alt="Worklog" />
+      <h1>You're offline</h1>
+      <p>Worklog needs a connection to sync with GitHub. Reconnect and try again.</p>
+      <button onclick="location.reload()">Retry</button>
+    </div>
+  </body>
+</html>
