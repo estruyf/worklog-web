@@ -1,0 +1,19 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import WebApp from '../../ui/WebApp';
+import { TOKEN_COOKIE } from '../../server/session';
+
+export const prerender = false;
+
+// One island for the whole app: this rest route serves /app and every sub-route
+// (e.g. /app/task/<id>), and the client router picks the view from the path.
+
+// Gate the app on the presence of a session cookie; API calls re-verify the token.
+if (!Astro.cookies.get(TOKEN_COOKIE)?.value) {
+  return Astro.redirect('/');
+}
+---
+
+<Layout title="Worklog">
+  <WebApp client:only="react" />
+</Layout>

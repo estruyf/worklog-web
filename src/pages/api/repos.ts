@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
-import { getToken } from '../../host/session';
-import { listRepos } from '../../host/github';
+import { getToken } from '../../server/session';
+import { listRepos } from '../../server/github';
 
 export const prerender = false;
 

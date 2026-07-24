@@ -1,6 +1,6 @@
 // Worklog ledger edits: insert/replace and remove a (date, client) line. Time is
 // tracked per client per day (full/half/custom hours), not per task. Shared by
-// the Log day command and the webview's calendar / day editor.
+// the app's calendar / day editor.
 
 import { Store } from "../store";
 import { eventWorklogClientId } from "../model/worklog";

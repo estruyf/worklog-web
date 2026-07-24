@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { clearToken } from '../../../host/session';
+import { clearToken } from '../../../server/session';
 
 export const prerender = false;
 

@@ -3,8 +3,8 @@
 // a moved ref returns 409 so the client can reload and re-apply.
 
 import type { APIRoute } from 'astro';
-import { getToken } from '../../host/session';
-import { commitFiles, GitHubError, type CommitFile } from '../../host/github';
+import { getToken } from '../../server/session';
+import { commitFiles, GitHubError, type CommitFile } from '../../server/github';
 
 export const prerender = false;
 
