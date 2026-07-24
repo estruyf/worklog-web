@@ -11,7 +11,8 @@
     "astro": "astro",
     "check": "astro check",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "publish": "npm run build && npx wrangler deploy"
   },
   "dependencies": {
     "@astrojs/cloudflare": "^12.6.0",

@@ -13,7 +13,7 @@ if (Astro.cookies.get(TOKEN_COOKIE)?.value) {
 <Layout title="Worklog — sign in">
   <main class="wrap">
     <div class="card">
-      <div class="logo">🕒</div>
+      <img class="logo" src="/worklog-logo-outline.svg" alt="Worklog" width="64" height="64" />
       <h1>Worklog</h1>
       <p class="sub">
         A GitHub-backed timesheet. Your tasks and hours live as Markdown in your own repo —
@@ -50,7 +50,8 @@ if (Astro.cookies.get(TOKEN_COOKIE)?.value) {
     box-shadow: 0 8px 30px rgba(31, 35, 40, 0.08);
   }
   .logo {
-    font-size: 44px;
+    width: 64px;
+    height: 64px;
   }
   h1 {
     margin: 8px 0 4px;

@@ -72,7 +72,7 @@ export function TaskFormModal() {
             }
           }}
           placeholder="Fix social feed rendering on mobile"
-          className="w-full px-[14px] py-[11px] border border-[#E2BE2E] rounded-[9px] text-[14px] shadow-[0_0_0_3px_#FBEFC0] mb-[22px] outline-none"
+          className="w-full px-[14px] py-[11px] border border-[#E2BE2E] rounded-[9px] text-[16px] md:text-[14px] shadow-[0_0_0_3px_#FBEFC0] mb-[22px] outline-none"
         />
 
         <label className="block font-semibold text-[14px] mb-[10px]">Client</label>
@@ -114,7 +114,7 @@ export function TaskFormModal() {
                 }
               }}
               placeholder="New client name"
-              className="flex-1 px-[14px] py-[11px] border border-[#D0D7DE] rounded-[9px] text-[14px] outline-none"
+              className="flex-1 px-[14px] py-[11px] border border-[#D0D7DE] rounded-[9px] text-[16px] md:text-[14px] outline-none"
             />
             <button onClick={() => onCreateClient(newClientName, 'modal')} className="px-[16px] py-[11px] border border-[#E2BE2E] rounded-[9px] bg-[#F4CF4D] text-[#3A2E05] font-semibold text-[14px] cursor-pointer">
               Add
@@ -128,7 +128,7 @@ export function TaskFormModal() {
         <label className="block font-semibold text-[14px] mb-2">
           Parent <span className="text-[#9AA0A6] font-normal">(optional)</span>
         </label>
-        <select value={parentId} onChange={(e) => setParentId(e.target.value)} className="w-full px-[14px] py-[11px] border border-[#D0D7DE] rounded-[9px] text-[14px] bg-white mb-[22px]">
+        <select value={parentId} onChange={(e) => setParentId(e.target.value)} className="w-full px-[14px] py-[11px] border border-[#D0D7DE] rounded-[9px] text-[16px] md:text-[14px] bg-white mb-[22px]">
           <option value="">— none —</option>
           {parentOptions.map((o) => (
             <option key={o.id} value={o.id}>
@@ -137,8 +137,8 @@ export function TaskFormModal() {
           ))}
         </select>
 
-        <div className="flex gap-[14px] mb-[22px]">
-          <div className="w-[180px]">
+        <div className="flex flex-col md:flex-row gap-[14px] mb-[22px]">
+          <div className="w-full md:w-[180px]">
             <label className="block font-semibold text-[14px] mb-2">
               Due <span className="text-[#9AA0A6] font-normal">(optional)</span>
             </label>
@@ -146,10 +146,10 @@ export function TaskFormModal() {
               type="date"
               value={due}
               onChange={(e) => setDue(e.target.value)}
-              className="w-full px-[14px] py-[11px] border border-[#D0D7DE] rounded-[9px] text-[14px] bg-white"
+              className="w-full px-[14px] py-[11px] border border-[#D0D7DE] rounded-[9px] text-[16px] md:text-[14px] bg-white"
             />
           </div>
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             <label className="block font-semibold text-[14px] mb-2">
               Tags <span className="text-[#9AA0A6] font-normal">(comma separated)</span>
             </label>
@@ -162,7 +162,7 @@ export function TaskFormModal() {
                 }
               }}
               placeholder="frontend, bug, urgent"
-              className="w-full px-[14px] py-[11px] border border-[#D0D7DE] rounded-[9px] text-[14px]"
+              className="w-full px-[14px] py-[11px] border border-[#D0D7DE] rounded-[9px] text-[16px] md:text-[14px]"
             />
           </div>
         </div>
@@ -195,7 +195,7 @@ export function TaskFormModal() {
             onDrop={img.onDrop}
             onDragOver={img.onDragOver}
             placeholder={'Add a description in Markdown…\n\n## Notes\n- supports **bold**, *italic*, `code`\n- [links](https://example.com), lists, > quotes\n- paste, drop or add an image'}
-            className="w-full min-h-[140px] px-[14px] py-[12px] border border-[#D0D7DE] rounded-[10px] text-[13.5px] leading-[1.6] outline-none focus:border-[#E2BE2E] focus:shadow-[0_0_0_3px_#FBEFC0] resize-y mb-2"
+            className="w-full min-h-[140px] px-[14px] py-[12px] border border-[#D0D7DE] rounded-[10px] text-[16px] md:text-[13.5px] leading-[1.6] outline-none focus:border-[#E2BE2E] focus:shadow-[0_0_0_3px_#FBEFC0] resize-y mb-2"
             style={{ fontFamily: "'JetBrains Mono', ui-monospace, monospace" }}
           />
         ) : description.trim() ? (
@@ -213,7 +213,7 @@ export function TaskFormModal() {
         </label>
         {links.map((l, i) => (
           <div key={i} className="flex gap-2 mb-2">
-            <input value={l} onChange={(e) => setLinks(links.map((x, j) => (j === i ? e.target.value : x)))} placeholder="https://github.com/.../pull/34" className="flex-1 px-[14px] py-[11px] border border-[#D0D7DE] rounded-[9px] text-[14px]" />
+            <input value={l} onChange={(e) => setLinks(links.map((x, j) => (j === i ? e.target.value : x)))} placeholder="https://github.com/.../pull/34" className="flex-1 px-[14px] py-[11px] border border-[#D0D7DE] rounded-[9px] text-[16px] md:text-[14px]" />
             <button
               onClick={() => {
                 const next = links.filter((_, j) => j !== i);

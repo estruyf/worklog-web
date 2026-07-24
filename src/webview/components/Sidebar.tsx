@@ -78,12 +78,7 @@ const NAV_ITEMS: { view: AppView; label: string; icon: React.ReactNode }[] = [
   },
 ];
 
-const brandGlyph = (
-  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#1F2328" strokeWidth="1.5">
-    <rect x="1.5" y="4.5" width="13" height="9" rx="1.5" />
-    <path d="M5.5 4.5V3.5a1 1 0 011-1h3a1 1 0 011 1v1" />
-  </svg>
-);
+const brandGlyph = <img src="/worklog-logo-outline.svg" alt="" width="20" height="20" className="rounded-[5px]" />;
 
 const navItemClass = (active: boolean) =>
   'flex items-center gap-[10px] w-full px-[12px] py-[9px] rounded-[8px] text-[13.5px] cursor-pointer text-left transition-colors ' +
