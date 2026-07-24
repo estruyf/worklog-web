@@ -45,15 +45,22 @@ export function TaskFormModal() {
   const img = useMarkdownImages(description, setDescription);
   const resolveImage = useMemo(() => makeImageResolver(assetsBase), [assetsBase]);
   return (
-    <div onClick={onClose} className="fixed inset-0 bg-[rgba(30,33,40,0.45)] flex items-start justify-center pt-[8vh] z-50">
-      <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-[14px] w-[560px] max-w-[92vw] px-[30px] pt-[26px] pb-6 shadow-[0_20px_60px_rgba(0,0,0,0.3)]">
-        <div className="flex items-center justify-between mb-[22px]">
+    // Full-screen page below md (modal dialogs are awkward on phones); centered
+    // dialog at md+. The panel is a flex column on mobile — fixed header/footer
+    // with only the body scrolling — and a plain card on desktop (md:block).
+    <div onClick={onClose} className="fixed inset-0 z-50 md:bg-[rgba(30,33,40,0.45)] md:flex md:items-start md:justify-center md:pt-[8vh]">
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="flex flex-col h-full w-full bg-white md:block md:h-auto md:w-[560px] md:max-w-[92vw] md:rounded-[14px] md:shadow-[0_20px_60px_rgba(0,0,0,0.3)]"
+      >
+        <div className="flex items-center justify-between shrink-0 px-5 pt-4 pb-3 border-b border-[#ECEEF1] md:px-[30px] md:pt-[26px] md:pb-0 md:mb-[22px] md:border-0">
           <h2 className="text-[20px] font-bold m-0">{editingId ? 'Edit task' : 'New task'}</h2>
-          <button onClick={onClose} className="bg-none border-none text-[20px] text-[#8A9099] cursor-pointer leading-none">
+          <button onClick={onClose} aria-label="Close" className="bg-none border-none text-[24px] md:text-[20px] text-[#8A9099] cursor-pointer leading-none">
             ×
           </button>
         </div>
 
+        <div className="flex-1 min-h-0 overflow-y-auto px-5 pt-4 pb-4 md:flex-none md:overflow-visible md:px-[30px] md:py-0">
         <label className="block font-semibold text-[14px] mb-2">Title</label>
         <input
           autoFocus
@@ -221,8 +228,9 @@ export function TaskFormModal() {
         <button onClick={() => setLinks([...links, ''])} className="bg-none border-none text-[#2D6CDF] text-[14px] font-medium cursor-pointer py-[2px]">
           + Add another link
         </button>
+        </div>
 
-        <div className="flex items-center justify-between mt-[26px]">
+        <div className="flex items-center justify-between shrink-0 px-5 pt-3 pb-3 border-t border-[#ECEEF1] md:px-[30px] md:pt-0 md:pb-6 md:mt-[26px] md:border-0">
           <div>
             {editingId && (
               <button onClick={() => onDelete(editingId)} className="px-[14px] py-[10px] border border-[#F0C9C9] rounded-[9px] bg-white text-[#DC2626] text-[14px] font-semibold cursor-pointer hover:bg-[#FEF2F2]">

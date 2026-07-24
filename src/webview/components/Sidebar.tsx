@@ -140,10 +140,11 @@ function RepoFooter({ repo, onSwitchRepo, onSignOut }: SidebarRepoProps) {
 /** The shared inner content — rendered once for the static desktop rail and once
  * for the mobile drawer. `onNavigate` lets the drawer close itself on selection. */
 function SidebarContent({ onNavigate, repoProps }: { onNavigate?: () => void; repoProps?: SidebarRepoProps }) {
-  const { view, setView, setSearchOpen } = useUi();
+  const { view, setView, setSearchOpen, setDetailId } = useUi();
   const { noClients, triggerGitSync: onGitSync, openModal: onNewTask, gitPending } = useData();
 
   const go = (v: AppView) => {
+    setDetailId(null);
     setView(v);
     onNavigate?.();
   };
@@ -156,10 +157,14 @@ function SidebarContent({ onNavigate, repoProps }: { onNavigate?: () => void; re
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center gap-2 font-bold text-[15px] px-[10px] h-[52px] shrink-0">
+      <button
+        onClick={() => go('day')}
+        className="flex items-center gap-2 font-bold text-[15px] px-[10px] h-[52px] shrink-0 cursor-pointer bg-transparent border-none text-left"
+        title="Go to Day view"
+      >
         {brandGlyph}
         Worklog
-      </div>
+      </button>
 
       {!noClients && (
         <>
@@ -231,6 +236,7 @@ function SidebarContent({ onNavigate, repoProps }: { onNavigate?: () => void; re
 export function Sidebar(repoProps: SidebarRepoProps = {}) {
   const [open, setOpen] = React.useState(false);
   const { openModal: onNewTask, noClients } = useData();
+  const { setView, setDetailId } = useUi();
 
   // Close the drawer on Escape and lock body scroll while it's open.
   React.useEffect(() => {
@@ -249,7 +255,7 @@ export function Sidebar(repoProps: SidebarRepoProps = {}) {
   return (
     <>
       {/* Mobile top bar */}
-      <div className="flex md:hidden items-center gap-2 h-[52px] px-3 border-b border-[#E5E7EB] shrink-0">
+      <div className="flex md:hidden items-center gap-2 h-[52px] px-3 border-b border-[#E5E7EB] shrink-0 sticky top-0 z-40 bg-white">
         <button
           onClick={() => setOpen(true)}
           className="flex items-center justify-center w-[36px] h-[36px] rounded-[8px] border border-[#D0D7DE] bg-white text-[#3C4149] cursor-pointer hover:bg-[#F6F7F9]"
@@ -257,10 +263,17 @@ export function Sidebar(repoProps: SidebarRepoProps = {}) {
         >
           <MenuIcon size={18} />
         </button>
-        <div className="flex items-center gap-2 font-bold text-[15px]">
+        <button
+          onClick={() => {
+            setDetailId(null);
+            setView('day');
+          }}
+          className="flex items-center gap-2 font-bold text-[15px] cursor-pointer bg-transparent border-none text-left"
+          title="Go to Day view"
+        >
           {brandGlyph}
           Worklog
-        </div>
+        </button>
         <div className="flex-1" />
         {!noClients && (
           <button
