@@ -73,6 +73,13 @@ export default function WebApp() {
     });
   }, []);
 
+  const restore = React.useCallback(() => {
+    worklogStore.restorePending().finally(() => setRecovery(null));
+  }, []);
+  const discard = React.useCallback(() => {
+    worklogStore.discardPending().finally(() => setRecovery(null));
+  }, []);
+
   // An unknown /app/* sub-path is a 404 regardless of repo/session state.
   if (route.name === 'notFound') {
     return <NotFoundScreen onHome={navigateToDashboard} />;
@@ -86,13 +93,6 @@ export default function WebApp() {
   if (phase.kind === 'error') {
     return <ErrorScreen message={phase.message} onRetry={() => repo && open(repo)} onSwitch={switchRepo} />;
   }
-
-  const restore = React.useCallback(() => {
-    worklogStore.restorePending().finally(() => setRecovery(null));
-  }, []);
-  const discard = React.useCallback(() => {
-    worklogStore.discardPending().finally(() => setRecovery(null));
-  }, []);
 
   return (
     <>

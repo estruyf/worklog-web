@@ -66,6 +66,23 @@ export function CalendarView() {
 
   const cells = useMemo(() => monthCells(cursor, weekStart), [cursor, weekStart]);
 
+  // Colors used across the visible month, deduped by client/event id, so the
+  // mobile color-only cells can be decoded via a legend underneath the grid.
+  const legend = useMemo(() => {
+    const seen = new Map<string, { color: string; label: string }>();
+    for (const date of cells) {
+      if (!date) continue;
+      for (const l of logsByDate.get(date) ?? []) {
+        if (seen.has(l.clientId)) continue;
+        seen.set(l.clientId, {
+          color: isEventWorklogClientId(l.clientId) ? EVENT_COLOR : colorOf(l.clientId),
+          label: labelFor(l.clientId, clientName),
+        });
+      }
+    }
+    return [...seen.entries()].map(([id, e]) => ({ id, ...e }));
+  }, [cells, logsByDate, colorOf, clientName]);
+
   const openDay = (date: string) => {
     setSelectedDate(date);
     navigateToView('day');
@@ -74,19 +91,21 @@ export function CalendarView() {
   return (
     <div className="flex-1 overflow-auto px-6 pt-8 pb-20">
       <div className="max-w-[920px] mx-auto">
-        <div className="flex items-center gap-3 mb-7">
+        <div className="flex flex-col md:flex-row md:items-center gap-3 mb-7">
           <h1 className="text-[24px] font-bold m-0 tracking-[-0.01em]">Calendar</h1>
-          <div className="flex-1" />
-          <button onClick={() => setCursor(shiftMonth(cursor, -1))} title="Previous month" className="w-7 h-7 border border-[#E5E7EB] rounded-md bg-white text-[#57606A] cursor-pointer flex items-center justify-center hover:bg-[#F6F7F9]">
-            {'<'}
-          </button>
-          <div className="text-[15px] font-semibold min-w-[110px] text-center">{monthLabel(cursor)}</div>
-          <button onClick={() => setCursor(shiftMonth(cursor, 1))} title="Next month" className="w-7 h-7 border border-[#E5E7EB] rounded-md bg-white text-[#57606A] cursor-pointer flex items-center justify-center hover:bg-[#F6F7F9]">
-            {'>'}
-          </button>
-          <button onClick={() => { openDay(today); setCursor(ymOf(today)); }} className="text-[12px] text-[#2D6CDF] border border-[#D0D7DE] rounded-md bg-white cursor-pointer px-[10px] py-[5px] hover:bg-[#F6F7F9]">
-            Today
-          </button>
+          <div className="hidden md:block flex-1" />
+          <div className="flex items-center gap-3">
+            <button onClick={() => setCursor(shiftMonth(cursor, -1))} title="Previous month" className="w-7 h-7 border border-[#E5E7EB] rounded-md bg-white text-[#57606A] cursor-pointer flex items-center justify-center hover:bg-[#F6F7F9]">
+              {'<'}
+            </button>
+            <div className="flex-1 md:flex-none text-[15px] font-semibold md:min-w-[110px] text-center">{monthLabel(cursor)}</div>
+            <button onClick={() => setCursor(shiftMonth(cursor, 1))} title="Next month" className="w-7 h-7 border border-[#E5E7EB] rounded-md bg-white text-[#57606A] cursor-pointer flex items-center justify-center hover:bg-[#F6F7F9]">
+              {'>'}
+            </button>
+            <button onClick={() => { openDay(today); setCursor(ymOf(today)); }} className="text-[12px] text-[#2D6CDF] border border-[#D0D7DE] rounded-md bg-white cursor-pointer px-[10px] py-[5px] hover:bg-[#F6F7F9]">
+              Today
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-7 gap-[6px] mb-2">
@@ -127,7 +146,14 @@ export function CalendarView() {
                   {day}
                 </span>
                 {logs.length > 0 && (
-                  <span className="flex flex-col gap-[3px] w-full overflow-hidden">
+                  <span className="flex md:hidden flex-wrap gap-[3px] w-full">
+                    {Array.from(new Set(logs.map((l) => (isEventWorklogClientId(l.clientId) ? EVENT_COLOR : colorOf(l.clientId))))).map((c, j) => (
+                      <span key={j} className="w-[11px] h-[11px] rounded-full shrink-0" style={{ background: c }} />
+                    ))}
+                  </span>
+                )}
+                {logs.length > 0 && (
+                  <span className="hidden md:flex flex-col gap-[3px] w-full overflow-hidden">
                     {logs.slice(0, 3).map((l, j) => (
                       <span key={j} className="flex items-center gap-[5px] min-w-0">
                         <span
@@ -144,6 +170,17 @@ export function CalendarView() {
             );
           })}
         </div>
+
+        {legend.length > 0 && (
+          <div className="flex md:hidden flex-wrap gap-x-4 gap-y-2 mt-5">
+            {legend.map((e) => (
+              <span key={e.id} className="flex items-center gap-[6px]">
+                <span className="w-[11px] h-[11px] rounded-full shrink-0" style={{ background: e.color }} />
+                <span className="text-[12px] text-[#3C4149]">{e.label}</span>
+              </span>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
