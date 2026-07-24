@@ -212,6 +212,89 @@ export async function commitFiles(
   return { commitSha: newCommit.sha, branch };
 }
 
+export interface CreatedRepo {
+  owner: string;
+  repo: string;
+  defaultBranch: string;
+}
+
+/** Create a new (empty, un-initialized) repository for the authenticated user.
+ *  No `auto_init`, so the repo starts with no commits — {@link scaffoldRepo}
+ *  then lays down the initial commit with the Worklog files. */
+export async function createRepo(token: string, name: string, isPrivate: boolean): Promise<CreatedRepo> {
+  const r = await gh<{ owner: { login: string }; name: string; default_branch: string }>(token, '/user/repos', {
+    method: 'POST',
+    body: JSON.stringify({ name, private: isPrivate, auto_init: false }),
+  });
+  return { owner: r.owner.login, repo: r.name, defaultBranch: r.default_branch || 'main' };
+}
+
+/** Commit the given files as the first (or next) commit on `branch`, creating the
+ *  branch ref when the repo has no commits yet. Handles both a freshly created
+ *  empty repo and an existing repo that already has history. */
+export async function scaffoldRepo(
+  token: string,
+  owner: string,
+  repo: string,
+  branchArg: string | undefined,
+  files: CommitFile[],
+  message: string,
+): Promise<CommitResult> {
+  const repoInfo = await gh<{ default_branch: string }>(token, `/repos/${owner}/${repo}`);
+  const branch = branchArg || repoInfo.default_branch || 'main';
+
+  // An empty repo has no ref yet (404), so there is no parent commit or base tree.
+  let baseCommitSha: string | undefined;
+  let baseTreeSha: string | undefined;
+  try {
+    const ref = await gh<{ object: { sha: string } }>(token, `/repos/${owner}/${repo}/git/ref/heads/${encodeURIComponent(branch)}`);
+    baseCommitSha = ref.object.sha;
+    const baseCommit = await gh<{ tree: { sha: string } }>(token, `/repos/${owner}/${repo}/git/commits/${baseCommitSha}`);
+    baseTreeSha = baseCommit.tree.sha;
+  } catch (err) {
+    // 404 (no ref) / 409 (empty repository) both mean "no history yet".
+    if (!(err instanceof GitHubError && (err.status === 404 || err.status === 409))) {
+      throw err;
+    }
+  }
+
+  const treeEntries = await Promise.all(
+    files.map(async (f) => {
+      const blob = await gh<{ sha: string }>(token, `/repos/${owner}/${repo}/git/blobs`, {
+        method: 'POST',
+        body: JSON.stringify(
+          f.base64 !== undefined ? { content: f.base64, encoding: 'base64' } : { content: f.content ?? '', encoding: 'utf-8' },
+        ),
+      });
+      return { path: f.path, mode: '100644', type: 'blob', sha: blob.sha };
+    }),
+  );
+
+  const newTree = await gh<{ sha: string }>(token, `/repos/${owner}/${repo}/git/trees`, {
+    method: 'POST',
+    body: JSON.stringify({ ...(baseTreeSha ? { base_tree: baseTreeSha } : {}), tree: treeEntries }),
+  });
+
+  const newCommit = await gh<{ sha: string }>(token, `/repos/${owner}/${repo}/git/commits`, {
+    method: 'POST',
+    body: JSON.stringify({ message, tree: newTree.sha, parents: baseCommitSha ? [baseCommitSha] : [] }),
+  });
+
+  if (baseCommitSha) {
+    await gh(token, `/repos/${owner}/${repo}/git/refs/heads/${encodeURIComponent(branch)}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ sha: newCommit.sha, force: false }),
+    });
+  } else {
+    await gh(token, `/repos/${owner}/${repo}/git/refs`, {
+      method: 'POST',
+      body: JSON.stringify({ ref: `refs/heads/${branch}`, sha: newCommit.sha }),
+    });
+  }
+
+  return { commitSha: newCommit.sha, branch };
+}
+
 /** Decode a base64 blob (GitHub returns base64 for file contents) as UTF-8 text. */
 function decodeBase64Utf8(base64: string): string {
   const binary = atob(base64);
