@@ -1,5 +1,5 @@
 // @ts-check
-import { defineConfig } from "astro/config";
+import { defineConfig, fontProviders } from "astro/config";
 import react from "@astrojs/react";
 import cloudflare from "@astrojs/cloudflare";
 import tailwindcss from "@tailwindcss/vite";
@@ -18,6 +18,26 @@ export default defineConfig({
     platformProxy: { enabled: true },
   }),
   integrations: [react()],
+  experimental: {
+    fonts: [
+      {
+        provider: fontProviders.google(),
+        name: "Inter",
+        cssVariable: "--font-inter",
+        weights: [400, 500, 600, 700],
+        styles: ["normal"],
+        fallbacks: ["-apple-system", "system-ui", "Segoe UI", "sans-serif"],
+      },
+      {
+        provider: fontProviders.google(),
+        name: "JetBrains Mono",
+        cssVariable: "--font-jetbrains-mono",
+        weights: [400, 500],
+        styles: ["normal"],
+        fallbacks: ["ui-monospace", "monospace"],
+      },
+    ],
+  },
   vite: {
     plugins: [tailwindcss()],
     resolve: isDev

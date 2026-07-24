@@ -90,10 +90,9 @@ export default function WebApp() {
 
 function Splash({ label }: { label: string }) {
   return (
-    <div style={splashStyle}>
-      <div className="spinner" />
-      <div style={{ color: '#57606a', fontSize: 15 }}>{label}</div>
-      <style>{`.spinner{width:30px;height:30px;border:3px solid #e5e7eb;border-top-color:#e2be2e;border-radius:50%;animation:spin .8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+    <div className={splashCls}>
+      <div className="w-7.5 h-7.5 border-[3px] border-[#e5e7eb] border-t-[#e2be2e] rounded-full animate-spin" />
+      <div className="text-[15px] text-[#57606a]">{label}</div>
     </div>
   );
 }
@@ -101,17 +100,17 @@ function Splash({ label }: { label: string }) {
 function ErrorScreen({ message, onRetry, onSwitch }: { message: string; onRetry: () => void; onSwitch: () => void }) {
   const looksMissing = /404|not found|could not|no ref|not a worklog/i.test(message);
   return (
-    <div style={{ ...splashStyle, padding: 24, textAlign: 'center' }}>
-      <div style={{ fontSize: 40 }}>😕</div>
-      <h2 style={{ margin: 0, color: '#1f2328' }}>Couldn’t open this repository</h2>
-      <p style={{ color: '#57606a', maxWidth: 460 }}>
+    <div className={`${splashCls} p-6 text-center`}>
+      <div className="text-[40px]">😕</div>
+      <h2 className="m-0 text-[#1f2328]">Couldn’t open this repository</h2>
+      <p className="max-w-115 text-[#57606a]">
         {looksMissing
           ? 'This repo may not have a Worklog layout (a .worklog/config.json plus clients/, worklog/ and archive/ folders), or the branch was not found.'
           : message}
       </p>
-      <div style={{ display: 'flex', gap: 10 }}>
-        <button onClick={onRetry} style={btnPrimary}>Retry</button>
-        <button onClick={onSwitch} style={btnSecondary}>Pick another repo</button>
+      <div className="flex gap-2.5">
+        <button onClick={onRetry} className={btnPrimaryCls}>Retry</button>
+        <button onClick={onSwitch} className={btnSecondaryCls}>Pick another repo</button>
       </div>
     </div>
   );
@@ -119,23 +118,15 @@ function ErrorScreen({ message, onRetry, onSwitch }: { message: string; onRetry:
 
 function NotFoundScreen({ onHome }: { onHome: () => void }) {
   return (
-    <div style={{ ...splashStyle, padding: 24, textAlign: 'center' }}>
-      <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.08em', color: '#8a9099' }}>404</div>
-      <h2 style={{ margin: 0, color: '#1f2328' }}>Page not found</h2>
-      <p style={{ color: '#57606a', maxWidth: 420 }}>This page doesn’t exist. It may have been removed or the link was mistyped.</p>
-      <button onClick={onHome} style={btnPrimary}>Back to Worklog</button>
+    <div className={`${splashCls} p-6 text-center`}>
+      <div className="text-[13px] font-bold tracking-[0.08em] text-[#8a9099]">404</div>
+      <h2 className="m-0 text-[#1f2328]">Page not found</h2>
+      <p className="max-w-105 text-[#57606a]">This page doesn’t exist. It may have been removed or the link was mistyped.</p>
+      <button onClick={onHome} className={btnPrimaryCls}>Back to Worklog</button>
     </div>
   );
 }
 
-const splashStyle: React.CSSProperties = {
-  minHeight: '100vh',
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 16,
-  alignItems: 'center',
-  justifyContent: 'center',
-  background: '#fff',
-};
-const btnPrimary: React.CSSProperties = { background: '#f4cf4d', color: '#3a2e05', border: '1px solid #e2be2e', padding: '9px 16px', borderRadius: 8, fontWeight: 600, cursor: 'pointer' };
-const btnSecondary: React.CSSProperties = { background: '#f1f2f4', color: '#1f2328', border: '1px solid #e5e7eb', padding: '9px 16px', borderRadius: 8, fontWeight: 600, cursor: 'pointer' };
+const splashCls = 'min-h-screen flex flex-col gap-4 items-center justify-center bg-white';
+const btnPrimaryCls = 'bg-[#f4cf4d] text-[#3a2e05] border border-[#e2be2e] px-4 py-[9px] rounded-lg font-semibold cursor-pointer';
+const btnSecondaryCls = 'bg-[#f1f2f4] text-[#1f2328] border border-[#e5e7eb] px-4 py-[9px] rounded-lg font-semibold cursor-pointer';

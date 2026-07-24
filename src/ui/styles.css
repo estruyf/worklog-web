@@ -31,7 +31,7 @@
   --vscode-charts-green: #1a7f37;
   --vscode-charts-yellow: #9a6700;
   --vscode-charts-red: #cf222e;
-  --vscode-font-family: "Inter", -apple-system, system-ui, "Segoe UI", sans-serif;
+  --vscode-font-family: var(--font-inter), -apple-system, system-ui, "Segoe UI", sans-serif;
   --vscode-font-size: 14px;
 }
 
@@ -159,7 +159,7 @@ body {
   margin: 18px 0;
 }
 .wl-md .wl-md-code {
-  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
   font-size: 12.5px;
   background: #f4f5f7;
   border: 1px solid #eceef1;
@@ -175,7 +175,7 @@ body {
   overflow-x: auto;
 }
 .wl-md .wl-md-codeblock {
-  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
   font-size: 12.5px;
   line-height: 1.55;
   white-space: pre;

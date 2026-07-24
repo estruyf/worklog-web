@@ -109,50 +109,58 @@ export function RepoPicker({ onPick, lastRepo }: { onPick: (ref: RepoRef) => voi
   };
 
   return (
-    <div style={wrap}>
-      <div style={panel}>
-        <div style={brand}>
-          <img src="/worklog-logo-outline.svg" alt="" width={28} height={28} style={{ borderRadius: 6 }} />
-          <span style={{ fontWeight: 700, fontSize: 18, color: '#1f2328' }}>Worklog</span>
+    <div className="min-h-screen grid place-items-center p-6 bg-[linear-gradient(180deg,#f6f7f9,#eef0f2)]">
+      <div className="bg-white border border-[#e5e7eb] rounded-2xl p-[30px] w-[min(560px,94vw)] shadow-[0_8px_30px_rgba(31,35,40,0.08)]">
+        <div className="flex items-center gap-2 mb-[18px]">
+          <img src="/worklog-logo-outline.svg" alt="" width={28} height={28} className="rounded-md" />
+          <span className="font-bold text-[18px] text-[#1f2328]">Worklog</span>
         </div>
-        <h1 style={{ margin: '0 0 4px', fontSize: 24, color: '#1f2328' }}>Choose a worklog repository</h1>
-        <p style={{ margin: '0 0 18px', color: '#6e7781', fontSize: 14 }}>
+        <h1 className="m-0 mb-1 text-[24px] text-[#1f2328]">Choose a worklog repository</h1>
+        <p className="m-0 mb-[18px] text-[14px] text-[#6e7781]">
           Pick the repo that holds your Worklog files (<code>.worklog/config.json</code>, <code>clients/</code>, <code>worklog/</code>, <code>archive/</code>).
         </p>
 
         {lastRepo && (
-          <button style={lastBtn} onClick={() => onPick(lastRepo)}>
+          <button
+            className="block w-full text-left bg-[#fbefc0] border border-[#e2be2e] text-[#3a2e05] px-3 py-[10px] rounded-lg font-semibold cursor-pointer mb-3"
+            onClick={() => onPick(lastRepo)}
+          >
             ↩ Reopen {lastRepo.owner}/{lastRepo.repo}
           </button>
         )}
 
-        <form onSubmit={submitManual} style={{ display: 'flex', gap: 8, margin: '4px 0 14px' }}>
+        <form onSubmit={submitManual} className="flex gap-2 mt-1 mb-[14px]">
           <input
             value={manual}
             onChange={(e) => setManual(e.target.value)}
             placeholder="owner/repo (or owner/repo@branch)"
-            style={input}
+            className={inputCls}
           />
-          <button type="submit" style={goBtn}>Open</button>
+          <button type="submit" className={goBtnCls}>Open</button>
         </form>
 
-        <button type="button" style={initToggle} onClick={() => setShowInit((v) => !v)} aria-expanded={showInit}>
-          <span style={{ fontWeight: 600 }}>＋ Initialize a new project</span>
-          <span style={{ color: '#8a9099', fontSize: 18, lineHeight: 1 }}>{showInit ? '−' : '+'}</span>
+        <button
+          type="button"
+          className="flex justify-between items-center w-full bg-[#f6f7f9] border border-[#e5e7eb] text-[#1f2328] px-3 py-[10px] rounded-lg cursor-pointer mb-[10px] text-[14px]"
+          onClick={() => setShowInit((v) => !v)}
+          aria-expanded={showInit}
+        >
+          <span className="font-semibold">＋ Initialize a new project</span>
+          <span className="text-[18px] leading-none text-[#8a9099]">{showInit ? '−' : '+'}</span>
         </button>
 
         {showInit && (
-          <form onSubmit={submitInit} style={initPanel}>
-            <p style={{ margin: '0 0 10px', color: '#6e7781', fontSize: 13 }}>
+          <form onSubmit={submitInit} className="border border-[#e5e7eb] rounded-[10px] p-[14px] mb-3 bg-[#fbfbfc]">
+            <p className="m-0 mb-[10px] text-[13px] text-[#6e7781]">
               Scaffold an empty Worklog project (<code>.worklog/config.json</code> plus <code>clients/</code>, <code>worklog/</code> and{' '}
               <code>archive/</code>) into a new or existing repository.
             </p>
 
-            <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-              <button type="button" onClick={() => setInitMode('create')} style={initMode === 'create' ? segOn : segOff}>
+            <div className="flex gap-2 mb-3">
+              <button type="button" onClick={() => setInitMode('create')} className={initMode === 'create' ? segOnCls : segOffCls}>
                 New repository
               </button>
-              <button type="button" onClick={() => setInitMode('existing')} style={initMode === 'existing' ? segOn : segOff}>
+              <button type="button" onClick={() => setInitMode('existing')} className={initMode === 'existing' ? segOnCls : segOffCls}>
                 Existing repository
               </button>
             </div>
@@ -163,10 +171,10 @@ export function RepoPicker({ onPick, lastRepo }: { onPick: (ref: RepoRef) => voi
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
                   placeholder="repository name (e.g. my-timesheet)"
-                  style={{ ...input, marginBottom: 10 }}
+                  className={`${inputCls} mb-[10px]`}
                   disabled={initBusy}
                 />
-                <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#6e7781', marginBottom: 12 }}>
+                <label className="flex items-center gap-2 text-[13px] text-[#6e7781] mb-3">
                   <input type="checkbox" checked={newPrivate} onChange={(e) => setNewPrivate(e.target.checked)} disabled={initBusy} />
                   Private repository
                 </label>
@@ -176,51 +184,52 @@ export function RepoPicker({ onPick, lastRepo }: { onPick: (ref: RepoRef) => voi
                 value={existingRepo}
                 onChange={(e) => setExistingRepo(e.target.value)}
                 placeholder="owner/repo (or owner/repo@branch)"
-                style={{ ...input, marginBottom: 12 }}
+                className={`${inputCls} mb-3`}
                 disabled={initBusy}
               />
             )}
 
-            {initError && <div style={{ color: '#dc2626', fontSize: 13, marginBottom: 10 }}>{initError}</div>}
+            {initError && <div className="text-[13px] text-[#dc2626] mb-[10px]">{initError}</div>}
 
-            <button type="submit" style={{ ...goBtn, padding: '9px 16px', opacity: initBusy ? 0.7 : 1 }} disabled={initBusy}>
+            <button type="submit" className={`${goBtnCls} py-[9px] disabled:opacity-70`} disabled={initBusy}>
               {initBusy ? 'Initializing…' : 'Initialize & open'}
             </button>
           </form>
         )}
 
-        <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search your repositories…" style={{ ...input, marginBottom: 10 }} />
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search your repositories…"
+          className={`${inputCls} mb-[10px]`}
+        />
 
-        {error && <div style={{ color: '#dc2626', fontSize: 13, marginBottom: 10 }}>{error}</div>}
-        {!repos && !error && <div style={{ color: '#8a9099', fontSize: 14, padding: '20px 0' }}>Loading your repositories…</div>}
+        {error && <div className="text-[13px] text-[#dc2626] mb-[10px]">{error}</div>}
+        {!repos && !error && <div className="text-[14px] text-[#8a9099] py-5">Loading your repositories…</div>}
 
-        <div style={list}>
+        <div className="max-h-[360px] overflow-y-auto flex flex-col gap-[6px]">
           {filtered.map((r) => (
-            <button key={r.fullName} style={row} onClick={() => onPick({ owner: r.owner, repo: r.name, branch: r.defaultBranch })}>
-              <span style={{ fontWeight: 600, color: '#1f2328' }}>{r.fullName}</span>
-              <span style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                {r.private && <span style={badge}>private</span>}
-                <span style={{ color: '#8a9099', fontSize: 12 }}>{r.defaultBranch}</span>
+            <button
+              key={r.fullName}
+              className="flex justify-between items-center px-3 py-[10px] border border-[#e5e7eb] rounded-lg bg-white cursor-pointer text-left"
+              onClick={() => onPick({ owner: r.owner, repo: r.name, branch: r.defaultBranch })}
+            >
+              <span className="font-semibold text-[#1f2328]">{r.fullName}</span>
+              <span className="flex items-center gap-2">
+                {r.private && <span className="text-[11px] bg-[#f1f2f4] text-[#57606a] px-[6px] py-px rounded-[20px]">private</span>}
+                <span className="text-[12px] text-[#8a9099]">{r.defaultBranch}</span>
               </span>
             </button>
           ))}
-          {repos && filtered.length === 0 && <div style={{ color: '#8a9099', fontSize: 14, padding: '16px 0' }}>No repositories match “{query}”.</div>}
+          {repos && filtered.length === 0 && <div className="text-[14px] text-[#8a9099] py-4">No repositories match “{query}”.</div>}
         </div>
       </div>
     </div>
   );
 }
 
-const wrap: React.CSSProperties = { minHeight: '100vh', display: 'grid', placeItems: 'center', background: 'linear-gradient(180deg,#f6f7f9,#eef0f2)', padding: 24 };
-const panel: React.CSSProperties = { background: '#fff', border: '1px solid #e5e7eb', borderRadius: 16, padding: 30, width: 'min(560px, 94vw)', boxShadow: '0 8px 30px rgba(31,35,40,.08)' };
-const brand: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 18 };
-const input: React.CSSProperties = { flex: 1, width: '100%', padding: '9px 12px', border: '1px solid #d0d7de', borderRadius: 8, fontSize: 14, color: '#1f2328' };
-const goBtn: React.CSSProperties = { background: '#f4cf4d', color: '#3a2e05', border: '1px solid #e2be2e', padding: '0 16px', borderRadius: 8, fontWeight: 600, cursor: 'pointer' };
-const lastBtn: React.CSSProperties = { display: 'block', width: '100%', textAlign: 'left', background: '#fbefc0', border: '1px solid #e2be2e', color: '#3a2e05', padding: '10px 12px', borderRadius: 8, fontWeight: 600, cursor: 'pointer', marginBottom: 12 };
-const initToggle: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', background: '#f6f7f9', border: '1px solid #e5e7eb', color: '#1f2328', padding: '10px 12px', borderRadius: 8, cursor: 'pointer', marginBottom: 10, fontSize: 14 };
-const initPanel: React.CSSProperties = { border: '1px solid #e5e7eb', borderRadius: 10, padding: 14, marginBottom: 12, background: '#fbfbfc' };
-const segOn: React.CSSProperties = { flex: 1, padding: '7px 10px', border: '1px solid #e2be2e', background: '#fbefc0', color: '#3a2e05', borderRadius: 8, fontWeight: 600, fontSize: 13, cursor: 'pointer' };
-const segOff: React.CSSProperties = { flex: 1, padding: '7px 10px', border: '1px solid #d0d7de', background: '#fff', color: '#57606a', borderRadius: 8, fontWeight: 600, fontSize: 13, cursor: 'pointer' };
-const list: React.CSSProperties = { maxHeight: 360, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6 };
-const row: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', border: '1px solid #e5e7eb', borderRadius: 8, background: '#fff', cursor: 'pointer', textAlign: 'left' };
-const badge: React.CSSProperties = { fontSize: 11, background: '#f1f2f4', color: '#57606a', padding: '1px 6px', borderRadius: 20 };
+// Shared class sets for the repeated form controls.
+const inputCls = 'flex-1 w-full px-3 py-[9px] border border-[#d0d7de] rounded-lg text-[14px] text-[#1f2328]';
+const goBtnCls = 'bg-[#f4cf4d] text-[#3a2e05] border border-[#e2be2e] px-4 rounded-lg font-semibold cursor-pointer';
+const segOnCls = 'flex-1 px-[10px] py-[7px] border border-[#e2be2e] bg-[#fbefc0] text-[#3a2e05] rounded-lg font-semibold text-[13px] cursor-pointer';
+const segOffCls = 'flex-1 px-[10px] py-[7px] border border-[#d0d7de] bg-white text-[#57606a] rounded-lg font-semibold text-[13px] cursor-pointer';
