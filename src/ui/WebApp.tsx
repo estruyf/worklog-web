@@ -153,6 +153,10 @@ function RecoveryPrompt({ info, onRestore, onDiscard }: { info: RecoveryInfo; on
 function Splash({ label }: { label: string }) {
   return (
     <div className={splashCls}>
+      <div className="flex items-center gap-2.5">
+        <img src="/worklog-logo-outline.svg" alt="" width={36} height={36} className="rounded-md" />
+        <span className="font-bold text-[24px] text-neutral-825">Worklog</span>
+      </div>
       <div className="w-7.5 h-7.5 border-[3px] border-neutral-400 border-t-brand-500 rounded-full animate-spin" />
       <div className="text-[15px] text-neutral-700">{label}</div>
     </div>
