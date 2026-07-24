@@ -51,9 +51,9 @@ export function TaskDetailPanel({ windowMode = false }: { windowMode?: boolean }
   const subtasksDone = subtasks.filter(isDone).length;
   const overdue = !!task.due && !isDone(task) && task.due < selectedDate;
   return (
-    <div className={'fixed inset-0 z-40 bg-white overflow-auto' + (windowMode ? '' : ' md:left-57')}> {/* clears the 228px (w-57) desktop sidebar rail */}
+    <div className={'fixed inset-0 z-40 bg-white overflow-auto' + (windowMode ? '' : ' top-13 md:top-0 md:left-57')}> {/* clears the mobile top bar (h-13) and the 228px (w-57) desktop sidebar rail */}
       <div className="max-w-[860px] mx-auto px-8 py-8">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
           {windowMode ? (
             <div />
           ) : (
@@ -61,7 +61,7 @@ export function TaskDetailPanel({ windowMode = false }: { windowMode?: boolean }
               <span className="text-[15px] leading-none">‹</span> Back
             </button>
           )}
-          <div className="flex gap-[8px]">
+          <div className="flex flex-wrap gap-[8px]">
             {!windowMode && (
               <button
                 onClick={onOpenInTab}
