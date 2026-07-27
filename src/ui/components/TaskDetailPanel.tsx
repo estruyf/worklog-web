@@ -23,7 +23,7 @@ function useDetailData() {
  * hidden — the breadcrumb handles that — and parent/subtask navigation pushes the
  * matching task route. */
 export function TaskDetailPanel({ routed = false }: { routed?: boolean } = {}) {
-  const { statusMeta, colorOf, clientName, assetsBase, reopen, toggleWorked, markDone, openEdit: onEdit, deleteTask: onDelete, saveDescription: onSaveDescription, openChildModal, addNote, deleteNote } = useData();
+  const { statusMeta, colorOf, clientName, assetsBase, reopen, toggleWorked, markDone, openEdit: onEdit, deleteTask: onDelete, saveDescription: onSaveDescription, openChildModal, addNote, deleteNote, openTagSearch } = useData();
   const { selectedDate, descDraft, setDescDraft, descMode, setDescMode, setDetailId, noteDraft, setNoteDraft } = useUi();
   const { task, parent, subtasks, descDirty } = useDetailData();
   const img = useMarkdownImages(descDraft, setDescDraft);
@@ -154,11 +154,24 @@ export function TaskDetailPanel({ routed = false }: { routed?: boolean } = {}) {
               </button>
             </span>
           )}
-          {task.tags?.map((tag) => (
-            <span key={tag} className="text-[11px] text-neutral-725 bg-neutral-250 border border-neutral-400 rounded-full px-[8px] py-[2px]">
-              {tag}
-            </span>
-          ))}
+          {/* Tags jump to the tag-filtered search, which the routed task page
+              doesn't mount — there they stay plain labels. */}
+          {task.tags?.map((tag) =>
+            routed ? (
+              <span key={tag} className="text-[11px] text-neutral-725 bg-neutral-250 border border-neutral-400 rounded-full px-[8px] py-[2px]">
+                {tag}
+              </span>
+            ) : (
+              <button
+                key={tag}
+                onClick={() => openTagSearch(tag)}
+                title={`Show everything tagged "${tag}"`}
+                className="text-[11px] text-neutral-725 bg-neutral-250 border border-neutral-400 rounded-full px-[8px] py-[2px] cursor-pointer hover:border-brand-500 hover:bg-brand-175 hover:text-brand-800"
+              >
+                {tag}
+              </button>
+            ),
+          )}
         </div>
         {!isDone(task) && (
           <div className="flex items-center gap-[10px] mb-4 text-[13px] text-neutral-700">

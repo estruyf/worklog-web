@@ -41,7 +41,13 @@ export function useWorklogModel(
   gitPending = false,
   loading = false,
 ) {
-  const clients = snap?.clients ?? [];
+  // `allClients` is every configured client; `clients` is the ones you still work
+  // with. Views default to the latter — archived clients drop out of the pickers,
+  // the day view and the log form — while name/colour lookups and the
+  // retrospective surfaces (Archive, Search) keep resolving against all of them.
+  const allClients = snap?.clients ?? [];
+  const clients = useMemo(() => allClients.filter((c) => !c.archived), [allClients]);
+  const archivedClients = useMemo(() => allClients.filter((c) => c.archived), [allClients]);
   const tasks = snap?.tasks ?? [];
   const worklog = snap?.worklog ?? [];
   const statuses = snap?.statuses ?? [];
@@ -53,11 +59,13 @@ export function useWorklogModel(
   const { selectedDate } = ui;
 
   // O(1) lookups by id, rebuilt only when the snapshot's clients/statuses change.
+  // Built from *all* clients so an archived one still resolves to its name and
+  // colour wherever its history shows up, and so the palette index stays stable.
   const clientById = useMemo(() => {
     const m = new Map<string, { client: Client; index: number }>();
-    clients.forEach((c, i) => m.set(c.id, { client: c, index: i }));
+    allClients.forEach((c, i) => m.set(c.id, { client: c, index: i }));
     return m;
-  }, [clients]);
+  }, [allClients]);
   const statusById = useMemo(() => {
     const m = new Map<string, StatusDef>();
     statuses.forEach((s) => m.set(s.id, s));
@@ -117,6 +125,35 @@ export function useWorklogModel(
     [worklog],
   );
 
+  // ---- tags ----
+  // Every tag in use with how often, most-used first: the filter row in the
+  // search overlay, and what makes a tag chip more than decoration.
+  const allTags = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const t of tasks) {
+      for (const tag of t.tags ?? []) {
+        counts.set(tag, (counts.get(tag) ?? 0) + 1);
+      }
+    }
+    return [...counts.entries()]
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .map(([tag, count]) => ({ tag, count }));
+  }, [tasks]);
+
+  const toggleTagFilter = useCallback((tag: string) => {
+    ui.setTagFilter((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
+    );
+  }, []);
+  const clearTagFilter = useCallback(() => ui.setTagFilter([]), []);
+  /** Follow a tag chip from anywhere in the app into the search overlay, showing
+   *  every task carrying it (open and archived). */
+  const openTagSearch = useCallback((tag: string) => {
+    ui.setTagFilter([tag]);
+    ui.setDetailId(null);
+    ui.setSearchOpen(true);
+  }, []);
+
   // ---- mutations (call the store directly) ----
   const cycleStatus = useCallback(
     (t: Task) => {
@@ -151,7 +188,7 @@ export function useWorklogModel(
     const ls = linksOf(t);
     ui.setMLinks(ls.length ? ls : [""]);
     ui.setMDue(t.due || "");
-    ui.setMTags((t.tags ?? []).join(", "));
+    ui.setMTags(t.tags ?? []);
     ui.setMDescription(t.description || "");
     ui.setMDescMode(t.description ? "preview" : "edit");
     ui.setAddingClient(false);
@@ -234,6 +271,7 @@ export function useWorklogModel(
         onCycle: todo ? undefined : () => cycleStatus(t),
         onEdit: () => openEdit(t),
         onDelete: () => deleteTask(t.id),
+        onTagClick: openTagSearch,
       };
     },
     [
@@ -247,6 +285,7 @@ export function useWorklogModel(
       cycleStatus,
       openEdit,
       deleteTask,
+      openTagSearch,
     ],
   );
   const openRowsFor = useCallback(
@@ -287,7 +326,7 @@ export function useWorklogModel(
     ui.setMParent("");
     ui.setMLinks([""]);
     ui.setMDue("");
-    ui.setMTags("");
+    ui.setMTags([]);
     ui.setMDescription("");
     ui.setMDescMode("edit");
     ui.setAddingClient(false);
@@ -312,7 +351,7 @@ export function useWorklogModel(
     ui.setMParent(parent.id);
     ui.setMLinks([""]);
     ui.setMDue("");
-    ui.setMTags("");
+    ui.setMTags([]);
     ui.setMDescription("");
     ui.setMDescMode("edit");
     ui.setAddingClient(false);
@@ -335,10 +374,8 @@ export function useWorklogModel(
     }
     const links = ui.mLinks.map((l) => l.trim()).filter(Boolean);
     const due = ui.mDue.trim() || undefined;
-    const tags = ui.mTags
-      .split(",")
-      .map((t) => t.trim())
-      .filter(Boolean);
+    // Already normalized and de-duplicated by the tag picker.
+    const tags = ui.mTags;
     const description = ui.mDescription.trim();
     if (ui.editingId) {
       worklogStore.updateTask(ui.editingId, {
@@ -407,6 +444,42 @@ export function useWorklogModel(
     }
     ui.setClientModalOpen(false);
   };
+  /** How much history a client carries. Drives the copy in the client editor and
+   *  gates deletion — the service refuses one that still has tasks or hours. */
+  const clientUsage = useCallback(
+    (id: string) => ({
+      tasks: tasks.filter((t) => t.clientIds.includes(id)).length,
+      worklog: worklog.filter((w) => w.clientId === id).length,
+    }),
+    [tasks, worklog],
+  );
+  const setClientArchived = useCallback((c: Client, archived: boolean) => {
+    worklogStore.setClientArchived(c.id, archived);
+    ui.setClientModalOpen(false);
+  }, []);
+  const deleteClient = useCallback(
+    (c: Client) => {
+      const usage = clientUsage(c.id);
+      if (usage.tasks > 0 || usage.worklog > 0) {
+        // Archiving is the non-destructive answer; the service refuses this too.
+        window.alert(
+          `"${c.name}" still has ${usage.tasks} task${usage.tasks === 1 ? "" : "s"} and ` +
+            `${usage.worklog} time entr${usage.worklog === 1 ? "y" : "ies"}. Archive it instead.`,
+        );
+        return;
+      }
+      if (
+        !window.confirm(
+          `Delete "${c.name}"? It has no tasks or logged time, so nothing is lost. This cannot be undone.`,
+        )
+      ) {
+        return;
+      }
+      worklogStore.deleteClient(c.id);
+      ui.setClientModalOpen(false);
+    },
+    [clientUsage],
+  );
   const openLogForm = () => {
     ui.setLogIsEvent(false);
     ui.setLogEventType("vacation");
@@ -433,6 +506,11 @@ export function useWorklogModel(
     ui.setLogOpen(true);
   };
   const saveLog = () => {
+    // Guards the case where every client is archived: without a client id the
+    // ledger line would serialise hollow.
+    if (!ui.logIsEvent && !ui.logClient) {
+      return;
+    }
     const hours =
       ui.logType === "full"
         ? hoursPerDay
@@ -504,12 +582,16 @@ export function useWorklogModel(
     tasks,
     worklog,
     clients,
+    allClients,
+    archivedClients,
     statuses,
     hoursPerDay,
     weekStart,
     autoSync,
     assetsBase,
-    noClients: clients.length === 0,
+    // Archived clients still count as clients — otherwise archiving the last one
+    // would drop you on the "add your first client" screen with no way back.
+    noClients: allClients.length === 0,
     colorOf,
     clientName,
     statusMeta,
@@ -539,6 +621,13 @@ export function useWorklogModel(
     deleteNote,
     openClientEditor,
     saveClient,
+    clientUsage,
+    setClientArchived,
+    deleteClient,
+    allTags,
+    toggleTagFilter,
+    clearTagFilter,
+    openTagSearch,
     openLogForm,
     editLog,
     saveLog,

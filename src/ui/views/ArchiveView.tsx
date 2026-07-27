@@ -75,8 +75,10 @@ function ArchiveFilterBar({
   filtersActive: boolean;
   resetFilters: () => void;
 }) {
-  const { clients } = useData();
-  const allCount = clients.reduce((n, c) => n + (clientCounts[c.id] ?? 0), 0);
+  // The archive is history: an archived client's closed tasks are still in here,
+  // so the picker has to offer every client, not just the active ones.
+  const { allClients } = useData();
+  const allCount = allClients.reduce((n, c) => n + (clientCounts[c.id] ?? 0), 0);
   return (
     <div className="flex flex-wrap items-center gap-2 mb-5">
       <div className="flex items-center gap-[10px] flex-1 min-w-[220px] px-[12px] py-[8px] border border-neutral-525 rounded-[9px] bg-white focus-within:border-brand-500">
@@ -104,7 +106,7 @@ function ArchiveFilterBar({
         className="px-3 py-[8px] border border-neutral-525 rounded-[9px] text-[14px] bg-white cursor-pointer focus:outline-none focus:border-brand-500"
       >
         <option value="">All clients ({allCount})</option>
-        {clients.map((c) => (
+        {allClients.map((c) => (
           <option key={c.id} value={c.id}>
             {c.name} ({clientCounts[c.id] ?? 0})
           </option>

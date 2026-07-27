@@ -37,14 +37,31 @@ function DueChip({ due, overdue }: { due: string; overdue: boolean }) {
   );
 }
 
-function TagChips({ tags }: { tags: string[] }) {
+/** Tag chips. Clickable when the row supplies `onTagClick`, which opens the
+ * tag-filtered search — otherwise plain labels. */
+function TagChips({ tags, onTagClick }: { tags: string[]; onTagClick?: (tag: string) => void }) {
+  const base = 'shrink-0 text-[11px] text-neutral-725 bg-neutral-250 border border-neutral-400 rounded-full px-[8px] py-[2px]';
   return (
     <>
-      {tags.map((tag) => (
-        <span key={tag} className="shrink-0 text-[11px] text-neutral-725 bg-neutral-250 border border-neutral-400 rounded-full px-[8px] py-[2px]">
-          {tag}
-        </span>
-      ))}
+      {tags.map((tag) =>
+        onTagClick ? (
+          <button
+            key={tag}
+            onClick={(e) => {
+              e.stopPropagation();
+              onTagClick(tag);
+            }}
+            title={`Show everything tagged "${tag}"`}
+            className={base + ' cursor-pointer hover:border-brand-500 hover:bg-brand-175 hover:text-brand-800'}
+          >
+            {tag}
+          </button>
+        ) : (
+          <span key={tag} className={base}>
+            {tag}
+          </span>
+        ),
+      )}
     </>
   );
 }
@@ -118,7 +135,7 @@ export const WorklogTaskRow = React.memo(function WorklogTaskRow({ row }: { row:
         <div className="hidden md:contents">
           {row.progress && <ProgressChip progress={row.progress} barWidth={46} />}
           {row.due && <DueChip due={row.due} overdue={row.overdue} />}
-          <TagChips tags={row.tags} />
+          <TagChips tags={row.tags} onTagClick={row.onTagClick} />
         </div>
         {/* Hover actions — desktop only. */}
         <div className="hidden md:flex items-center gap-[6px] shrink-0 opacity-0 pointer-events-none transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 group-hover:pointer-events-auto group-focus-within:pointer-events-auto">
@@ -154,7 +171,7 @@ export const WorklogTaskRow = React.memo(function WorklogTaskRow({ row }: { row:
           )}
           {row.progress && <ProgressChip progress={row.progress} barWidth={38} />}
           {row.due && <DueChip due={row.due} overdue={row.overdue} />}
-          <TagChips tags={row.tags} />
+          <TagChips tags={row.tags} onTagClick={row.onTagClick} />
           {row.hasLink && <LinkChip link={row.link} size={13} />}
         </div>
       )}

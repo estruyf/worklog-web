@@ -32,8 +32,11 @@ export interface PendingSnapshot {
   text: Record<string, string>;
   /** repo-relative path -> base64 bytes. */
   binary: Record<string, string>;
-  /** The dirty paths (a subset of the text/binary keys). */
+  /** The dirty paths (the text/binary keys, plus the deleted ones). */
   dirty: string[];
+  /** Dirty paths that were deleted, so they aren't restored as empty files.
+   *  Absent on snapshots written before deletes existed. */
+  deleted?: string[];
 }
 
 /** Compose the object-store key from a repo triple. */

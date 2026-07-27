@@ -53,6 +53,12 @@ export class FileMap {
   readonly binary = new Map<string, Uint8Array>();
   /** Paths written since load; the host commits exactly these. */
   readonly dirty = new Set<string>();
+  /** Dirty paths that were removed rather than written; they commit as tree
+   *  deletions instead of blobs. */
+  readonly deleted = new Set<string>();
+  /** Paths the branch is known to hold — everything loaded, plus everything a
+   *  successful sync wrote. A delete only has to reach GitHub for those. */
+  readonly remote = new Set<string>();
 
   /** Blob SHA per path as loaded from GitHub, to skip unchanged files on reload. */
   readonly baseSha = new Map<string, string>();
@@ -90,14 +96,37 @@ export async function readText(path: string): Promise<string | undefined> {
 
 export async function writeText(path: string, text: string): Promise<void> {
   const fm = fileMap();
+  fm.deleted.delete(path); // re-creating a deleted path cancels the deletion
   fm.text.set(path, text);
   fm.markDirty(path);
 }
 
 export async function writeBytes(path: string, bytes: Uint8Array): Promise<void> {
   const fm = fileMap();
+  fm.deleted.delete(path);
   fm.binary.set(path, bytes);
   fm.markDirty(path);
+}
+
+/** Remove a file. It commits as a tree deletion when the branch actually holds
+ *  it; a file that only ever existed locally is just dropped from the pending set. */
+export async function deleteFile(path: string): Promise<void> {
+  const fm = fileMap();
+  fm.text.delete(path);
+  fm.binary.delete(path);
+  if (fm.remote.has(path)) {
+    fm.deleted.add(path);
+    fm.markDirty(path);
+  } else {
+    fm.deleted.delete(path);
+    fm.dirty.delete(path);
+  }
+}
+
+/** Every text path currently in the map, for services that work on a folder
+ *  (there are no directories to list — the map is flat). */
+export function listTextPaths(): string[] {
+  return [...fileMap().text.keys()];
 }
 
 /** Directories are implicit in the flat map — nothing to create. Kept so the
@@ -154,7 +183,13 @@ export class Workspace {
       return {
         hoursPerDay: parsed.hoursPerDay && parsed.hoursPerDay > 0 ? parsed.hoursPerDay : DEFAULT_HOURS_PER_DAY,
         weekStart: parseWeekStart(parsed.weekStart),
-        clients: Array.isArray(parsed.clients) ? parsed.clients.filter((c): c is Client => !!c && !!c.id) : [],
+        // `archived` is normalized to true-or-absent so it never round-trips a
+        // stray value into config.json (JSON.stringify drops the undefined).
+        clients: Array.isArray(parsed.clients)
+          ? parsed.clients
+              .filter((c): c is Client => !!c && !!c.id)
+              .map((c) => ({ ...c, archived: c.archived === true ? true : undefined }))
+          : [],
         statuses: statuses.length ? statuses : DEFAULT_STATUSES,
         autoSync: parseAutoSync(parsed.autoSync),
       };

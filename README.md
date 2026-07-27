@@ -133,7 +133,11 @@ The dashboard mirrors the VS Code extension:
 - **Calendar** — a month grid of logged time; click a day to jump to it, or plan a task with a
   due date.
 - **Clients** — every client and its open tasks. Create/edit clients (name + accent colour), add
-  tasks with links, tags, due dates, descriptions and subtasks.
+  tasks with links, tags, due dates, descriptions and subtasks. Retire a client you no longer work
+  with by **archiving** it: it drops out of the pickers, the Day view and the log form, while every
+  task and logged hour stays put and keeps reporting. Archived clients are listed (and restored)
+  under the client list. **Delete** is offered only for a client with no tasks and no logged time —
+  anything else would orphan billing history, so archive that instead.
 - **Archive** — closed tasks by client/month; reopen one to move it back to its client file.
 - **Insights** — per-client hours and derived days for a month, an events breakdown, and a monthly
   trend chart.
@@ -142,6 +146,14 @@ The dashboard mirrors the VS Code extension:
 GitHub automatically about a minute after your last change. Click the **sync** button in the top
 bar to commit right away. Commit messages match the extension's format:
 `chore: worklog sync <date>`.
+
+**Tags:** the task form picks from the tags already in use — type to filter them, `↑/↓` and `↵` to
+choose, and **Create "…"** appears only when nothing existing matches, so the vocabulary doesn't
+drift into typos. A re-spelling folds onto the tag that exists (typing `Mobile` reuses `mobile`).
+
+A tag chip is also a filter wherever it appears — click one on a task, in the detail panel or in a
+search hit to see every task carrying it, open and archived. Search (`⌘/Ctrl+F`) has a tag row of
+its own: pick one or more tags (a task must carry all of them) with or without a query.
 
 **Keyboard shortcuts:** `⌘/Ctrl+N` new task · `⌘/Ctrl+F` or `⌘/Ctrl+S` search · `⌘/Ctrl+L` log time
 (Day view) · `⌘/Ctrl+R` reload from GitHub · `Esc` close the top dialog.

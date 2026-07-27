@@ -7,14 +7,16 @@ import { clientIdOf, fmtLong, fmtShort, isDone } from '../utils';
 
 /** Derives the selected client's open rows, done list, counts and last-worked label. */
 function useClientsData() {
-  const { tasks, worklog, clients, today, colorOf, openRowsFor } = useData();
+  const { tasks, worklog, clients, allClients, archivedClients, today, colorOf, openRowsFor } = useData();
   const { selectedClient } = useUi();
 
   const openTasks = useMemo(() => tasks.filter((t) => !isDone(t)), [tasks]);
-  const selectedClientObj = useMemo(() => clients.find((c) => c.id === selectedClient), [clients, selectedClient]);
+  // Selection resolves against every client: an archived one is still openable
+  // from the archived list below, it just isn't offered by default.
+  const selectedClientObj = useMemo(() => allClients.find((c) => c.id === selectedClient), [allClients, selectedClient]);
   const clientOpenCounts = useMemo(
-    () => Object.fromEntries(clients.map((c) => [c.id, openTasks.filter((t) => clientIdOf(t) === c.id).length])),
-    [clients, openTasks],
+    () => Object.fromEntries(allClients.map((c) => [c.id, openTasks.filter((t) => clientIdOf(t) === c.id).length])),
+    [allClients, openTasks],
   );
   const scOpen = useMemo(() => tasks.filter((t) => clientIdOf(t) === selectedClient && !isDone(t)), [tasks, selectedClient]);
   const selectedOpenRows = useMemo<WorklogRow[]>(() => openRowsFor(scOpen), [openRowsFor, scOpen]);
@@ -33,6 +35,7 @@ function useClientsData() {
 
   return {
     clients,
+    archivedClients,
     selectedColor: colorOf(selectedClient),
     selectedName: selectedClientObj?.name ?? '',
     selectedClientObj,
@@ -48,6 +51,7 @@ function useClientsData() {
  * name and open-task count. Replaces the sidebar list on narrow screens. */
 function MobileClientDropdown({
   clients,
+  archivedClients,
   selectedClient,
   selectedName,
   clientOpenCounts,
@@ -56,6 +60,7 @@ function MobileClientDropdown({
   onAdd,
 }: {
   clients: Client[];
+  archivedClients: Client[];
   selectedClient: string;
   selectedName: string;
   clientOpenCounts: Record<string, number>;
@@ -109,6 +114,29 @@ function MobileClientDropdown({
               </div>
             );
           })}
+          {archivedClients.length > 0 && (
+            <>
+              <div className="mx-3 mt-[10px] mb-[6px] pt-[10px] border-t border-neutral-325 text-[10.5px] font-bold tracking-[0.06em] text-neutral-675">
+                ARCHIVED · {archivedClients.length}
+              </div>
+              {archivedClients.map((c) => (
+                <div
+                  key={c.id}
+                  onClick={() => { onSelect(c.id); setOpen(false); }}
+                  className={
+                    'flex items-center justify-between px-3 py-[10px] mx-[6px] rounded-lg cursor-pointer ' +
+                    (c.id === selectedClient ? 'bg-brand-225' : 'hover:bg-neutral-200')
+                  }
+                >
+                  <span className="flex items-center gap-[9px] min-w-0 opacity-65">
+                    <span className="w-[9px] h-[9px] rounded-full shrink-0" style={{ background: colorOf(c.id) }} />
+                    <span className="font-semibold text-[14px] truncate">{c.name}</span>
+                  </span>
+                  <span className="text-neutral-625 text-[13px]">{clientOpenCounts[c.id] ?? 0}</span>
+                </div>
+              ))}
+            </>
+          )}
           <div
             onClick={() => { onAdd(); setOpen(false); }}
             className="flex items-center gap-[6px] mx-[6px] mt-[6px] px-3 py-[10px] border border-dashed border-neutral-550 rounded-lg text-neutral-700 text-[13px] cursor-pointer hover:border-brand-500 hover:text-brand-800"
@@ -122,10 +150,11 @@ function MobileClientDropdown({
 }
 
 export function ClientsView() {
-  const { statusMeta, openDetail, openClientEditor, colorOf } = useData();
-  const { selectedClient, setSelectedClient } = useUi();
+  const { statusMeta, openDetail, openClientEditor, colorOf, setClientArchived } = useData();
+  const { selectedClient, setSelectedClient, showArchivedClients, setShowArchivedClients } = useUi();
   const {
     clients,
+    archivedClients,
     selectedColor,
     selectedName,
     selectedClientObj,
@@ -139,6 +168,7 @@ export function ClientsView() {
     <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
       <MobileClientDropdown
         clients={clients}
+        archivedClients={archivedClients}
         selectedClient={selectedClient}
         selectedName={selectedName}
         clientOpenCounts={clientOpenCounts}
@@ -170,11 +200,50 @@ export function ClientsView() {
         >
           <span className="text-[15px] leading-none">+</span> Add client
         </button>
+
+        {/* Retired clients, folded away — still openable, so their history and
+            the Restore button stay one click from here. */}
+        {archivedClients.length > 0 && (
+          <div className="mt-4 pt-3 border-t border-neutral-325">
+            <button
+              onClick={() => setShowArchivedClients(!showArchivedClients)}
+              className="flex items-center gap-[6px] w-full px-3 py-[6px] bg-transparent border-none text-[11px] font-bold tracking-[0.06em] text-neutral-675 cursor-pointer hover:text-neutral-825"
+            >
+              <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" className={'transition-transform ' + (showArchivedClients ? 'rotate-90' : '')}>
+                <path d="M6 3l5 5-5 5" />
+              </svg>
+              ARCHIVED · {archivedClients.length}
+            </button>
+            {showArchivedClients &&
+              archivedClients.map((c) => {
+                const active = c.id === selectedClient;
+                return (
+                  <div
+                    key={c.id}
+                    onClick={() => setSelectedClient(c.id)}
+                    title={`${c.name} — archived`}
+                    className={'flex items-center justify-between px-3 py-[9px] rounded-lg cursor-pointer mb-[3px] ' + (active ? 'bg-brand-225' : 'bg-transparent hover:bg-neutral-200')}
+                  >
+                    <span className="flex items-center gap-[9px] opacity-65">
+                      <span className="w-[9px] h-[9px] rounded-full" style={{ background: colorOf(c.id) }} />
+                      <span className="font-semibold text-[14px]">{c.name}</span>
+                    </span>
+                    <span className="text-neutral-625 text-[13px]">{clientOpenCounts[c.id] ?? 0}</span>
+                  </div>
+                );
+              })}
+          </div>
+        )}
       </div>
       <div className="flex-1 overflow-auto px-5 py-6 md:px-9 md:py-[30px]">
         <div className="flex items-center flex-wrap gap-[14px] mb-7">
           <span className="w-[11px] h-[11px] rounded-full" style={{ background: selectedColor }} />
           <h1 className="text-[24px] font-bold m-0">{selectedName}</h1>
+          {selectedClientObj?.archived && (
+            <span title="Hidden from the pickers and lists; its history is untouched" className="text-[10.5px] font-bold tracking-[0.05em] text-neutral-675 bg-neutral-250 border border-neutral-400 rounded-full px-[9px] py-[3px]">
+              ARCHIVED
+            </span>
+          )}
           <span className="text-[14px] text-neutral-675">{selectedLastWorked}</span>
           {selectedClientObj && (
             <button
@@ -186,6 +255,15 @@ export function ClientsView() {
                 <path d="M11.5 2.5l2 2L6 12l-3 1 1-3 7.5-7.5z" />
               </svg>
               Edit
+            </button>
+          )}
+          {selectedClientObj?.archived && (
+            <button
+              onClick={() => setClientArchived(selectedClientObj, false)}
+              title="Bring this client back into the pickers and lists"
+              className="flex items-center gap-[5px] px-[10px] py-[5px] border border-neutral-400 rounded-md bg-white text-neutral-700 text-[12.5px] cursor-pointer hover:bg-neutral-200"
+            >
+              Restore
             </button>
           )}
         </div>

@@ -58,7 +58,13 @@ export function WorklogProvider({ children }: { children: React.ReactNode }) {
     }
     ui.setSelectedDate((d) => d || snap.today);
     ui.setMonth((mo) => mo || snap.today.slice(0, 7));
-    ui.setSelectedClient((c) => (c && snap.clients.some((x) => x.id === c) ? c : snap.clients[0]?.id || ''));
+    // Keep whatever is selected if it still exists (archived included — the
+    // Clients view can open those); otherwise fall back to an active client.
+    ui.setSelectedClient((c) =>
+      c && snap.clients.some((x) => x.id === c)
+        ? c
+        : (snap.clients.find((x) => !x.archived) ?? snap.clients[0])?.id || '',
+    );
     const pending = ui.pendingClient.current;
     if (pending) {
       const match = snap.clients.find((c) => c.name === pending.name);

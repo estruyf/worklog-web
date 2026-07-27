@@ -60,10 +60,16 @@ function useDayData() {
 }
 
 export function DayView() {
-  const { today, clients, colorOf, clientName, statusMeta, reopen, openDetail, typeLabel, hoursPerDay, logState, setLogState, saveLog, removeLog, editLog, openLogForm, openModalForDue } = useData();
+  const { today, clients, allClients, colorOf, clientName, statusMeta, reopen, openDetail, typeLabel, hoursPerDay, logState, setLogState, saveLog, removeLog, editLog, openLogForm, openModalForDue } = useData();
   const { selectedDate, setSelectedDate, editDayOpen, setEditDayOpen } = useUi();
   const { openTasks, dayLogs, dueRows, todoRows, openGroups, doneTasks, workedGroups, isTodaySel } = useDayData();
   const onSelectDate = setSelectedDate;
+  // New time goes to active clients only, but editing an entry logged before its
+  // client was archived still shows (and keeps) that client.
+  const logClients = useMemo(() => {
+    const current = allClients.find((c) => c.id === logState.client);
+    return current?.archived ? [...clients, current] : clients;
+  }, [clients, allClients, logState.client]);
   const openTasksCount = openTasks.length;
   const isFuture = selectedDate > today;
   // Day rollup for the LOGGED pill: total hours and the derived days.
@@ -105,7 +111,7 @@ export function DayView() {
             setLogState={setLogState}
             saveLog={saveLog}
             removeLog={removeLog}
-            clients={clients}
+            clients={logClients}
             colorOf={colorOf}
           />
         )}

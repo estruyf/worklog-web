@@ -49,6 +49,9 @@ export interface WorklogRow {
   onCycle?: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  /** Follows a tag chip into the tag-filtered search. Omitted where tags are
+   *  shown but not actionable. */
+  onTagClick?: (tag: string) => void;
 }
 
 /** A client bucket of open/worked task rows for the Today and Clients views. */
