@@ -101,7 +101,7 @@ export function InsightsView() {
   };
   return (
     <div className="flex-1 overflow-auto px-6 py-[34px]">
-      <div className="max-w-[820px] mx-auto">
+      <div className="max-w-[920px] mx-auto">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-[24px] font-bold m-0">Insights</h1>
           <select value={month} onChange={(e) => setMonth(e.target.value)} className="px-3 py-2 border border-neutral-525 rounded-lg text-[14px] bg-white cursor-pointer">
