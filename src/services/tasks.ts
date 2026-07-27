@@ -8,6 +8,7 @@ import { serializeTask } from '../parser/taskParser';
 import { today } from '../util/date';
 import { appendTaskBlock } from '../commands/shared';
 import { writeText, readText, ensureDir } from '../workspace/paths';
+import { GENERAL_TODO_CLIENT_ID, generalTodoClient, isGeneralTodoClientId } from '../model/todos';
 
 export interface NewTaskInput {
   title: string;
@@ -46,7 +47,11 @@ export async function createTask(store: Store, input: NewTaskInput): Promise<Tas
   if (!title) {
     throw new Error('A task title is required.');
   }
-  const client = store.db.getClients().find((c) => c.id === input.clientId);
+  // General to-dos use a reserved pseudo-client that may not exist yet (no file
+  // until the first to-do is created), so fall back to its virtual record.
+  const client =
+    store.db.getClients().find((c) => c.id === input.clientId) ??
+    (isGeneralTodoClientId(input.clientId) ? generalTodoClient() : undefined);
   if (!client) {
     throw new Error(`Unknown client "${input.clientId}".`);
   }
@@ -80,6 +85,9 @@ export async function createClient(store: Store, input: NewClientInput): Promise
   const id = (input.id?.trim() || slugifyClientId(name));
   if (!/^[a-z0-9][a-z0-9-]*$/.test(id)) {
     throw new Error('Client id must be lowercase letters, numbers and dashes.');
+  }
+  if (id === GENERAL_TODO_CLIENT_ID) {
+    throw new Error(`"${GENERAL_TODO_CLIENT_ID}" is reserved for general to-dos.`);
   }
   if (store.db.getClients().some((c) => c.id === id)) {
     throw new Error(`A client with id "${id}" already exists.`);

@@ -12,6 +12,7 @@ import { FileMap, mountFileMap } from '../workspace/paths';
 import { today } from '../util/date';
 import { createClient, createTask, updateClient } from '../services/tasks';
 import { saveImageAsset } from '../services/assets';
+import { isGeneralTodoClientId } from '../model/todos';
 import {
   addTaskNote,
   closeTaskById,
@@ -211,8 +212,10 @@ class WorklogStore {
     }
   }
 
-  /** Commit dirty files now. Used by the Sync button (loud: shows status toasts)
-   *  and the background debounce (silent: only surfaces errors). */
+  /** Commit dirty files now. Used by the Sync button and the background debounce.
+   *  Both report progress ("Syncing changes…" → "Changes synced") and failures;
+   *  `silent` only suppresses the no-op "Everything is up to date" notice, which
+   *  a background sync has no reason to announce. */
   async sync(options: { silent?: boolean } = {}): Promise<void> {
     const { silent = false } = options;
     if (!this.repo || this.committing) {
@@ -227,9 +230,7 @@ class WorklogStore {
     this.clearCommitTimer();
     this.committing = true;
     this.updateSnapshot({ loading: true });
-    if (!silent) {
-      this.emitToast('Syncing changes…', 'loading');
-    }
+    this.emitToast('Syncing changes…', 'loading');
     try {
       const files = [...this.fm.dirty].map((path) => {
         if (this.fm.binary.has(path)) {
@@ -262,9 +263,7 @@ class WorklogStore {
       this.clearPersistTimer();
       void clearPending(this.repoKey());
       this.updateSnapshot({ gitPending: false });
-      if (!silent) {
-        this.emitToast('Changes synced', 'success');
-      }
+      this.emitToast('Changes synced', 'success');
     } catch (err) {
       // Failures surface even for background syncs.
       this.emitToast(`Sync failed: ${err instanceof Error ? err.message : String(err)}`, 'error');
@@ -376,7 +375,9 @@ class WorklogStore {
       autoSync: config.autoSync,
       assetsBase,
       statuses: config.statuses,
-      clients: this.store.db.getClients(),
+      // The general to-do bucket is a task-only concept; keep it out of the
+      // client list so it never surfaces in billing (log form, dashboard, totals).
+      clients: this.store.db.getClients().filter((c) => !isGeneralTodoClientId(c.id)),
       tasks: this.store.db.getAllTasks(),
       worklog: this.store.db.getAllWorklog(),
     };

@@ -11,6 +11,12 @@ import {
   formatEventTypeLabel,
   isEventWorklogClientId,
 } from "../../model/worklog";
+import {
+  GENERAL_TODO_CLIENT_ID,
+  GENERAL_TODO_COLOR,
+  GENERAL_TODO_LABEL,
+  isGeneralTodoClientId,
+} from "../../model/todos";
 import type { WorklogState } from "../state";
 import { worklogStore, type ToastMessage } from "../../data/worklogStore";
 import { navigateToTask } from "../router";
@@ -60,6 +66,9 @@ export function useWorklogModel(
 
   const colorOf = useCallback(
     (id: string): string => {
+      if (isGeneralTodoClientId(id)) {
+        return GENERAL_TODO_COLOR;
+      }
       const hit = clientById.get(id);
       const i = hit ? hit.index : -1;
       return (
@@ -72,9 +81,11 @@ export function useWorklogModel(
   const clientName = useCallback(
     (id: string): string =>
       clientById.get(id)?.client.name ??
-      (isEventWorklogClientId(id)
-        ? formatEventTypeLabel(eventTypeFromClientId(id))
-        : "?"),
+      (isGeneralTodoClientId(id)
+        ? GENERAL_TODO_LABEL
+        : isEventWorklogClientId(id)
+          ? formatEventTypeLabel(eventTypeFromClientId(id))
+          : "?"),
     [clientById],
   );
 
@@ -190,9 +201,12 @@ export function useWorklogModel(
   // ---- row builders ----
   const makeRow = useCallback(
     (t: Task, child: boolean): WorklogRow => {
-      const m = statusMeta(t.status, isDone(t));
       const ls = linksOf(t);
-      const worked = workedOnDate(t, selectedDate);
+      // General to-dos are open or closed only: no worked-on marking and no
+      // status to show or cycle through.
+      const todo = isGeneralTodoClientId(clientIdOf(t));
+      const m = todo ? undefined : statusMeta(t.status, isDone(t));
+      const worked = !todo && workedOnDate(t, selectedDate);
       const children = tasks.filter((c) => c.parentId === t.id);
       const progress = children.length
         ? { done: children.filter(isDone).length, total: children.length }
@@ -201,8 +215,8 @@ export function useWorklogModel(
         id: t.id,
         title: t.title,
         pad: child ? "40px" : "10px",
-        statusLabel: m.label,
-        statusColor: m.color,
+        statusLabel: m?.label,
+        statusColor: m?.color,
         worked,
         workedTitle: worked
           ? "Unmark worked on this day"
@@ -216,8 +230,8 @@ export function useWorklogModel(
         onView: () => openDetail(t),
         onOpenTab: () => navigateToTask(t.id),
         onDone: () => markDone(t),
-        onWorked: () => toggleWorked(t),
-        onCycle: () => cycleStatus(t),
+        onWorked: todo ? undefined : () => toggleWorked(t),
+        onCycle: todo ? undefined : () => cycleStatus(t),
         onEdit: () => openEdit(t),
         onDelete: () => deleteTask(t.id),
       };
@@ -284,6 +298,12 @@ export function useWorklogModel(
   const openModalForDue = (due: string) => {
     openModal();
     ui.setMDue(due);
+  };
+  // Open the new-task modal pre-assigned to the general to-do bucket, so the
+  // To-dos view can add straight to its own list.
+  const openTodoModal = () => {
+    openModal();
+    ui.setMClient(GENERAL_TODO_CLIENT_ID);
   };
   const openChildModal = (parent: Task) => {
     ui.setEditingId(null);
@@ -509,6 +529,7 @@ export function useWorklogModel(
     deleteTask,
     openModal,
     openModalForDue,
+    openTodoModal,
     openChildModal,
     openModalFromShortcut,
     saveTask,

@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { clientIdOf, isDone, linksOf, renderMarkdown, makeImageResolver, workedOnDate } from '../utils';
 import { BriefcaseIcon } from 'lucide-react';
+import { isGeneralTodoClientId } from '../../model/todos';
 import { useData, useUi } from '../context';
 import { useMarkdownImages } from '../hooks';
 import { navigateToDashboard, navigateToTask } from '../router';
@@ -49,7 +50,9 @@ export function TaskDetailPanel({ routed = false }: { routed?: boolean } = {}) {
       deleteNote(task.id, index);
     }
   };
-  const worked = workedOnDate(task, selectedDate);
+  // General to-dos are open or closed only — no worked-on marking.
+  const isTodo = isGeneralTodoClientId(clientIdOf(task));
+  const worked = !isTodo && workedOnDate(task, selectedDate);
   const subtasksDone = subtasks.filter(isDone).length;
   const overdue = !!task.due && !isDone(task) && task.due < selectedDate;
   return (
@@ -90,19 +93,21 @@ export function TaskDetailPanel({ routed = false }: { routed?: boolean } = {}) {
                 Open page
               </button>
             )}
-            <button
-              onClick={() => toggleWorked(task)}
-              title={worked ? 'Unmark worked on this day' : 'Mark worked on this day'}
-              className={
-                'flex items-center gap-[6px] px-[14px] py-[7px] border rounded-[7px] font-semibold text-[13px] cursor-pointer ' +
-                (worked
-                  ? 'border-brand-500 bg-brand-225 text-brand-650 hover:bg-brand-275'
-                  : 'border-brand-400 bg-brand-100 text-brand-625 hover:bg-brand-200')
-              }
-            >
-              <BriefcaseIcon className="w-[13px] h-[13px]" />
-              {worked ? 'Worked marked' : 'Mark worked'}
-            </button>
+            {!isTodo && (
+              <button
+                onClick={() => toggleWorked(task)}
+                title={worked ? 'Unmark worked on this day' : 'Mark worked on this day'}
+                className={
+                  'flex items-center gap-[6px] px-[14px] py-[7px] border rounded-[7px] font-semibold text-[13px] cursor-pointer ' +
+                  (worked
+                    ? 'border-brand-500 bg-brand-225 text-brand-650 hover:bg-brand-275'
+                    : 'border-brand-400 bg-brand-100 text-brand-625 hover:bg-brand-200')
+                }
+              >
+                <BriefcaseIcon className="w-[13px] h-[13px]" />
+                {worked ? 'Worked marked' : 'Mark worked'}
+              </button>
+            )}
             {isDone(task) ? (
               <button onClick={() => reopen(task)} className="px-[14px] py-[7px] border border-neutral-400 rounded-[7px] bg-white text-neutral-750 font-semibold text-[13px] cursor-pointer hover:bg-neutral-200">
                 Reopen
@@ -132,9 +137,11 @@ export function TaskDetailPanel({ routed = false }: { routed?: boolean } = {}) {
         </div>
 
         <div className="flex items-center gap-[10px] mb-3">
-          <span className="text-[10.5px] font-bold tracking-[0.05em]" style={{ color: statusMeta(task.status, isDone(task)).color }}>
-            {statusMeta(task.status, isDone(task)).label}
-          </span>
+          {!isTodo && (
+            <span className="text-[10.5px] font-bold tracking-[0.05em]" style={{ color: statusMeta(task.status, isDone(task)).color }}>
+              {statusMeta(task.status, isDone(task)).label}
+            </span>
+          )}
           <span className="flex items-center gap-[6px] text-[13px] text-neutral-750">
             <span className="w-[8px] h-[8px] rounded-full" style={{ background: colorOf(clientIdOf(task)) }} />
             {clientName(clientIdOf(task))}

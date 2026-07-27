@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { useData, useUi } from '../context';
 import { useMarkdownImages } from '../hooks';
 import { clientIdOf, isDone, renderMarkdown, makeImageResolver } from '../utils';
+import { GENERAL_TODO_CLIENT_ID, GENERAL_TODO_COLOR, GENERAL_TODO_LABEL } from '../../model/todos';
 
 /** Derives the parent-task options and save-enabled flag for the open form. */
 function useTaskFormData() {
@@ -96,6 +97,20 @@ export function TaskFormModal() {
               </button>
             );
           })}
+          <button
+            onClick={() => {
+              setClientId(GENERAL_TODO_CLIENT_ID);
+              setParentId('');
+            }}
+            title="A general to-do not linked to any client"
+            className={
+              'flex items-center gap-2 px-4 py-[9px] rounded-full text-[14px] font-semibold cursor-pointer border text-neutral-825 ' +
+              (clientId === GENERAL_TODO_CLIENT_ID ? 'border-brand-500 bg-brand-450' : 'border-neutral-525 bg-neutral-350')
+            }
+          >
+            <span className="w-[9px] h-[9px] rounded-full" style={{ background: GENERAL_TODO_COLOR }} />
+            {GENERAL_TODO_LABEL}
+          </button>
           {!addingClient && (
             <button onClick={() => setAddingClient(true)} className="flex items-center gap-[6px] px-4 py-[9px] border border-dashed border-neutral-550 rounded-full bg-white text-neutral-700 text-[13px] cursor-pointer">
               + Add client
