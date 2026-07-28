@@ -229,9 +229,36 @@ export async function createRepo(token: string, name: string, isPrivate: boolean
   return { owner: r.owner.login, repo: r.name, defaultBranch: r.default_branch || 'main' };
 }
 
+/** Does the repo have any commits at all? A brand-new repo created without
+ *  `auto_init` has none, and GitHub answers 409 ("Git Repository is empty.") on
+ *  every Git Data endpoint until it does. */
+async function repoHasCommits(token: string, owner: string, repo: string): Promise<boolean> {
+  try {
+    await gh<unknown[]>(token, `/repos/${owner}/${repo}/commits?per_page=1`);
+    return true;
+  } catch (err) {
+    if (err instanceof GitHubError && (err.status === 404 || err.status === 409)) {
+      return false;
+    }
+    throw err;
+  }
+}
+
+/** The Git Data API (blobs/trees/commits) refuses to touch a repo with no commits,
+ *  but the Contents API can write to one — so lay down a throwaway file with it to
+ *  get the repo out of the "empty" state. The caller force-replaces this commit with
+ *  a real root commit, so neither the placeholder nor this commit survives. */
+async function bootstrapEmptyRepo(token: string, owner: string, repo: string): Promise<void> {
+  await gh(token, `/repos/${owner}/${repo}/contents/.worklog-init`, {
+    method: 'PUT',
+    body: JSON.stringify({ message: 'chore: initialize repository', content: btoa('init') }),
+  });
+}
+
 /** Commit the given files as the first (or next) commit on `branch`, creating the
  *  branch ref when the repo has no commits yet. Handles both a freshly created
- *  empty repo and an existing repo that already has history. */
+ *  empty repo and an existing repo that already has history. Scaffolding never
+ *  overwrites: files that already exist on the branch are left untouched. */
 export async function scaffoldRepo(
   token: string,
   owner: string,
@@ -241,25 +268,45 @@ export async function scaffoldRepo(
   message: string,
 ): Promise<CommitResult> {
   const repoInfo = await gh<{ default_branch: string }>(token, `/repos/${owner}/${repo}`);
-  const branch = branchArg || repoInfo.default_branch || 'main';
+  const defaultBranch = repoInfo.default_branch || 'main';
+  const branch = branchArg || defaultBranch;
 
-  // An empty repo has no ref yet (404), so there is no parent commit or base tree.
+  // An empty repo has no ref yet (404/409), so there is no parent commit or base tree.
   let baseCommitSha: string | undefined;
   let baseTreeSha: string | undefined;
+  let isEmptyRepo = false;
+  let existingPaths = new Set<string>();
   try {
     const ref = await gh<{ object: { sha: string } }>(token, `/repos/${owner}/${repo}/git/ref/heads/${encodeURIComponent(branch)}`);
     baseCommitSha = ref.object.sha;
     const baseCommit = await gh<{ tree: { sha: string } }>(token, `/repos/${owner}/${repo}/git/commits/${baseCommitSha}`);
     baseTreeSha = baseCommit.tree.sha;
+    const baseTree = await gh<{ tree: Array<{ path: string; type: string }> }>(
+      token,
+      `/repos/${owner}/${repo}/git/trees/${baseTreeSha}?recursive=1`,
+    );
+    existingPaths = new Set(baseTree.tree.filter((e) => e.type === 'blob').map((e) => e.path));
   } catch (err) {
-    // 404 (no ref) / 409 (empty repository) both mean "no history yet".
+    // 404 (no such ref) / 409 (empty repository) both mean "no history on this branch",
+    // but only a repo with zero commits needs the Contents API bootstrap below.
     if (!(err instanceof GitHubError && (err.status === 404 || err.status === 409))) {
       throw err;
     }
+    isEmptyRepo = !(await repoHasCommits(token, owner, repo));
+    if (isEmptyRepo) {
+      // Creates the default branch; we rewrite it to our own root commit further down.
+      await bootstrapEmptyRepo(token, owner, repo);
+    }
+  }
+
+  // Anything the repo already has (a README, a config from a previous init) wins.
+  const missing = files.filter((f) => !existingPaths.has(f.path));
+  if (missing.length === 0 && baseCommitSha) {
+    return { commitSha: baseCommitSha, branch };
   }
 
   const treeEntries = await Promise.all(
-    files.map(async (f) => {
+    missing.map(async (f) => {
       const blob = await gh<{ sha: string }>(token, `/repos/${owner}/${repo}/git/blobs`, {
         method: 'POST',
         body: JSON.stringify(
@@ -286,10 +333,20 @@ export async function scaffoldRepo(
       body: JSON.stringify({ sha: newCommit.sha, force: false }),
     });
   } else {
-    await gh(token, `/repos/${owner}/${repo}/git/refs`, {
-      method: 'POST',
-      body: JSON.stringify({ ref: `refs/heads/${branch}`, sha: newCommit.sha }),
-    });
+    if (isEmptyRepo) {
+      // Discard the bootstrap commit: the default branch ends up with our parentless
+      // commit as its only history, and `.worklog-init` never existed on it.
+      await gh(token, `/repos/${owner}/${repo}/git/refs/heads/${encodeURIComponent(defaultBranch)}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ sha: newCommit.sha, force: true }),
+      });
+    }
+    if (!isEmptyRepo || branch !== defaultBranch) {
+      await gh(token, `/repos/${owner}/${repo}/git/refs`, {
+        method: 'POST',
+        body: JSON.stringify({ ref: `refs/heads/${branch}`, sha: newCommit.sha }),
+      });
+    }
   }
 
   return { commitSha: newCommit.sha, branch };

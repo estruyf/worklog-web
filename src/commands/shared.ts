@@ -1,6 +1,5 @@
-// Shared markdown-append helpers used by the task services. Ported from the
-// extension; the VS Code `pickClient` quick-pick is dropped (the web UI picks the
-// client in a form), and paths are plain repo-relative strings.
+// Shared markdown-append helpers used by the task services. The client is picked
+// in the UI's form rather than here, and paths are plain repo-relative strings.
 
 import type { Client } from '../model/types';
 import { Workspace, readText, writeText, ensureDir } from '../workspace/paths';

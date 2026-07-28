@@ -1,11 +1,8 @@
-// Browser/Workers replacement for the extension's VS Code `workspace/paths.ts`.
-//
-// The extension backed file I/O with `vscode.workspace.fs` over disk URIs. Here
-// the "filesystem" is an in-memory map of repo-relative paths loaded from GitHub,
-// with dirty-tracking so the host can commit only the files that changed. The
-// ported services (`services/*`, `commands/shared`) call the same `readText /
-// writeText / ensureDir` free functions and the same `Workspace` path helpers,
-// so they need no changes beyond treating a "Uri" as a plain path string.
+// The "filesystem" the rest of the app writes through: an in-memory map of
+// repo-relative paths loaded from GitHub, with dirty-tracking so the host can
+// commit only the files that changed. Services (`services/*`, `commands/shared`)
+// go through the `readText / writeText / ensureDir` free functions and the
+// `Workspace` path helpers; a path is always a plain repo-relative string.
 
 import type { AutoSyncConfig, Client, DaylogConfig, StatusDef } from '../model/types';
 import { DEFAULT_STATUSES } from '../model/status';
@@ -44,7 +41,7 @@ export function parseWeekStart(value: unknown): number {
 
 // ---- In-memory file map --------------------------------------------------
 
-/** The mutable, in-memory repository contents backing the ported services. One
+/** The mutable, in-memory repository contents backing the services. One
  *  repo is "mounted" at a time via {@link mountFileMap}. */
 export class FileMap {
   /** repo-relative path -> UTF-8 text (markdown, json). */
@@ -73,7 +70,7 @@ export class FileMap {
 
 let mounted: FileMap | undefined;
 
-/** Mount the file map the ported services read/write against. */
+/** Mount the file map the services read/write against. */
 export function mountFileMap(map: FileMap): void {
   mounted = map;
 }
@@ -86,9 +83,8 @@ export function fileMap(): FileMap {
   return mounted;
 }
 
-// ---- Free functions the ported services import ---------------------------
-// In the extension these took a `vscode.Uri`; here a "uri" is a repo-relative
-// path string, so the call sites are unchanged apart from dropping `.fsPath`.
+// ---- Free functions the services import ----------------------------------
+// A "uri" here is simply a repo-relative path string.
 
 export async function readText(path: string): Promise<string | undefined> {
   return fileMap().text.get(path);
@@ -129,8 +125,8 @@ export function listTextPaths(): string[] {
   return [...fileMap().text.keys()];
 }
 
-/** Directories are implicit in the flat map — nothing to create. Kept so the
- *  ported services can call it exactly as before. */
+/** Directories are implicit in the flat map — nothing to create. Kept so call
+ *  sites can stay symmetrical with a real filesystem. */
 export async function ensureDir(_path: string): Promise<void> {
   // no-op
 }

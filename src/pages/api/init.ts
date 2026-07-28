@@ -1,8 +1,8 @@
 // Initialize a fresh Worklog project. Two modes:
 //   - `create`   : make a brand-new GitHub repo (name + visibility), then scaffold.
 //   - `existing` : scaffold into an existing (empty or non-Worklog) repo.
-// The scaffold is intentionally minimal — a default `.worklog/config.json` plus
-// empty clients/, worklog/ and archive/ folders (kept via .gitkeep). The client
+// The scaffold is intentionally minimal — a README, a default `.worklog/config.json`
+// plus empty clients/, worklog/ and archive/ folders (kept via .gitkeep). The client
 // then opens the returned repo like any other.
 
 import type { APIRoute } from 'astro';
@@ -27,6 +27,49 @@ interface ExistingBody {
 }
 type InitBody = CreateBody | ExistingBody;
 
+/** Where this repo can be opened and edited. */
+const APP_URL = 'https://worklog.struyfconsulting.be';
+
+/** A README for the new repo: what the files are, and where to edit them. */
+function readme(): string {
+  return `# Worklog
+
+This repository holds a **Worklog** timesheet. Markdown is the source of truth — every
+task, time entry and client lives in a plain text file you can read, diff and edit by hand.
+
+## Open it in the app
+
+Manage this timesheet at **[${APP_URL}](${APP_URL})** — sign in with GitHub, pick this
+repository, and every change is committed straight back here.
+
+## Layout
+
+\`\`\`
+.worklog/config.json           # clients, statuses, hoursPerDay, weekStart
+clients/<id>.md                # open tasks
+archive/<client>/<YYYY-MM>.md  # closed tasks
+worklog/<YYYY-MM>.md           # time entries: - <YYYY-MM-DD> <clientId|event:type> <hours>
+assets/                        # images pasted into task notes (optional)
+\`\`\`
+
+A task block looks like:
+
+\`\`\`markdown
+## Fix the mobile picker
+- id: t_awxnyh
+- status: in-progress
+- created: 2026-06-30
+- due: 2026-07-05
+- tags: mobile, bug
+
+Free-form description in Markdown.
+
+### Notes
+- 2026-06-30 14:12 — Reproduced on iOS Safari.
+\`\`\`
+`;
+}
+
 /** The files that make up an empty Worklog project. */
 function scaffoldFiles(): CommitFile[] {
   const config: DaylogConfig = {
@@ -37,6 +80,7 @@ function scaffoldFiles(): CommitFile[] {
     autoSync: { ...DEFAULT_AUTO_SYNC },
   };
   return [
+    { path: 'README.md', content: readme() },
     { path: '.worklog/config.json', content: JSON.stringify(config, null, 2) + '\n' },
     { path: 'clients/.gitkeep', content: '' },
     { path: 'worklog/.gitkeep', content: '' },

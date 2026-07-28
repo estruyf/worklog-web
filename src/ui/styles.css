@@ -1,80 +1,79 @@
 @import "tailwindcss";
 @source "./**/*.{ts,tsx}";
 
-/* The extension inherited these `--vscode-*` variables from the VS Code theme.
-   Standalone on the web we supply a GitHub-flavoured light palette so the same
-   `bg-primary / text-muted / border-border` tokens resolve to real colours. */
+/* The raw theme variables: a GitHub-flavoured light palette that the
+   `bg-primary / text-muted / border-border` tokens below resolve against. */
 :root {
-  --vscode-editor-background: #ffffff;
-  --vscode-sideBar-background: #f6f8fa;
-  --vscode-editorWidget-background: #ffffff;
-  --vscode-foreground: #1f2328;
-  --vscode-descriptionForeground: #6e7781;
-  --vscode-widget-border: #d0d7de;
-  --vscode-editorWidget-border: #d0d7de;
-  --vscode-input-background: #ffffff;
-  --vscode-input-foreground: #1f2328;
-  --vscode-input-border: #d0d7de;
-  --vscode-button-background: #1f6feb;
-  --vscode-button-foreground: #ffffff;
-  --vscode-button-hoverBackground: #388bfd;
-  --vscode-button-secondaryBackground: #eaeef2;
-  --vscode-button-secondaryForeground: #1f2328;
-  --vscode-button-secondaryHoverBackground: #dfe3e8;
-  --vscode-focusBorder: #2d6cdf;
-  --vscode-textLink-foreground: #2d6cdf;
-  --vscode-list-hoverBackground: #f3f4f6;
-  --vscode-list-activeSelectionBackground: #dbeafe;
-  --vscode-list-activeSelectionForeground: #1f2328;
-  --vscode-badge-background: #dfe3e8;
-  --vscode-badge-foreground: #1f2328;
-  --vscode-charts-green: #1a7f37;
-  --vscode-charts-yellow: #9a6700;
-  --vscode-charts-red: #cf222e;
-  --vscode-font-family: var(--font-inter), -apple-system, system-ui, "Segoe UI", sans-serif;
-  --vscode-font-size: 14px;
+  --ui-editor-background: #ffffff;
+  --ui-sideBar-background: #f6f8fa;
+  --ui-editorWidget-background: #ffffff;
+  --ui-foreground: #1f2328;
+  --ui-descriptionForeground: #6e7781;
+  --ui-widget-border: #d0d7de;
+  --ui-editorWidget-border: #d0d7de;
+  --ui-input-background: #ffffff;
+  --ui-input-foreground: #1f2328;
+  --ui-input-border: #d0d7de;
+  --ui-button-background: #1f6feb;
+  --ui-button-foreground: #ffffff;
+  --ui-button-hoverBackground: #388bfd;
+  --ui-button-secondaryBackground: #eaeef2;
+  --ui-button-secondaryForeground: #1f2328;
+  --ui-button-secondaryHoverBackground: #dfe3e8;
+  --ui-focusBorder: #2d6cdf;
+  --ui-textLink-foreground: #2d6cdf;
+  --ui-list-hoverBackground: #f3f4f6;
+  --ui-list-activeSelectionBackground: #dbeafe;
+  --ui-list-activeSelectionForeground: #1f2328;
+  --ui-badge-background: #dfe3e8;
+  --ui-badge-foreground: #1f2328;
+  --ui-charts-green: #1a7f37;
+  --ui-charts-yellow: #9a6700;
+  --ui-charts-red: #cf222e;
+  --ui-font-family: var(--font-inter), -apple-system, system-ui, "Segoe UI", sans-serif;
+  --ui-font-size: 14px;
 }
 
-/* Map Tailwind's color tokens onto VS Code theme variables so utilities like
+/* Map Tailwind's color tokens onto the theme variables so utilities like
    bg-primary / text-muted / border-border adapt to the active theme. */
 @theme {
-  --color-bg: var(--vscode-editor-background);
+  --color-bg: var(--ui-editor-background);
   --color-surface: var(
-    --vscode-sideBar-background,
-    var(--vscode-editorWidget-background)
+    --ui-sideBar-background,
+    var(--ui-editorWidget-background)
   );
-  --color-elevated: var(--vscode-editorWidget-background);
-  --color-fg: var(--vscode-foreground);
-  --color-muted: var(--vscode-descriptionForeground);
+  --color-elevated: var(--ui-editorWidget-background);
+  --color-fg: var(--ui-foreground);
+  --color-muted: var(--ui-descriptionForeground);
   --color-border: var(
-    --vscode-widget-border,
-    var(--vscode-editorWidget-border, #80808033)
+    --ui-widget-border,
+    var(--ui-editorWidget-border, #80808033)
   );
-  --color-input: var(--vscode-input-background);
-  --color-input-fg: var(--vscode-input-foreground);
-  --color-input-border: var(--vscode-input-border, transparent);
-  --color-primary: var(--vscode-button-background);
-  --color-primary-fg: var(--vscode-button-foreground);
+  --color-input: var(--ui-input-background);
+  --color-input-fg: var(--ui-input-foreground);
+  --color-input-border: var(--ui-input-border, transparent);
+  --color-primary: var(--ui-button-background);
+  --color-primary-fg: var(--ui-button-foreground);
   --color-primary-hover: var(
-    --vscode-button-hoverBackground,
-    var(--vscode-button-background)
+    --ui-button-hoverBackground,
+    var(--ui-button-background)
   );
-  --color-secondary: var(--vscode-button-secondaryBackground);
-  --color-secondary-fg: var(--vscode-button-secondaryForeground);
+  --color-secondary: var(--ui-button-secondaryBackground);
+  --color-secondary-fg: var(--ui-button-secondaryForeground);
   --color-secondary-hover: var(
-    --vscode-button-secondaryHoverBackground,
-    var(--vscode-button-secondaryBackground)
+    --ui-button-secondaryHoverBackground,
+    var(--ui-button-secondaryBackground)
   );
-  --color-accent: var(--vscode-focusBorder);
-  --color-link: var(--vscode-textLink-foreground);
-  --color-hover: var(--vscode-list-hoverBackground);
-  --color-active: var(--vscode-list-activeSelectionBackground);
-  --color-active-fg: var(--vscode-list-activeSelectionForeground);
-  --color-badge: var(--vscode-badge-background);
-  --color-badge-fg: var(--vscode-badge-foreground);
-  --color-ok: var(--vscode-charts-green, #89d185);
-  --color-warn: var(--vscode-charts-yellow, #cca700);
-  --color-danger: var(--vscode-charts-red, #f14c4c);
+  --color-accent: var(--ui-focusBorder);
+  --color-link: var(--ui-textLink-foreground);
+  --color-hover: var(--ui-list-hoverBackground);
+  --color-active: var(--ui-list-activeSelectionBackground);
+  --color-active-fg: var(--ui-list-activeSelectionForeground);
+  --color-badge: var(--ui-badge-background);
+  --color-badge-fg: var(--ui-badge-foreground);
+  --color-ok: var(--ui-charts-green, #89d185);
+  --color-warn: var(--ui-charts-yellow, #cca700);
+  --color-danger: var(--ui-charts-red, #f14c4c);
 
   /* ---- Brand palette (web light, faithful hex map) ---- */
 
@@ -162,8 +161,8 @@
   /* Overlay — modal scrim */
   --color-overlay: rgba(30, 33, 40, 0.45);
 
-  --font-sans: var(--vscode-font-family);
-  --text-base: var(--vscode-font-size, 13px);
+  --font-sans: var(--ui-font-family);
+  --text-base: var(--ui-font-size, 13px);
 }
 
 html,
@@ -176,11 +175,11 @@ body {
   margin: 0;
   background: var(--color-bg);
   color: var(--color-fg);
-  font-family: var(--vscode-font-family);
-  font-size: var(--vscode-font-size, 13px);
+  font-family: var(--ui-font-family);
+  font-size: var(--ui-font-size, 13px);
 }
 
-/* Keep native focus rings crisp on the VS Code accent. */
+/* Keep native focus rings crisp on the accent colour. */
 *:focus-visible {
   outline: 1px solid var(--color-accent);
   outline-offset: -1px;

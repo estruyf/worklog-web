@@ -1,8 +1,8 @@
-// In-memory replacement for the extension's sql.js `Cache`. The dataset is tiny
-// (one person's timesheet), so plain arrays + maps are more than fast enough and
-// remove the WASM dependency. Markdown remains the single source of truth: a
-// rebuild re-parses the file map and calls {@link load}. Exposes exactly the
-// query surface the ported services, snapshot builder, and views consume.
+// In-memory query cache. The dataset is tiny (one person's timesheet), so plain
+// arrays + maps are more than fast enough and keep the app free of a WASM SQLite
+// dependency. Markdown remains the single source of truth: a rebuild re-parses
+// the file map and calls {@link load}. Exposes exactly the query surface the
+// services, snapshot builder, and views consume.
 
 import type { Client, Task, WorklogEntry } from '../model/types';
 

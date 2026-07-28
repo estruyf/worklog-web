@@ -1,9 +1,8 @@
 # Worklog Web
 
-A standalone, GitHub-backed web app for managing a **Worklog** timesheet — the same Markdown
-format used by the [vscode-worklog](https://github.com/estruyf/vscode-worklog) extension, without
-needing VS Code. Sign in with GitHub, pick the repo that holds your timesheet, and manage tasks,
-time entries, clients, archiving and insights. Every edit is committed straight back to your repo.
+A standalone, GitHub-backed web app for managing a **Worklog** timesheet. Sign in with GitHub,
+pick the repo that holds your timesheet, and manage tasks, time entries, clients, archiving and
+insights. Every edit is committed straight back to your repo.
 **Markdown is the source of truth.**
 
 - **Stack:** Astro (SSR) + React islands + Tailwind, deployed on Cloudflare.
@@ -125,7 +124,7 @@ Use the **repo pill** in the top-right to switch repositories, open the repo on 
 
 ## Using the app
 
-The dashboard mirrors the VS Code extension:
+The dashboard has five views:
 
 - **Day** — the default view. Log time for the selected day (full day, half day, or custom
   hours), or log a non-client **event** (vacation, out-of-office, …). See open, due, worked, and
@@ -144,8 +143,7 @@ The dashboard mirrors the VS Code extension:
 
 **Saving:** edits are written to an in-memory copy of your Markdown immediately, then committed to
 GitHub automatically about a minute after your last change. Click the **sync** button in the top
-bar to commit right away. Commit messages match the extension's format:
-`chore: worklog sync <date>`.
+bar to commit right away. Commit messages use the format `chore: worklog sync <date>`.
 
 **Tags:** the task form picks from the tags already in use — type to filter them, `↑/↓` and `↵` to
 choose, and **Create "…"** appears only when nothing existing matches, so the vocabulary doesn't
@@ -163,7 +161,7 @@ its own: pick one or more tags (a task must carry all of them) with or without a
 ## Testing
 
 The test suite parses and re-serializes a timesheet repo and asserts the round-trip is faithful —
-this is what guarantees commits stay diff-clean and interoperable with the extension. By default it
+this is what guarantees commits stay diff-clean and the Markdown stays portable. By default it
 runs against the fixture repo in `test/fixtures/timesheet`, so `npm test` works on a clean checkout;
 point `WORKLOG_DATA_DIR` at a real repo to run the same assertions over live data.
 
@@ -242,17 +240,15 @@ Free-form description in Markdown.
 
 ## How it works
 
-The extension was cleanly layered, so this is mostly a **port, not a rewrite**:
+The app is layered so that nothing but the outermost ring knows about GitHub:
 
-- `src/model`, `src/parser`, `src/util` — the pure task/worklog parser & serializer (unchanged;
-  only `ids.ts` swapped Node crypto for Web Crypto).
-- `src/webview` — the extension's React dashboard (Day / Calendar / Clients / Archive / Insights).
-  The only VS Code seam, `vscodeApi.ts`, now re-exports an in-process bridge.
-- `src/services`, `src/commands/shared`, `src/views` — the mutation services, adapted to write into
-  an in-memory file map instead of `vscode.workspace.fs`.
-- `src/host` — the new GitHub-backed host: OAuth session, load, commit, and the message bridge.
-- `src/workspace`, `src/db`, `src/store.ts` — an in-memory replacement for the SQLite cache and file
-  I/O (no WASM, no disk).
+- `src/model`, `src/parser`, `src/util` — the pure task/worklog parser & serializer.
+- `src/ui` — the React dashboard (Day / Calendar / Clients / Archive / Insights).
+- `src/services`, `src/commands/shared` — the mutation services, writing into an in-memory
+  file map rather than to disk.
+- `src/server`, `src/pages/api` — the GitHub-backed host: OAuth session, load, and commit.
+- `src/workspace`, `src/data`, `src/db`, `src/store.ts` — the in-memory file store and cache
+  (no WASM, no disk).
 
 **Read path:** GitHub → load files → parse → in-memory store → React dashboard.
 **Write path:** dashboard → services → in-memory Markdown → debounced commit → GitHub.
@@ -266,21 +262,17 @@ routes — it never reaches browser JS. That is why the app runs with SSR.
 src/
   pages/
     index.astro          # landing / "Sign in with GitHub"
-    app.astro            # the dashboard (mounts the React island)
+    app/                 # the dashboard (mounts the React island)
     api/
       auth/{login,callback,logout}.ts   # OAuth code flow + cookie session
-      user.ts, repos.ts, load.ts, commit.ts   # token-proxied GitHub calls
-  components/
-    WebApp.tsx           # island: session → repo picker → dashboard
-    RepoPicker.tsx
-  host/
+      user.ts, repos.ts, load.ts, commit.ts, init.ts   # token-proxied GitHub calls
+  server/
     github.ts            # server-side GitHub REST/Git Data client
     session.ts           # cookie + env helpers
-    bridge.ts            # in-process replacement for the webview<->host bus
-  webview/               # the ported React dashboard (see above)
-  model/ parser/ util/   # ported pure logic
-  services/ commands/ views/   # ported mutation services + snapshot + handler
-  workspace/ db/ store.ts      # in-memory file map + index + store
+  ui/                    # the React dashboard: WebApp/WorklogApp, views, components
+  model/ parser/ util/   # pure task/worklog logic
+  services/ commands/    # mutation services
+  workspace/ data/ db/ store.ts   # in-memory file map + index + store
 test/roundtrip.test.ts   # golden round-trip tests
 ```
 
@@ -305,5 +297,5 @@ test/roundtrip.test.ts   # golden round-trip tests
   branch conflicts (no rebase/merge).
 - Inline images resolve via `raw.githubusercontent.com`, so freshly-pasted images render only after
   the next sync, and private-repo inline image auth is a follow-up.
-- Scaffolding a brand-new empty repo from the UI is not wired yet — point the app at a repo that
-  already has the Worklog layout (or create the files once with the extension).
+- Scaffolding writes the Worklog layout only where it is missing: files that already exist in the
+  target repo are left as they are.

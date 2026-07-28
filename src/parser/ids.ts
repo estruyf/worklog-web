@@ -1,6 +1,6 @@
 // Task id generation. Ids are explicit and stable — `t_` + a short, URL-safe,
 // collision-resistant token. Uses the Web Crypto API (available in browsers and
-// the Cloudflare Workers runtime), matching the extension's `t_<6 base36>` shape.
+// the Cloudflare Workers runtime) and the `t_<6 base36>` shape.
 
 const ALPHABET = '0123456789abcdefghijklmnopqrstuvwxyz';
 

@@ -1,5 +1,5 @@
 // Pure, line-based parser for client and archive markdown files (see spec §3.2).
-// markdown string -> structured Task records, and back. No VS Code / fs deps so
+// markdown string -> structured Task records, and back. No I/O dependencies, so
 // it is trivially unit-testable and reusable by both full and incremental paths.
 
 import type { Task, TaskLink, TaskNote } from "../model/types";

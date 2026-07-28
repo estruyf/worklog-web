@@ -1,7 +1,6 @@
 // Golden round-trip tests over a timesheet repo laid out on disk. These guard the
-// single most important property of the web port: the parser/serializer it
-// inherited from the extension is faithful, so commits stay diff-clean and
-// interoperable.
+// single most important property of the app: the parser/serializer is faithful,
+// so commits stay diff-clean and the Markdown stays portable.
 //
 // By default they run against the committed fixture repo in test/fixtures/timesheet
 // so the suite is self-contained. Point WORKLOG_DATA_DIR at a real timesheet repo

@@ -1,5 +1,5 @@
-// Full rebuild: walk the in-memory file map -> parse -> load the db. Mirrors the
-// extension's indexer, but iterates the mounted FileMap instead of globbing disk.
+// Full rebuild: walk the in-memory file map -> parse -> load the db. Iterates the
+// mounted FileMap rather than globbing a disk.
 
 import { MemoryDb } from '../db/memoryDb';
 import { parseTaskFile } from '../parser/taskParser';
