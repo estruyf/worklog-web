@@ -1,18 +1,23 @@
-// Golden round-trip tests over the REAL timesheet repo. These guard the single
-// most important property of the web port: the parser/serializer it inherited
-// from the extension is faithful, so commits stay diff-clean and interoperable.
+// Golden round-trip tests over a timesheet repo laid out on disk. These guard the
+// single most important property of the web port: the parser/serializer it
+// inherited from the extension is faithful, so commits stay diff-clean and
+// interoperable.
 //
-// The sibling data repo path can be overridden with WORKLOG_DATA_DIR.
+// By default they run against the committed fixture repo in test/fixtures/timesheet
+// so the suite is self-contained. Point WORKLOG_DATA_DIR at a real timesheet repo
+// to run the same assertions over live data.
 
 import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { parseTaskFile, serializeTask } from '../src/parser/taskParser';
 import { parseWorklogFile, serializeWorklogEntry } from '../src/parser/worklogParser';
 import { replaceBlock, extractBlock } from '../src/parser/blocks';
 import type { Task } from '../src/model/types';
 
-const DATA = process.env.WORKLOG_DATA_DIR ?? '/Users/eliostruyf/Developer/timesheet';
+const FIXTURES = fileURLToPath(new URL('./fixtures/timesheet', import.meta.url));
+const DATA = process.env.WORKLOG_DATA_DIR ?? FIXTURES;
 
 function taskFiles(): { path: string; clientId: string }[] {
   const out: { path: string; clientId: string }[] = [];
@@ -93,6 +98,10 @@ describe('task file round-trip', () => {
 describe('worklog ledger round-trip', () => {
   const worklogDir = join(DATA, 'worklog');
   const files = existsSync(worklogDir) ? readdirSync(worklogDir).filter((f) => f.endsWith('.md')) : [];
+
+  it('finds worklog files to test', () => {
+    expect(files.length).toBeGreaterThan(0);
+  });
 
   for (const f of files) {
     it(`serialize(parse) reproduces every entry in ${f}`, () => {

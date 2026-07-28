@@ -162,11 +162,13 @@ its own: pick one or more tags (a task must carry all of them) with or without a
 
 ## Testing
 
-The test suite parses and re-serializes a **real** timesheet repo and asserts the round-trip is
-faithful — this is what guarantees commits stay diff-clean and interoperable with the extension.
+The test suite parses and re-serializes a timesheet repo and asserts the round-trip is faithful —
+this is what guarantees commits stay diff-clean and interoperable with the extension. By default it
+runs against the fixture repo in `test/fixtures/timesheet`, so `npm test` works on a clean checkout;
+point `WORKLOG_DATA_DIR` at a real repo to run the same assertions over live data.
 
 ```bash
-npm test                                   # uses /Users/<you>/Developer/timesheet by default
+npm test                                            # fixture repo in test/fixtures/timesheet
 WORKLOG_DATA_DIR=/path/to/your/timesheet npm test   # point at any timesheet repo
 ```
 
