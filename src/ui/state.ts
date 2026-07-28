@@ -13,6 +13,7 @@ export interface WorklogState {
   today: string; // local YYYY-MM-DD, computed at derive time
   hoursPerDay: number;
   weekStart: number; // first weekday of the calendar grid: 0 = Sunday … 6 = Saturday
+  todosPerPage: number; // page size of the day view's to-do side list
   autoSync: AutoSyncConfig; // background Git-sync behaviour after logging time
   assetsBase: string; // base URL for resolving image refs in Markdown
 

@@ -54,6 +54,7 @@ export function useWorklogModel(
   const today = snap?.today ?? "";
   const hoursPerDay = snap?.hoursPerDay ?? 0;
   const weekStart = snap?.weekStart ?? 0;
+  const todosPerPage = snap?.todosPerPage ?? 5;
   const autoSync = snap?.autoSync ?? { enabled: false, delayMinutes: 5 };
   const assetsBase = snap?.assetsBase ?? "";
   const { selectedDate } = ui;
@@ -548,6 +549,7 @@ export function useWorklogModel(
   const saveSettings = (fields: {
     hoursPerDay?: number;
     weekStart?: number;
+    todosPerPage?: number;
     autoSync?: { enabled?: boolean; delayMinutes?: number };
   }) => worklogStore.updateSettings(fields);
 
@@ -587,6 +589,7 @@ export function useWorklogModel(
     statuses,
     hoursPerDay,
     weekStart,
+    todosPerPage,
     autoSync,
     assetsBase,
     // Archived clients still count as clients — otherwise archiving the last one

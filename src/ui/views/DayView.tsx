@@ -60,7 +60,7 @@ function useDayData() {
 }
 
 export function DayView() {
-  const { today, clients, allClients, colorOf, clientName, statusMeta, reopen, openDetail, typeLabel, hoursPerDay, logState, setLogState, saveLog, removeLog, editLog, openLogForm, openModalForDue } = useData();
+  const { today, clients, allClients, colorOf, clientName, statusMeta, reopen, openDetail, typeLabel, hoursPerDay, todosPerPage, logState, setLogState, saveLog, removeLog, editLog, openLogForm, openModalForDue } = useData();
   const { selectedDate, setSelectedDate, editDayOpen, setEditDayOpen } = useUi();
   const { openTasks, dayLogs, dueRows, todoRows, openGroups, doneTasks, workedGroups, isTodaySel } = useDayData();
   const onSelectDate = setSelectedDate;
@@ -78,7 +78,10 @@ export function DayView() {
 
   return (
     <div className="flex-1 overflow-auto px-6 pt-8 pb-20">
-      <div className="max-w-[920px] mx-auto">
+      {/* The main column keeps its comfortable reading width; the extra room from
+       * `xl:` up goes to the to-do side list, so a long to-do list never pushes
+       * the logged time and client sections down the page. */}
+      <div className="max-w-[920px] xl:max-w-[1280px] mx-auto">
         <DayHeader
           selectedDate={selectedDate}
           today={today}
@@ -90,50 +93,61 @@ export function DayView() {
           openModalForDue={openModalForDue}
         />
 
-        <DueTasksSection dueRows={dueRows} />
+        {/* The to-do panel is placed by the grid, not duplicated: it stacks in the
+          * flow under the due tasks on narrow screens, and moves into a sticky
+          * second column from `xl:` up, spanning both rows of the main column. */}
+        <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_320px] xl:gap-x-8">
+          <div className="min-w-0 xl:col-start-1 xl:row-start-1">
+            <DueTasksSection dueRows={dueRows} />
+          </div>
 
-        <TodoTasksSection todoRows={todoRows} />
+          <aside className="min-w-0 xl:col-start-2 xl:row-start-1 xl:row-end-3 xl:self-start xl:sticky xl:top-0">
+            <TodoTasksSection todoRows={todoRows} pageSize={todosPerPage} />
+          </aside>
 
-        <LoggedSection
-          dayLogs={dayLogs}
-          loggedHours={loggedHours}
-          loggedDays={loggedDays}
-          colorOf={colorOf}
-          clientName={clientName}
-          typeLabel={typeLabel}
-          editLog={editLog}
-          openLogForm={openLogForm}
-        />
+          <div className="min-w-0 xl:col-start-1 xl:row-start-2">
+            <LoggedSection
+              dayLogs={dayLogs}
+              loggedHours={loggedHours}
+              loggedDays={loggedDays}
+              colorOf={colorOf}
+              clientName={clientName}
+              typeLabel={typeLabel}
+              editLog={editLog}
+              openLogForm={openLogForm}
+            />
 
-        {logState.open && (
-          <LogForm
-            logState={logState}
-            setLogState={setLogState}
-            saveLog={saveLog}
-            removeLog={removeLog}
-            clients={logClients}
-            colorOf={colorOf}
-          />
-        )}
+            {logState.open && (
+              <LogForm
+                logState={logState}
+                setLogState={setLogState}
+                saveLog={saveLog}
+                removeLog={removeLog}
+                clients={logClients}
+                colorOf={colorOf}
+              />
+            )}
 
-        <OpenTasksSection
-          isTodaySel={isTodaySel}
-          editDayOpen={editDayOpen}
-          openGroups={openGroups}
-          dayLogs={dayLogs}
-          openTasksCount={openTasksCount}
-        />
+            <OpenTasksSection
+              isTodaySel={isTodaySel}
+              editDayOpen={editDayOpen}
+              openGroups={openGroups}
+              dayLogs={dayLogs}
+              openTasksCount={openTasksCount}
+            />
 
-        <WorkedTasksSection isTodaySel={isTodaySel} workedGroups={workedGroups} />
+            <WorkedTasksSection isTodaySel={isTodaySel} workedGroups={workedGroups} />
 
-        <DoneTasksSection
-          doneTasks={doneTasks}
-          isTodaySel={isTodaySel}
-          reopen={reopen}
-          openDetail={openDetail}
-          statusMeta={statusMeta}
-          clientName={clientName}
-        />
+            <DoneTasksSection
+              doneTasks={doneTasks}
+              isTodaySel={isTodaySel}
+              reopen={reopen}
+              openDetail={openDetail}
+              statusMeta={statusMeta}
+              clientName={clientName}
+            />
+          </div>
+        </div>
       </div>
     </div>
   );

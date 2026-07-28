@@ -10,6 +10,8 @@ export interface SettingsFields {
   hoursPerDay?: number;
   /** First weekday of the calendar grid: 0 = Sunday … 6 = Saturday. */
   weekStart?: number;
+  /** How many open to-dos the day view's side list shows per page. */
+  todosPerPage?: number;
   /** Automatic Git sync after logging time. Only the provided keys are changed. */
   autoSync?: { enabled?: boolean; delayMinutes?: number };
 }
@@ -30,6 +32,13 @@ export async function updateSettings(store: Store, fields: SettingsFields): Prom
       throw new Error('Week start must be a day of the week.');
     }
     config.weekStart = parseWeekStart(fields.weekStart);
+  }
+
+  if (fields.todosPerPage !== undefined) {
+    if (!Number.isInteger(fields.todosPerPage) || fields.todosPerPage < 1) {
+      throw new Error('To-dos per page must be a whole number of at least 1.');
+    }
+    config.todosPerPage = fields.todosPerPage;
   }
 
   if (fields.autoSync !== undefined) {

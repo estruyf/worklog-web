@@ -445,6 +445,7 @@ class WorklogStore {
       today: today(),
       hoursPerDay: config.hoursPerDay,
       weekStart: config.weekStart,
+      todosPerPage: config.todosPerPage,
       autoSync: config.autoSync,
       assetsBase,
       statuses: config.statuses,

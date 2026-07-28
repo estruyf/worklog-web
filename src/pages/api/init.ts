@@ -9,7 +9,7 @@ import type { APIRoute } from 'astro';
 import { getToken } from '../../server/session';
 import { createRepo, scaffoldRepo, GitHubError, type CommitFile } from '../../server/github';
 import { DEFAULT_STATUSES } from '../../model/status';
-import { DEFAULT_AUTO_SYNC, DEFAULT_HOURS_PER_DAY, DEFAULT_WEEK_START } from '../../workspace/paths';
+import { DEFAULT_AUTO_SYNC, DEFAULT_HOURS_PER_DAY, DEFAULT_TODOS_PER_PAGE, DEFAULT_WEEK_START } from '../../workspace/paths';
 import type { DaylogConfig } from '../../model/types';
 
 export const prerender = false;
@@ -75,6 +75,7 @@ function scaffoldFiles(): CommitFile[] {
   const config: DaylogConfig = {
     hoursPerDay: DEFAULT_HOURS_PER_DAY,
     weekStart: DEFAULT_WEEK_START,
+    todosPerPage: DEFAULT_TODOS_PER_PAGE,
     clients: [],
     statuses: DEFAULT_STATUSES,
     autoSync: { ...DEFAULT_AUTO_SYNC },

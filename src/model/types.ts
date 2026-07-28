@@ -84,6 +84,8 @@ export interface DaylogConfig {
   hoursPerDay: number;
   /** First day of the week for the calendar grid: 0 = Sunday … 6 = Saturday. */
   weekStart: number;
+  /** How many open to-dos the day view's side list shows per page. */
+  todosPerPage: number;
   clients: Client[];
   statuses: StatusDef[];
   autoSync: AutoSyncConfig;

@@ -9,7 +9,14 @@ import { DEFAULT_STATUSES } from '../model/status';
 
 export const DEFAULT_HOURS_PER_DAY = 8;
 export const DEFAULT_WEEK_START = 0; // Sunday
+export const DEFAULT_TODOS_PER_PAGE = 5;
 export const DEFAULT_AUTO_SYNC: AutoSyncConfig = { enabled: false, delayMinutes: 5 };
+
+/** Normalize a config `todosPerPage` to a whole number of at least 1, falling
+ *  back to the default for missing/invalid values. */
+export function parseTodosPerPage(value: unknown): number {
+  return typeof value === 'number' && Number.isInteger(value) && value >= 1 ? value : DEFAULT_TODOS_PER_PAGE;
+}
 
 /** Normalize a config `autoSync` block, clamping the delay to a sane minimum and
  *  falling back to the defaults for missing/invalid fields. */
@@ -169,7 +176,7 @@ export class Workspace {
   async loadConfig(): Promise<DaylogConfig> {
     const raw = await readText(this.configFile);
     if (raw === undefined) {
-      return { hoursPerDay: DEFAULT_HOURS_PER_DAY, weekStart: DEFAULT_WEEK_START, clients: [], statuses: DEFAULT_STATUSES, autoSync: { ...DEFAULT_AUTO_SYNC } };
+      return { hoursPerDay: DEFAULT_HOURS_PER_DAY, weekStart: DEFAULT_WEEK_START, todosPerPage: DEFAULT_TODOS_PER_PAGE, clients: [], statuses: DEFAULT_STATUSES, autoSync: { ...DEFAULT_AUTO_SYNC } };
     }
     try {
       const parsed = JSON.parse(raw) as Partial<DaylogConfig>;
@@ -179,6 +186,7 @@ export class Workspace {
       return {
         hoursPerDay: parsed.hoursPerDay && parsed.hoursPerDay > 0 ? parsed.hoursPerDay : DEFAULT_HOURS_PER_DAY,
         weekStart: parseWeekStart(parsed.weekStart),
+        todosPerPage: parseTodosPerPage(parsed.todosPerPage),
         // `archived` is normalized to true-or-absent so it never round-trips a
         // stray value into config.json (JSON.stringify drops the undefined).
         clients: Array.isArray(parsed.clients)
@@ -190,7 +198,7 @@ export class Workspace {
         autoSync: parseAutoSync(parsed.autoSync),
       };
     } catch {
-      return { hoursPerDay: DEFAULT_HOURS_PER_DAY, weekStart: DEFAULT_WEEK_START, clients: [], statuses: DEFAULT_STATUSES, autoSync: { ...DEFAULT_AUTO_SYNC } };
+      return { hoursPerDay: DEFAULT_HOURS_PER_DAY, weekStart: DEFAULT_WEEK_START, todosPerPage: DEFAULT_TODOS_PER_PAGE, clients: [], statuses: DEFAULT_STATUSES, autoSync: { ...DEFAULT_AUTO_SYNC } };
     }
   }
 

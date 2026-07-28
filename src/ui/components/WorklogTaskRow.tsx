@@ -78,16 +78,19 @@ function LinkChip({ link, size }: { link: string; size: number }) {
 // unchanged — important because the task lists re-render on every keystroke in
 // the surrounding views (log form, search box).
 //
-// The row collapses gracefully on narrow screens (< md / 768px, matching the
-// sidebar's breakpoint): the status column and hover actions drop out, the
-// title is allowed to wrap, and the metadata (status, progress, due, tags,
-// link) reflows onto a second line indented under the title.
+// The row collapses gracefully when it is narrower than `@lg` (32rem): the
+// status column and hover actions drop out, the title is allowed to wrap, and
+// the metadata (status, progress, due, tags, link) reflows onto a second line
+// indented under the title. It keys off the row's own width rather than the
+// viewport's, because the same row is used both full-width and in the day
+// view's ~320px to-do side column, where the hover actions would otherwise
+// squeeze the title down to a couple of characters.
 export const WorklogTaskRow = React.memo(function WorklogTaskRow({ row }: { row: WorklogRow }) {
-  const hasMobileMeta = !!row.statusLabel || !!row.progress || !!row.due || row.tags.length > 0 || row.hasLink;
+  const hasNarrowMeta = !!row.statusLabel || !!row.progress || !!row.due || row.tags.length > 0 || row.hasLink;
   return (
     <div
       key={row.id}
-      className="group py-2 px-2.5 rounded-lg hover:bg-neutral-175"
+      className="@container group py-2 px-2.5 rounded-lg hover:bg-neutral-175"
       style={{ paddingLeft: row.pad }}
     >
       <div className="flex items-center gap-[11px]">
@@ -105,10 +108,10 @@ export const WorklogTaskRow = React.memo(function WorklogTaskRow({ row }: { row:
             <BriefcaseIcon className={`w-[10px] h-[10px]`} />
           </button>
         )}
-        {/* Status column — desktop only; on mobile it moves to the meta row
+        {/* Status column — wide rows only; when narrow it moves to the meta row
             below. Absent for rows without a meaningful status (to-dos). */}
         {row.statusLabel && (
-          <button onClick={row.onCycle} title="Change status" className="hidden md:block w-16 shrink-0 text-left text-[10.5px] font-bold tracking-[0.05em] bg-transparent border-none cursor-pointer p-0" style={{ color: row.statusColor }}>
+          <button onClick={row.onCycle} title="Change status" className="hidden @lg:block w-16 shrink-0 text-left text-[10.5px] font-bold tracking-[0.05em] bg-transparent border-none cursor-pointer p-0" style={{ color: row.statusColor }}>
             {row.statusLabel}
           </button>
         )}
@@ -127,18 +130,18 @@ export const WorklogTaskRow = React.memo(function WorklogTaskRow({ row }: { row:
             }
           }}
           title="View task · middle-click to open in a new tab"
-          className="text-[14.5px] text-neutral-825 flex-1 min-w-0 text-left bg-transparent border-none cursor-pointer p-0 hover:underline whitespace-normal leading-[1.35] md:whitespace-nowrap md:overflow-hidden md:text-ellipsis md:leading-normal"
+          className="text-[14.5px] text-neutral-825 flex-1 min-w-0 text-left bg-transparent border-none cursor-pointer p-0 hover:underline whitespace-normal leading-[1.35] @lg:whitespace-nowrap @lg:overflow-hidden @lg:text-ellipsis @lg:leading-normal"
         >
           {row.title}
         </button>
-        {/* Inline meta — desktop only. On mobile these reflow to the row below. */}
-        <div className="hidden md:contents">
+        {/* Inline meta — wide rows only. When narrow these reflow to the row below. */}
+        <div className="hidden @lg:contents">
           {row.progress && <ProgressChip progress={row.progress} barWidth={46} />}
           {row.due && <DueChip due={row.due} overdue={row.overdue} />}
           <TagChips tags={row.tags} onTagClick={row.onTagClick} />
         </div>
-        {/* Hover actions — desktop only. */}
-        <div className="hidden md:flex items-center gap-[6px] shrink-0 opacity-0 pointer-events-none transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 group-hover:pointer-events-auto group-focus-within:pointer-events-auto">
+        {/* Hover actions — wide rows only; they would crowd out the title otherwise. */}
+        <div className="hidden @lg:flex items-center gap-[6px] shrink-0 opacity-0 pointer-events-none transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 group-hover:pointer-events-auto group-focus-within:pointer-events-auto">
           <button onClick={row.onView} className="px-[8px] py-[5px] border border-neutral-400 rounded-[7px] bg-white text-neutral-750 text-[12px] font-medium cursor-pointer hover:bg-neutral-200">
             View
           </button>
@@ -153,17 +156,17 @@ export const WorklogTaskRow = React.memo(function WorklogTaskRow({ row }: { row:
           </button>
         </div>
         {row.hasLink && (
-          <span className="hidden md:inline-flex">
+          <span className="hidden @lg:inline-flex">
             <LinkChip link={row.link} size={14} />
           </span>
         )}
       </div>
 
-      {/* Mobile meta row — status + progress + due + tags + link, indented under
+      {/* Narrow-row meta — status + progress + due + tags + link, indented under
           the title (done + worked buttons ≈ 45px, 28px without the worked one).
-          Hidden from md up, and skipped entirely when there is nothing to show. */}
-      {hasMobileMeta && (
-        <div className={'flex md:hidden flex-wrap items-center gap-x-[10px] gap-y-[6px] mt-[6px] ' + (row.onWorked ? 'pl-[45px]' : 'pl-[28px]')}>
+          Hidden from `@lg` up, and skipped entirely when there is nothing to show. */}
+      {hasNarrowMeta && (
+        <div className={'flex @lg:hidden flex-wrap items-center gap-x-[10px] gap-y-[6px] mt-[6px] ' + (row.onWorked ? 'pl-[45px]' : 'pl-[28px]')}>
           {row.statusLabel && (
             <button onClick={row.onCycle} title="Change status" className="text-[10.5px] font-bold tracking-[0.05em] bg-transparent border-none cursor-pointer p-0" style={{ color: row.statusColor }}>
               {row.statusLabel}

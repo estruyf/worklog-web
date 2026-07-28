@@ -6,10 +6,11 @@ const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Frida
 /** App configuration, persisted to .worklog/config.json. Covers the scalar
  *  settings not managed elsewhere (clients live in the Clients view). */
 export function SettingsView() {
-  const { hoursPerDay, weekStart, autoSync, saveSettings } = useData();
+  const { hoursPerDay, weekStart, todosPerPage, autoSync, saveSettings } = useData();
 
   const [hours, setHours] = useState(String(hoursPerDay));
   const [week, setWeek] = useState(weekStart);
+  const [todoPage, setTodoPage] = useState(String(todosPerPage));
   const [syncEnabled, setSyncEnabled] = useState(autoSync.enabled);
   const [syncDelay, setSyncDelay] = useState(String(autoSync.delayMinutes));
   const [saved, setSaved] = useState(false);
@@ -22,6 +23,9 @@ export function SettingsView() {
     setWeek(weekStart);
   }, [weekStart]);
   useEffect(() => {
+    setTodoPage(String(todosPerPage));
+  }, [todosPerPage]);
+  useEffect(() => {
     setSyncEnabled(autoSync.enabled);
   }, [autoSync.enabled]);
   useEffect(() => {
@@ -31,16 +35,20 @@ export function SettingsView() {
   const parsedHours = parseFloat(hours);
   const hoursValid = Number.isFinite(parsedHours) && parsedHours > 0;
 
+  const parsedTodoPage = parseInt(todoPage, 10);
+  const todoPageValid = Number.isInteger(parsedTodoPage) && parsedTodoPage >= 1;
+
   const parsedDelay = parseInt(syncDelay, 10);
   const delayValid = Number.isInteger(parsedDelay) && parsedDelay >= 1;
 
   const dirty =
     (hoursValid && parsedHours !== hoursPerDay) ||
     week !== weekStart ||
+    (todoPageValid && parsedTodoPage !== todosPerPage) ||
     syncEnabled !== autoSync.enabled ||
     (delayValid && parsedDelay !== autoSync.delayMinutes);
 
-  const canSave = dirty && hoursValid && (!syncEnabled || delayValid);
+  const canSave = dirty && hoursValid && todoPageValid && (!syncEnabled || delayValid);
 
   const onSave = () => {
     if (!canSave) {
@@ -49,6 +57,7 @@ export function SettingsView() {
     saveSettings({
       hoursPerDay: parsedHours,
       weekStart: week,
+      todosPerPage: parsedTodoPage,
       autoSync: { enabled: syncEnabled, delayMinutes: parsedDelay },
     });
     setSaved(true);
@@ -105,6 +114,23 @@ export function SettingsView() {
 
           <div className="flex items-start justify-between gap-6 px-[18px] py-[18px]">
             <div>
+              <div className="text-[14.5px] font-semibold">To-dos per page</div>
+              <div className="text-[13px] text-neutral-675 mt-[3px]">
+                How many open to-dos the day view’s side list shows at once. Anything beyond that pages.
+              </div>
+            </div>
+            <input
+              type="number"
+              min={1}
+              step={1}
+              value={todoPage}
+              onChange={(e) => setTodoPage(e.target.value)}
+              className="w-[96px] shrink-0 px-3 py-[8px] border border-neutral-525 rounded-[8px] text-[14px] text-right focus:outline-none focus:border-brand-500"
+            />
+          </div>
+
+          <div className="flex items-start justify-between gap-6 px-[18px] py-[18px]">
+            <div>
               <div className="text-[14.5px] font-semibold">Automatic Git sync</div>
               <div className="text-[13px] text-neutral-675 mt-[3px]">
                 Commit and push in the background shortly after you log time, so your timesheet doesn’t sit unpushed. Only errors are shown.
@@ -154,6 +180,9 @@ export function SettingsView() {
 
         {!hoursValid && (
           <div className="text-[13px] text-danger-675 mt-3">Hours per day must be greater than 0.</div>
+        )}
+        {!todoPageValid && (
+          <div className="text-[13px] text-danger-675 mt-3">To-dos per page must be a whole number of at least 1.</div>
         )}
         {syncEnabled && !delayValid && (
           <div className="text-[13px] text-danger-675 mt-3">Sync delay must be a whole number of at least 1 minute.</div>
