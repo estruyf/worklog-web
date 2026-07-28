@@ -91,6 +91,7 @@ export function LogForm({ logState, setLogState, saveLog, removeLog, clients, co
                 className="px-3 py-[9px] border border-neutral-525 rounded-lg text-[13px] bg-white"
               >
                 <option value="vacation">Vacation</option>
+                <option value="public-holiday">Public holiday</option>
                 <option value="out-of-office">Out of office</option>
                 <option value="conference">Conference</option>
                 <option value="sick">Sick day</option>
