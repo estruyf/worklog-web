@@ -241,6 +241,34 @@ Free-form description in Markdown.
 - 2026-06-30 14:12 — Reproduced on iOS Safari.
 ```
 
+### Recurring tasks
+
+Add a `repeat:` line and the task stops disappearing when you complete it — its
+`due` date rolls onto the next occurrence and a snapshot of the one you just
+finished is appended to the archive:
+
+```markdown
+## Send the monthly invoice reminder
+- id: t_rc3ccc
+- status: open
+- due: 2026-07-31
+- repeat: monthly on last
+- repeatFrom: schedule
+- repeatUntil: 2026-12-31
+- lastDone: 2026-06-30
+```
+
+| Line | Meaning |
+| --- | --- |
+| `repeat:` | `daily`, `weekdays`, `every 3 days`, `weekly on mon,thu`, `every 2 weeks on thu`, `monthly on 15`, `monthly on last`, `yearly on 03-14` |
+| `repeatFrom:` | `schedule` (default) counts from the series, so missing one occurrence doesn't move the rest. `completion` counts the interval from the day you actually finished it. |
+| `repeatUntil:` | Last date of the series. Completing the final occurrence closes the task for good. |
+| `lastDone:` | Written automatically on each completion. |
+
+Archived occurrences carry `repeatOf: <task id>` and get their own id, so the
+history is queryable and no two blocks ever share an id. Nothing runs in the
+background: the next occurrence is computed at the moment you tick one off.
+
 ---
 
 ## How it works

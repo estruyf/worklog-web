@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { useData, useUi } from '../context';
 import { TagPicker } from './TagPicker';
+import { RecurrencePicker } from './RecurrencePicker';
 import { useMarkdownImages } from '../hooks';
 import { clientIdOf, isDone, renderMarkdown, makeImageResolver } from '../utils';
 import { GENERAL_TODO_CLIENT_ID, GENERAL_TODO_COLOR, GENERAL_TODO_LABEL } from '../../model/todos';
@@ -31,6 +32,12 @@ export function TaskFormModal() {
     setMLinks: setLinks,
     mDue: due,
     setMDue: setDue,
+    mRepeat: repeat,
+    setMRepeat: setRepeat,
+    mRepeatFrom: repeatFrom,
+    setMRepeatFrom: setRepeatFrom,
+    mRepeatUntil: repeatUntil,
+    setMRepeatUntil: setRepeatUntil,
     mTags: tags,
     setMTags: setTags,
     mDescription: description,
@@ -166,8 +173,18 @@ export function TaskFormModal() {
         <div className="flex flex-col md:flex-row gap-[14px] mb-[22px]">
           <div className="w-full md:w-[180px]">
             <div className="flex items-center justify-between mb-2">
+              {/* With a repeat rule this date isn't a deadline — it's where the
+                  series starts, and it rolls forward on its own from there. */}
               <label className="block font-semibold text-[14px]">
-                Due <span className="text-neutral-625 font-normal">(optional)</span>
+                {repeat.trim() ? (
+                  <>
+                    Starts <span className="text-neutral-625 font-normal">(optional)</span>
+                  </>
+                ) : (
+                  <>
+                    Due <span className="text-neutral-625 font-normal">(optional)</span>
+                  </>
+                )}
               </label>
               {due && (
                 <button type="button" onClick={() => setDue('')} className="text-[12px] text-info bg-none border-none cursor-pointer">
@@ -189,6 +206,16 @@ export function TaskFormModal() {
             <TagPicker value={tags} onChange={setTags} known={knownTags} />
           </div>
         </div>
+
+        <RecurrencePicker
+          value={repeat}
+          onChange={setRepeat}
+          anchor={repeatFrom}
+          onAnchorChange={setRepeatFrom}
+          until={repeatUntil}
+          onUntilChange={setRepeatUntil}
+          due={due}
+        />
 
         <div className="flex items-center justify-between mb-2">
           <label className="font-semibold text-[14px]">

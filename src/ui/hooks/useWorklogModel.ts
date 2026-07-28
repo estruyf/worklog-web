@@ -17,6 +17,11 @@ import {
   GENERAL_TODO_LABEL,
   isGeneralTodoClientId,
 } from "../../model/todos";
+import {
+  describeRecurrence,
+  formatRecurrence,
+  parseRecurrence,
+} from "../../model/recurrence";
 import type { WorklogState } from "../state";
 import { worklogStore, type ToastMessage } from "../../data/worklogStore";
 import { navigateToTask } from "../router";
@@ -25,6 +30,7 @@ import {
   PALETTE,
   clientIdOf,
   defaultTaskClientId,
+  dueOn,
   isDone,
   linksOf,
   workedOnDate,
@@ -189,6 +195,9 @@ export function useWorklogModel(
     const ls = linksOf(t);
     ui.setMLinks(ls.length ? ls : [""]);
     ui.setMDue(t.due || "");
+    ui.setMRepeat(t.repeat ? formatRecurrence(t.repeat) : "");
+    ui.setMRepeatFrom(t.repeat?.anchor ?? "schedule");
+    ui.setMRepeatUntil(t.repeat?.until ?? "");
     ui.setMTags(t.tags ?? []);
     ui.setMDescription(t.description || "");
     ui.setMDescMode(t.description ? "preview" : "edit");
@@ -207,10 +216,15 @@ export function useWorklogModel(
         return;
       }
 
-      const isPermanent = options?.permanent || isDone(t);
+      // A repeating task can't be "moved to archive" — closing it just rolls it
+      // onto its next occurrence — so deleting one ends the series outright.
+      // Completions already logged are separate archived blocks and survive.
+      const isPermanent = options?.permanent || isDone(t) || !!t.repeat;
       const ok = isPermanent
         ? window.confirm(
-            `Delete "${t.title}" forever? This also removes subtasks and cannot be undone.`,
+            t.repeat && !isDone(t)
+              ? `Stop "${t.title}" from repeating and delete it? Completions already logged stay in the archive.`
+              : `Delete "${t.title}" forever? This also removes subtasks and cannot be undone.`,
           )
         : window.confirm(
             `Move "${t.title}" to archive? You can restore it later from Archive.`,
@@ -261,8 +275,12 @@ export function useWorklogModel(
           : "Mark worked on this day",
         hasLink: ls.length > 0,
         link: ls[0] || "",
-        due: t.due,
+        // On a day the rule lands on, the chip shows *that* occurrence — a
+        // recurring task only stores its next due date, so showing it raw would
+        // label a September occurrence with an August date.
+        due: t.repeat && !isDone(t) && dueOn(t, selectedDate) ? selectedDate : t.due,
         overdue: !!t.due && !isDone(t) && t.due < today,
+        repeat: t.repeat && !isDone(t) ? describeRecurrence(t.repeat) : undefined,
         tags: t.tags ?? [],
         progress,
         onView: () => openDetail(t),
@@ -327,11 +345,17 @@ export function useWorklogModel(
     ui.setMParent("");
     ui.setMLinks([""]);
     ui.setMDue("");
+    resetRepeat();
     ui.setMTags([]);
     ui.setMDescription("");
     ui.setMDescMode("edit");
     ui.setAddingClient(false);
     ui.setModalOpen(true);
+  };
+  const resetRepeat = () => {
+    ui.setMRepeat("");
+    ui.setMRepeatFrom("schedule");
+    ui.setMRepeatUntil("");
   };
   // Open the new-task modal pre-seeded with a due date, e.g. from the calendar
   // when planning work for a future day.
@@ -352,6 +376,7 @@ export function useWorklogModel(
     ui.setMParent(parent.id);
     ui.setMLinks([""]);
     ui.setMDue("");
+    resetRepeat();
     ui.setMTags([]);
     ui.setMDescription("");
     ui.setMDescMode("edit");
@@ -375,6 +400,18 @@ export function useWorklogModel(
     }
     const links = ui.mLinks.map((l) => l.trim()).filter(Boolean);
     const due = ui.mDue.trim() || undefined;
+    // An unparseable expression saves as a plain one-off rather than blocking
+    // the save; the picker already flags it while you type.
+    const parsedRepeat = ui.mRepeat.trim()
+      ? parseRecurrence(ui.mRepeat)
+      : undefined;
+    const repeat = parsedRepeat
+      ? {
+          ...parsedRepeat,
+          anchor: ui.mRepeatFrom,
+          until: ui.mRepeatUntil.trim() || undefined,
+        }
+      : undefined;
     // Already normalized and de-duplicated by the tag picker.
     const tags = ui.mTags;
     const description = ui.mDescription.trim();
@@ -387,6 +424,7 @@ export function useWorklogModel(
         description,
         due: due ?? "",
         tags,
+        repeat: repeat ?? null,
       });
     } else {
       worklogStore.createTask({
@@ -397,6 +435,7 @@ export function useWorklogModel(
         description: description || undefined,
         due,
         tags,
+        repeat,
       });
     }
     closeModal();

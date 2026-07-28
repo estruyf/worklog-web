@@ -7,6 +7,7 @@ import { parseWorklogFile } from '../parser/worklogParser';
 import { Workspace, fileMap, stem, dirName } from './paths';
 import type { Client, Task, WorklogEntry } from '../model/types';
 import { isEventWorklogClientId } from '../model/worklog';
+import { withSeededDue } from '../model/recurringTask';
 
 export interface RebuildResult {
   clients: number;
@@ -39,12 +40,15 @@ export async function rebuild(db: MemoryDb, ws: Workspace): Promise<RebuildResul
     }
   }
 
-  const clients = mergeClients(config.clients, tasks, worklog);
+  // A recurring task with no due date has no day to appear on. Seed it here so
+  // the invariant holds for files written before it existed, or by hand.
+  const seeded = tasks.map((t) => withSeededDue(t));
+  const clients = mergeClients(config.clients, seeded, worklog);
 
   db.reset();
-  db.load({ clients, tasks, worklog });
+  db.load({ clients, tasks: seeded, worklog });
 
-  return { clients: clients.length, tasks: tasks.length, worklog: worklog.length };
+  return { clients: clients.length, tasks: seeded.length, worklog: worklog.length };
 }
 
 /** Clients come from config; also synthesise any referenced-but-unconfigured

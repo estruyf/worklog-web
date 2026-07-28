@@ -11,7 +11,7 @@
 import { Store } from '../store';
 import { FileMap, deleteFile, mountFileMap } from '../workspace/paths';
 import { today } from '../util/date';
-import { createClient, createTask, deleteClient, setClientArchived, updateClient } from '../services/tasks';
+import { createClient, createTask, deleteClient, setClientArchived, updateClient, type NewTaskInput } from '../services/tasks';
 import { saveImageAsset } from '../services/assets';
 import { isGeneralTodoClientId } from '../model/todos';
 import {
@@ -91,6 +91,7 @@ class WorklogStore {
   private committing = false;
   private commitTimer: ReturnType<typeof setTimeout> | undefined;
   private persistTimer: ReturnType<typeof setTimeout> | undefined;
+  private rolloverTimer: ReturnType<typeof setTimeout> | undefined;
   // A recovered snapshot loaded on open, held until the user restores or discards it.
   private recovered?: PendingSnapshot;
 
@@ -155,6 +156,7 @@ class WorklogStore {
     await this.store.rebuild('open');
     this.loaded = true;
     this.updateSnapshot({ data: this.deriveState(), loading: false, gitPending: false });
+    this.scheduleDateRollover();
     await this.loadRecovery();
   }
 
@@ -340,15 +342,7 @@ class WorklogStore {
 
   // ---- actions (call the domain services directly) --------------------------
 
-  createTask(input: {
-    title: string;
-    clientId: string;
-    parentId?: string;
-    links?: string[];
-    description?: string;
-    due?: string;
-    tags?: string[];
-  }): Promise<void> {
+  createTask(input: NewTaskInput): Promise<void> {
     return this.run(() => createTask(this.store, input));
   }
 
@@ -527,6 +521,33 @@ class WorklogStore {
     this.clearCommitTimer();
     const delay = Math.max(1, autoSync.delayMinutes) * 60_000;
     this.commitTimer = setTimeout(() => void this.sync({ silent: true }), delay);
+  }
+
+  /** Re-derive the state just after local midnight. `today` is only recomputed
+   *  when the state is derived, so without this a tab left open overnight keeps
+   *  yesterday's date: nothing would become overdue and a recurring task due the
+   *  next day would never move into the day view. */
+  private scheduleDateRollover(): void {
+    this.clearRolloverTimer();
+    const now = new Date();
+    // 30s past midnight, so a timer firing a touch early still lands on the new day.
+    const nextMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 30);
+    this.rolloverTimer = setTimeout(
+      () => {
+        if (this.loaded) {
+          this.updateSnapshot({ data: this.deriveState() });
+        }
+        this.scheduleDateRollover();
+      },
+      Math.max(1_000, nextMidnight.getTime() - now.getTime()),
+    );
+  }
+
+  private clearRolloverTimer(): void {
+    if (this.rolloverTimer) {
+      clearTimeout(this.rolloverTimer);
+      this.rolloverTimer = undefined;
+    }
   }
 
   private clearCommitTimer(): void {

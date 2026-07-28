@@ -2,11 +2,12 @@
 // commands. All writes go to markdown; the watcher/rebuild then refreshes views.
 
 import { Store } from '../store';
-import type { Client, Task } from '../model/types';
+import type { Client, Recurrence, Task } from '../model/types';
 import { newTaskId } from '../parser/ids';
 import { serializeTask } from '../parser/taskParser';
 import { today } from '../util/date';
 import { appendTaskBlock } from '../commands/shared';
+import { withSeededDue } from '../model/recurringTask';
 import { writeText, readText, ensureDir, deleteFile, listTextPaths } from '../workspace/paths';
 import { GENERAL_TODO_CLIENT_ID, generalTodoClient, isGeneralTodoClientId } from '../model/todos';
 
@@ -18,6 +19,7 @@ export interface NewTaskInput {
   description?: string;
   due?: string;
   tags?: string[];
+  repeat?: Recurrence;
 }
 
 export interface NewClientInput {
@@ -66,14 +68,19 @@ export async function createTask(store: Store, input: NewTaskInput): Promise<Tas
     links: (input.links ?? []).map((url) => url.trim()).filter(Boolean).map((url) => ({ url })),
     created: today(),
     due: input.due?.trim() || undefined,
+    repeat: input.repeat,
     tags: (input.tags ?? []).map((t) => t.trim()).filter(Boolean),
     sourceFile: '',
     sourceLine: 0,
   };
 
-  await appendTaskBlock(store.ws, client, serializeTask(task, client.id));
+  // A rule alone doesn't place the task on any day — seed the first occurrence
+  // so a new recurring task actually shows up somewhere.
+  const seeded = withSeededDue(task);
+
+  await appendTaskBlock(store.ws, client, serializeTask(seeded, client.id));
   await store.rebuild('addTask');
-  return task;
+  return seeded;
 }
 
 /** Add a client to config.json, create an empty client file, and rebuild. */

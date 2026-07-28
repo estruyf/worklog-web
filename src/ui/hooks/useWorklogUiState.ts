@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { AppView, SearchScope } from "../model";
+import type { RecurrenceAnchor } from "../../model/recurrence";
 import { closeTaskDetail, openTaskDetail, useDetailId } from "../router";
 
 export function useWorklogUiState() {
@@ -44,6 +45,11 @@ export function useWorklogUiState() {
   const [mParent, setMParent] = useState("");
   const [mLinks, setMLinks] = useState<string[]>([""]);
   const [mDue, setMDue] = useState("");
+  // Recurrence is held as its canonical `- repeat:` expression ('' = one-off)
+  // plus its two qualifiers, so the form reuses the same parser the files do.
+  const [mRepeat, setMRepeat] = useState("");
+  const [mRepeatFrom, setMRepeatFrom] = useState<RecurrenceAnchor>("schedule");
+  const [mRepeatUntil, setMRepeatUntil] = useState("");
   // The task form's tags, as a list — the picker owns normalization, so what
   // sits here is already the exact set that will be written.
   const [mTags, setMTags] = useState<string[]>([]);
@@ -125,6 +131,12 @@ export function useWorklogUiState() {
     setMLinks,
     mDue,
     setMDue,
+    mRepeat,
+    setMRepeat,
+    mRepeatFrom,
+    setMRepeatFrom,
+    mRepeatUntil,
+    setMRepeatUntil,
     mTags,
     setMTags,
     mDescription,

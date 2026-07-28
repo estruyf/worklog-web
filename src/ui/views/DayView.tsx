@@ -3,7 +3,7 @@ import { isEventWorklogClientId } from '../../model/worklog';
 import { isGeneralTodoClientId } from '../../model/todos';
 import type { ClientTaskGroup } from '../model';
 import { useData, useUi } from '../context';
-import { clientIdOf, isDone, workedOnDate } from '../utils';
+import { clientIdOf, dueOn, isDone, workedOnDate } from '../utils';
 import {
   DayHeader,
   DoneTasksSection,
@@ -34,9 +34,10 @@ function useDayData() {
       .filter((g) => g.count > 0 && loggedClientIds.has(g.id));
   }, [clients, openTasks, dayLogs, colorOf, openRowsFor]);
   // Open tasks due on this day — the home for anything planned ahead of time,
-  // regardless of whether its client logged time that day.
+  // regardless of whether its client logged time that day. Recurring tasks match
+  // on every day their rule lands on, not just the next one they store.
   const dueRows = useMemo(
-    () => openRowsFor(tasks.filter((t) => !isDone(t) && t.due === selectedDate)),
+    () => openRowsFor(tasks.filter((t) => !isDone(t) && dueOn(t, selectedDate))),
     [tasks, selectedDate, openRowsFor],
   );
   // General to-dos (not linked to any client): a persistent personal list, shown

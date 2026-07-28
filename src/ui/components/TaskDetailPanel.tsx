@@ -1,6 +1,8 @@
 import React, { useMemo } from 'react';
 import { clientIdOf, isDone, linksOf, renderMarkdown, makeImageResolver, workedOnDate } from '../utils';
-import { BriefcaseIcon } from 'lucide-react';
+import { BriefcaseIcon, RefreshCwIcon } from 'lucide-react';
+import type { Task } from '../../model/types';
+import { describeRecurrence } from '../../model/recurrence';
 import { isGeneralTodoClientId } from '../../model/todos';
 import { useData, useUi } from '../context';
 import { useMarkdownImages } from '../hooks';
@@ -14,7 +16,65 @@ function useDetailData() {
   const task = useMemo(() => (detailId ? tasks.find((t) => t.id === detailId) : undefined), [detailId, tasks]);
   const subtasks = useMemo(() => (task ? tasks.filter((t) => t.parentId === task.id) : []), [task, tasks]);
   const parent = useMemo(() => (task?.parentId ? tasks.find((t) => t.id === task.parentId) : undefined), [task, tasks]);
-  return { task, parent, subtasks, descDirty: !!task && descDraft !== (task.description ?? '') };
+  // Archived snapshots of a recurring task, most recently completed first.
+  const occurrences = useMemo(
+    () =>
+      task?.repeat
+        ? tasks
+          .filter((t) => t.repeatOf === task.id && t.completed)
+          .sort((a, b) => (b.completed ?? '').localeCompare(a.completed ?? ''))
+        : [],
+    [task, tasks],
+  );
+  return { task, parent, subtasks, occurrences, descDirty: !!task && descDraft !== (task.description ?? '') };
+}
+
+/** How many past occurrences the history strip shows before collapsing. */
+const HISTORY_LIMIT = 8;
+
+/** Recurrence summary for a repeating task: the rule in words, when the next
+ *  occurrence lands, and the completions already logged. */
+function RepeatSummary({
+  task,
+  occurrences,
+  overdue,
+}: {
+  task: Task;
+  occurrences: Task[];
+  overdue: boolean;
+}) {
+  if (!task.repeat) {
+    return null;
+  }
+  const shown = occurrences.slice(0, HISTORY_LIMIT);
+  const hidden = occurrences.length - shown.length;
+  return (
+    <div className="mb-4 px-[14px] py-[11px] border border-brand-375 bg-brand-100 rounded-[10px] text-[13px] text-neutral-750">
+      <div className="flex items-center gap-[7px] font-semibold text-brand-800">
+        <RefreshCwIcon className="w-[13px] h-[13px]" />
+        {describeRecurrence(task.repeat)}
+      </div>
+      <div className="mt-[5px] text-[12.5px] text-neutral-700">
+        {task.due ? <>Next on {task.due}</> : <>No next date set</>}
+        {task.lastDone && <> · last done {task.lastDone}</>}
+        {overdue && <span className="text-danger-675 font-semibold"> · overdue</span>}
+      </div>
+      {shown.length > 0 && (
+        <div className="mt-[9px] flex flex-wrap items-center gap-[6px]">
+          {shown.map((o) => (
+            <span
+              key={o.id}
+              title={`Completed ${o.completed}`}
+              className="text-[11px] text-neutral-725 bg-white border border-neutral-400 rounded-full px-[8px] py-[2px] tabular-nums"
+            >
+              {o.completed}
+            </span>
+          ))}
+          {hidden > 0 && <span className="text-[11.5px] text-neutral-650">+{hidden} more in the archive</span>}
+        </div>
+      )}
+    </div>
+  );
 }
 
 /** Full-screen task detail overlay: header actions, metadata, subtasks and a
@@ -25,7 +85,7 @@ function useDetailData() {
 export function TaskDetailPanel({ routed = false }: { routed?: boolean } = {}) {
   const { statusMeta, colorOf, clientName, assetsBase, reopen, toggleWorked, markDone, openEdit: onEdit, deleteTask: onDelete, saveDescription: onSaveDescription, openChildModal, addNote, deleteNote, openTagSearch } = useData();
   const { selectedDate, descDraft, setDescDraft, descMode, setDescMode, setDetailId, noteDraft, setNoteDraft } = useUi();
-  const { task, parent, subtasks, descDirty } = useDetailData();
+  const { task, parent, subtasks, occurrences, descDirty } = useDetailData();
   const img = useMarkdownImages(descDraft, setDescDraft);
   const resolveImage = useMemo(() => makeImageResolver(assetsBase), [assetsBase]);
   if (!task) {
@@ -81,18 +141,7 @@ export function TaskDetailPanel({ routed = false }: { routed?: boolean } = {}) {
             </button>
           )}
           <div className="flex flex-wrap gap-[8px]">
-            {!routed && (
-              <button
-                onClick={onOpenInTab}
-                title="Open this task on its own page"
-                className="flex items-center gap-[6px] px-[14px] py-[7px] border border-neutral-400 rounded-[7px] bg-white text-neutral-750 font-semibold text-[13px] cursor-pointer hover:bg-neutral-200"
-              >
-                <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6">
-                  <path d="M6 3H3.5A1.5 1.5 0 002 4.5v8A1.5 1.5 0 003.5 14h8a1.5 1.5 0 001.5-1.5V10M10 2h4v4M14 2L7.5 8.5" />
-                </svg>
-                Open page
-              </button>
-            )}
+
             {!isTodo && (
               <button
                 onClick={() => toggleWorked(task)}
@@ -173,7 +222,10 @@ export function TaskDetailPanel({ routed = false }: { routed?: boolean } = {}) {
             ),
           )}
         </div>
-        {!isDone(task) && (
+        {/* A recurring task's due date is the series' next occurrence and is
+            managed by the rule — editing it by hand here would fight the roll
+            forward, so the repeat summary states it instead. */}
+        {!isDone(task) && !task.repeat && (
           <div className="flex items-center gap-[10px] mb-4 text-[13px] text-neutral-700">
             <span className={'font-semibold ' + (overdue ? 'text-danger-675' : '')}>{overdue ? 'Overdue · due' : 'Due'}</span>
             <input
@@ -189,6 +241,7 @@ export function TaskDetailPanel({ routed = false }: { routed?: boolean } = {}) {
             )}
           </div>
         )}
+        {!isDone(task) && <RepeatSummary task={task} occurrences={occurrences} overdue={overdue} />}
         {isDone(task) && (
           <div className="flex items-center gap-[10px] mb-4 text-[13px] text-neutral-700">
             <span className="font-semibold">Completed on</span>

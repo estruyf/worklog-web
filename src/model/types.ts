@@ -1,6 +1,10 @@
 // Core data contracts. Markdown is the source of truth; these are the
 // structured records the parser produces and the cache stores.
 
+import type { Recurrence } from './recurrence';
+
+export type { Recurrence } from './recurrence';
+
 // Statuses are configurable (see StatusDef / config.json). The type is a plain
 // string id; the configured StatusDef list supplies labels, colors and which id
 // is "terminal" (closing → archive).
@@ -25,9 +29,17 @@ export interface Task {
   clientIds: string[];
   links: TaskLink[];
   created?: string; // YYYY-MM-DD
-  /** Optional due date (YYYY-MM-DD); drives overdue highlighting. */
+  /** Optional due date (YYYY-MM-DD); drives overdue highlighting. For a recurring
+   *  task this is the next occurrence, and it rolls forward on each completion. */
   due?: string;
   completed?: string; // YYYY-MM-DD
+  /** Recurrence rule. The task stays in its client file and its `due` advances
+   *  on completion; each completion also leaves a snapshot in the archive. */
+  repeat?: Recurrence;
+  /** Date this recurring task was last completed (YYYY-MM-DD). */
+  lastDone?: string;
+  /** On an archived snapshot: the id of the recurring task it came from. */
+  repeatOf?: string;
   /** Dates the task was actively worked on (YYYY-MM-DD), independent from completion. */
   workedOn?: string[];
   /** Freeform labels for cross-client grouping/filtering. */

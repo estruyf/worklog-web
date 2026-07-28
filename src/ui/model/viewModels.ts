@@ -34,6 +34,8 @@ export interface WorklogRow {
   due?: string;
   /** True when the task has an unmet due date in the past. */
   overdue: boolean;
+  /** The recurrence rule in words, for tasks that repeat; drives the chip. */
+  repeat?: string;
   /** Freeform labels rendered as chips. */
   tags: string[];
   /** Subtask completion rollup, present only for tasks that have children. */

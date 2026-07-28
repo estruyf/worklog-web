@@ -3,15 +3,19 @@
 // refreshes the cache + app state afterwards.
 
 import { Store } from "../store";
-import type { Task, TaskNote } from "../model/types";
+import type { Recurrence, Task, TaskNote } from "../model/types";
 import {
   inProgressStatusId,
   isTerminalStatus,
+  openStatusId,
   terminalStatusId,
 } from "../model/status";
 import { isGeneralTodoClientId } from "../model/todos";
+import { nextDueAfterCompletion } from "../model/recurrence";
+import { withSeededDue } from "../model/recurringTask";
 import { parseTaskFile, serializeTask } from "../parser/taskParser";
 import { extractBlock, replaceBlock } from "../parser/blocks";
+import { newTaskId } from "../parser/ids";
 import { readText, writeText } from "../workspace/paths";
 import { today, monthOf, nowStamp } from "../util/date";
 import { appendArchiveBlock, appendTaskBlock } from "../commands/shared";
@@ -189,7 +193,9 @@ async function closeCascade(
   return closed;
 }
 
-/** Move one open task from its client file into the archive, stamped closed. */
+/** Move one open task from its client file into the archive, stamped closed.
+ *  A recurring task rolls onto its next occurrence instead (see rollOccurrence),
+ *  and only closes for good once its series runs out. */
 async function closeOne(
   store: Store,
   task: Task,
@@ -208,10 +214,36 @@ async function closeOne(
   if (!extracted) {
     throw new Error(`Could not locate task ${task.id} in ${clientId}.md.`);
   }
-  const parsed = parseTaskFile(extracted.block, clientUri, clientId)
-    .tasks[0];
+  // Seeded the same way the index does, so the roll advances from the due date
+  // the user actually saw rather than from a blank one.
+  const source = withSeededDue(
+    parseTaskFile(extracted.block, clientUri, clientId).tasks[0] ?? task,
+  );
+
+  if (source.repeat) {
+    const nextDue = nextDueAfterCompletion(
+      source.repeat,
+      source.due,
+      completedDate,
+    );
+    if (nextDue) {
+      return rollOccurrence(store, {
+        source,
+        clientId,
+        clientName,
+        clientUri,
+        content,
+        statusId,
+        completedDate,
+        nextDue,
+      });
+    }
+    // Series exhausted (past its `repeatUntil`): fall through and close for
+    // good, keeping the rule on the archived block as a record of intent.
+  }
+
   const closed: Task = {
-    ...(parsed ?? task),
+    ...source,
     status: statusId,
     completed: completedDate,
   };
@@ -227,7 +259,76 @@ async function closeOne(
   return closed;
 }
 
-/** Move a closed task back out of the archive into its client file. */
+interface RollArgs {
+  source: Task;
+  clientId: string;
+  clientName: string;
+  clientUri: string;
+  /** Current text of the client file (the live block is rewritten in place). */
+  content: string;
+  statusId: string;
+  completedDate: string;
+  nextDue: string;
+}
+
+/**
+ * Complete one occurrence of a recurring task. The task itself never leaves its
+ * client file — its due date advances to the next occurrence — while a snapshot
+ * of the occurrence just finished is appended to the archive.
+ *
+ * The snapshot takes the per-occurrence progress (notes and worked-on days) so
+ * the next occurrence starts clean; otherwise a daily task would carry its whole
+ * history forever and re-copy it into the archive on every single completion.
+ *
+ * The snapshot gets a fresh id and points back via `repeatOf`: reusing the live
+ * task's id would put two blocks with the same id in the index and make
+ * lookups by id ambiguous.
+ */
+async function rollOccurrence(store: Store, args: RollArgs): Promise<Task> {
+  const { source, clientId, clientName, clientUri, content } = args;
+
+  const snapshot: Task = {
+    ...source,
+    id: newTaskId(),
+    status: args.statusId,
+    completed: args.completedDate,
+    repeat: undefined,
+    lastDone: undefined,
+    repeatOf: source.id,
+  };
+
+  const live: Task = {
+    ...source,
+    status: openStatusId(store.getConfig().statuses),
+    due: args.nextDue,
+    lastDone: args.completedDate,
+    completed: undefined,
+    notes: undefined,
+    workedOn: undefined,
+  };
+
+  const replaced = replaceBlock(
+    content,
+    source.id,
+    serializeTask(live, clientId),
+  );
+  if (replaced === undefined) {
+    throw new Error(`Could not locate task ${source.id} to roll forward.`);
+  }
+  await writeText(clientUri, replaced.replace(/\s*$/, "") + "\n");
+  await appendArchiveBlock(
+    store.ws,
+    clientId,
+    clientName,
+    monthOf(args.completedDate),
+    serializeTask(snapshot, clientId),
+  );
+  return live;
+}
+
+/** Move a closed task back out of the archive into its client file. An archived
+ *  occurrence of a still-recurring task is undone in place instead, so reopening
+ *  it doesn't leave a duplicate next to the live task. */
 async function reopenTask(
   store: Store,
   taskId: string,
@@ -236,6 +337,12 @@ async function reopenTask(
   const task = store.db.getTask(taskId);
   if (!task) {
     throw new Error(`Task ${taskId} not found.`);
+  }
+  if (task.repeatOf) {
+    const template = store.db.getTask(task.repeatOf);
+    if (template?.repeat) {
+      return undoOccurrence(store, task, template, statusId);
+    }
   }
   const clientId = task.clientIds[0];
   const client = store.db.getClients().find((c) => c.id === clientId);
@@ -264,6 +371,69 @@ async function reopenTask(
   );
   await store.rebuild("reopenTask");
   return reopened;
+}
+
+/**
+ * Undo one completion of a recurring task: drop the archived snapshot and wind
+ * the live task back to the occurrence it recorded, restoring that occurrence's
+ * progress. `lastDone` falls back to the completion before it, if any.
+ */
+async function undoOccurrence(
+  store: Store,
+  snapshot: Task,
+  template: Task,
+  statusId: string,
+): Promise<Task> {
+  const archiveUri = snapshot.sourceFile;
+  const archiveContent = await readText(archiveUri);
+  if (archiveContent === undefined) {
+    throw new Error(`Could not read the archive file for "${snapshot.title}".`);
+  }
+  const extracted = extractBlock(archiveContent, snapshot.id);
+  if (!extracted) {
+    throw new Error(`Could not locate occurrence ${snapshot.id} in the archive.`);
+  }
+
+  const previous = store.db
+    .occurrencesOf(template.id)
+    .find((o) => o.id !== snapshot.id && o.completed);
+
+  await writeText(archiveUri, extracted.remainder);
+  await updateInPlace(store, template, (t) => ({
+    ...t,
+    status: statusId,
+    due: snapshot.due,
+    lastDone: previous?.completed,
+    notes: snapshot.notes,
+    workedOn: snapshot.workedOn,
+  }));
+  await store.rebuild("undoOccurrence");
+  return store.db.getTask(template.id) ?? template;
+}
+
+/** Set or clear a task's recurrence rule. Clearing leaves the task as a plain
+ *  one-off with its current due date; the archived history stays put. */
+export async function setTaskRecurrence(
+  store: Store,
+  taskId: string,
+  repeat: Recurrence | undefined,
+): Promise<Task> {
+  const task = store.db.getTask(taskId);
+  if (!task) {
+    throw new Error(`Task ${taskId} not found.`);
+  }
+  if (task.completed) {
+    throw new Error("Only open tasks can repeat.");
+  }
+  await updateInPlace(store, task, (t) =>
+    withSeededDue({
+      ...t,
+      repeat,
+      lastDone: repeat ? t.lastDone : undefined,
+    }),
+  );
+  await store.rebuild("setRecurrence");
+  return store.db.getTask(taskId) ?? task;
 }
 
 /** Assign or clear a task's parent (rejects cycles). */
@@ -321,6 +491,7 @@ export interface TaskFields {
   description?: string; // markdown body; '' clears it
   due?: string; // '' clears the due date
   tags?: string[];
+  repeat?: Recurrence | null; // null clears the recurrence rule
 }
 
 /** Edit a task's title / client / parent / links. Same-client edits rewrite the
@@ -339,7 +510,7 @@ export async function updateTask(
   const target =
     fields.clientId && fields.clientId.trim() ? fields.clientId : current;
 
-  const apply = (t: Task): Task => ({
+  const apply = (t: Task): Task => withSeededDue({
     ...t,
     title:
       fields.title !== undefined ? fields.title.trim() || t.title : t.title,
@@ -359,6 +530,9 @@ export async function updateTask(
       fields.tags !== undefined
         ? fields.tags.map((tag) => tag.trim()).filter(Boolean)
         : t.tags,
+    repeat: fields.repeat !== undefined ? (fields.repeat ?? undefined) : t.repeat,
+    // Dropping the rule drops the series' bookkeeping with it.
+    lastDone: fields.repeat === null ? undefined : t.lastDone,
   });
 
   if (target === current) {

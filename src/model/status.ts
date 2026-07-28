@@ -19,6 +19,12 @@ export function isTerminalStatus(statuses: StatusDef[], id: string): boolean {
   return statuses.find((s) => s.id === id)?.terminal === true;
 }
 
+/** The id of the default "open" status — where a newly started task sits. Used
+ *  to reset a recurring task when it rolls onto its next occurrence. */
+export function openStatusId(statuses: StatusDef[]): string {
+  return (statuses.find((s) => !s.terminal) ?? statuses[0])?.id ?? 'open';
+}
+
 /** The id of the "in progress" (actively working) status. Prefers an explicit
  *  `in-progress` id, else the second non-terminal status; undefined if none. */
 export function inProgressStatusId(statuses: StatusDef[]): string | undefined {

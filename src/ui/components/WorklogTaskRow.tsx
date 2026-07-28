@@ -1,6 +1,6 @@
 import React from 'react';
 import type { WorklogRow } from '../model';
-import { BriefcaseIcon, GlobeIcon, SquareArrowOutUpRight } from 'lucide-react';
+import { BriefcaseIcon, GlobeIcon, RefreshCwIcon, SquareArrowOutUpRight } from 'lucide-react';
 import { fmtShort } from '../utils';
 
 /** Subtask completion rollup, shown inline on desktop and below the title on
@@ -33,6 +33,21 @@ function DueChip({ due, overdue }: { due: string; overdue: boolean }) {
         <path d="M2.5 6.5h11M5.5 2v2M10.5 2v2" />
       </svg>
       {fmtShort(due)}
+    </span>
+  );
+}
+
+/** Marks a task that rolls onto a new occurrence when completed, rather than
+ *  disappearing into the archive. `title` carries the rule in words. */
+function RepeatChip({ label }: { label: string }) {
+  return (
+    <span
+      title={label}
+      aria-label={label}
+      className="shrink-0 flex items-center gap-[4px] text-[11px] font-semibold px-[7px] py-[2px] rounded-full text-brand-800 bg-brand-175 border border-brand-375"
+    >
+      <RefreshCwIcon size={9} strokeWidth={2.4} />
+      Repeats
     </span>
   );
 }
@@ -86,7 +101,8 @@ function LinkChip({ link, size }: { link: string; size: number }) {
 // view's ~320px to-do side column, where the hover actions would otherwise
 // squeeze the title down to a couple of characters.
 export const WorklogTaskRow = React.memo(function WorklogTaskRow({ row }: { row: WorklogRow }) {
-  const hasNarrowMeta = !!row.statusLabel || !!row.progress || !!row.due || row.tags.length > 0 || row.hasLink;
+  const hasNarrowMeta =
+    !!row.statusLabel || !!row.progress || !!row.due || !!row.repeat || row.tags.length > 0 || row.hasLink;
   return (
     <div
       key={row.id}
@@ -138,6 +154,7 @@ export const WorklogTaskRow = React.memo(function WorklogTaskRow({ row }: { row:
         <div className="hidden @lg:contents">
           {row.progress && <ProgressChip progress={row.progress} barWidth={46} />}
           {row.due && <DueChip due={row.due} overdue={row.overdue} />}
+          {row.repeat && <RepeatChip label={row.repeat} />}
           <TagChips tags={row.tags} onTagClick={row.onTagClick} />
         </div>
         {/* Hover actions — wide rows only; they would crowd out the title otherwise. */}
@@ -174,6 +191,7 @@ export const WorklogTaskRow = React.memo(function WorklogTaskRow({ row }: { row:
           )}
           {row.progress && <ProgressChip progress={row.progress} barWidth={38} />}
           {row.due && <DueChip due={row.due} overdue={row.overdue} />}
+          {row.repeat && <RepeatChip label={row.repeat} />}
           <TagChips tags={row.tags} onTagClick={row.onTagClick} />
           {row.hasLink && <LinkChip link={row.link} size={13} />}
         </div>

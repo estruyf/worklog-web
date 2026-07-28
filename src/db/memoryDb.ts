@@ -46,6 +46,13 @@ export class MemoryDb {
       .sort(byCreatedThenTitle);
   }
 
+  /** Archived occurrences of a recurring task, most recently completed first. */
+  occurrencesOf(templateId: string): Task[] {
+    return this.tasks
+      .filter((t) => t.repeatOf === templateId)
+      .sort((a, b) => (b.completed ?? '').localeCompare(a.completed ?? ''));
+  }
+
   /** Every task (open + done) — used to build the app state. */
   getAllTasks(): Task[] {
     return [...this.tasks].sort(byCreatedThenTitle);

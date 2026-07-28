@@ -3,12 +3,29 @@
 // it is trivially unit-testable and reusable by both full and incremental paths.
 
 import type { Task, TaskLink, TaskNote } from "../model/types";
+import {
+  formatRecurrence,
+  parseRecurrence,
+  type Recurrence,
+  type RecurrenceAnchor,
+} from "../model/recurrence";
 
 export interface ParsedTaskFile {
   /** Display name from the `# H1`, if present. */
   displayName?: string;
   tasks: Task[];
 }
+
+/** Recurrence is spread over several `- repeat*:` lines, so the pieces are
+ *  collected raw and assembled once the block ends — the lines may appear in
+ *  any order. */
+interface RepeatMeta {
+  expr?: string;
+  from?: string;
+  until?: string;
+}
+
+type TaskDraft = Partial<Task> & { links: TaskLink[]; repeatMeta?: RepeatMeta };
 
 const H1 = /^#\s+(.*)$/;
 const H2 = /^##\s+(.*)$/;
@@ -35,7 +52,7 @@ export function parseTaskFile(
 
   let current:
     | {
-        task: Partial<Task> & { links: TaskLink[] };
+        task: TaskDraft;
         descLines: string[];
         line: number;
       }
@@ -59,6 +76,9 @@ export function parseTaskFile(
       created: t.created,
       due: t.due,
       completed: t.completed,
+      repeat: buildRecurrence(t.repeatMeta),
+      lastDone: t.lastDone,
+      repeatOf: t.repeatOf,
       workedOn: t.workedOn,
       tags: t.tags,
       notes,
@@ -112,11 +132,46 @@ export function parseTaskFile(
   return result;
 }
 
-function applyMeta(
-  task: Partial<Task> & { links: TaskLink[] },
-  key: string,
-  value: string,
-): void {
+/** Assemble the collected `- repeat*:` lines into a rule. An unrecognised
+ *  expression yields no rule at all — the task stays a plain one-off rather than
+ *  repeating on a guess. */
+function buildRecurrence(meta: RepeatMeta | undefined): Recurrence | undefined {
+  if (!meta?.expr) {
+    return undefined;
+  }
+  const rec = parseRecurrence(meta.expr);
+  if (!rec) {
+    return undefined;
+  }
+  const anchor = parseAnchor(meta.from);
+  if (anchor) {
+    rec.anchor = anchor;
+  }
+  if (meta.until) {
+    rec.until = meta.until;
+  }
+  return rec;
+}
+
+function parseAnchor(value: string | undefined): RecurrenceAnchor | undefined {
+  switch (value?.trim().toLowerCase()) {
+    case "completion":
+    case "completed":
+    case "done":
+      return "completion";
+    case "schedule":
+    case "due":
+      return "schedule";
+    default:
+      return undefined;
+  }
+}
+
+function repeatMeta(task: TaskDraft): RepeatMeta {
+  return (task.repeatMeta ??= {});
+}
+
+function applyMeta(task: TaskDraft, key: string, value: string): void {
   switch (key) {
     case "id":
       task.id = value;
@@ -143,6 +198,21 @@ function applyMeta(
       break;
     case "completed":
       task.completed = value || undefined;
+      break;
+    case "repeat":
+      repeatMeta(task).expr = value || undefined;
+      break;
+    case "repeatfrom":
+      repeatMeta(task).from = value || undefined;
+      break;
+    case "repeatuntil":
+      repeatMeta(task).until = value || undefined;
+      break;
+    case "lastdone":
+      task.lastDone = value || undefined;
+      break;
+    case "repeatof":
+      task.repeatOf = value || undefined;
       break;
     case "tags": {
       const tags = value
@@ -284,6 +354,22 @@ export function serializeTask(task: Task, clientId?: string): string {
   }
   if (task.completed) {
     out.push(`- completed: ${task.completed}`);
+  }
+  if (task.repeat) {
+    out.push(`- repeat: ${formatRecurrence(task.repeat)}`);
+    // `schedule` is the default; only write the line when it differs.
+    if (task.repeat.anchor === "completion") {
+      out.push(`- repeatFrom: completion`);
+    }
+    if (task.repeat.until) {
+      out.push(`- repeatUntil: ${task.repeat.until}`);
+    }
+  }
+  if (task.lastDone) {
+    out.push(`- lastDone: ${task.lastDone}`);
+  }
+  if (task.repeatOf) {
+    out.push(`- repeatOf: ${task.repeatOf}`);
   }
   for (const worked of task.workedOn ?? []) {
     out.push(`- worked: ${worked}`);
