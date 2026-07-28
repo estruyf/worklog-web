@@ -3,8 +3,19 @@ import { Font } from 'astro:assets';
 
 interface Props {
   title?: string;
+  description?: string;
+  /** Path or URL to the social-share image. Resolved to an absolute URL. */
+  image?: string;
+  /** When true (default) the page is kept out of search engines. */
+  noindex?: boolean;
+  ogType?: string;
 }
-const { title = 'Worklog' } = Astro.props;
+const { title = 'Worklog', description, image, noindex = true, ogType = 'website' } = Astro.props;
+
+// SSR (`output: "server"`) means Astro.url is the live request URL, so we can
+// build absolute canonical/social URLs without a hardcoded production domain.
+const canonical = new URL(Astro.url.pathname, Astro.url).href;
+const ogImage = new URL(image ?? '/worklog-512x512.png', Astro.url).href;
 
 // iOS/Safari doesn't auto-generate PWA splash screens (unlike Android), so we
 // point `apple-touch-startup-image` at a pre-rendered image per device. Each
@@ -37,8 +48,20 @@ const iosSplash: [number, number, number, number, number][] = [
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="robots" content="noindex" />
+    {noindex && <meta name="robots" content="noindex" />}
     <title>{title}</title>
+    {description && <meta name="description" content={description} />}
+    <link rel="canonical" href={canonical} />
+    <meta property="og:type" content={ogType} />
+    <meta property="og:site_name" content="Worklog" />
+    <meta property="og:title" content={title} />
+    {description && <meta property="og:description" content={description} />}
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={ogImage} />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content={title} />
+    {description && <meta name="twitter:description" content={description} />}
+    <meta name="twitter:image" content={ogImage} />
     <link rel="icon" type="image/svg+xml" href="/worklog-logo-outline.svg" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <meta name="theme-color" content="#F4CF4D" />
