@@ -13,6 +13,8 @@ import {
   XIcon,
 } from 'lucide-react';
 import type { AppView } from '../model';
+import { isGeneralTodoClientId } from '../../model/todos';
+import { clientIdOf, isDone } from '../utils';
 
 /** Repo/session controls rendered at the very bottom of the rail. Optional so the
  * single-task page can mount the Sidebar-less layout without a repo picker or auth. */
@@ -31,6 +33,16 @@ const NAV_ITEMS: { view: AppView; label: string; icon: React.ReactNode }[] = [
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
         <rect x="2" y="2.5" width="12" height="11" rx="1.5" />
         <path d="M4.5 6h7M4.5 8.5h7M4.5 11h4" />
+      </svg>
+    ),
+  },
+  {
+    view: 'todos',
+    label: 'To-dos',
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+        <path d="M1.5 3.5L3 5l2.5-2.5M1.5 8L3 9.5 5.5 7M1.5 12.5L3 14l2.5-2.5" />
+        <path d="M8 4h6.5M8 8.5h6.5M8 13h6.5" />
       </svg>
     ),
   },
@@ -137,7 +149,14 @@ function RepoFooter({ repo, onSwitchRepo, onSignOut }: SidebarRepoProps) {
  * for the mobile drawer. `onNavigate` lets the drawer close itself on selection. */
 function SidebarContent({ onNavigate, repoProps }: { onNavigate?: () => void; repoProps?: SidebarRepoProps }) {
   const { view, setSearchOpen, setDetailId } = useUi();
-  const { noClients, triggerGitSync: onGitSync, openModal: onNewTask, gitPending } = useData();
+  const { noClients, tasks, triggerGitSync: onGitSync, openModal: onNewTask, gitPending } = useData();
+
+  // Open general to-dos get a count badge — they're the one nav target whose list
+  // isn't tied to the selected day, so nothing else surfaces that they're waiting.
+  const todoCount = React.useMemo(
+    () => tasks.filter((t) => isGeneralTodoClientId(clientIdOf(t)) && !isDone(t)).length,
+    [tasks],
+  );
 
   const go = (v: AppView) => {
     setDetailId(null);
@@ -171,9 +190,13 @@ function SidebarContent({ onNavigate, repoProps }: { onNavigate?: () => void; re
                 onNavigate?.();
               }}
               className="flex items-center justify-center gap-[7px] w-full px-[14px] py-[9px] rounded-[8px] text-[13px] font-semibold cursor-pointer border border-brand-500 bg-brand-450 text-brand-800 hover:bg-brand-475"
+              title="New task (⇧N)"
             >
               <PlusIcon size={15} />
               New task
+              <kbd className="inline-flex items-center justify-center h-[18px] px-[5px] rounded-[5px] border border-brand-500 bg-brand-225 text-brand-800 text-[11px] font-medium leading-none">
+                ⇧N
+              </kbd>
             </button>
           </div>
 
@@ -182,6 +205,11 @@ function SidebarContent({ onNavigate, repoProps }: { onNavigate?: () => void; re
               <button key={item.view} onClick={() => go(item.view)} className={navItemClass(view === item.view)}>
                 <span className="shrink-0">{item.icon}</span>
                 {item.label}
+                {item.view === 'todos' && todoCount > 0 && (
+                  <span className="ml-auto inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full bg-neutral-325 text-neutral-675 text-[11.5px] font-semibold">
+                    {todoCount}
+                  </span>
+                )}
               </button>
             ))}
           </nav>
@@ -295,8 +323,10 @@ export function Sidebar(repoProps: SidebarRepoProps = {}) {
         )}
       </div>
 
-      {/* Desktop static rail */}
-      <aside className="hidden md:flex w-[228px] shrink-0 border-r border-neutral-400 bg-white">
+      {/* Desktop static rail — pinned to the viewport so it never scrolls with the
+          page content; `self-start` keeps the flex row from stretching it, which
+          would leave sticky nothing to stick against. */}
+      <aside className="hidden md:flex sticky top-0 self-start h-screen overflow-y-auto w-[228px] shrink-0 border-r border-neutral-400 bg-white">
         <div className="w-full">
           <SidebarContent repoProps={repoProps} />
         </div>

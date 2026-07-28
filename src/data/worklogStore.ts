@@ -8,10 +8,11 @@
 // debounced auto-commit that pushes the dirty files back to the branch.
 
 import { Store } from '../store';
-import { FileMap, mountFileMap } from '../workspace/paths';
+import { FileMap, deleteFile, mountFileMap } from '../workspace/paths';
 import { today } from '../util/date';
-import { createClient, createTask, updateClient } from '../services/tasks';
+import { createClient, createTask, deleteClient, setClientArchived, updateClient } from '../services/tasks';
 import { saveImageAsset } from '../services/assets';
+import { isGeneralTodoClientId } from '../model/todos';
 import {
   addTaskNote,
   closeTaskById,
@@ -60,6 +61,15 @@ interface LoadResponse {
   text: Record<string, string>;
   binary: Record<string, string>;
   sha: Record<string, string>;
+}
+
+/** One file in a commit payload: written (text or base64) or removed. Mirrors
+ *  `CommitFile` on the server side of /api/commit. */
+interface OutgoingFile {
+  path: string;
+  content?: string;
+  base64?: string;
+  deleted?: boolean;
 }
 
 export type ToastTone = 'loading' | 'success' | 'info' | 'error';
@@ -183,13 +193,17 @@ class WorklogStore {
       return;
     }
     this.recovered = undefined;
+    const deleted = new Set(saved.deleted ?? []);
     for (const path of saved.dirty) {
-      if (Object.prototype.hasOwnProperty.call(saved.binary, path)) {
+      if (deleted.has(path)) {
+        await deleteFile(path);
+      } else if (Object.prototype.hasOwnProperty.call(saved.binary, path)) {
         this.fm.binary.set(path, base64ToBytes(saved.binary[path]));
+        this.fm.markDirty(path);
       } else {
         this.fm.text.set(path, saved.text[path] ?? '');
+        this.fm.markDirty(path);
       }
-      this.fm.markDirty(path);
     }
     // Re-parse the merged file map; onDidChange refreshes the snapshot, re-persists
     // and arms auto-sync.
@@ -211,8 +225,10 @@ class WorklogStore {
     }
   }
 
-  /** Commit dirty files now. Used by the Sync button (loud: shows status toasts)
-   *  and the background debounce (silent: only surfaces errors). */
+  /** Commit dirty files now. Used by the Sync button and the background debounce.
+   *  Both report progress ("Syncing changes…" → "Changes synced") and failures;
+   *  `silent` only suppresses the no-op "Everything is up to date" notice, which
+   *  a background sync has no reason to announce. */
   async sync(options: { silent?: boolean } = {}): Promise<void> {
     const { silent = false } = options;
     if (!this.repo || this.committing) {
@@ -227,11 +243,12 @@ class WorklogStore {
     this.clearCommitTimer();
     this.committing = true;
     this.updateSnapshot({ loading: true });
-    if (!silent) {
-      this.emitToast('Syncing changes…', 'loading');
-    }
+    this.emitToast('Syncing changes…', 'loading');
     try {
-      const files = [...this.fm.dirty].map((path) => {
+      const files: OutgoingFile[] = [...this.fm.dirty].map((path) => {
+        if (this.fm.deleted.has(path)) {
+          return { path, deleted: true };
+        }
         if (this.fm.binary.has(path)) {
           return { path, base64: bytesToBase64(this.fm.binary.get(path)!) };
         }
@@ -258,13 +275,21 @@ class WorklogStore {
       }
       const result = (await res.json()) as { commitSha: string };
       this.repo.baseCommitSha = result.commitSha;
+      // The branch now holds exactly what was just written, so a later delete of
+      // any of these paths knows it has to reach GitHub.
+      for (const f of files) {
+        if (f.deleted) {
+          this.fm.remote.delete(f.path);
+        } else {
+          this.fm.remote.add(f.path);
+        }
+      }
+      this.fm.deleted.clear();
       this.fm.clearDirty();
       this.clearPersistTimer();
       void clearPending(this.repoKey());
       this.updateSnapshot({ gitPending: false });
-      if (!silent) {
-        this.emitToast('Changes synced', 'success');
-      }
+      this.emitToast('Changes synced', 'success');
     } catch (err) {
       // Failures surface even for background syncs.
       this.emitToast(`Sync failed: ${err instanceof Error ? err.message : String(err)}`, 'error');
@@ -298,6 +323,14 @@ class WorklogStore {
 
   updateClient(id: string, fields: { name?: string; color?: string }): Promise<void> {
     return this.run(() => updateClient(this.store, id, fields));
+  }
+
+  setClientArchived(id: string, archived: boolean): Promise<void> {
+    return this.run(() => setClientArchived(this.store, id, archived));
+  }
+
+  deleteClient(id: string): Promise<void> {
+    return this.run(() => deleteClient(this.store, id));
   }
 
   updateSettings(fields: SettingsFields): Promise<void> {
@@ -376,7 +409,9 @@ class WorklogStore {
       autoSync: config.autoSync,
       assetsBase,
       statuses: config.statuses,
-      clients: this.store.db.getClients(),
+      // The general to-do bucket is a task-only concept; keep it out of the
+      // client list so it never surfaces in billing (log form, dashboard, totals).
+      clients: this.store.db.getClients().filter((c) => !isGeneralTodoClientId(c.id)),
       tasks: this.store.db.getAllTasks(),
       worklog: this.store.db.getAllWorklog(),
     };
@@ -392,6 +427,10 @@ class WorklogStore {
     }
     for (const [path, sha] of Object.entries(data.sha)) {
       this.fm.baseSha.set(path, sha);
+    }
+    // Everything that came back from the branch exists there — see FileMap.remote.
+    for (const path of [...this.fm.text.keys(), ...this.fm.binary.keys()]) {
+      this.fm.remote.add(path);
     }
     mountFileMap(this.fm);
     this.repo = { owner: data.owner, repo: data.repo, branch: data.branch, baseCommitSha: data.baseCommitSha };
@@ -476,8 +515,11 @@ class WorklogStore {
     }
     const text: Record<string, string> = {};
     const binary: Record<string, string> = {};
+    const deleted: string[] = [];
     for (const path of this.fm.dirty) {
-      if (this.fm.binary.has(path)) {
+      if (this.fm.deleted.has(path)) {
+        deleted.push(path);
+      } else if (this.fm.binary.has(path)) {
         binary[path] = bytesToBase64(this.fm.binary.get(path)!);
       } else {
         text[path] = this.fm.text.get(path) ?? '';
@@ -493,6 +535,7 @@ class WorklogStore {
       text,
       binary,
       dirty: [...this.fm.dirty],
+      deleted,
     };
     await savePending(snapshot);
   }

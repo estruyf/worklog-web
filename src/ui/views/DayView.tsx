@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { isEventWorklogClientId } from '../../model/worklog';
+import { isGeneralTodoClientId } from '../../model/todos';
 import type { ClientTaskGroup } from '../model';
 import { useData, useUi } from '../context';
 import { clientIdOf, isDone, workedOnDate } from '../utils';
@@ -10,6 +11,7 @@ import {
   LoggedSection,
   LogForm,
   OpenTasksSection,
+  TodoTasksSection,
   WorkedTasksSection,
 } from './day-view';
 
@@ -37,6 +39,12 @@ function useDayData() {
     () => openRowsFor(tasks.filter((t) => !isDone(t) && t.due === selectedDate)),
     [tasks, selectedDate, openRowsFor],
   );
+  // General to-dos (not linked to any client): a persistent personal list, shown
+  // regardless of logged time or the selected date.
+  const todoRows = useMemo(
+    () => openRowsFor(openTasks.filter((t) => isGeneralTodoClientId(clientIdOf(t)))),
+    [openTasks, openRowsFor],
+  );
   const doneTasks = useMemo(() => tasks.filter((t) => t.completed === selectedDate), [tasks, selectedDate]);
   const workedGroups = useMemo<ClientTaskGroup[]>(() => {
     const workedTasks = tasks.filter((t) => !isDone(t) && workedOnDate(t, selectedDate));
@@ -48,14 +56,20 @@ function useDayData() {
       .filter((g) => g.count > 0);
   }, [tasks, selectedDate, clients, colorOf, openRowsFor]);
 
-  return { openTasks, dayLogs, dueRows, openGroups, doneTasks, workedGroups, isTodaySel: selectedDate === today };
+  return { openTasks, dayLogs, dueRows, todoRows, openGroups, doneTasks, workedGroups, isTodaySel: selectedDate === today };
 }
 
 export function DayView() {
-  const { today, clients, colorOf, clientName, statusMeta, reopen, openDetail, typeLabel, hoursPerDay, logState, setLogState, saveLog, removeLog, editLog, openLogForm, openModalForDue } = useData();
+  const { today, clients, allClients, colorOf, clientName, statusMeta, reopen, openDetail, typeLabel, hoursPerDay, logState, setLogState, saveLog, removeLog, editLog, openLogForm, openModalForDue } = useData();
   const { selectedDate, setSelectedDate, editDayOpen, setEditDayOpen } = useUi();
-  const { openTasks, dayLogs, dueRows, openGroups, doneTasks, workedGroups, isTodaySel } = useDayData();
+  const { openTasks, dayLogs, dueRows, todoRows, openGroups, doneTasks, workedGroups, isTodaySel } = useDayData();
   const onSelectDate = setSelectedDate;
+  // New time goes to active clients only, but editing an entry logged before its
+  // client was archived still shows (and keeps) that client.
+  const logClients = useMemo(() => {
+    const current = allClients.find((c) => c.id === logState.client);
+    return current?.archived ? [...clients, current] : clients;
+  }, [clients, allClients, logState.client]);
   const openTasksCount = openTasks.length;
   const isFuture = selectedDate > today;
   // Day rollup for the LOGGED pill: total hours and the derived days.
@@ -78,6 +92,8 @@ export function DayView() {
 
         <DueTasksSection dueRows={dueRows} />
 
+        <TodoTasksSection todoRows={todoRows} />
+
         <LoggedSection
           dayLogs={dayLogs}
           loggedHours={loggedHours}
@@ -95,7 +111,7 @@ export function DayView() {
             setLogState={setLogState}
             saveLog={saveLog}
             removeLog={removeLog}
-            clients={clients}
+            clients={logClients}
             colorOf={colorOf}
           />
         )}

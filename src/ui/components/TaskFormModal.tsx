@@ -1,7 +1,9 @@
 import React, { useMemo } from 'react';
 import { useData, useUi } from '../context';
+import { TagPicker } from './TagPicker';
 import { useMarkdownImages } from '../hooks';
 import { clientIdOf, isDone, renderMarkdown, makeImageResolver } from '../utils';
+import { GENERAL_TODO_CLIENT_ID, GENERAL_TODO_COLOR, GENERAL_TODO_LABEL } from '../../model/todos';
 
 /** Derives the parent-task options and save-enabled flag for the open form. */
 function useTaskFormData() {
@@ -40,8 +42,17 @@ export function TaskFormModal() {
     newClientName,
     setNewClientName,
   } = useUi();
-  const { clients, colorOf, assetsBase, saveTask: onSave, closeModal: onClose, createClient: onCreateClient, deleteTask: onDelete } = useData();
+  const { clients, allClients, colorOf, assetsBase, allTags, saveTask: onSave, closeModal: onClose, createClient: onCreateClient, deleteTask: onDelete } = useData();
+  // Usage-ranked, so the picker offers the tags actually in circulation first.
+  const knownTags = useMemo(() => allTags.map((t) => t.tag), [allTags]);
   const { parentOptions, canAdd } = useTaskFormData();
+  // Archived clients aren't offered for new work, but a task already filed under
+  // one keeps showing it — otherwise editing that task looks unassigned and the
+  // next click silently moves it to another client.
+  const pickableClients = useMemo(() => {
+    const current = allClients.find((c) => c.id === clientId);
+    return current?.archived ? [...clients, current] : clients;
+  }, [clients, allClients, clientId]);
   const img = useMarkdownImages(description, setDescription);
   const resolveImage = useMemo(() => makeImageResolver(assetsBase), [assetsBase]);
   return (
@@ -77,7 +88,7 @@ export function TaskFormModal() {
 
         <label className="block font-semibold text-[14px] mb-[10px]">Client</label>
         <div className="flex flex-wrap gap-[10px] mb-[22px]">
-          {clients.map((c) => {
+          {pickableClients.map((c) => {
             const active = c.id === clientId;
             return (
               <button
@@ -86,6 +97,7 @@ export function TaskFormModal() {
                   setClientId(c.id);
                   setParentId('');
                 }}
+                title={c.archived ? `${c.name} (archived)` : c.name}
                 className={
                   'flex items-center gap-2 px-4 py-[9px] rounded-full text-[14px] font-semibold cursor-pointer border text-neutral-825 ' +
                   (active ? 'border-brand-500 bg-brand-450' : 'border-neutral-525 bg-neutral-350')
@@ -96,6 +108,20 @@ export function TaskFormModal() {
               </button>
             );
           })}
+          <button
+            onClick={() => {
+              setClientId(GENERAL_TODO_CLIENT_ID);
+              setParentId('');
+            }}
+            title="A general to-do not linked to any client"
+            className={
+              'flex items-center gap-2 px-4 py-[9px] rounded-full text-[14px] font-semibold cursor-pointer border text-neutral-825 ' +
+              (clientId === GENERAL_TODO_CLIENT_ID ? 'border-brand-500 bg-brand-450' : 'border-neutral-525 bg-neutral-350')
+            }
+          >
+            <span className="w-[9px] h-[9px] rounded-full" style={{ background: GENERAL_TODO_COLOR }} />
+            {GENERAL_TODO_LABEL}
+          </button>
           {!addingClient && (
             <button onClick={() => setAddingClient(true)} className="flex items-center gap-[6px] px-4 py-[9px] border border-dashed border-neutral-550 rounded-full bg-white text-neutral-700 text-[13px] cursor-pointer">
               + Add client
@@ -158,19 +184,9 @@ export function TaskFormModal() {
           </div>
           <div className="flex-1 min-w-0">
             <label className="block font-semibold text-[14px] mb-2">
-              Tags <span className="text-neutral-625 font-normal">(comma separated)</span>
+              Tags <span className="text-neutral-625 font-normal">(pick existing or create)</span>
             </label>
-            <input
-              value={tags}
-              onChange={(e) => setTags(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  onSave();
-                }
-              }}
-              placeholder="frontend, bug, urgent"
-              className="w-full px-[14px] py-[11px] border border-neutral-525 rounded-[9px] text-[16px] md:text-[14px]"
-            />
+            <TagPicker value={tags} onChange={setTags} known={knownTags} />
           </div>
         </div>
 

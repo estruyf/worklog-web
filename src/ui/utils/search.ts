@@ -34,9 +34,22 @@ export interface SearchDeps {
   onEdit: (t: Task) => () => void;
 }
 
+/** What the hit list is narrowed by. A query is not required: tags alone are a
+ *  valid filter, which is how "show me everything tagged bug" works. */
+export interface SearchFilters {
+  query: string;
+  scope: SearchScope;
+  /** Client id, or '' for every client. */
+  client: string;
+  /** Tags a task must carry — all of them. Empty means no tag filter. */
+  tags: string[];
+}
+
 export interface SearchDerived {
   /** The normalised (trimmed, lower-cased) query the results were built from. */
   q: string;
+  /** True when anything is narrowing the list — a query, tags, or both. */
+  filtered: boolean;
   groups: SearchGroup[];
   /** Every hit in render order — the index space the keyboard cursor walks. */
   flat: SearchResult[];
@@ -46,20 +59,17 @@ export interface SearchDerived {
   archivedCount: number;
 }
 
-export function deriveSearch(
-  tasks: Task[],
-  rawQuery: string,
-  scope: SearchScope,
-  clientFilter: string,
-  deps: SearchDeps,
-): SearchDerived {
+export function deriveSearch(tasks: Task[], filters: SearchFilters, deps: SearchDeps): SearchDerived {
   const { clientIdOf, clientName, colorOf, statusMeta, isDone, linksOf, onEdit } = deps;
-  const q = rawQuery.trim().toLowerCase();
+  const { scope, client: clientFilter } = filters;
+  const q = filters.query.trim().toLowerCase();
+  const tagFilter = filters.tags.map((t) => t.toLowerCase());
+  const filtered = q !== '' || tagFilter.length > 0;
   const openCount = tasks.filter((t) => !isDone(t)).length;
   const archivedCount = tasks.length - openCount;
 
-  if (!q) {
-    return { q, groups: [], flat: [], count: 0, openCount, archivedCount };
+  if (!filtered) {
+    return { q, filtered, groups: [], flat: [], count: 0, openCount, archivedCount };
   }
 
   const groupsByClient = new Map<string, SearchGroup>();
@@ -82,6 +92,16 @@ export function deriveSearch(
     const links = linksOf(t);
     const tags = t.tags ?? [];
 
+    // Tags narrow before the query does, and every picked tag must be present.
+    if (tagFilter.length > 0) {
+      const lower = tags.map((tag) => tag.toLowerCase());
+      if (!tagFilter.every((tag) => lower.includes(tag))) {
+        continue;
+      }
+    }
+
+    // With no query every field trivially "contains" the empty string, so a
+    // tags-only filter falls through as a plain, unhighlighted match.
     const inTitle = t.title.toLowerCase().includes(q);
     const inDesc = desc.toLowerCase().includes(q);
     const inLink = links.join(' ').toLowerCase().includes(q);
@@ -133,5 +153,5 @@ export function deriveSearch(
   const groups = [...groupsByClient.values()];
   // Flatten in group render order so the cursor index lines up with the DOM.
   const flat = groups.flatMap((g) => g.rows);
-  return { q, groups, flat, count: flat.length, openCount, archivedCount };
+  return { q, filtered, groups, flat, count: flat.length, openCount, archivedCount };
 }

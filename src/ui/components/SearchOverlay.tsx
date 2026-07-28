@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Icon } from './icons';
 import { useData, useUi } from '../context';
 import { useSearchData } from '../hooks';
@@ -21,10 +21,16 @@ const SCOPES: { key: 'all' | 'open' | 'archived'; label: string }[] = [
 /** Command-palette style search overlay, layered on top of the active view.
  * Opened via the nav Search button or ⌘F/⌘S; closed via Esc, the backdrop, or
  * opening a hit. Keyboard nav (↑/↓/↵) is driven by the shell while this is open. */
+/** How many tag chips show before the row collapses behind "+n more". */
+const TAG_CHIP_LIMIT = 12;
+
 export function SearchOverlay() {
-  const { clients, colorOf } = useData();
-  const { search, setSearch, searchScope, setSearchScope, searchClient, setSearchClient, searchSel, setSearchOpen } = useUi();
-  const { q, groups, count, openCount, archivedCount } = useSearchData();
+  // Search reaches into the archive, so it offers *every* client — an archived
+  // one still has history worth finding.
+  const { allClients, colorOf, allTags, toggleTagFilter, clearTagFilter } = useData();
+  const { search, setSearch, searchScope, setSearchScope, searchClient, setSearchClient, tagFilter, searchSel, setSearchOpen } = useUi();
+  const { q, filtered, groups, count, openCount, archivedCount } = useSearchData();
+  const [allTagsShown, setAllTagsShown] = useState(false);
 
   const close = () => setSearchOpen(false);
 
@@ -34,11 +40,19 @@ export function SearchOverlay() {
     selRef.current?.scrollIntoView({ block: 'nearest' });
   }, [searchSel]);
 
-  const filtersActive = searchScope !== 'all' || searchClient !== '';
+  const filtersActive = searchScope !== 'all' || searchClient !== '' || tagFilter.length > 0;
   const resetFilters = () => {
     setSearchScope('all');
     setSearchClient('');
+    clearTagFilter();
   };
+
+  // Selected tags stay visible even when the row is collapsed, so a filter can
+  // always be switched off where it was switched on.
+  const visibleTags = allTagsShown
+    ? allTags
+    : allTags.filter((t, i) => i < TAG_CHIP_LIMIT || tagFilter.includes(t.tag));
+  const hiddenTagCount = allTags.length - visibleTags.length;
 
   let flatIndex = 0;
 
@@ -63,7 +77,7 @@ export function SearchOverlay() {
               className="flex-1 bg-transparent text-input-fg outline-none focus-visible:outline-none!"
               placeholder="Search tasks by title, link, description..."
             />
-            {q !== '' && (
+            {filtered && (
               <span className="shrink-0 text-[13px] text-neutral-650">
                 {count} {count === 1 ? 'result' : 'results'}
               </span>
@@ -109,15 +123,17 @@ export function SearchOverlay() {
             >
               All clients
             </button>
-            {clients.map((c) => {
+            {allClients.map((c) => {
               const active = searchClient === c.id;
               return (
                 <button
                   key={c.id}
                   onClick={() => setSearchClient(c.id)}
+                  title={c.archived ? `${c.name} (archived)` : c.name}
                   className={
                     'inline-flex items-center gap-[6px] px-[10px] py-[5px] rounded-full text-[12.5px] cursor-pointer border ' +
-                    (active ? 'border-brand-500 bg-brand-225 text-brand-650 font-semibold' : 'border-neutral-400 bg-white text-neutral-700')
+                    (active ? 'border-brand-500 bg-brand-225 text-brand-650 font-semibold' : 'border-neutral-400 bg-white text-neutral-700') +
+                    (c.archived && !active ? ' opacity-60' : '')
                   }
                 >
                   <span className="w-2 h-2 rounded-full shrink-0" style={{ background: colorOf(c.id) }} />
@@ -132,12 +148,47 @@ export function SearchOverlay() {
               </button>
             )}
           </div>
+
+          {/* Tag filter — a filter in its own right: with tags picked and the
+              query empty, the results below are everything carrying them. */}
+          {allTags.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2 mb-[14px]">
+              <span className="text-[11px] font-bold tracking-[0.06em] text-neutral-675 mr-[2px]">TAGS</span>
+              {visibleTags.map(({ tag, count: n }) => {
+                const active = tagFilter.includes(tag);
+                return (
+                  <button
+                    key={tag}
+                    onClick={() => toggleTagFilter(tag)}
+                    title={active ? `Stop filtering by "${tag}"` : `Filter by "${tag}"`}
+                    className={
+                      'inline-flex items-center gap-[6px] px-[10px] py-[4px] rounded-full text-[12.5px] cursor-pointer border ' +
+                      (active ? 'border-brand-500 bg-brand-225 text-brand-650 font-semibold' : 'border-neutral-400 bg-white text-neutral-700')
+                    }
+                  >
+                    {tag}
+                    <span className={'text-[11px] tabular-nums ' + (active ? 'text-brand-650' : 'text-neutral-625')}>{n}</span>
+                  </button>
+                );
+              })}
+              {hiddenTagCount > 0 && (
+                <button onClick={() => setAllTagsShown(true)} className="text-[12.5px] text-info bg-none border-none cursor-pointer px-1">
+                  +{hiddenTagCount} more
+                </button>
+              )}
+              {tagFilter.length > 0 && (
+                <button onClick={clearTagFilter} className="text-[12.5px] text-info bg-none border-none cursor-pointer px-1">
+                  Clear tags
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Results (scrollable) */}
         <div className="flex-1 overflow-auto px-5 pb-5 border-t border-neutral-325">
           {/* Idle state */}
-          {q === '' && (
+          {!filtered && (
             <div className="mt-5 rounded-[14px] border border-dashed border-neutral-500 bg-neutral-50 px-6 py-7 text-center">
               <div className="flex items-center justify-center gap-8">
                 <div>
@@ -162,7 +213,14 @@ export function SearchOverlay() {
             </div>
           )}
 
-          {q !== '' && count === 0 && <div className="text-[14px] text-neutral-625 italic mt-5">No tasks match "{search}".</div>}
+          {filtered && count === 0 && (
+            <div className="text-[14px] text-neutral-625 italic mt-5">
+              No tasks match
+              {q !== '' && <> "{search}"</>}
+              {q !== '' && tagFilter.length > 0 && ' with'}
+              {tagFilter.length > 0 && ` ${tagFilter.length === 1 ? 'the tag' : 'the tags'} ${tagFilter.join(', ')}`}.
+            </div>
+          )}
 
           {/* Grouped results */}
           <div className="mt-4">
@@ -214,11 +272,28 @@ export function SearchOverlay() {
                                 {r.matchBadge}
                               </span>
                             )}
-                            {r.tags.map((tag) => (
-                              <span key={tag} className="shrink-0 text-[11px] text-neutral-725 bg-neutral-250 border border-neutral-400 rounded-full px-[8px] py-[1px]">
-                                {tag}
-                              </span>
-                            ))}
+                            {r.tags.map((tag) => {
+                              const active = tagFilter.includes(tag);
+                              return (
+                                <button
+                                  key={tag}
+                                  onClick={(e) => {
+                                    // The row itself opens the task; a tag narrows the list instead.
+                                    e.stopPropagation();
+                                    toggleTagFilter(tag);
+                                  }}
+                                  title={active ? `Stop filtering by "${tag}"` : `Filter by "${tag}"`}
+                                  className={
+                                    'shrink-0 text-[11px] rounded-full px-[8px] py-[1px] border cursor-pointer ' +
+                                    (active
+                                      ? 'border-brand-500 bg-brand-225 text-brand-650 font-semibold'
+                                      : 'text-neutral-725 bg-neutral-250 border-neutral-400 hover:border-brand-500 hover:bg-brand-175 hover:text-brand-800')
+                                  }
+                                >
+                                  {tag}
+                                </button>
+                              );
+                            })}
                           </div>
                           {r.snippet && <div className="text-[12.5px] text-neutral-650 mt-[3px] truncate">{r.snippet}</div>}
                         </div>

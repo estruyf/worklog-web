@@ -9,6 +9,7 @@ import {
   isTerminalStatus,
   terminalStatusId,
 } from "../model/status";
+import { isGeneralTodoClientId } from "../model/todos";
 import { parseTaskFile, serializeTask } from "../parser/taskParser";
 import { extractBlock, replaceBlock } from "../parser/blocks";
 import { readText, writeText } from "../workspace/paths";
@@ -57,7 +58,8 @@ export async function setTaskStatus(
   return { ...task, status: statusId };
 }
 
-/** Toggle whether a task is marked as worked on a specific day. */
+/** Toggle whether a task is marked as worked on a specific day. Not available
+ *  for general to-dos: they are open or closed, with no worked-on tracking. */
 export async function toggleTaskWorkedOn(
   store: Store,
   taskId: string,
@@ -66,6 +68,9 @@ export async function toggleTaskWorkedOn(
   const task = store.db.getTask(taskId);
   if (!task) {
     throw new Error(`Task ${taskId} not found.`);
+  }
+  if (isGeneralTodoClientId(task.clientIds[0])) {
+    throw new Error("To-dos don't track worked-on days — they're open or closed.");
   }
   const existing = new Set(task.workedOn ?? []);
   const marking = !existing.has(date);

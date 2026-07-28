@@ -67,6 +67,9 @@ export interface Client {
   id: string;
   name: string;
   color?: string;
+  /** Retired client: hidden from the pickers and lists, but its tasks, archive
+   *  and ledger history stay intact and keep resolving to this name/color. */
+  archived?: boolean;
 }
 
 /** Automatic Git sync after logging time, so a timesheet doesn't sit unpushed. */

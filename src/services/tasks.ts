@@ -7,7 +7,8 @@ import { newTaskId } from '../parser/ids';
 import { serializeTask } from '../parser/taskParser';
 import { today } from '../util/date';
 import { appendTaskBlock } from '../commands/shared';
-import { writeText, readText, ensureDir } from '../workspace/paths';
+import { writeText, readText, ensureDir, deleteFile, listTextPaths } from '../workspace/paths';
+import { GENERAL_TODO_CLIENT_ID, generalTodoClient, isGeneralTodoClientId } from '../model/todos';
 
 export interface NewTaskInput {
   title: string;
@@ -46,7 +47,11 @@ export async function createTask(store: Store, input: NewTaskInput): Promise<Tas
   if (!title) {
     throw new Error('A task title is required.');
   }
-  const client = store.db.getClients().find((c) => c.id === input.clientId);
+  // General to-dos use a reserved pseudo-client that may not exist yet (no file
+  // until the first to-do is created), so fall back to its virtual record.
+  const client =
+    store.db.getClients().find((c) => c.id === input.clientId) ??
+    (isGeneralTodoClientId(input.clientId) ? generalTodoClient() : undefined);
   if (!client) {
     throw new Error(`Unknown client "${input.clientId}".`);
   }
@@ -80,6 +85,9 @@ export async function createClient(store: Store, input: NewClientInput): Promise
   const id = (input.id?.trim() || slugifyClientId(name));
   if (!/^[a-z0-9][a-z0-9-]*$/.test(id)) {
     throw new Error('Client id must be lowercase letters, numbers and dashes.');
+  }
+  if (id === GENERAL_TODO_CLIENT_ID) {
+    throw new Error(`"${GENERAL_TODO_CLIENT_ID}" is reserved for general to-dos.`);
   }
   if (store.db.getClients().some((c) => c.id === id)) {
     throw new Error(`A client with id "${id}" already exists.`);
@@ -120,5 +128,63 @@ export async function updateClient(store: Store, id: string, fields: ClientField
   }
   await store.ws.saveConfig(config);
   await store.rebuild('updateClient');
-  return { id, name: client.name, color: client.color };
+  return { id, name: client.name, color: client.color, archived: client.archived };
+}
+
+/** Retire a client (or bring it back) by flipping `archived` in config.json. No
+ *  files move: its tasks, archive and ledger entries stay exactly where they are,
+ *  so past months keep reporting correctly — the client just drops out of the
+ *  pickers and lists you work in day to day. */
+export async function setClientArchived(store: Store, id: string, archived: boolean): Promise<void> {
+  const config = await store.ws.loadConfig();
+  const client = config.clients.find((c) => c.id === id);
+  if (!client) {
+    throw new Error(`Unknown client "${id}".`);
+  }
+  client.archived = archived ? true : undefined;
+  await store.ws.saveConfig(config);
+  await store.rebuild(archived ? 'archiveClient' : 'restoreClient');
+}
+
+/** How much history a client carries — what makes deleting it destructive. */
+export function clientUsage(store: Store, id: string): { tasks: number; worklog: number } {
+  return {
+    tasks: store.db.getAllTasks().filter((t) => t.clientIds.includes(id)).length,
+    worklog: store.db.getAllWorklog().filter((w) => w.clientId === id).length,
+  };
+}
+
+/** Delete a client that carries no history: drop it from config.json and remove
+ *  its (taskless) client file and archive folder. A client with tasks or logged
+ *  time is refused — deleting it would orphan billing history, and the indexer
+ *  would resurrect it anyway from the entries that still reference the id.
+ *  {@link setClientArchived} is the way to retire those. */
+export async function deleteClient(store: Store, id: string): Promise<void> {
+  const config = await store.ws.loadConfig();
+  const index = config.clients.findIndex((c) => c.id === id);
+  if (index < 0) {
+    throw new Error(`Unknown client "${id}".`);
+  }
+  const name = config.clients[index].name;
+  const { tasks, worklog } = clientUsage(store, id);
+  if (tasks > 0 || worklog > 0) {
+    throw new Error(
+      `"${name}" still has ${tasks} task${tasks === 1 ? '' : 's'} and ${worklog} time ` +
+        `entr${worklog === 1 ? 'y' : 'ies'}. Archive it instead of deleting it.`,
+    );
+  }
+
+  config.clients.splice(index, 1);
+  await store.ws.saveConfig(config);
+
+  // The client file and any archive months left behind are empty by definition
+  // (the guard above proved no task parses out of them), so they go with it.
+  const archivePrefix = `${store.ws.archiveDir}/${id}/`;
+  for (const path of listTextPaths()) {
+    if (path === store.ws.clientFile(id) || path.startsWith(archivePrefix)) {
+      await deleteFile(path);
+    }
+  }
+
+  await store.rebuild('deleteClient');
 }

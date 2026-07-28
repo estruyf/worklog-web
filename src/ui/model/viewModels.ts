@@ -4,7 +4,7 @@
 
 /** The top-level tabs the shell can display. Search is not a view — it opens as
  * an overlay (see SearchOverlay) on top of whichever view is active. */
-export type AppView = "day" | "calendar" | "clients" | "insights" | "archive" | "settings";
+export type AppView = "day" | "todos" | "calendar" | "clients" | "insights" | "archive" | "settings";
 
 /** Resolved status display, computed from a StatusDef + completion state. */
 export interface StatusMeta {
@@ -20,8 +20,12 @@ export interface WorklogRow {
   id: string;
   title: string;
   pad: string;
-  statusLabel: string;
-  statusColor: string;
+  /** Status display, omitted for rows whose status carries no information
+   *  (general to-dos, which are open or closed only). */
+  statusLabel?: string;
+  statusColor?: string;
+  /** Worked-on state for the selected day. Always false for rows that don't
+   *  track it (general to-dos), where `onWorked` is omitted too. */
   worked: boolean;
   workedTitle: string;
   hasLink: boolean;
@@ -37,10 +41,17 @@ export interface WorklogRow {
   onView: () => void;
   onOpenTab: () => void;
   onDone: () => void;
-  onWorked: () => void;
-  onCycle: () => void;
+  /** Omitted for tasks without a worked-on state (general to-dos); the row then
+   *  hides the worked toggle. */
+  onWorked?: () => void;
+  /** Omitted for tasks with no intermediate statuses to cycle through (general
+   *  to-dos), which don't render a status at all. */
+  onCycle?: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  /** Follows a tag chip into the tag-filtered search. Omitted where tags are
+   *  shown but not actionable. */
+  onTagClick?: (tag: string) => void;
 }
 
 /** A client bucket of open/worked task rows for the Today and Clients views. */

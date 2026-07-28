@@ -50,7 +50,7 @@ function Shell({ repoProps }: { repoProps?: SidebarRepoProps }) {
   stateRef.current = { searchOpen, modalOpen, detailId, clientModalOpen, searchSel, searchData, openModalFromShortcut, closeModal, openLogForm };
 
   // Global shortcuts. ⌘F/⌘S -> open the Search overlay (⌘S also suppresses the
-  // browser's save dialog); ⌘N -> New task; ⌘L on the Day view -> open the in-app
+  // browser's save dialog); ⇧N (or ⌘N in the PWA) -> New task; ⌘L on the Day view -> open the in-app
   // log form; Esc
   // closes the top-most dialog; while the Search overlay is open, ↑/↓ move the
   // hit cursor and ↵ opens the selected hit and closes the overlay. The search
@@ -61,6 +61,7 @@ function Shell({ repoProps }: { repoProps?: SidebarRepoProps }) {
       const s = stateRef.current;
       const meta = e.metaKey || e.ctrlKey;
       const key = e.key.toLowerCase();
+      const idle = !s.searchOpen && !s.modalOpen && !s.detailId && !s.clientModalOpen && !isEditableTarget(e.target);
 
       if (meta && (key === 's' || key === 'f')) {
         e.preventDefault();
@@ -68,21 +69,15 @@ function Shell({ repoProps }: { repoProps?: SidebarRepoProps }) {
         requestAnimationFrame(() => document.getElementById('worklog-search-input')?.focus());
         return;
       }
-      if (meta && key === 'n') {
+      // ⌘/Ctrl+N is reserved by the browser ("new window") and never reaches the
+      // page, so it only fires in the installed PWA. ⇧N is the shortcut that
+      // actually works in a tab, hence the two accepted forms.
+      if ((meta && key === 'n') || (key === 'n' && e.shiftKey && !e.altKey && idle)) {
         e.preventDefault();
         s.openModalFromShortcut();
         return;
       }
-      if (
-        meta &&
-        key === 'l' &&
-        view === 'day' &&
-        !s.searchOpen &&
-        !s.modalOpen &&
-        !s.detailId &&
-        !s.clientModalOpen &&
-        !isEditableTarget(e.target)
-      ) {
+      if (meta && key === 'l' && view === 'day' && idle) {
         e.preventDefault();
         s.openLogForm();
         return;

@@ -4,6 +4,7 @@
 import React from 'react';
 import type { AppView } from '../model';
 import { DayView } from './DayView';
+import { TodosView } from './TodosView';
 import { CalendarView } from './CalendarView';
 import { ClientsView } from './ClientsView';
 import { InsightsView } from './InsightsView';
@@ -12,6 +13,7 @@ import { SettingsView } from './SettingsView';
 
 export const ROUTES: Record<AppView, React.ComponentType> = {
   day: DayView,
+  todos: TodosView,
   calendar: CalendarView,
   clients: ClientsView,
   insights: InsightsView,
