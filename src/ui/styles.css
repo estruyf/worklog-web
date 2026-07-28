@@ -228,8 +228,16 @@ body {
   margin: 0 0 12px;
   padding-left: 22px;
 }
+/* Tailwind's preflight strips list markers; restore them per list type. */
+.wl-md ul.wl-md-list {
+  list-style: disc outside;
+}
+.wl-md ol.wl-md-list {
+  list-style: decimal outside;
+}
 .wl-md .wl-md-list li {
   margin: 3px 0;
+  list-style: inherit;
 }
 .wl-md .wl-md-quote {
   margin: 0 0 12px;
