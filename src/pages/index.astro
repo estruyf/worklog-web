@@ -583,9 +583,15 @@ Freeform Markdown description — images and all.`;
           <a href="https://www.eliostruyf.com">by Elio Struyf</a>
         </nav>
       </div>
-      <span class="foot-note"
-        >A GitHub-backed timesheet · your data lives in your repo.</span
-      >
+      <div class="foot-bottom">
+        <span class="foot-note">A GitHub-backed timesheet · your data lives in your repo.</span>
+        <img
+          class="foot-badge"
+          src="https://api.visitorbadge.io/api/visitors?path=https%3A%2F%2Fworklog.struyfconsulting.be&labelColor=%23e2be2e&countColor=%23e2be2e&slug=homepage"
+          alt="Visitor count"
+          height="20"
+        />
+      </div>
     </footer>
   </div>
 </Layout>
@@ -1207,9 +1213,21 @@ Freeform Markdown description — images and all.`;
   .foot-links a:hover {
     color: var(--brand-strong);
   }
+  .foot-bottom {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 16px;
+    align-items: center;
+    justify-content: space-between;
+  }
   .foot-note {
     font-size: 13px;
     color: var(--faint);
+  }
+  .foot-badge {
+    height: 20px;
+    width: auto;
+    opacity: 0.9;
   }
 
   /* ---- Responsive ---- */

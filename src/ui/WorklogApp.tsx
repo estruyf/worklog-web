@@ -145,6 +145,18 @@ function Shell({ repoProps }: { repoProps?: SidebarRepoProps }) {
       {clientModalOpen && <ClientFormModal />}
 
       <Toast toast={toast} />
+
+      {/* Hidden visitor-stats pixel — an <img> still fetches its src while hidden,
+          so this pings the counter once per app load without showing anything. */}
+      <img
+        src="https://api.visitorbadge.io/api/visitors?path=https%3A%2F%2Fworklog.struyfconsulting.be&labelColor=%23e2be2e&countColor=%23e2be2e&slug=app"
+        alt=""
+        aria-hidden="true"
+        width={1}
+        height={1}
+        loading="eager"
+        className="absolute h-px w-px opacity-0 pointer-events-none -left-px -top-px"
+      />
     </div>
   );
 }
