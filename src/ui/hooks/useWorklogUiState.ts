@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { AppView, SearchScope } from "../model";
+import { closeTaskDetail, openTaskDetail, useDetailId } from "../router";
 
 export function useWorklogUiState() {
   const [view, setView] = useState<AppView>("day");
@@ -60,7 +61,18 @@ export function useWorklogUiState() {
   const [logHours, setLogHours] = useState<number | string>(2);
   const [logNote, setLogNote] = useState("");
 
-  const [detailId, setDetailId] = useState<string | null>(null);
+  // The open task lives in history rather than in component state (see ../router):
+  // opening one pushes an entry so the browser's Back button closes the panel
+  // instead of navigating the app behind it and leaving it stranded on top. On
+  // the routed /app/task/<id> page the id comes from the route itself.
+  const detailId = useDetailId();
+  const setDetailId = useCallback((id: string | null) => {
+    if (id) {
+      openTaskDetail(id);
+    } else {
+      closeTaskDetail();
+    }
+  }, []);
   const [descDraft, setDescDraft] = useState("");
   const [descMode, setDescMode] = useState<"preview" | "edit">("preview");
   const [noteDraft, setNoteDraft] = useState("");

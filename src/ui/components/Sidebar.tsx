@@ -148,7 +148,7 @@ function RepoFooter({ repo, onSwitchRepo, onSignOut }: SidebarRepoProps) {
 /** The shared inner content — rendered once for the static desktop rail and once
  * for the mobile drawer. `onNavigate` lets the drawer close itself on selection. */
 function SidebarContent({ onNavigate, repoProps }: { onNavigate?: () => void; repoProps?: SidebarRepoProps }) {
-  const { view, setSearchOpen, setDetailId } = useUi();
+  const { view, setSearchOpen } = useUi();
   const { noClients, tasks, triggerGitSync: onGitSync, openModal: onNewTask, gitPending } = useData();
 
   // Open general to-dos get a count badge — they're the one nav target whose list
@@ -158,8 +158,9 @@ function SidebarContent({ onNavigate, repoProps }: { onNavigate?: () => void; re
     [tasks],
   );
 
+  // Navigating away closes an open task detail overlay on its own — it rides the
+  // same history entry the navigation replaces.
   const go = (v: AppView) => {
-    setDetailId(null);
     navigateToView(v);
     onNavigate?.();
   };
@@ -273,7 +274,6 @@ function SidebarContent({ onNavigate, repoProps }: { onNavigate?: () => void; re
 export function Sidebar(repoProps: SidebarRepoProps = {}) {
   const [open, setOpen] = React.useState(false);
   const { openModal: onNewTask, noClients } = useData();
-  const { setDetailId } = useUi();
 
   // Close the drawer on Escape and lock body scroll while it's open.
   React.useEffect(() => {
@@ -301,10 +301,7 @@ export function Sidebar(repoProps: SidebarRepoProps = {}) {
           <MenuIcon size={18} />
         </button>
         <button
-          onClick={() => {
-            setDetailId(null);
-            navigateToView('day');
-          }}
+          onClick={() => navigateToView('day')}
           className="flex items-center gap-2 font-bold text-[15px] cursor-pointer bg-transparent border-none text-left"
           title="Go to Day view"
         >

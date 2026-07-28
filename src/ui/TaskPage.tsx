@@ -3,20 +3,17 @@
 // pinned to one task and without the dashboard chrome. Edit / new-client still work
 // because their modals mount here too. A shareable URL with working browser
 // back/forward; the breadcrumb navigates back to the dashboard or the parent task.
+//
+// Nothing pins the detail view here: on a task route the router reports the
+// route's own task as the open one (see useDetailId), so the panel follows the URL.
 
-import React from 'react';
 import { useData, useUi, WorklogProvider } from './context';
 import { ClientFormModal, Toast, TaskDetailPanel, TaskFormModal } from './components';
 import { navigateToDashboard } from './router';
 
 function TaskPageShell({ taskId }: { taskId: string }) {
   const { snap, toast } = useData();
-  const { setDetailId, modalOpen, clientModalOpen } = useUi();
-
-  // Pin the detail view to this task once the app mounts / the route changes.
-  React.useEffect(() => {
-    setDetailId(taskId);
-  }, [taskId, setDetailId]);
+  const { modalOpen, clientModalOpen } = useUi();
 
   if (!snap) {
     return <div className="min-h-screen bg-white" />;

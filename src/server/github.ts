@@ -121,10 +121,23 @@ function isWorklogPath(path: string): boolean {
 
 const TEXT_PATH = /\.(md|json)$|\.worklog$/;
 
-export async function loadRepo(token: string, owner: string, repo: string, branchArg?: string): Promise<LoadedRepo> {
+export interface BranchHead {
+  branch: string;
+  /** Commit the branch currently points at on GitHub. */
+  commitSha: string;
+}
+
+/** The branch's current head commit. One ref lookup, no tree or blobs — cheap
+ *  enough for the client to ask on every sync to spot new commits pushed
+ *  elsewhere. */
+export async function getBranchHead(token: string, owner: string, repo: string, branchArg?: string): Promise<BranchHead> {
   const branch = branchArg || (await gh<{ default_branch: string }>(token, `/repos/${owner}/${repo}`)).default_branch;
   const ref = await gh<{ object: { sha: string } }>(token, `/repos/${owner}/${repo}/git/ref/heads/${encodeURIComponent(branch)}`);
-  const baseCommitSha = ref.object.sha;
+  return { branch, commitSha: ref.object.sha };
+}
+
+export async function loadRepo(token: string, owner: string, repo: string, branchArg?: string): Promise<LoadedRepo> {
+  const { branch, commitSha: baseCommitSha } = await getBranchHead(token, owner, repo, branchArg);
   const commit = await gh<{ tree: { sha: string } }>(token, `/repos/${owner}/${repo}/git/commits/${baseCommitSha}`);
   const tree = await gh<{ tree: Array<{ path: string; type: string; sha: string }> }>(
     token,

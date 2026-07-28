@@ -5,7 +5,8 @@
 //   - direct async action methods (createTask, setWorklog, saveImage, …) the UI
 //     calls straight — no message bus.
 // Every persisted edit re-derives the state, marks the tree dirty, and arms a
-// debounced auto-commit that pushes the dirty files back to the branch.
+// debounced auto-commit. Syncing goes both ways: it first asks GitHub where the
+// branch head is, pulls when the branch moved, and pushes the dirty files back.
 
 import { Store } from '../store';
 import { FileMap, deleteFile, mountFileMap } from '../workspace/paths';
@@ -142,17 +143,14 @@ class WorklogStore {
   /** Load a repo from GitHub and render it. */
   async open(owner: string, repo: string, branch?: string): Promise<void> {
     this.updateSnapshot({ loading: true });
-    const params = new URLSearchParams({ owner, repo });
-    if (branch) {
-      params.set('branch', branch);
-    }
-    const res = await fetch(`/api/load?${params}`);
-    if (!res.ok) {
+    let data: LoadResponse;
+    try {
+      data = await this.fetchRepo(owner, repo, branch);
+    } catch (err) {
       this.updateSnapshot({ loading: false });
-      this.emitToast(`Could not load ${owner}/${repo}: ${await res.text()}`, 'error');
+      this.emitToast(`Could not load ${owner}/${repo}: ${err instanceof Error ? err.message : String(err)}`, 'error');
       throw new Error('load failed');
     }
-    const data = (await res.json()) as LoadResponse;
     this.applyLoad(data);
     await this.store.rebuild('open');
     this.loaded = true;
@@ -225,26 +223,64 @@ class WorklogStore {
     }
   }
 
-  /** Commit dirty files now. Used by the Sync button and the background debounce.
-   *  Both report progress ("Syncing changes…" → "Changes synced") and failures;
-   *  `silent` only suppresses the no-op "Everything is up to date" notice, which
-   *  a background sync has no reason to announce. */
+  /** Sync with the branch in both directions: pick up commits pushed elsewhere
+   *  (another device, an edit on github.com) and commit the local dirty files.
+   *  Used by the Sync button and the background debounce. Both report progress
+   *  ("Syncing changes…" → "Changes synced") and failures; `silent` only
+   *  suppresses the notices a background sync has no reason to announce. */
   async sync(options: { silent?: boolean } = {}): Promise<void> {
     const { silent = false } = options;
     if (!this.repo || this.committing) {
       return;
     }
-    if (this.fm.dirty.size === 0) {
-      if (!silent) {
-        this.emitToast('Everything is up to date', 'info');
-      }
-      return;
-    }
     this.clearCommitTimer();
     this.committing = true;
+    const hasLocalChanges = this.fm.dirty.size > 0;
     this.updateSnapshot({ loading: true });
-    this.emitToast('Syncing changes…', 'loading');
+    if (hasLocalChanges) {
+      this.emitToast('Syncing changes…', 'loading');
+    } else if (!silent) {
+      this.emitToast('Checking for changes…', 'loading');
+    }
     try {
+      const head = await this.fetchHead();
+      const remoteMoved = head !== this.repo.baseCommitSha;
+      if (!hasLocalChanges) {
+        // Nothing to push, so the branch head is the whole story.
+        if (remoteMoved) {
+          await this.pull();
+          this.emitToast('Pulled changes from GitHub', 'success');
+        } else if (!silent) {
+          this.emitToast('Everything is up to date', 'info');
+        }
+        return;
+      }
+      // Commit on top of what the branch holds now: the new tree is the remote one
+      // with the dirty files written over it, so commits made elsewhere survive
+      // (a file changed on both sides keeps the local version).
+      this.repo.baseCommitSha = head;
+      const rebased = await this.pushDirty();
+      if (remoteMoved || rebased) {
+        // The commit merged in files the in-memory tree has never seen — reload so
+        // what's on screen matches the branch. Safe: the push cleared the dirty set.
+        await this.pull();
+      }
+      this.emitToast('Changes synced', 'success');
+    } catch (err) {
+      // Failures surface even for background syncs.
+      this.emitToast(`Sync failed: ${err instanceof Error ? err.message : String(err)}`, 'error');
+    } finally {
+      this.committing = false;
+      this.updateSnapshot({ loading: false });
+    }
+  }
+
+  /** Commit the dirty files onto `baseCommitSha` and clear the dirty set. Retries
+   *  once when the branch moves between the head check and the commit (409);
+   *  returns true when it did, so the caller knows the in-memory tree is behind. */
+  private async pushDirty(): Promise<boolean> {
+    let rebased = false;
+    for (let attempt = 0; attempt < 2; attempt++) {
       const files: OutgoingFile[] = [...this.fm.dirty].map((path) => {
         if (this.fm.deleted.has(path)) {
           return { path, deleted: true };
@@ -258,23 +294,20 @@ class WorklogStore {
       const res = await fetch('/api/commit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...this.repo, message, files }),
+        body: JSON.stringify({ ...this.repo!, message, files }),
       });
       if (res.status === 409) {
-        // Branch moved: refresh the base sha and retry once on the next tick. This
-        // is a retry of an in-flight sync (manual or auto), so it runs regardless
-        // of the auto-sync setting.
-        await this.refreshBaseSha();
-        this.committing = false;
-        this.clearCommitTimer();
-        this.commitTimer = setTimeout(() => void this.sync({ silent }), 0);
-        return;
+        // Someone pushed while this commit was in flight: re-base onto the new head
+        // and try again.
+        this.repo!.baseCommitSha = await this.fetchHead();
+        rebased = true;
+        continue;
       }
       if (!res.ok) {
         throw new Error(await res.text());
       }
       const result = (await res.json()) as { commitSha: string };
-      this.repo.baseCommitSha = result.commitSha;
+      this.repo!.baseCommitSha = result.commitSha;
       // The branch now holds exactly what was just written, so a later delete of
       // any of these paths knows it has to reach GitHub.
       for (const f of files) {
@@ -289,14 +322,20 @@ class WorklogStore {
       this.clearPersistTimer();
       void clearPending(this.repoKey());
       this.updateSnapshot({ gitPending: false });
-      this.emitToast('Changes synced', 'success');
-    } catch (err) {
-      // Failures surface even for background syncs.
-      this.emitToast(`Sync failed: ${err instanceof Error ? err.message : String(err)}`, 'error');
-    } finally {
-      this.committing = false;
-      this.updateSnapshot({ loading: false });
+      return rebased;
     }
+    throw new Error('the branch kept moving on GitHub — try again');
+  }
+
+  /** Re-read the branch from GitHub and re-render from it. Only call with an
+   *  empty dirty set: the fetched tree replaces the in-memory one wholesale. */
+  private async pull(): Promise<void> {
+    if (!this.repo) {
+      return;
+    }
+    this.applyLoad(await this.fetchRepo(this.repo.owner, this.repo.repo, this.repo.branch));
+    await this.store.rebuild('pull');
+    this.updateSnapshot({ data: this.deriveState(), gitPending: false });
   }
 
   // ---- actions (call the domain services directly) --------------------------
@@ -436,16 +475,29 @@ class WorklogStore {
     this.repo = { owner: data.owner, repo: data.repo, branch: data.branch, baseCommitSha: data.baseCommitSha };
   }
 
-  private async refreshBaseSha(): Promise<void> {
-    if (!this.repo) {
-      return;
+  /** Fetch a branch's Worklog files from GitHub (the token stays server-side). */
+  private async fetchRepo(owner: string, repo: string, branch?: string): Promise<LoadResponse> {
+    const params = new URLSearchParams({ owner, repo });
+    if (branch) {
+      params.set('branch', branch);
     }
-    const params = new URLSearchParams({ owner: this.repo.owner, repo: this.repo.repo, branch: this.repo.branch });
     const res = await fetch(`/api/load?${params}`);
-    if (res.ok) {
-      const data = (await res.json()) as LoadResponse;
-      this.repo.baseCommitSha = data.baseCommitSha;
+    if (!res.ok) {
+      throw new Error(await res.text());
     }
+    return (await res.json()) as LoadResponse;
+  }
+
+  /** The branch's head commit on GitHub right now. Throws when the check fails —
+   *  a sync that can't see the branch must not claim everything is up to date. */
+  private async fetchHead(): Promise<string> {
+    const { owner, repo, branch } = this.repo!;
+    const params = new URLSearchParams({ owner, repo, branch });
+    const res = await fetch(`/api/head?${params}`);
+    if (!res.ok) {
+      throw new Error(await res.text());
+    }
+    return ((await res.json()) as { commitSha: string }).commitSha;
   }
 
   /** Merge a partial into the cached snapshot (new reference) and notify. */

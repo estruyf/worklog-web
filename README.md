@@ -145,6 +145,11 @@ The dashboard has five views:
 GitHub automatically about a minute after your last change. Click the **sync** button in the top
 bar to commit right away. Commit messages use the format `chore: worklog sync <date>`.
 
+A sync goes both ways: it first checks where the branch head is on GitHub and pulls in anything
+committed elsewhere — another device, an edit made on github.com — before (and, when the branch had
+moved, again after) pushing your own changes. Merging is per file: a file changed on both sides
+keeps your local version. With nothing of your own to push, sync is a plain pull.
+
 **Tags:** the task form picks from the tags already in use — type to filter them, `↑/↓` and `↵` to
 choose, and **Create "…"** appears only when nothing existing matches, so the vocabulary doesn't
 drift into typos. A re-spelling folds onto the tag that exists (typing `Mobile` reuses `mobile`).
