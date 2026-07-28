@@ -9,8 +9,9 @@ import { MONTHS } from './constants';
 import { monthLabel, shiftDate } from './date';
 import { clientIdOf, isDone } from './task';
 
-/** Accent for event pseudo-clients (vacation, sick, …), which have no client color. */
-export const EVENT_COLOR = '#8B5CF6';
+/** Accent for event pseudo-clients (vacation, sick, …), which have no client color.
+ *  Fixed to the yellow brand color (--color-brand-500). */
+export const EVENT_COLOR = '#E2BE2E';
 
 /** How much of the calendar is on screen: a whole month or a single week. */
 export type CalendarMode = 'month' | 'week';

@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import type { MonthlyRow } from '../model';
 import { useData, useUi } from '../context';
 import { navigateToView } from '../router';
-import { monthLabel, num } from '../utils';
+import { EVENT_COLOR, monthLabel, num } from '../utils';
 import { HoursByClientChart } from '../components/charts/HoursByClientChart';
 import { MonthlyTrendChart, type TrendPoint } from '../components/charts/MonthlyTrendChart';
 import { isEventWorklogClientId } from '../../model/worklog';
@@ -39,7 +39,7 @@ function useInsightsData() {
         const item = agg[cid];
         return {
           name: clientName(cid),
-          color: colorOf(cid),
+          color: isEventWorklogClientId(cid) ? EVENT_COLOR : colorOf(cid),
           hours: item.hours,
           days: num(item.hours / hoursPerDay),
           dates: Object.keys(item.dayHours)

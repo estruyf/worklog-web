@@ -10,7 +10,6 @@
 import React, { createContext, useContext } from 'react';
 import { useWorklogState, useWorklogUiState, useWorklogModel } from '../hooks';
 import { useRoute } from '../router';
-import type { WorklogState } from '../state';
 
 type UiState = ReturnType<typeof useWorklogUiState>;
 type WorklogData = ReturnType<typeof useWorklogModel>;
