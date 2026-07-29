@@ -151,8 +151,15 @@ bar to commit right away. Commit messages use the format `chore: worklog sync <d
 
 A sync goes both ways: it first checks where the branch head is on GitHub and pulls in anything
 committed elsewhere — another device, an edit made on github.com — before (and, when the branch had
-moved, again after) pushing your own changes. Merging is per file: a file changed on both sides
-keeps your local version. With nothing of your own to push, sync is a plain pull.
+moved, again after) pushing your own changes. With nothing of your own to push, sync is a plain pull.
+
+A commit writes whole files, so a file that changed on both sides is merged before it's pushed —
+record by record, not line by line. Task blocks are matched by their `id`, ledger lines by date +
+client, config entries by their id, and the standard three-way rule applies to each: a record only
+one side touched takes that side's version (including deletions), and one both sides touched keeps
+yours and says so. So a task added in one browser tab and an edit made in another both survive,
+whichever tab syncs first. The same merge runs when unsynced changes are recovered on open, so
+restoring never rolls the branch back.
 
 An open tab doesn't wait for a sync to notice a push from somewhere else. It checks the branch head
 once a minute, and again the moment you switch back to the tab, so coming back after committing from
@@ -355,8 +362,9 @@ test/roundtrip.test.ts   # golden round-trip tests
 
 ## Known limitations
 
-- Single user, one repo mounted at a time; commits are last-write-wins with a reload-and-retry on
-  branch conflicts (no rebase/merge).
+- Single user, one repo mounted at a time. Commits three-way merge per record before pushing (see
+  Saving), so concurrent edits to different tasks, days or clients all survive; the same record
+  changed in two places at once resolves to your version, with a notice.
 - Inline images resolve via `raw.githubusercontent.com`, so freshly-pasted images render only after
   the next sync, and private-repo inline image auth is a follow-up.
 - Scaffolding writes the Worklog layout only where it is missing: files that already exist in the

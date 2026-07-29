@@ -14,6 +14,46 @@ export interface ExtractedBlock {
 const H2 = /^##\s+/;
 const ID_META = /^-\s+id\s*:\s*(.+?)\s*$/;
 
+/** One `## ` block of a task file, with its id if it declares one. */
+export interface TaskBlock {
+  /** The `- id:` value, when the block has one. */
+  id?: string;
+  /** The block text, trailing blank lines trimmed. */
+  text: string;
+}
+
+/** Split a task file into its leading header (everything before the first `## `)
+ *  and its task blocks. Used by the sync merge, which reconciles two versions of
+ *  a file block by block rather than line by line. */
+export function splitTaskBlocks(content: string): { header: string; blocks: TaskBlock[] } {
+  const lines = content.split(/\r?\n/);
+  const starts: number[] = [];
+  for (let i = 0; i < lines.length; i++) {
+    if (H2.test(lines[i])) {
+      starts.push(i);
+    }
+  }
+  const header = lines.slice(0, starts.length ? starts[0] : lines.length).join('\n').replace(/\s+$/, '');
+  const blocks: TaskBlock[] = [];
+  for (let b = 0; b < starts.length; b++) {
+    const end = b + 1 < starts.length ? starts[b + 1] : lines.length;
+    const blockLines = lines.slice(starts[b], end);
+    while (blockLines.length && blockLines[blockLines.length - 1].trim() === '') {
+      blockLines.pop();
+    }
+    let id: string | undefined;
+    for (const line of blockLines) {
+      const m = ID_META.exec(line);
+      if (m) {
+        id = m[1];
+        break;
+      }
+    }
+    blocks.push({ id, text: blockLines.join('\n') });
+  }
+  return { header, blocks };
+}
+
 /** Find the [startLine, endLine) range of the task block with the given id. */
 export function findBlockRange(content: string, taskId: string): { start: number; end: number } | undefined {
   const lines = content.split(/\r?\n/);

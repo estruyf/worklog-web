@@ -32,7 +32,17 @@ import { removeWorklog, setEventWorklog, setWorklog } from '../services/worklog'
 import { updateSettings, type SettingsFields } from '../services/settings';
 import type { WorklogState } from '../ui/state';
 import { DEFAULT_AUTO_SYNC } from '../workspace/paths';
-import { clearPending, loadPending, repoKeyOf, savePending, type PendingSnapshot } from './pendingStore';
+import {
+  clearPending,
+  clearSnapshot,
+  instanceId,
+  loadPending,
+  repoKeyOf,
+  savePending,
+  snapshotKeyOf,
+  type PendingSnapshot,
+} from './pendingStore';
+import { mergeFile } from './merge';
 
 /** Summary of recoverable unsynced changes found on open, for the UI prompt. */
 export interface RecoveryInfo {
@@ -205,7 +215,11 @@ class WorklogStore {
   }
 
   /** Re-apply the recovered snapshot's dirty files over the loaded repo and mark
-   *  them for the next sync. Rebuilds the domain model from the merged tree. */
+   *  them for the next sync. Rebuilds the domain model from the merged tree.
+   *
+   *  The branch may have moved since the snapshot was written, so a text file is
+   *  three-way merged against what was just loaded rather than written over it —
+   *  otherwise restoring would undo whatever reached the branch in the meantime. */
   async restorePending(): Promise<void> {
     const saved = this.recovered;
     if (!saved) {
@@ -213,27 +227,42 @@ class WorklogStore {
     }
     this.recovered = undefined;
     const deleted = new Set(saved.deleted ?? []);
+    const conflicts: string[] = [];
     for (const path of saved.dirty) {
-      if (deleted.has(path)) {
-        await deleteFile(path);
-      } else if (Object.prototype.hasOwnProperty.call(saved.binary, path)) {
+      if (Object.prototype.hasOwnProperty.call(saved.binary, path)) {
         this.fm.binary.set(path, base64ToBytes(saved.binary[path]));
         this.fm.markDirty(path);
+        continue;
+      }
+      const local = deleted.has(path) ? undefined : (saved.text[path] ?? '');
+      const merged = mergeFile(path, { base: saved.baseText?.[path], local, remote: this.fm.text.get(path) });
+      conflicts.push(...merged.conflicts);
+      if (merged.text === undefined) {
+        await deleteFile(path);
       } else {
-        this.fm.text.set(path, saved.text[path] ?? '');
+        this.fm.text.set(path, merged.text);
+        this.fm.deleted.delete(path);
         this.fm.markDirty(path);
       }
     }
     // Re-parse the merged file map; onDidChange refreshes the snapshot, re-persists
     // and arms auto-sync.
     await this.store.rebuild('restore');
+    if (conflicts.length > 0) {
+      this.emitToast(
+        conflicts.length === 1 ? conflicts[0] : `${conflicts.length} recovered changes conflicted — kept your versions`,
+        'info',
+      );
+    }
   }
 
-  /** Drop the recovered snapshot without applying it, and delete it from storage. */
+  /** Drop the recovered snapshot without applying it, and delete it from storage.
+   *  Only that snapshot: another instance's unsynced work stays recoverable. */
   async discardPending(): Promise<void> {
+    const saved = this.recovered;
     this.recovered = undefined;
-    if (this.repo) {
-      await clearPending(this.repoKey());
+    if (saved) {
+      await clearSnapshot(saved.key);
     }
   }
 
@@ -278,9 +307,12 @@ class WorklogStore {
         }
         return;
       }
-      // Commit on top of what the branch holds now: the new tree is the remote one
-      // with the dirty files written over it, so commits made elsewhere survive
-      // (a file changed on both sides keeps the local version).
+      // Commit on top of what the branch holds now. A file only this instance
+      // touched is written over as-is; one that changed on both sides is merged
+      // record by record first, so the other instance's edits to it survive.
+      if (remoteMoved) {
+        await this.mergeRemote();
+      }
       this.repo.baseCommitSha = head;
       const rebased = await this.pushDirty();
       if (remoteMoved || rebased) {
@@ -320,9 +352,11 @@ class WorklogStore {
         body: JSON.stringify({ ...this.repo!, message, files }),
       });
       if (res.status === 409) {
-        // Someone pushed while this commit was in flight: re-base onto the new head
-        // and try again.
-        this.repo!.baseCommitSha = await this.fetchHead();
+        // Someone pushed while this commit was in flight: merge against the new
+        // head, re-base onto it and try again.
+        const head = await this.fetchHead();
+        await this.mergeRemote();
+        this.repo!.baseCommitSha = head;
         rebased = true;
         continue;
       }
@@ -332,12 +366,17 @@ class WorklogStore {
       const result = (await res.json()) as { commitSha: string };
       this.repo!.baseCommitSha = result.commitSha;
       // The branch now holds exactly what was just written, so a later delete of
-      // any of these paths knows it has to reach GitHub.
+      // any of these paths knows it has to reach GitHub — and the pushed content
+      // becomes the ancestor the next merge compares against.
       for (const f of files) {
         if (f.deleted) {
           this.fm.remote.delete(f.path);
+          this.fm.baseText.delete(f.path);
         } else {
           this.fm.remote.add(f.path);
+          if (f.content !== undefined) {
+            this.fm.baseText.set(f.path, f.content);
+          }
         }
       }
       this.fm.deleted.clear();
@@ -348,6 +387,72 @@ class WorklogStore {
       return rebased;
     }
     throw new Error('the branch kept moving on GitHub — try again');
+  }
+
+  /** Reconcile the dirty files with the branch before pushing them.
+   *
+   *  A commit writes whole files, so pushing the local copy of a file the other
+   *  instance also changed would drop its edits without a trace. This re-reads
+   *  the branch and three-way merges every dirty text file against it (base =
+   *  what this instance loaded, see FileMap.baseText), leaving the merged
+   *  content in the file map for `pushDirty` to commit. Records added on either
+   *  side survive; one changed on both keeps the local version and is reported.
+   *
+   *  Binaries (assets) carry generated, single-use names, so there is nothing to
+   *  reconcile — the local bytes stand. */
+  private async mergeRemote(): Promise<void> {
+    if (!this.repo || this.fm.dirty.size === 0) {
+      return;
+    }
+    const remote = await this.fetchRepo(this.repo.owner, this.repo.repo, this.repo.branch);
+    const conflicts: string[] = [];
+    let merged = false;
+    for (const path of [...this.fm.dirty]) {
+      if (this.fm.binary.has(path)) {
+        continue;
+      }
+      const deletedHere = this.fm.deleted.has(path);
+      const local = deletedHere ? undefined : this.fm.text.get(path);
+      const remoteText = remote.text[path];
+      const base = this.fm.baseText.get(path);
+      // Nothing to reconcile unless the branch moved this file away from the
+      // version the local edits were made on.
+      if (remoteText === base) {
+        continue;
+      }
+      const result = mergeFile(path, { base, local, remote: remoteText });
+      conflicts.push(...result.conflicts);
+      // The merge resolved against this remote version, so that's the ancestor
+      // the next merge of this file has to compare against.
+      if (remoteText !== undefined) {
+        this.fm.baseText.set(path, remoteText);
+      } else {
+        this.fm.baseText.delete(path);
+      }
+      if (result.text === local) {
+        continue;
+      }
+      merged = true;
+      if (result.text === undefined) {
+        this.fm.text.delete(path);
+        this.fm.deleted.add(path);
+      } else {
+        this.fm.text.set(path, result.text);
+        this.fm.deleted.delete(path);
+      }
+      this.fm.dirty.add(path);
+    }
+    if (merged) {
+      // Show the merged tree now rather than after the push: if the commit fails,
+      // what's on screen is still the version the retry will send.
+      await this.store.rebuild('merge');
+    }
+    if (conflicts.length > 0) {
+      this.emitToast(
+        conflicts.length === 1 ? conflicts[0] : `${conflicts.length} changes conflicted with GitHub — kept your versions`,
+        'info',
+      );
+    }
   }
 
   /** Re-read the branch from GitHub and re-render from it. Only call with an
@@ -476,6 +581,8 @@ class WorklogStore {
     this.fm = new FileMap();
     for (const [path, text] of Object.entries(data.text)) {
       this.fm.text.set(path, text);
+      // The version every later edit is a change *from*, for the sync merge.
+      this.fm.baseText.set(path, text);
     }
     for (const [path, base64] of Object.entries(data.binary)) {
       this.fm.binary.set(path, base64ToBytes(base64));
@@ -676,6 +783,7 @@ class WorklogStore {
       return;
     }
     const text: Record<string, string> = {};
+    const baseText: Record<string, string> = {};
     const binary: Record<string, string> = {};
     const deleted: string[] = [];
     for (const path of this.fm.dirty) {
@@ -686,8 +794,16 @@ class WorklogStore {
       } else {
         text[path] = this.fm.text.get(path) ?? '';
       }
+      // Mirror the ancestor too: a restore three-way merges against the branch,
+      // and by then this instance's in-memory base is gone.
+      const base = this.fm.baseText.get(path);
+      if (base !== undefined) {
+        baseText[path] = base;
+      }
     }
     const snapshot: PendingSnapshot = {
+      key: snapshotKeyOf(this.repoKey(), instanceId()),
+      instanceId: instanceId(),
       repoKey: this.repoKey(),
       owner: this.repo.owner,
       repo: this.repo.repo,
@@ -695,6 +811,7 @@ class WorklogStore {
       baseCommitSha: this.repo.baseCommitSha,
       savedAt: Date.now(),
       text,
+      baseText,
       binary,
       dirty: [...this.fm.dirty],
       deleted,

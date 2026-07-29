@@ -67,6 +67,12 @@ export class FileMap {
   /** Blob SHA per path as loaded from GitHub, to skip unchanged files on reload. */
   readonly baseSha = new Map<string, string>();
 
+  /** Text of each path as the branch last had it — the version the local edits
+   *  started from. It's the common ancestor the sync merge needs to tell "I
+   *  changed this" from "the other instance changed this" (see data/merge). Set
+   *  on load and updated on every successful push. */
+  readonly baseText = new Map<string, string>();
+
   markDirty(path: string): void {
     this.dirty.add(path);
   }
