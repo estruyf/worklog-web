@@ -2,13 +2,13 @@
 // commands. All writes go to markdown; the watcher/rebuild then refreshes views.
 
 import { Store } from '../store';
-import type { Client, Recurrence, Task } from '../model/types';
+import type { Client, Recurrence, Task, TaskLink } from '../model/types';
 import { newTaskId } from '../parser/ids';
 import { serializeTask } from '../parser/taskParser';
 import { today } from '../util/date';
 import { appendTaskBlock } from '../commands/shared';
 import { withSeededDue } from '../model/recurringTask';
-import { writeText, readText, ensureDir, deleteFile, listTextPaths } from '../workspace/paths';
+import { writeText, readText, ensureDir, deleteFile, listTextPaths, parseClientLinks } from '../workspace/paths';
 import { GENERAL_TODO_CLIENT_ID, generalTodoClient, isGeneralTodoClientId } from '../model/todos';
 
 export interface NewTaskInput {
@@ -28,11 +28,19 @@ export interface NewClientInput {
   id?: string;
   /** Optional accent color (hex), used by the dashboard. */
   color?: string;
+  /** Optional Markdown notes about the client. */
+  description?: string;
+  /** Optional reference links (a bare url string is accepted too). */
+  links?: (TaskLink | string)[];
 }
 
 export interface ClientFields {
   name?: string;
   color?: string;
+  /** Pass '' to clear the notes. */
+  description?: string;
+  /** Pass [] to clear the links. */
+  links?: (TaskLink | string)[];
 }
 
 export function slugifyClientId(name: string): string {
@@ -101,8 +109,10 @@ export async function createClient(store: Store, input: NewClientInput): Promise
   }
 
   const color = input.color?.trim() || undefined;
+  const description = input.description?.trim() || undefined;
+  const links = parseClientLinks(input.links);
   const config = await store.ws.loadConfig();
-  config.clients.push({ id, name, color });
+  config.clients.push({ id, name, color, description, links });
   await store.ws.saveConfig(config);
 
   await ensureDir(store.ws.clientsDir);
@@ -112,11 +122,12 @@ export async function createClient(store: Store, input: NewClientInput): Promise
   }
 
   await store.rebuild('addClient');
-  return { id, name, color };
+  return { id, name, color, description, links };
 }
 
-/** Edit a client's display name and/or accent color in config.json, then rebuild.
- *  The client id (and therefore its files/ledger references) is left unchanged. */
+/** Edit a client's display name, accent color, notes and/or reference links in
+ *  config.json, then rebuild. Only the fields passed are touched, and the client
+ *  id (and therefore its files/ledger references) is left unchanged. */
 export async function updateClient(store: Store, id: string, fields: ClientFields): Promise<Client> {
   const config = await store.ws.loadConfig();
   const client = config.clients.find((c) => c.id === id);
@@ -133,9 +144,22 @@ export async function updateClient(store: Store, id: string, fields: ClientField
   if (fields.color !== undefined) {
     client.color = fields.color.trim() || undefined;
   }
+  if (fields.description !== undefined) {
+    client.description = fields.description.trim() || undefined;
+  }
+  if (fields.links !== undefined) {
+    client.links = parseClientLinks(fields.links);
+  }
   await store.ws.saveConfig(config);
   await store.rebuild('updateClient');
-  return { id, name: client.name, color: client.color, archived: client.archived };
+  return {
+    id,
+    name: client.name,
+    color: client.color,
+    description: client.description,
+    links: client.links,
+    archived: client.archived,
+  };
 }
 
 /** Retire a client (or bring it back) by flipping `archived` in config.json. No

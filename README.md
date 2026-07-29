@@ -135,7 +135,9 @@ The dashboard has these views:
 - **To-dos** — the general to-do list: tasks that belong to no client.
 - **Calendar** — a month grid of logged time; click a day to jump to it, or plan a task with a
   due date.
-- **Clients** — every client and its open tasks. Create/edit clients (name + accent colour), add
+- **Clients** — every client and its open tasks. Create/edit clients (name, accent colour, a
+  Markdown description and reference links — the repo, the shared drive, the ticket board — shown
+  above the client's tasks), add
   tasks with links, tags, due dates, descriptions and subtasks. Retire a client you no longer work
   with by **archiving** it: it drops out of the pickers, the Day view and the log form, while every
   task and logged hour stays put and keeps reporting. Archived clients are listed (and restored)

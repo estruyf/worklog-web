@@ -5,7 +5,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { Store } from '../src/store';
 import { FileMap, mountFileMap } from '../src/workspace/paths';
-import { deleteClient, setClientArchived, clientUsage } from '../src/services/tasks';
+import { createClient, deleteClient, setClientArchived, clientUsage, updateClient } from '../src/services/tasks';
 import type { DaylogConfig } from '../src/model/types';
 
 const CONFIG = {
@@ -59,6 +59,81 @@ describe('clientUsage', () => {
     expect(clientUsage(store, 'acme')).toEqual({ tasks: 1, worklog: 1 });
     expect(clientUsage(store, 'billed')).toEqual({ tasks: 0, worklog: 1 });
     expect(clientUsage(store, 'empty')).toEqual({ tasks: 0, worklog: 0 });
+  });
+});
+
+describe('client description and links', () => {
+  const clientIn = async (id: string) => (await config()).clients.find((c) => c.id === id);
+
+  it('stores the notes and links a new client is created with', async () => {
+    await createClient(store, {
+      name: 'Globex',
+      description: 'Contact: Jane. **Net 30.**',
+      links: [{ url: 'https://github.com/globex/site', label: 'Repo' }, { url: 'https://globex.example' }],
+    });
+
+    expect(await clientIn('globex')).toMatchObject({
+      description: 'Contact: Jane. **Net 30.**',
+      links: [{ url: 'https://github.com/globex/site', label: 'Repo' }, { url: 'https://globex.example' }],
+    });
+    expect(store.db.getClients().find((c) => c.id === 'globex')?.links).toHaveLength(2);
+  });
+
+  it('drops half-filled link rows and blank labels instead of persisting them', async () => {
+    await createClient(store, {
+      name: 'Globex',
+      links: [{ url: '  ', label: 'Nothing' }, { url: ' https://globex.example ', label: '  ' }],
+    });
+
+    expect((await clientIn('globex'))?.links).toEqual([{ url: 'https://globex.example' }]);
+  });
+
+  it('leaves both fields absent when a client is created without them', async () => {
+    await createClient(store, { name: 'Globex' });
+
+    const raw = fm.text.get('.worklog/config.json')!;
+    expect(raw).not.toContain('description');
+    expect(raw).not.toContain('links');
+  });
+
+  it('adds and replaces them on an existing client without touching its files', async () => {
+    await updateClient(store, 'acme', { description: 'Rate: €X/day', links: [{ url: 'https://acme.example' }] });
+
+    expect(await clientIn('acme')).toMatchObject({ description: 'Rate: €X/day', links: [{ url: 'https://acme.example' }] });
+    expect([...fm.dirty]).toEqual(['.worklog/config.json']);
+    expect(fm.text.get('clients/acme.md')).toBe(ACME_MD);
+  });
+
+  it('keeps the fields a partial update leaves out', async () => {
+    await updateClient(store, 'acme', { description: 'Rate: €X/day', links: [{ url: 'https://acme.example' }] });
+    await updateClient(store, 'acme', { name: 'Acme Corporation' });
+
+    expect(await clientIn('acme')).toMatchObject({
+      name: 'Acme Corporation',
+      description: 'Rate: €X/day',
+      links: [{ url: 'https://acme.example' }],
+    });
+  });
+
+  it('clears them by dropping the keys rather than writing empty values', async () => {
+    await updateClient(store, 'acme', { description: 'Rate: €X/day', links: [{ url: 'https://acme.example' }] });
+    await updateClient(store, 'acme', { description: '   ', links: [] });
+
+    const acme = await clientIn('acme');
+    expect(acme?.description).toBeUndefined();
+    expect(acme?.links).toBeUndefined();
+    expect(fm.text.get('.worklog/config.json')).not.toContain('acme.example');
+  });
+
+  it('tolerates a hand-edited config: bare url strings in, junk entries out', async () => {
+    fm.text.set(
+      '.worklog/config.json',
+      JSON.stringify({ ...CONFIG, clients: [{ id: 'acme', name: 'Acme Corp', description: '  ', links: ['https://acme.example', null, { label: 'No url' }] }] }, null, 2),
+    );
+
+    const acme = (await config()).clients[0];
+    expect(acme.links).toEqual([{ url: 'https://acme.example' }]);
+    expect(acme.description).toBeUndefined();
   });
 });
 

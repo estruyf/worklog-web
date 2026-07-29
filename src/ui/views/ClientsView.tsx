@@ -3,7 +3,7 @@ import type { Client } from '../../model/types';
 import type { WorklogRow } from '../model';
 import { WorklogTaskRow } from '../components';
 import { useData, useUi } from '../context';
-import { clientIdOf, fmtLong, fmtShort, isDone } from '../utils';
+import { clientIdOf, fmtLong, fmtShort, isDone, renderMarkdown } from '../utils';
 
 /** Derives the selected client's open rows, done list, counts and last-worked label. */
 function useClientsData() {
@@ -164,6 +164,9 @@ export function ClientsView() {
     selectedDone,
     selectedLastWorked,
   } = useClientsData();
+  const clientDescription = selectedClientObj?.description?.trim() ?? '';
+  const clientLinks = selectedClientObj?.links ?? [];
+  const hasClientInfo = !!clientDescription || clientLinks.length > 0;
   return (
     <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
       <MobileClientDropdown
@@ -236,7 +239,7 @@ export function ClientsView() {
         )}
       </div>
       <div className="flex-1 overflow-auto px-5 py-6 md:px-9 md:py-[30px]">
-        <div className="flex items-center flex-wrap gap-[14px] mb-7">
+        <div className={'flex items-center flex-wrap gap-[14px] ' + (hasClientInfo ? 'mb-4' : 'mb-7')}>
           <span className="w-[11px] h-[11px] rounded-full" style={{ background: selectedColor }} />
           <h1 className="text-[24px] font-bold m-0">{selectedName}</h1>
           {selectedClientObj?.archived && (
@@ -267,6 +270,37 @@ export function ClientsView() {
             </button>
           )}
         </div>
+
+        {/* Who the client is and where their things live — the context you want
+            in front of you before touching their tasks. */}
+        {hasClientInfo && (
+          <div className="border border-neutral-375 rounded-[14px] bg-white px-[18px] py-[14px] mb-7">
+            {clientDescription && (
+              <div
+                className="wl-md text-[14px] leading-[1.6] text-neutral-825"
+                dangerouslySetInnerHTML={{ __html: renderMarkdown(clientDescription) }}
+              />
+            )}
+            {clientLinks.length > 0 && (
+              <div className={'flex flex-col gap-1 ' + (clientDescription ? 'mt-[14px] pt-[14px] border-t border-neutral-325' : '')}>
+                {clientLinks.map((l, i) => (
+                  <a
+                    key={i}
+                    href={l.url}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    className="flex items-center gap-[7px] text-[13.5px] text-info hover:underline w-fit"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+                      <path d="M6 3H3.5A1.5 1.5 0 002 4.5v8A1.5 1.5 0 003.5 14h8a1.5 1.5 0 001.5-1.5V10M10 2h4v4M14 2L7.5 8.5" />
+                    </svg>
+                    {l.label || l.url}
+                  </a>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="text-[11px] font-bold tracking-[0.06em] text-neutral-675 mb-[14px]">OPEN TASKS · {selectedOpenCount}</div>
         <div className="border border-neutral-375 rounded-[14px] bg-white px-2 py-[6px] mb-[38px]">

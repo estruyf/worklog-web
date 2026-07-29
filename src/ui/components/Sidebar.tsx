@@ -1,7 +1,8 @@
 import React from 'react';
 import { useData, useUi } from '../context';
-import { navigateToView } from '../router';
+import { navigateToView, useRoute } from '../router';
 import {
+  CheckIcon,
   ChevronsUpDownIcon,
   FolderSyncIcon,
   GithubIcon,
@@ -298,8 +299,13 @@ function SidebarContent({ onNavigate, repoProps }: { onNavigate?: () => void; re
  */
 export function Sidebar(repoProps: SidebarRepoProps = {}) {
   const [open, setOpen] = React.useState(false);
-  const { openTaskForm: onNewTask, noClients, today } = useData();
-  const { setSelectedDate } = useUi();
+  const { openTaskForm: onNewTask, saveTask, noClients, today } = useData();
+  const { setSelectedDate, editingId, mTitle, mClient } = useUi();
+  // The task form's own actions sit at the bottom of a long scroll; on mobile the
+  // top bar is what's always in reach, so while the form is up it offers Save in
+  // place of New — starting another task from inside the form makes no sense.
+  const onForm = useRoute().name === 'taskForm';
+  const canSave = mTitle.trim().length > 0 && !!mClient;
 
   // Close the drawer on Escape and lock body scroll while it's open.
   React.useEffect(() => {
@@ -340,14 +346,29 @@ export function Sidebar(repoProps: SidebarRepoProps = {}) {
           Worklog
         </button>
         <div className="flex-1" />
-        {!noClients && (
+        {onForm ? (
           <button
-            onClick={onNewTask}
-            className="flex items-center justify-center gap-[6px] px-[12px] h-[36px] rounded-[8px] text-[13px] font-semibold cursor-pointer border border-brand-500 bg-brand-450 text-brand-800 hover:bg-brand-475"
+            onClick={saveTask}
+            className={
+              'flex items-center justify-center gap-[6px] px-[12px] h-[36px] rounded-[8px] text-[13px] font-semibold border ' +
+              (canSave
+                ? 'border-brand-500 bg-brand-450 text-brand-800 cursor-pointer hover:bg-brand-475'
+                : 'border-brand-375 bg-brand-175 text-brand-550 cursor-not-allowed')
+            }
           >
-            <PlusIcon size={15} />
-            New
+            <CheckIcon size={15} />
+            {editingId ? 'Save' : 'Add'}
           </button>
+        ) : (
+          !noClients && (
+            <button
+              onClick={onNewTask}
+              className="flex items-center justify-center gap-[6px] px-[12px] h-[36px] rounded-[8px] text-[13px] font-semibold cursor-pointer border border-brand-500 bg-brand-450 text-brand-800 hover:bg-brand-475"
+            >
+              <PlusIcon size={15} />
+              New
+            </button>
+          )
         )}
       </div>
 

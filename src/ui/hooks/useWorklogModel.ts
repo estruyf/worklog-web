@@ -514,6 +514,8 @@ export function useWorklogModel(
     ui.setEditingClientId(c?.id ?? null);
     ui.setCName(c?.name ?? "");
     ui.setCColor(c ? colorOf(c.id) : PALETTE[clients.length % PALETTE.length]);
+    ui.setCDesc(c?.description ?? "");
+    ui.setCLinks((c?.links ?? []).map((l) => ({ url: l.url, label: l.label ?? "" })));
     ui.setClientModalOpen(true);
   };
   const saveClient = () => {
@@ -521,11 +523,16 @@ export function useWorklogModel(
     if (!name) {
       return;
     }
+    // Blank rows the user added but never filled in are dropped rather than saved.
+    const links = ui.cLinks
+      .map((l) => ({ url: l.url.trim(), label: l.label.trim() }))
+      .filter((l) => l.url);
+    const description = ui.cDesc.trim();
     if (ui.editingClientId) {
-      worklogStore.updateClient(ui.editingClientId, { name, color: ui.cColor });
+      worklogStore.updateClient(ui.editingClientId, { name, color: ui.cColor, description, links });
     } else {
       ui.pendingClient.current = { name, target: "selected" };
-      worklogStore.createClient(name, ui.cColor);
+      worklogStore.createClient(name, ui.cColor, { description, links });
     }
     ui.setClientModalOpen(false);
   };

@@ -14,7 +14,7 @@
 import { Store } from '../store';
 import { FileMap, deleteFile, mountFileMap } from '../workspace/paths';
 import { today } from '../util/date';
-import { createClient, createTask, deleteClient, setClientArchived, updateClient, type NewTaskInput } from '../services/tasks';
+import { createClient, createTask, deleteClient, setClientArchived, updateClient, type ClientFields, type NewTaskInput } from '../services/tasks';
 import { saveImageAsset } from '../services/assets';
 import { isGeneralTodoClientId } from '../model/todos';
 import {
@@ -478,11 +478,11 @@ class WorklogStore {
     return this.run(() => updateTask(this.store, taskId, fields));
   }
 
-  createClient(name: string, color?: string): Promise<void> {
-    return this.run(() => createClient(this.store, { name, color }));
+  createClient(name: string, color?: string, fields?: Omit<ClientFields, 'name' | 'color'>): Promise<void> {
+    return this.run(() => createClient(this.store, { name, color, ...fields }));
   }
 
-  updateClient(id: string, fields: { name?: string; color?: string }): Promise<void> {
+  updateClient(id: string, fields: ClientFields): Promise<void> {
     return this.run(() => updateClient(this.store, id, fields));
   }
 

@@ -4,7 +4,7 @@
 // go through the `readText / writeText / ensureDir` free functions and the
 // `Workspace` path helpers; a path is always a plain repo-relative string.
 
-import type { AutoSyncConfig, Client, DaylogConfig, StatusDef } from '../model/types';
+import type { AutoSyncConfig, Client, DaylogConfig, StatusDef, TaskLink } from '../model/types';
 import { DEFAULT_STATUSES } from '../model/status';
 
 export const DEFAULT_HOURS_PER_DAY = 8;
@@ -27,6 +27,23 @@ export function parseAutoSync(value: unknown): AutoSyncConfig {
       ? raw.delayMinutes
       : DEFAULT_AUTO_SYNC.delayMinutes;
   return { enabled: raw.enabled === true, delayMinutes: delay };
+}
+
+/** Normalize a client's reference links: keep only entries with a usable url and
+ *  drop the key entirely when none survive, so config.json stays free of empty
+ *  arrays for the clients that never got any. */
+export function parseClientLinks(value: unknown): TaskLink[] | undefined {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+  const links = value
+    .map((l) => (typeof l === 'string' ? { url: l } : (l as Partial<TaskLink> | null)))
+    .filter((l): l is Partial<TaskLink> => !!l && typeof l.url === 'string' && !!l.url.trim())
+    .map((l) => {
+      const label = typeof l.label === 'string' ? l.label.trim() : '';
+      return { url: l.url!.trim(), ...(label ? { label } : {}) };
+    });
+  return links.length ? links : undefined;
 }
 
 const DAY_NAMES = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
@@ -193,12 +210,18 @@ export class Workspace {
         hoursPerDay: parsed.hoursPerDay && parsed.hoursPerDay > 0 ? parsed.hoursPerDay : DEFAULT_HOURS_PER_DAY,
         weekStart: parseWeekStart(parsed.weekStart),
         todosPerPage: parseTodosPerPage(parsed.todosPerPage),
-        // `archived` is normalized to true-or-absent so it never round-trips a
-        // stray value into config.json (JSON.stringify drops the undefined).
+        // `archived`, `description` and `links` are normalized to value-or-absent
+        // so they never round-trip a stray value into config.json (JSON.stringify
+        // drops the undefined).
         clients: Array.isArray(parsed.clients)
           ? parsed.clients
               .filter((c): c is Client => !!c && !!c.id)
-              .map((c) => ({ ...c, archived: c.archived === true ? true : undefined }))
+              .map((c) => ({
+                ...c,
+                description: typeof c.description === 'string' && c.description.trim() ? c.description : undefined,
+                links: parseClientLinks(c.links),
+                archived: c.archived === true ? true : undefined,
+              }))
           : [],
         statuses: statuses.length ? statuses : DEFAULT_STATUSES,
         autoSync: parseAutoSync(parsed.autoSync),

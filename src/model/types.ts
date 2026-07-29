@@ -79,6 +79,12 @@ export interface Client {
   id: string;
   name: string;
   color?: string;
+  /** Freeform Markdown notes about the client — the contact, the agreed rate,
+   *  how they like to be invoiced. Shown on the Clients view. */
+  description?: string;
+  /** Reference links that belong to the client rather than any one task: their
+   *  repo, the shared drive, the ticketing board. */
+  links?: TaskLink[];
   /** Retired client: hidden from the pickers and lists, but its tasks, archive
    *  and ledger history stay intact and keep resolving to this name/color. */
   archived?: boolean;

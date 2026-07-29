@@ -91,6 +91,10 @@ export function useWorklogUiState() {
   const [editingClientId, setEditingClientId] = useState<string | null>(null);
   const [cName, setCName] = useState("");
   const [cColor, setCColor] = useState("");
+  const [cDesc, setCDesc] = useState("");
+  // Link drafts stay as plain strings while editing — they only become
+  // {url,label} records on save, so a half-typed row can't break anything.
+  const [cLinks, setCLinks] = useState<{ url: string; label: string }[]>([]);
 
   const pendingClient = useRef<
     { name: string; target: "modal" | "selected" } | undefined
@@ -181,6 +185,10 @@ export function useWorklogUiState() {
     setCName,
     cColor,
     setCColor,
+    cDesc,
+    setCDesc,
+    cLinks,
+    setCLinks,
     pendingClient,
   };
 }
