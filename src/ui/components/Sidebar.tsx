@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import type { AppView } from '../model';
 import { isGeneralTodoClientId } from '../../model/todos';
+import { collectOverdue } from '../../model/overdue';
 import { clientIdOf, isDone } from '../utils';
 
 /** Repo/session controls rendered at the very bottom of the rail. Optional so the
@@ -33,6 +34,17 @@ const NAV_ITEMS: { view: AppView; label: string; icon: React.ReactNode }[] = [
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
         <rect x="2" y="2.5" width="12" height="11" rx="1.5" />
         <path d="M4.5 6h7M4.5 8.5h7M4.5 11h4" />
+      </svg>
+    ),
+  },
+  {
+    view: 'overdue',
+    label: 'Overdue',
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+        <path d="M8 2.2l6.2 10.6a.8.8 0 01-.7 1.2H2.5a.8.8 0 01-.7-1.2L8 2.2z" strokeLinejoin="round" />
+        <path d="M8 6.2v3.1" strokeLinecap="round" />
+        <circle cx="8" cy="11.4" r="0.5" fill="currentColor" stroke="none" />
       </svg>
     ),
   },
@@ -157,6 +169,9 @@ function SidebarContent({ onNavigate, repoProps }: { onNavigate?: () => void; re
     () => tasks.filter((t) => isGeneralTodoClientId(clientIdOf(t)) && !isDone(t)).length,
     [tasks],
   );
+  // What has slipped past its due date, counted against today rather than the
+  // day being browsed: the rail says the same thing wherever you are in the app.
+  const overdueCount = React.useMemo(() => collectOverdue(tasks, today).length, [tasks, today]);
 
   // Navigating away closes an open task detail overlay on its own — it rides the
   // same history entry the navigation replaces. Picking Day snaps back to today:
@@ -214,6 +229,11 @@ function SidebarContent({ onNavigate, repoProps }: { onNavigate?: () => void; re
                 {item.view === 'todos' && todoCount > 0 && (
                   <span className="ml-auto inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full bg-neutral-325 text-neutral-675 text-[11.5px] font-semibold">
                     {todoCount}
+                  </span>
+                )}
+                {item.view === 'overdue' && overdueCount > 0 && (
+                  <span className="ml-auto inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full bg-danger-100 border border-danger-200 text-danger-675 text-[11.5px] font-semibold">
+                    {overdueCount}
                   </span>
                 )}
               </button>

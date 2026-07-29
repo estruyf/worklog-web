@@ -13,6 +13,7 @@ describe('parseRoute', () => {
 
   it('maps the other dashboard views', () => {
     expect(parseRoute('/app/todos')).toEqual({ name: 'view', view: 'todos' });
+    expect(parseRoute('/app/overdue')).toEqual({ name: 'view', view: 'overdue' });
     expect(parseRoute('/app/settings/')).toEqual({ name: 'view', view: 'settings' });
   });
 

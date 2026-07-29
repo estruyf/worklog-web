@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { isEventWorklogClientId } from '../../model/worklog';
 import { isGeneralTodoClientId } from '../../model/todos';
+import { collectOverdue } from '../../model/overdue';
 import type { ClientTaskGroup } from '../model';
 import { useData, useUi } from '../context';
 import { clientIdOf, dueOn, isDone, workedOnDate } from '../utils';
@@ -11,6 +12,7 @@ import {
   LoggedSection,
   LogForm,
   OpenTasksSection,
+  OverdueTasksSection,
   TodoTasksSection,
   WorkedTasksSection,
 } from './day-view';
@@ -33,13 +35,20 @@ function useDayData() {
       })
       .filter((g) => g.count > 0 && loggedClientIds.has(g.id));
   }, [clients, openTasks, dayLogs, colorOf, openRowsFor]);
+  // Anything already past its due date on the day being viewed. Judged against
+  // the selected date rather than today, so the block always reads as "late as
+  // of this day" wherever you are in the calendar.
+  const overdueTasks = useMemo(() => collectOverdue(tasks, selectedDate), [tasks, selectedDate]);
+  const overdueRows = useMemo(() => openRowsFor(overdueTasks), [overdueTasks, openRowsFor]);
   // Open tasks due on this day — the home for anything planned ahead of time,
   // regardless of whether its client logged time that day. Recurring tasks match
-  // on every day their rule lands on, not just the next one they store.
-  const dueRows = useMemo(
-    () => openRowsFor(tasks.filter((t) => !isDone(t) && dueOn(t, selectedDate))),
-    [tasks, selectedDate, openRowsFor],
-  );
+  // on every day their rule lands on, not just the next one they store. Overdue
+  // ones are left out: a daily task whose rule also lands today is one task, and
+  // the overdue block above is the more urgent place to meet it.
+  const dueRows = useMemo(() => {
+    const late = new Set(overdueTasks.map((t) => t.id));
+    return openRowsFor(tasks.filter((t) => !isDone(t) && !late.has(t.id) && dueOn(t, selectedDate)));
+  }, [tasks, selectedDate, openRowsFor, overdueTasks]);
   // General to-dos (not linked to any client): a persistent personal list, shown
   // regardless of logged time or the selected date.
   const todoRows = useMemo(
@@ -57,13 +66,13 @@ function useDayData() {
       .filter((g) => g.count > 0);
   }, [tasks, selectedDate, clients, colorOf, openRowsFor]);
 
-  return { openTasks, dayLogs, dueRows, todoRows, openGroups, doneTasks, workedGroups, isTodaySel: selectedDate === today };
+  return { openTasks, dayLogs, overdueRows, dueRows, todoRows, openGroups, doneTasks, workedGroups, isTodaySel: selectedDate === today };
 }
 
 export function DayView() {
   const { today, clients, allClients, colorOf, clientName, statusMeta, reopen, openDetail, typeLabel, hoursPerDay, todosPerPage, logState, setLogState, saveLog, removeLog, editLog, openLogForm, openTaskFormForDue } = useData();
   const { selectedDate, setSelectedDate, editDayOpen, setEditDayOpen } = useUi();
-  const { openTasks, dayLogs, dueRows, todoRows, openGroups, doneTasks, workedGroups, isTodaySel } = useDayData();
+  const { openTasks, dayLogs, overdueRows, dueRows, todoRows, openGroups, doneTasks, workedGroups, isTodaySel } = useDayData();
   const onSelectDate = setSelectedDate;
   // New time goes to active clients only, but editing an entry logged before its
   // client was archived still shows (and keeps) that client.
@@ -99,6 +108,7 @@ export function DayView() {
           * second column from `xl:` up, spanning both rows of the main column. */}
         <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_320px] xl:gap-x-8">
           <div className="min-w-0 xl:col-start-1 xl:row-start-1">
+            <OverdueTasksSection overdueRows={overdueRows} />
             <DueTasksSection dueRows={dueRows} />
           </div>
 

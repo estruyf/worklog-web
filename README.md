@@ -124,11 +124,15 @@ Use the **repo pill** in the top-right to switch repositories, open the repo on 
 
 ## Using the app
 
-The dashboard has five views:
+The dashboard has these views:
 
 - **Day** — the default view. Log time for the selected day (full day, half day, or custom
-  hours), or log a non-client **event** (vacation, out-of-office, …). See open, due, worked, and
-  done tasks for that day; mark a task worked, cycle its status, or close it.
+  hours), or log a non-client **event** (vacation, out-of-office, …). See overdue, due, open,
+  worked, and done tasks for that day; mark a task worked, cycle its status, or close it.
+  Anything past its due date sits in an **Overdue** block at the very top.
+- **Overdue** — everything that has slipped, across every client and the to-do list, grouped by
+  client with the longest-overdue client first, plus what is due today. The nav badge counts it.
+- **To-dos** — the general to-do list: tasks that belong to no client.
 - **Calendar** — a month grid of logged time; click a day to jump to it, or plan a task with a
   due date.
 - **Clients** — every client and its open tasks. Create/edit clients (name + accent colour), add
@@ -275,6 +279,24 @@ finished is appended to the archive:
 Archived occurrences carry `repeatOf: <task id>` and get their own id, so the
 history is queryable and no two blocks ever share an id. Nothing runs in the
 background: the next occurrence is computed at the moment you tick one off.
+
+### Overdue
+
+A task is **overdue** when its `due:` date is behind the day being looked at and
+nothing has closed it. That is a comparison, not a job — nothing scans in the
+background, and no state is written to your Markdown.
+
+It matters most for recurring tasks. A `schedule` rule only rolls its `due` date
+forward when an occurrence is *completed*, so an invoice set to `monthly on 1`
+that fell on a Saturday still reads as due the 1st on Monday morning. By then no
+day matches its rule any more, so "due this day" can't show it — the overdue
+block is what keeps it in front of you until it's actually done.
+
+Overdue tasks surface in three places: an **Overdue** block at the top of the day
+overview (judged against the day you're viewing), the **Overdue** view in the nav
+(judged against today, grouped by client), and a red count badge on that nav item.
+A task that is both overdue and lands on the day you're viewing is shown once, as
+overdue. Due-date chips on task rows turn red and gain the lag — `1 Aug · 3d`.
 
 ---
 

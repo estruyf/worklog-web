@@ -4,6 +4,7 @@ import { BriefcaseIcon, RefreshCwIcon } from 'lucide-react';
 import type { Task } from '../../model/types';
 import { describeRecurrence } from '../../model/recurrence';
 import { isGeneralTodoClientId } from '../../model/todos';
+import { daysOverdue, formatDaysLate, isOverdue } from '../../model/overdue';
 import { useData, useUi } from '../context';
 import { useMarkdownImages } from '../hooks';
 import { navigateToDashboard, navigateToTask } from '../router';
@@ -114,7 +115,8 @@ export function TaskDetailPanel({ routed = false }: { routed?: boolean } = {}) {
   const isTodo = isGeneralTodoClientId(clientIdOf(task));
   const worked = !isTodo && workedOnDate(task, selectedDate);
   const subtasksDone = subtasks.filter(isDone).length;
-  const overdue = !!task.due && !isDone(task) && task.due < selectedDate;
+  const overdue = isOverdue(task, selectedDate);
+  const lateBy = daysOverdue(task, selectedDate);
   return (
     <div className={'fixed inset-0 z-40 bg-white overflow-auto' + (routed ? '' : ' top-13 md:top-0 md:left-57')}> {/* clears the mobile top bar (h-13) and the 228px (w-57) desktop sidebar rail */}
       <div className="max-w-[860px] mx-auto px-8 py-8">
@@ -234,6 +236,7 @@ export function TaskDetailPanel({ routed = false }: { routed?: boolean } = {}) {
               onChange={(e) => onSetDue(e.target.value)}
               className={'px-3 py-[7px] border rounded-[8px] text-[13px] ' + (overdue ? 'border-danger-225 text-danger-675' : 'border-neutral-525')}
             />
+            {overdue && <span className="text-[12.5px] text-danger-675">{formatDaysLate(lateBy)}</span>}
             {task.due && (
               <button onClick={() => onSetDue('')} className="text-[12px] text-info bg-none border-none cursor-pointer">
                 Clear

@@ -22,6 +22,7 @@ import {
   formatRecurrence,
   parseRecurrence,
 } from "../../model/recurrence";
+import { daysSinceEpoch } from "../../util/date";
 import type { WorklogState } from "../state";
 import { worklogStore, type ToastMessage } from "../../data/worklogStore";
 import { closeTaskForm, navigateToTask, navigateToTaskForm, useRoute } from "../router";
@@ -330,6 +331,14 @@ export function useWorklogModel(
       const progress = children.length
         ? { done: children.filter(isDone).length, total: children.length }
         : undefined;
+      // On a day the rule lands on, the chip shows *that* occurrence — a
+      // recurring task only stores its next due date, so showing it raw would
+      // label a September occurrence with an August date.
+      const displayDue = t.repeat && !isDone(t) && dueOn(t, selectedDate) ? selectedDate : t.due;
+      // Overdue is judged on the occurrence being shown, not on the stored due
+      // date: a daily task that also lands on the day you're looking at is due
+      // then, not late, however far back its stored `due` sits.
+      const overdue = !!displayDue && !isDone(t) && displayDue < today;
       return {
         id: t.id,
         title: t.title,
@@ -342,11 +351,9 @@ export function useWorklogModel(
           : "Mark worked on this day",
         hasLink: ls.length > 0,
         link: ls[0] || "",
-        // On a day the rule lands on, the chip shows *that* occurrence — a
-        // recurring task only stores its next due date, so showing it raw would
-        // label a September occurrence with an August date.
-        due: t.repeat && !isDone(t) && dueOn(t, selectedDate) ? selectedDate : t.due,
-        overdue: !!t.due && !isDone(t) && t.due < today,
+        due: displayDue,
+        overdue,
+        overdueDays: overdue ? daysSinceEpoch(today) - daysSinceEpoch(displayDue as string) : undefined,
         repeat: t.repeat && !isDone(t) ? describeRecurrence(t.repeat) : undefined,
         tags: t.tags ?? [],
         progress,

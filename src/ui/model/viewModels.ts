@@ -4,7 +4,7 @@
 
 /** The top-level tabs the shell can display. Search is not a view — it opens as
  * an overlay (see SearchOverlay) on top of whichever view is active. */
-export type AppView = "day" | "todos" | "calendar" | "clients" | "insights" | "archive" | "settings";
+export type AppView = "day" | "overdue" | "todos" | "calendar" | "clients" | "insights" | "archive" | "settings";
 
 /** Resolved status display, computed from a StatusDef + completion state. */
 export interface StatusMeta {
@@ -34,6 +34,8 @@ export interface WorklogRow {
   due?: string;
   /** True when the task has an unmet due date in the past. */
   overdue: boolean;
+  /** How many days late an overdue row is; omitted when it isn't overdue. */
+  overdueDays?: number;
   /** The recurrence rule in words, for tasks that repeat; drives the chip. */
   repeat?: string;
   /** Freeform labels rendered as chips. */

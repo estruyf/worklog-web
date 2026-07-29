@@ -6,6 +6,7 @@ import { useMarkdownImages } from '../hooks';
 import { clientIdOf, isDone, renderMarkdown, makeImageResolver } from '../utils';
 import { GENERAL_TODO_CLIENT_ID, GENERAL_TODO_COLOR, GENERAL_TODO_LABEL } from '../../model/todos';
 import { closeTaskForm, navigateToDashboard, navigateToTask, useRoute } from '../router';
+import { today } from '../../util/date';
 
 /** Derives the parent-task options and save-enabled flag for the open form. */
 function useTaskFormData() {
@@ -66,6 +67,9 @@ export function TaskFormPage() {
     const current = allClients.find((c) => c.id === clientId);
     return current?.archived ? [...clients, current] : clients;
   }, [clients, allClients, clientId]);
+  // The snapshot's day rolls over with the app; fall back to the clock before the
+  // first snapshot lands so the shortcut is never a stale or empty date.
+  const todayKey = snap?.today || today();
   const img = useMarkdownImages(description, setDescription);
   const resolveImage = useMemo(() => makeImageResolver(assetsBase), [assetsBase]);
 
@@ -227,6 +231,18 @@ export function TaskFormPage() {
                 onChange={(e) => setDue(e.target.value)}
                 className="w-full min-w-0 px-[14px] py-[11px] border border-neutral-525 rounded-[9px] text-[16px] md:text-[14px] bg-white"
               />
+              {/* Today is by far the most common due date, and picking it from the
+                  native date input takes more clicks than it's worth. */}
+              <button
+                type="button"
+                onClick={() => setDue(due === todayKey ? '' : todayKey)}
+                className={
+                  'mt-2 px-[11px] py-[4px] rounded-full text-[12px] font-semibold cursor-pointer border ' +
+                  (due === todayKey ? 'border-brand-500 bg-brand-450 text-brand-800' : 'border-neutral-525 bg-white text-neutral-725 hover:bg-neutral-200')
+                }
+              >
+                Today
+              </button>
             </div>
           )}
           <div className="flex-1 min-w-0">

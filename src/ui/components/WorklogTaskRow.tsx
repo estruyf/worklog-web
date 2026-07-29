@@ -1,6 +1,7 @@
 import React from 'react';
 import type { WorklogRow } from '../model';
 import { BriefcaseIcon, GlobeIcon, RefreshCwIcon, SquareArrowOutUpRight } from 'lucide-react';
+import { formatDaysLate } from '../../model/overdue';
 import { fmtShort } from '../utils';
 
 /** Subtask completion rollup, shown inline on desktop and below the title on
@@ -19,10 +20,13 @@ function ProgressChip({ progress, barWidth }: { progress: NonNullable<WorklogRow
   );
 }
 
-function DueChip({ due, overdue }: { due: string; overdue: boolean }) {
+/** The due date, red once it has passed. An overdue chip also carries how far
+ *  past it is — "1 Aug · 3d" — since on a late task the date alone doesn't say
+ *  whether it slipped overnight or a fortnight ago. */
+function DueChip({ due, overdue, days }: { due: string; overdue: boolean; days?: number }) {
   return (
     <span
-      title={overdue ? `Overdue — was due ${due}` : `Due ${due}`}
+      title={overdue ? `${formatDaysLate(days ?? 0)} — was due ${due}` : `Due ${due}`}
       className={
         'shrink-0 flex items-center gap-[4px] text-[11px] font-semibold px-[7px] py-[2px] rounded-full ' +
         (overdue ? 'text-danger-675 bg-danger-75 border border-danger-200' : 'text-neutral-675 bg-neutral-250 border border-neutral-400')
@@ -33,6 +37,7 @@ function DueChip({ due, overdue }: { due: string; overdue: boolean }) {
         <path d="M2.5 6.5h11M5.5 2v2M10.5 2v2" />
       </svg>
       {fmtShort(due)}
+      {overdue && !!days && <span className="opacity-80">· {days}d</span>}
     </span>
   );
 }
@@ -153,7 +158,7 @@ export const WorklogTaskRow = React.memo(function WorklogTaskRow({ row }: { row:
         {/* Inline meta — wide rows only. When narrow these reflow to the row below. */}
         <div className="hidden @lg:contents">
           {row.progress && <ProgressChip progress={row.progress} barWidth={46} />}
-          {row.due && <DueChip due={row.due} overdue={row.overdue} />}
+          {row.due && <DueChip due={row.due} overdue={row.overdue} days={row.overdueDays} />}
           {row.repeat && <RepeatChip label={row.repeat} />}
           <TagChips tags={row.tags} onTagClick={row.onTagClick} />
         </div>
@@ -190,7 +195,7 @@ export const WorklogTaskRow = React.memo(function WorklogTaskRow({ row }: { row:
             </button>
           )}
           {row.progress && <ProgressChip progress={row.progress} barWidth={38} />}
-          {row.due && <DueChip due={row.due} overdue={row.overdue} />}
+          {row.due && <DueChip due={row.due} overdue={row.overdue} days={row.overdueDays} />}
           {row.repeat && <RepeatChip label={row.repeat} />}
           <TagChips tags={row.tags} onTagClick={row.onTagClick} />
           {row.hasLink && <LinkChip link={row.link} size={13} />}
