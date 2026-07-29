@@ -150,6 +150,13 @@ committed elsewhere — another device, an edit made on github.com — before (a
 moved, again after) pushing your own changes. Merging is per file: a file changed on both sides
 keeps your local version. With nothing of your own to push, sync is a plain pull.
 
+An open tab doesn't wait for a sync to notice a push from somewhere else. It checks the branch head
+once a minute, and again the moment you switch back to the tab, so coming back after committing from
+another device pulls the changes in on its own. The check is skipped while the tab is in the
+background and whenever you have unsynced edits — those are the sync button's business, since only a
+sync knows how to commit on top of a branch that moved. There's no GitHub notification behind this:
+nothing tells the app a push happened, so it asks (one cheap ref lookup per check).
+
 **Tags:** the task form picks from the tags already in use — type to filter them, `↑/↓` and `↵` to
 choose, and **Create "…"** appears only when nothing existing matches, so the vocabulary doesn't
 drift into typos. A re-spelling folds onto the tag that exists (typing `Mobile` reuses `mobile`).

@@ -7,6 +7,9 @@
 // Every persisted edit re-derives the state, marks the tree dirty, and arms a
 // debounced auto-commit. Syncing goes both ways: it first asks GitHub where the
 // branch head is, pulls when the branch moved, and pushes the dirty files back.
+// GitHub can't tell us when someone else pushes, so an open tab also polls the
+// branch head on a timer and on regaining focus, and pulls when it has no local
+// changes of its own (see `checkRemote`).
 
 import { Store } from '../store';
 import { FileMap, deleteFile, mountFileMap } from '../workspace/paths';
@@ -83,6 +86,15 @@ export interface ToastMessage {
 type Subscriber = () => void;
 type ToastListener = (toast: ToastMessage | null) => void;
 
+/** How often an open tab asks GitHub whether the branch moved. One ref lookup
+ *  per tick — 60/hour against a 5000/hour rate limit — and only while the tab is
+ *  visible, so a backgrounded tab costs nothing. */
+const REMOTE_CHECK_INTERVAL_MS = 60_000;
+
+/** Floor between two checks, so a burst of focus/visibility events (alt-tabbing,
+ *  switching desktops) collapses into one request. */
+const REMOTE_CHECK_MIN_GAP_MS = 10_000;
+
 class WorklogStore {
   private store = new Store();
   private fm = new FileMap();
@@ -92,6 +104,12 @@ class WorklogStore {
   private commitTimer: ReturnType<typeof setTimeout> | undefined;
   private persistTimer: ReturnType<typeof setTimeout> | undefined;
   private rolloverTimer: ReturnType<typeof setTimeout> | undefined;
+  private watchTimer: ReturnType<typeof setTimeout> | undefined;
+  private checkingRemote = false;
+  /** Epoch millis of the last remote head check, for the min-gap throttle. */
+  private lastRemoteCheck = 0;
+  /** True once the focus/visibility listeners are registered (added once). */
+  private watching = false;
   // A recovered snapshot loaded on open, held until the user restores or discards it.
   private recovered?: PendingSnapshot;
 
@@ -157,6 +175,7 @@ class WorklogStore {
     this.loaded = true;
     this.updateSnapshot({ data: this.deriveState(), loading: false, gitPending: false });
     this.scheduleDateRollover();
+    this.startWatchingRemote();
     await this.loadRecovery();
   }
 
@@ -246,6 +265,8 @@ class WorklogStore {
     }
     try {
       const head = await this.fetchHead();
+      // This is a head check like the watcher's — don't let one follow the other.
+      this.lastRemoteCheck = Date.now();
       const remoteMoved = head !== this.repo.baseCommitSha;
       if (!hasLocalChanges) {
         // Nothing to push, so the branch head is the whole story.
@@ -521,6 +542,73 @@ class WorklogStore {
     this.clearCommitTimer();
     const delay = Math.max(1, autoSync.delayMinutes) * 60_000;
     this.commitTimer = setTimeout(() => void this.sync({ silent: true }), delay);
+  }
+
+  /** Start watching GitHub for commits pushed elsewhere (another device, an edit
+   *  on github.com). Nothing notifies us, so this polls: on a timer while the tab
+   *  is visible, and immediately when the tab regains focus — the case that
+   *  actually matters, since you come back to this tab after pushing from the
+   *  other device. Without it a tab that isn't edited never learns the branch
+   *  moved, because the only other head check lives in `sync()`. */
+  private startWatchingRemote(): void {
+    this.scheduleRemoteCheck();
+    if (this.watching || typeof document === 'undefined') {
+      return;
+    }
+    this.watching = true;
+    document.addEventListener('visibilitychange', this.onTabActive);
+    window.addEventListener('focus', this.onTabActive);
+  }
+
+  private onTabActive = (): void => {
+    void this.checkRemote();
+  };
+
+  private scheduleRemoteCheck(): void {
+    this.clearWatchTimer();
+    this.watchTimer = setTimeout(() => {
+      void this.checkRemote().then(() => this.scheduleRemoteCheck());
+    }, REMOTE_CHECK_INTERVAL_MS);
+  }
+
+  /** Ask where the branch head is and pull when it moved. Read-only as far as
+   *  local work goes: with dirty files this backs off entirely and leaves the
+   *  merge to `sync()`, which knows how to commit on top of the new head. */
+  private async checkRemote(): Promise<void> {
+    if (!this.repo || !this.loaded || this.committing || this.checkingRemote || this.fm.dirty.size > 0) {
+      return;
+    }
+    // A hidden tab has nothing to show; the visibility listener catches up.
+    if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
+      return;
+    }
+    const now = Date.now();
+    if (now - this.lastRemoteCheck < REMOTE_CHECK_MIN_GAP_MS) {
+      return;
+    }
+    this.lastRemoteCheck = now;
+    this.checkingRemote = true;
+    try {
+      const head = await this.fetchHead();
+      // Re-check the guards: an edit or a sync may have started in flight.
+      if (head === this.repo.baseCommitSha || this.committing || this.fm.dirty.size > 0) {
+        return;
+      }
+      await this.pull();
+      this.emitToast('Pulled changes from GitHub', 'success');
+    } catch {
+      // Offline or a transient GitHub failure. A background check has no reason
+      // to interrupt with a toast — the next tick tries again.
+    } finally {
+      this.checkingRemote = false;
+    }
+  }
+
+  private clearWatchTimer(): void {
+    if (this.watchTimer) {
+      clearTimeout(this.watchTimer);
+      this.watchTimer = undefined;
+    }
   }
 
   /** Re-derive the state just after local midnight. `today` is only recomputed
