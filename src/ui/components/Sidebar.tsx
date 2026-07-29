@@ -149,7 +149,7 @@ function RepoFooter({ repo, onSwitchRepo, onSignOut }: SidebarRepoProps) {
  * for the mobile drawer. `onNavigate` lets the drawer close itself on selection. */
 function SidebarContent({ onNavigate, repoProps }: { onNavigate?: () => void; repoProps?: SidebarRepoProps }) {
   const { view, setSearchOpen } = useUi();
-  const { noClients, tasks, triggerGitSync: onGitSync, openModal: onNewTask, gitPending } = useData();
+  const { noClients, tasks, triggerGitSync: onGitSync, openTaskForm: onNewTask, gitPending } = useData();
 
   // Open general to-dos get a count badge — they're the one nav target whose list
   // isn't tied to the selected day, so nothing else surfaces that they're waiting.
@@ -273,7 +273,7 @@ function SidebarContent({ onNavigate, repoProps }: { onNavigate?: () => void; re
  */
 export function Sidebar(repoProps: SidebarRepoProps = {}) {
   const [open, setOpen] = React.useState(false);
-  const { openModal: onNewTask, noClients } = useData();
+  const { openTaskForm: onNewTask, noClients } = useData();
 
   // Close the drawer on Escape and lock body scroll while it's open.
   React.useEffect(() => {

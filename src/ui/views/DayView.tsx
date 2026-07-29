@@ -61,7 +61,7 @@ function useDayData() {
 }
 
 export function DayView() {
-  const { today, clients, allClients, colorOf, clientName, statusMeta, reopen, openDetail, typeLabel, hoursPerDay, todosPerPage, logState, setLogState, saveLog, removeLog, editLog, openLogForm, openModalForDue } = useData();
+  const { today, clients, allClients, colorOf, clientName, statusMeta, reopen, openDetail, typeLabel, hoursPerDay, todosPerPage, logState, setLogState, saveLog, removeLog, editLog, openLogForm, openTaskFormForDue } = useData();
   const { selectedDate, setSelectedDate, editDayOpen, setEditDayOpen } = useUi();
   const { openTasks, dayLogs, dueRows, todoRows, openGroups, doneTasks, workedGroups, isTodaySel } = useDayData();
   const onSelectDate = setSelectedDate;
@@ -91,7 +91,7 @@ export function DayView() {
           setEditDayOpen={setEditDayOpen}
           onSelectDate={onSelectDate}
           isFuture={isFuture}
-          openModalForDue={openModalForDue}
+          openTaskFormForDue={openTaskFormForDue}
         />
 
         {/* The to-do panel is placed by the grid, not duplicated: it stacks in the

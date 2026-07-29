@@ -1,10 +1,11 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { useData, useUi } from '../context';
 import { TagPicker } from './TagPicker';
 import { RecurrencePicker } from './RecurrencePicker';
 import { useMarkdownImages } from '../hooks';
 import { clientIdOf, isDone, renderMarkdown, makeImageResolver } from '../utils';
 import { GENERAL_TODO_CLIENT_ID, GENERAL_TODO_COLOR, GENERAL_TODO_LABEL } from '../../model/todos';
+import { closeTaskForm, navigateToDashboard, navigateToTask, useRoute } from '../router';
 
 /** Derives the parent-task options and save-enabled flag for the open form. */
 function useTaskFormData() {
@@ -17,9 +18,13 @@ function useTaskFormData() {
   return { parentOptions, canAdd: mTitle.trim().length > 0 && !!mClient };
 }
 
-/** New / edit task modal. State is owned by the app so it can be seeded from
- * edit, quick-add and host "openAddTask" messages; this component only renders it. */
-export function TaskFormModal() {
+/** The new / edit task view (/app/new and /app/task/<id>/edit). A routed view
+ * rather than a dialog: the form is long enough that a centred modal runs past the
+ * bottom of a short viewport with no way to scroll to the buttons. It renders in
+ * the dashboard's main column, so the nav stays where it is. Field state is owned
+ * by the app (seeded before navigating here, or from the route on a direct load);
+ * this component only renders it. */
+export function TaskFormPage() {
   const {
     editingId,
     mTitle: title,
@@ -49,7 +54,8 @@ export function TaskFormModal() {
     newClientName,
     setNewClientName,
   } = useUi();
-  const { clients, allClients, colorOf, assetsBase, allTags, saveTask: onSave, closeModal: onClose, createClient: onCreateClient, deleteTask: onDelete } = useData();
+  const { snap, tasks, clients, allClients, colorOf, assetsBase, allTags, saveTask: onSave, createClient: onCreateClient, deleteTask: onDelete } = useData();
+  const route = useRoute();
   // Usage-ranked, so the picker offers the tags actually in circulation first.
   const knownTags = useMemo(() => allTags.map((t) => t.tag), [allTags]);
   const { parentOptions, canAdd } = useTaskFormData();
@@ -62,23 +68,52 @@ export function TaskFormModal() {
   }, [clients, allClients, clientId]);
   const img = useMarkdownImages(description, setDescription);
   const resolveImage = useMemo(() => makeImageResolver(assetsBase), [assetsBase]);
-  return (
-    // Full-screen page below md (modal dialogs are awkward on phones); centered
-    // dialog at md+. The panel is a flex column on mobile — fixed header/footer
-    // with only the body scrolling — and a plain card on desktop (md:block).
-    <div onClick={onClose} className="fixed inset-0 z-50 md:bg-overlay md:flex md:items-start md:justify-center md:pt-[8vh]">
-      <div
-        onClick={(e) => e.stopPropagation()}
-        className="flex flex-col h-full w-full bg-white md:block md:h-auto md:w-[560px] md:max-w-[92vw] md:rounded-[14px] md:shadow-[0_20px_60px_rgba(0,0,0,0.3)]"
-      >
-        <div className="flex items-center justify-between shrink-0 px-5 pt-4 pb-3 border-b border-neutral-375 md:px-[30px] md:pt-[26px] md:pb-0 md:mb-[22px] md:border-0">
-          <h2 className="text-[20px] font-bold m-0">{editingId ? 'Edit task' : 'New task'}</h2>
-          <button onClick={onClose} aria-label="Close" className="bg-none border-none text-[24px] md:text-[20px] text-neutral-650 cursor-pointer leading-none">
-            ×
-          </button>
-        </div>
 
-        <div className="flex-1 min-h-0 overflow-y-auto px-5 pt-4 pb-4 md:flex-none md:overflow-visible md:px-[30px] md:py-0">
+  // The form owns its shortcuts while it's up — the shell's global handler stands
+  // down for this route. Esc leaves, ⌘S / ⌘↵ saves; ⌘S because the browser's own
+  // save dialog is what would otherwise open.
+  // Save goes through a ref so typing doesn't re-subscribe on every keystroke.
+  const save = React.useRef(onSave);
+  save.current = onSave;
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        closeTaskForm();
+        return;
+      }
+      if ((e.metaKey || e.ctrlKey) && (e.key.toLowerCase() === 's' || e.key === 'Enter')) {
+        e.preventDefault();
+        save.current();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
+
+  // An edit URL for a task that isn't there (deleted, or a stale link) has nothing
+  // to seed the fields from, so say so instead of showing an empty "edit" form.
+  const editTargetId = route.name === 'taskForm' ? route.taskId : null;
+  if (snap && editTargetId && !tasks.some((t) => t.id === editTargetId)) {
+    return (
+      <div className="flex flex-1 flex-col items-center justify-center gap-4 bg-white text-[14px] text-neutral-675">
+        This task no longer exists.
+        <button onClick={navigateToDashboard} className="text-info hover:underline cursor-pointer bg-transparent border-none">
+          ‹ Back to Worklog
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    // Fills the dashboard's main column, so the nav stays put and this reads as a
+    // view rather than a separate app. The document scrolls — nothing can be
+    // stranded below the fold the way it was in the old dialog — with the header
+    // and actions stuck to the top and bottom of the viewport. The mobile header
+    // clears the sidebar's own top bar (h-13); at md+ the sidebar is a column and
+    // this column starts at the top.
+    <div className="flex flex-1 flex-col bg-white">
+      <div className="flex-1 max-w-[920px] mx-auto w-full px-5 py-6 md:px-8">
+        <h1 className="text-[22px] font-bold m-0 mb-6">{editingId ? 'Edit task' : 'New task'}</h1>
         <label className="block font-semibold text-[14px] mb-2">Title</label>
         <input
           autoFocus
@@ -171,34 +206,29 @@ export function TaskFormModal() {
         </select>
 
         <div className="flex flex-col md:flex-row gap-[14px] mb-[22px]">
-          <div className="w-full md:w-[180px]">
-            <div className="flex items-center justify-between mb-2">
-              {/* With a repeat rule this date isn't a deadline — it's where the
-                  series starts, and it rolls forward on its own from there. */}
-              <label className="block font-semibold text-[14px]">
-                {repeat.trim() ? (
-                  <>
-                    Starts <span className="text-neutral-625 font-normal">(optional)</span>
-                  </>
-                ) : (
-                  <>
-                    Due <span className="text-neutral-625 font-normal">(optional)</span>
-                  </>
+          {/* With a repeat rule this date isn't a deadline — it's where the series
+              starts, and it rolls forward on its own from there. The repeat block
+              owns it in that case, next to the rule it belongs to. */}
+          {!repeat.trim() && (
+            <div className="w-full md:w-[180px]">
+              <div className="flex items-center justify-between mb-2">
+                <label className="block font-semibold text-[14px]">
+                  Due <span className="text-neutral-625 font-normal">(optional)</span>
+                </label>
+                {due && (
+                  <button type="button" onClick={() => setDue('')} className="text-[12px] text-info bg-none border-none cursor-pointer">
+                    Clear
+                  </button>
                 )}
-              </label>
-              {due && (
-                <button type="button" onClick={() => setDue('')} className="text-[12px] text-info bg-none border-none cursor-pointer">
-                  Clear
-                </button>
-              )}
+              </div>
+              <input
+                type="date"
+                value={due}
+                onChange={(e) => setDue(e.target.value)}
+                className="w-full min-w-0 px-[14px] py-[11px] border border-neutral-525 rounded-[9px] text-[16px] md:text-[14px] bg-white"
+              />
             </div>
-            <input
-              type="date"
-              value={due}
-              onChange={(e) => setDue(e.target.value)}
-              className="w-full min-w-0 px-[14px] py-[11px] border border-neutral-525 rounded-[9px] text-[16px] md:text-[14px] bg-white"
-            />
-          </div>
+          )}
           <div className="flex-1 min-w-0">
             <label className="block font-semibold text-[14px] mb-2">
               Tags <span className="text-neutral-625 font-normal">(pick existing or create)</span>
@@ -215,6 +245,7 @@ export function TaskFormModal() {
           until={repeatUntil}
           onUntilChange={setRepeatUntil}
           due={due}
+          onDueChange={setDue}
         />
 
         <div className="flex items-center justify-between mb-2">
@@ -237,25 +268,25 @@ export function TaskFormModal() {
         </div>
         <input ref={img.fileInputRef} type="file" accept="image/*" multiple onChange={img.onFileChange} className="hidden" />
         <div className="mb-[22px]">
-        {descMode === 'edit' ? (
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            onPaste={img.onPaste}
-            onDrop={img.onDrop}
-            onDragOver={img.onDragOver}
-            placeholder={'Add a description in Markdown…\n\n## Notes\n- supports **bold**, *italic*, `code`\n- [links](https://example.com), lists, > quotes\n- paste, drop or add an image'}
-            className="w-full min-h-[140px] px-[14px] py-[12px] border border-neutral-525 rounded-[10px] text-[16px] md:text-[13.5px] leading-[1.6] outline-none focus:border-brand-500 focus:shadow-[0_0_0_3px_var(--color-brand-225)] resize-y mb-2"
-            style={{ fontFamily: "'JetBrains Mono', ui-monospace, monospace" }}
-          />
-        ) : description.trim() ? (
-          <div className="wl-md border border-neutral-375 rounded-[12px] px-[18px] py-[14px] bg-neutral-50 mb-2" dangerouslySetInnerHTML={{ __html: renderMarkdown(description, resolveImage) }} />
-        ) : (
-          <div onClick={() => setDescMode('edit')} className="border border-dashed border-neutral-450 rounded-[12px] px-[18px] py-[18px] text-[14px] text-neutral-625 italic cursor-text mb-2">
-            Nothing to preview yet. Click to add Markdown notes.
-          </div>
-        )}
-        {img.error && <div className="text-[12.5px] text-danger-675">{img.error}</div>}
+          {descMode === 'edit' ? (
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              onPaste={img.onPaste}
+              onDrop={img.onDrop}
+              onDragOver={img.onDragOver}
+              placeholder={'Add a description in Markdown…\n\n## Notes\n- supports **bold**, *italic*, `code`\n- [links](https://example.com), lists, > quotes\n- paste, drop or add an image'}
+              className="w-full min-h-[140px] px-[14px] py-[12px] border border-neutral-525 rounded-[10px] text-[16px] md:text-[13.5px] leading-[1.6] outline-none focus:border-brand-500 focus:shadow-[0_0_0_3px_var(--color-brand-225)] resize-y mb-2"
+              style={{ fontFamily: "'JetBrains Mono', ui-monospace, monospace" }}
+            />
+          ) : description.trim() ? (
+            <div className="wl-md border border-neutral-375 rounded-[12px] px-[18px] py-[14px] bg-neutral-50 mb-2" dangerouslySetInnerHTML={{ __html: renderMarkdown(description, resolveImage) }} />
+          ) : (
+            <div onClick={() => setDescMode('edit')} className="border border-dashed border-neutral-450 rounded-[12px] px-[18px] py-[18px] text-[14px] text-neutral-625 italic cursor-text mb-2">
+              Nothing to preview yet. Click to add Markdown notes.
+            </div>
+          )}
+          {img.error && <div className="text-[12.5px] text-danger-675">{img.error}</div>}
         </div>
 
         <label className="block font-semibold text-[14px] mb-2">
@@ -278,9 +309,10 @@ export function TaskFormModal() {
         <button onClick={() => setLinks([...links, ''])} className="bg-none border-none text-info text-[14px] font-medium cursor-pointer py-[2px]">
           + Add another link
         </button>
-        </div>
+      </div>
 
-        <div className="flex items-center justify-between shrink-0 px-5 pt-3 pb-3 border-t border-neutral-375 md:px-[30px] md:pt-0 md:pb-6 md:mt-[26px] md:border-0">
+      <div className="sticky bottom-0 bg-white border-t border-neutral-375">
+        <div className="max-w-[920px] mx-auto w-full flex items-center justify-between px-5 py-3 md:px-8">
           <div>
             {editingId && (
               <button onClick={() => onDelete(editingId)} className="px-[14px] py-[10px] border border-danger-225 rounded-[9px] bg-white text-danger-675 text-[14px] font-semibold cursor-pointer hover:bg-danger-75">
@@ -289,7 +321,7 @@ export function TaskFormModal() {
             )}
           </div>
           <div className="flex gap-[10px]">
-            <button onClick={onClose} className="px-5 py-[10px] border border-neutral-400 rounded-[9px] bg-neutral-250 text-[14px] font-semibold cursor-pointer">
+            <button onClick={closeTaskForm} className="px-5 py-[10px] border border-neutral-400 rounded-[9px] bg-neutral-250 text-[14px] font-semibold cursor-pointer">
               Close
             </button>
             <button
@@ -304,6 +336,7 @@ export function TaskFormModal() {
           </div>
         </div>
       </div>
+
     </div>
   );
 }

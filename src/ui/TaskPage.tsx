@@ -1,19 +1,20 @@
-// The single-task page at /app/task/<id>. Reuses the full provider + TaskDetailPanel
-// (in `routed` mode, which renders a breadcrumb instead of the in-app Back button),
-// pinned to one task and without the dashboard chrome. Edit / new-client still work
-// because their modals mount here too. A shareable URL with working browser
-// back/forward; the breadcrumb navigates back to the dashboard or the parent task.
+// The single-task page at /app/task/<id>. Reuses TaskDetailPanel (in `routed` mode,
+// which renders a breadcrumb instead of the in-app Back button), pinned to one task
+// and without the dashboard chrome. Editing leaves for the form route; new-client
+// still works because its modal mounts here too. A shareable URL with working
+// browser back/forward; the breadcrumb navigates back to the dashboard or the
+// parent task.
 //
 // Nothing pins the detail view here: on a task route the router reports the
 // route's own task as the open one (see useDetailId), so the panel follows the URL.
 
-import { useData, useUi, WorklogProvider } from './context';
-import { ClientFormModal, Toast, TaskDetailPanel, TaskFormModal } from './components';
+import { useData, useUi } from './context';
+import { ClientFormModal, Toast, TaskDetailPanel } from './components';
 import { navigateToDashboard } from './router';
 
-function TaskPageShell({ taskId }: { taskId: string }) {
+export function TaskPage({ taskId }: { taskId: string }) {
   const { snap, toast } = useData();
-  const { modalOpen, clientModalOpen } = useUi();
+  const { clientModalOpen } = useUi();
 
   if (!snap) {
     return <div className="min-h-screen bg-white" />;
@@ -36,18 +37,9 @@ function TaskPageShell({ taskId }: { taskId: string }) {
         </div>
       )}
 
-      {modalOpen && <TaskFormModal />}
       {clientModalOpen && <ClientFormModal />}
 
       <Toast toast={toast} />
     </div>
-  );
-}
-
-export function TaskPage({ taskId }: { taskId: string }) {
-  return (
-    <WorklogProvider>
-      <TaskPageShell taskId={taskId} />
-    </WorklogProvider>
   );
 }

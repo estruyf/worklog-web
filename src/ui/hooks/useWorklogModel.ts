@@ -3,7 +3,7 @@
 // provider and exposed through DataContext instead of prop-drilled. Per-view
 // derivations (groups, monthly rolls, search) live in each view's own data hook.
 
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import type { Client, StatusDef, Task } from "../../model/types";
 import {
   eventWorklogClientId,
@@ -24,7 +24,7 @@ import {
 } from "../../model/recurrence";
 import type { WorklogState } from "../state";
 import { worklogStore, type ToastMessage } from "../../data/worklogStore";
-import { navigateToTask } from "../router";
+import { closeTaskForm, navigateToTask, navigateToTaskForm, useRoute } from "../router";
 import type { StatusMetaFn, LogState, WorklogRow } from "../model";
 import {
   PALETTE,
@@ -187,7 +187,34 @@ export function useWorklogModel(
   );
   const openDetail = useCallback((t: Task) => ui.setDetailId(t.id), []);
 
-  const openEdit = useCallback((t: Task) => {
+  // ---- task form ----
+  // The form is a route (/app/new, /app/task/<id>/edit), so "open it" means seed
+  // the fields and navigate. `seededForm` records which target the fields hold —
+  // "new", a task id, or null when the form is closed — so the route effect below
+  // knows the seeding already happened and only steps in for a form arrived at by
+  // URL alone: a pasted link, a reload, or back/forward onto the route.
+  const route = useRoute();
+  const seededForm = useRef<string | null>(null);
+  const resetRepeat = () => {
+    ui.setMRepeat("");
+    ui.setMRepeatFrom("schedule");
+    ui.setMRepeatUntil("");
+  };
+  const seedNewForm = (clientId: string, parentId = "") => {
+    ui.setEditingId(null);
+    ui.setMTitle("");
+    ui.setMClient(clientId);
+    ui.setMParent(parentId);
+    ui.setMLinks([""]);
+    ui.setMDue("");
+    resetRepeat();
+    ui.setMTags([]);
+    ui.setMDescription("");
+    ui.setMDescMode("edit");
+    ui.setAddingClient(false);
+    seededForm.current = "new";
+  };
+  const seedEditForm = (t: Task) => {
     ui.setEditingId(t.id);
     ui.setMTitle(t.title);
     ui.setMClient(clientIdOf(t));
@@ -202,12 +229,50 @@ export function useWorklogModel(
     ui.setMDescription(t.description || "");
     ui.setMDescMode(t.description ? "preview" : "edit");
     ui.setAddingClient(false);
-    ui.setModalOpen(true);
-  }, []);
-  const closeModal = useCallback(() => {
-    ui.setModalOpen(false);
-    ui.setEditingId(null);
-    ui.setAddingClient(false);
+    seededForm.current = t.id;
+  };
+  /** Which client a brand-new task lands on: the one you're looking at, else the
+   *  one the day's work points at. */
+  const defaultFormClientId = () =>
+    defaultTaskClientId({
+      selectedClientId: ui.selectedClient,
+      selectedDate,
+      today,
+      clients,
+      worklog,
+    });
+
+  useEffect(() => {
+    if (route.name !== "taskForm") {
+      // Leaving the form clears what it was editing. Done here rather than in
+      // closeTaskForm so the fields survive until the route actually changes —
+      // history.back() only lands on the next popstate, and clearing early would
+      // blank the still-mounted form for a frame.
+      seededForm.current = null;
+      ui.setEditingId(null);
+      ui.setAddingClient(false);
+      return;
+    }
+    // Wait for the snapshot: without clients loaded there is nothing sensible to
+    // preselect, and marking the form seeded here would keep it empty for good.
+    if (!snap || seededForm.current === (route.taskId ?? "new")) {
+      return;
+    }
+    if (route.taskId) {
+      const t = tasks.find((x) => x.id === route.taskId);
+      if (t) {
+        seedEditForm(t);
+      }
+      return;
+    }
+    seedNewForm(defaultFormClientId());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [route, snap, tasks]);
+
+  const openEdit = useCallback((t: Task) => {
+    seedEditForm(t);
+    navigateToTaskForm(t.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const deleteTask = useCallback(
     (id: string, options?: { permanent?: boolean }) => {
@@ -243,11 +308,13 @@ export function useWorklogModel(
         worklogStore.closeTask(id, selectedDate);
       }
 
-      if (ui.modalOpen && ui.editingId === id) {
-        closeModal();
+      // Deleting the task the form is open on leaves the form with nothing to
+      // save, so step off the route too.
+      if (route.name === "taskForm" && route.taskId === id) {
+        closeTaskForm();
       }
     },
-    [tasks, ui.detailId, ui.modalOpen, ui.editingId, closeModal, selectedDate],
+    [tasks, ui.detailId, route, selectedDate],
   );
 
   // ---- row builders ----
@@ -329,69 +396,36 @@ export function useWorklogModel(
     [makeRow],
   );
 
-  // ---- form / modal actions (only fired from the rendered shell & modals) ----
-  const openModal = () => {
-    ui.setEditingId(null);
-    ui.setMTitle("");
-    ui.setMClient(
-      defaultTaskClientId({
-        selectedClientId: ui.selectedClient,
-        selectedDate,
-        today,
-        clients,
-        worklog,
-      }),
-    );
-    ui.setMParent("");
-    ui.setMLinks([""]);
-    ui.setMDue("");
-    resetRepeat();
-    ui.setMTags([]);
-    ui.setMDescription("");
-    ui.setMDescMode("edit");
-    ui.setAddingClient(false);
-    ui.setModalOpen(true);
+  // ---- form actions (only fired from the rendered shell & pages) ----
+  const openTaskForm = () => {
+    seedNewForm(defaultFormClientId());
+    navigateToTaskForm();
   };
-  const resetRepeat = () => {
-    ui.setMRepeat("");
-    ui.setMRepeatFrom("schedule");
-    ui.setMRepeatUntil("");
-  };
-  // Open the new-task modal pre-seeded with a due date, e.g. from the calendar
+  // Open the new-task form pre-seeded with a due date, e.g. from the calendar
   // when planning work for a future day.
-  const openModalForDue = (due: string) => {
-    openModal();
+  const openTaskFormForDue = (due: string) => {
+    openTaskForm();
     ui.setMDue(due);
   };
-  // Open the new-task modal pre-assigned to the general to-do bucket, so the
+  // Open the new-task form pre-assigned to the general to-do bucket, so the
   // To-dos view can add straight to its own list.
-  const openTodoModal = () => {
-    openModal();
-    ui.setMClient(GENERAL_TODO_CLIENT_ID);
+  const openTodoForm = () => {
+    seedNewForm(GENERAL_TODO_CLIENT_ID);
+    navigateToTaskForm();
   };
-  const openChildModal = (parent: Task) => {
-    ui.setEditingId(null);
-    ui.setMTitle("");
-    ui.setMClient(clientIdOf(parent));
-    ui.setMParent(parent.id);
-    ui.setMLinks([""]);
-    ui.setMDue("");
-    resetRepeat();
-    ui.setMTags([]);
-    ui.setMDescription("");
-    ui.setMDescMode("edit");
-    ui.setAddingClient(false);
-    ui.setModalOpen(true);
+  const openSubtaskForm = (parent: Task) => {
+    seedNewForm(clientIdOf(parent), parent.id);
+    navigateToTaskForm();
   };
-  const openModalFromShortcut = () => {
+  const openTaskFormFromShortcut = () => {
     const detailTask = ui.detailId
       ? tasks.find((t) => t.id === ui.detailId)
       : undefined;
     if (detailTask && !isDone(detailTask)) {
-      openChildModal(detailTask);
+      openSubtaskForm(detailTask);
       return;
     }
-    openModal();
+    openTaskForm();
   };
   const saveTask = () => {
     const title = ui.mTitle.trim();
@@ -438,7 +472,7 @@ export function useWorklogModel(
         repeat,
       });
     }
-    closeModal();
+    closeTaskForm();
   };
   const createClient = (name: string, target: "modal" | "selected") => {
     const n = name.trim();
@@ -649,13 +683,12 @@ export function useWorklogModel(
     reopen,
     openDetail,
     openEdit,
-    closeModal,
     deleteTask,
-    openModal,
-    openModalForDue,
-    openTodoModal,
-    openChildModal,
-    openModalFromShortcut,
+    openTaskForm,
+    openTaskFormForDue,
+    openTodoForm,
+    openSubtaskForm,
+    openTaskFormFromShortcut,
     saveTask,
     createClient,
     saveDescription,

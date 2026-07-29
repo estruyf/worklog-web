@@ -339,6 +339,28 @@ describe('firstOccurrence', () => {
     expect(firstOccurrence(rec('weekly on mon,thu'), '2026-08-03')).toBe('2026-08-03');
   });
 
+  it('takes the nearest slot for a multi-interval rule, not one interval out', () => {
+    // The phase of "every 3 months on the 1st" — Aug/Nov/Feb or Oct/Jan/Apr — is
+    // decided by where the series starts, so the first one is simply the next
+    // 1st. Counting the interval from the day it was written instead made the
+    // same rule start in October when set up in July and in November in August.
+    expect(firstOccurrence(rec('every 3 months on 1'), '2026-07-29')).toBe('2026-08-01');
+    expect(firstOccurrence(rec('every 3 months on 1'), '2026-08-29')).toBe('2026-09-01');
+    // And from there the interval does apply.
+    expect(nextOccurrence(rec('every 3 months on 1'), '2026-08-01')).toBe('2026-11-01');
+    // 2026-08-03 is a Monday; a fortnightly rule starts on the coming Monday
+    // rather than skipping the one in the "off" week.
+    expect(firstOccurrence(rec('every 2 weeks on mon'), '2026-07-28')).toBe('2026-08-03');
+    expect(firstOccurrence(rec('every 2 years on 03-14'), '2026-07-28')).toBe('2027-03-14');
+  });
+
+  it('starts the series wherever it is told to', () => {
+    // A start date the caller picks is the anchor, even when the rule's own
+    // choice would have been earlier.
+    expect(firstOccurrence(rec('every 3 months on 1'), '2026-10-01')).toBe('2026-10-01');
+    expect(firstOccurrence(rec('monthly on 1'), '2027-01-15')).toBe('2027-02-01');
+  });
+
   it('starts a pure-interval rule immediately', () => {
     // "Every 10 days" has no slots of its own — waiting 10 days to start is
     // never what someone means.

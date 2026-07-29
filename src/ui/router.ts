@@ -1,7 +1,9 @@
 // Minimal client-side router for the /app island. Each top-level view is a route
 // (day at /app, the rest at /app/<view>), and a single task opens as a shareable
-// sub-route /app/task/<id> with a breadcrumb. Built on the History API so the
-// browser's back/forward buttons just work.
+// sub-route /app/task/<id> with a breadcrumb. The task form is a route too —
+// /app/new and /app/task/<id>/edit — because a dialog tall enough to hold it
+// gets cut off on short screens with nothing to scroll. Built on the History API
+// so the browser's back/forward buttons just work.
 //
 // `navigate` wraps `history.pushState` and notifies subscribers; a `popstate`
 // listener covers back/forward. Route helpers preserve the current query string
@@ -23,11 +25,22 @@ const VIEWS: AppView[] = ['day', 'todos', 'calendar', 'clients', 'insights', 'ar
 export type Route =
   | { name: 'view'; view: AppView }
   | { name: 'task'; taskId: string }
+  // The task form: `taskId` is the task being edited, or null for a new one.
+  | { name: 'taskForm'; taskId: string | null }
   | { name: 'notFound' };
 
-function parse(pathname: string): Route {
-  // Trim the /app base, then match /task/<id> or /<view>; anything else is 404.
+/** Route for a pathname. Exported for tests; the app reads `useRoute` instead. */
+export function parseRoute(pathname: string): Route {
+  // Trim the /app base, then match the task form, /task/<id> or /<view>;
+  // anything else is 404.
   const rest = pathname.startsWith(APP_BASE) ? pathname.slice(APP_BASE.length) : pathname;
+  if (rest === '/new' || rest === '/new/') {
+    return { name: 'taskForm', taskId: null };
+  }
+  const edit = /^\/task\/([^/]+)\/edit\/?$/.exec(rest);
+  if (edit) {
+    return { name: 'taskForm', taskId: decodeURIComponent(edit[1]) };
+  }
   const task = /^\/task\/([^/]+)\/?$/.exec(rest);
   if (task) {
     return { name: 'task', taskId: decodeURIComponent(task[1]) };
@@ -55,6 +68,9 @@ function subscribe(listener: () => void): () => void {
 
 // The history-state key holding the task the detail overlay is open on.
 const DETAIL_KEY = 'worklogDetail';
+// Marks a history entry this app pushed for the task form, so closing the form
+// can walk back off it instead of stranding the user on an unrelated page.
+const FORM_KEY = 'worklogForm';
 
 function readDetailState(): string | null {
   const state = window.history.state as Record<string, unknown> | null;
@@ -64,17 +80,22 @@ function readDetailState(): string | null {
 
 // Cache the current route object so useSyncExternalStore gets a stable reference
 // until the location actually changes.
-let current: Route = typeof window === 'undefined' ? { name: 'view', view: 'day' } : parse(window.location.pathname);
+let current: Route = typeof window === 'undefined' ? { name: 'view', view: 'day' } : parseRoute(window.location.pathname);
 let overlayDetailId: string | null = typeof window === 'undefined' ? null : readDetailState();
 // `history.back()` only lands on the next popstate, so the overlay still reads as
 // open until then. This keeps a second close request in that window (a delete
 // closes the panel from two places) from popping one entry too many.
 let closingDetail = false;
+// Same for the task form: `history.back()` only lands on the next popstate, so a
+// second close request in that window must not pop an extra entry (saving and
+// deleting both close the form on their way out).
+let closingForm = false;
 
 function refresh(): void {
-  current = parse(window.location.pathname);
+  current = parseRoute(window.location.pathname);
   overlayDetailId = readDetailState();
   closingDetail = false;
+  closingForm = false;
   notify();
 }
 
@@ -111,6 +132,40 @@ export function navigateToTask(taskId: string): void {
 
 export function navigateToDashboard(): void {
   navigate(APP_BASE);
+}
+
+/** Open the task form: /app/new for a new task, /app/task/<id>/edit for an
+ *  existing one. Always pushes (never replaces the detail overlay's entry the
+ *  way `navigate` does) so Back off the form lands on the panel you opened it
+ *  from, panel included. */
+export function navigateToTaskForm(taskId?: string | null): void {
+  const path = taskId ? `${APP_BASE}/task/${encodeURIComponent(taskId)}/edit` : `${APP_BASE}/new`;
+  const url = path + window.location.search;
+  // Re-opening the form you're already on (the sidebar's New task button stays
+  // clickable) reseeds it in place rather than stacking a second entry that Back
+  // would have to walk off twice.
+  if (window.location.pathname === path) {
+    window.history.replaceState({ [FORM_KEY]: true }, '', url);
+  } else {
+    window.history.pushState({ [FORM_KEY]: true }, '', url);
+  }
+  refresh();
+}
+
+/** Leave the task form. Walks back off the entry the form pushed, so closing it
+ *  in-app and closing it with Back leave the same history behind; a form opened
+ *  by a pasted URL has no such entry, so that one falls back to the dashboard. */
+export function closeTaskForm(): void {
+  if (closingForm) {
+    return;
+  }
+  const state = window.history.state as Record<string, unknown> | null;
+  closingForm = true;
+  if (state?.[FORM_KEY]) {
+    window.history.back();
+  } else {
+    navigate(APP_BASE);
+  }
 }
 
 /** Open the dashboard's task detail overlay. Adds a same-URL history entry so the

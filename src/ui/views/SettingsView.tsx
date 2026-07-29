@@ -66,7 +66,7 @@ export function SettingsView() {
 
   return (
     <div className="flex-1 overflow-auto px-6 py-10">
-      <div className="max-w-[640px] mx-auto">
+      <div className="max-w-[920px] mx-auto">
         <div className="mb-8">
           <h1 className="text-[24px] font-bold m-0">Settings</h1>
           <p className="text-[13px] text-neutral-675 mt-1 mb-0">

@@ -348,6 +348,9 @@ export function nextOccurrence(rec: Recurrence, base: string): string | undefine
  * so the first one lands on the next matching slot — "monthly on 1" set up
  * mid-month starts on the 1st, not today. Pure-interval rules ("daily", "every
  * 10 days") have no slots of their own and start immediately.
+ *
+ * Callers that want a series to start somewhere else pass that day as `from`;
+ * a recurring task's due date is what anchors it from then on.
  */
 export function firstOccurrence(rec: Recurrence, from: string): string | undefined {
   if (!isValidISODate(from)) {
@@ -356,9 +359,14 @@ export function firstOccurrence(rec: Recurrence, from: string): string | undefin
   const namesDays =
     !!rec.weekdays?.length || rec.monthDay !== undefined || rec.month !== undefined;
   // "On or after `from`" is "strictly after the day before `from`". The anchor is
-  // forced to `schedule` because a cadence has nothing to measure from yet.
+  // forced to `schedule` because a cadence has nothing to measure from yet, and
+  // the interval is dropped: which months a quarterly rule lands in is decided
+  // *by* its first occurrence, so there is no phase to count from yet. Stepping
+  // with the real interval would instead phase the series off whichever day it
+  // happened to be set up on — "every 3 months on the 1st" written in August
+  // would start in November rather than on the 1st of August.
   const start = namesDays
-    ? nextOccurrence({ ...rec, anchor: 'schedule', until: undefined }, addDays(from, -1))
+    ? nextOccurrence({ ...rec, interval: 1, anchor: 'schedule', until: undefined }, addDays(from, -1))
     : from;
   if (!start || (rec.until && start > rec.until)) {
     return undefined;

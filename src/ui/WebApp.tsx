@@ -1,13 +1,20 @@
 // The client island for /app. Resolves the GitHub session, lets the user pick a
 // repository, opens it through the store (which loads + parses the Worklog files),
-// and mounts the dashboard. The current route (/app or /app/task/<id>) picks
-// between the dashboard and a single-task page. A floating control switches repo
-// or signs out. One repo is mounted at a time. The selected repo is remembered in
-// localStorage (not the URL) so a return visit reopens it automatically.
+// and mounts the dashboard. The current route picks between the single-task page
+// (/app/task/<id>) and the dashboard, which hosts the views and the task form
+// (/app/new, /app/task/<id>/edit) inside its own chrome. A floating control
+// switches repo or signs out. One repo is mounted at a time. The selected repo is
+// remembered in localStorage (not the URL) so a return visit reopens it
+// automatically.
+//
+// WorklogProvider wraps both: they share one set of UI state, so navigating to the
+// form and back doesn't throw away the fields it was seeded with.
 
 import React from 'react';
 import { WorklogApp } from './WorklogApp';
 import { TaskPage } from './TaskPage';
+import { WorklogProvider } from './context';
+import { useUnsavedGuard } from './hooks';
 import { worklogStore, type RecoveryInfo } from '../data/worklogStore';
 import { navigateToDashboard, useRoute } from './router';
 import { RepoPicker } from './RepoPicker';
@@ -34,6 +41,10 @@ function readLastRepo(): RepoRef | undefined {
 
 export default function WebApp() {
   const route = useRoute();
+  // Warn before leaving with unsynced edits (they're also mirrored for recovery).
+  // Here rather than in the dashboard so it covers every route — the task form and
+  // the single-task page can just as easily be where you close the tab.
+  useUnsavedGuard();
   const initialRepo = React.useMemo(readLastRepo, []);
   const [phase, setPhase] = React.useState<Phase>(initialRepo ? { kind: 'loading', label: `Loading ${initialRepo.owner}/${initialRepo.repo}…` } : { kind: 'picker' });
   const [repo, setRepo] = React.useState<RepoRef | undefined>(initialRepo);
@@ -96,12 +107,28 @@ export default function WebApp() {
 
   return (
     <>
-      {route.name === 'task' ? (
-        <TaskPage taskId={route.taskId} />
-      ) : (
-        <WorklogApp repoProps={{ repo, onSwitchRepo: switchRepo, onSignOut: signOut }} />
-      )}
+      <WorklogProvider>
+        {route.name === 'task' ? (
+          <TaskPage taskId={route.taskId} />
+        ) : (
+          <WorklogApp repoProps={{ repo, onSwitchRepo: switchRepo, onSignOut: signOut }} />
+        )}
+      </WorklogProvider>
       {recovery && <RecoveryPrompt info={recovery} onRestore={restore} onDiscard={discard} />}
+
+      {/* Hidden visitor-stats pixel — an <img> still fetches its src while hidden,
+          so this pings the counter once per app load without showing anything.
+          Mounted out here rather than in the dashboard: routing to the task form
+          and back remounts that, and each remount would count as another visit. */}
+      <img
+        src="https://api.visitorbadge.io/api/visitors?path=https%3A%2F%2Fworklog.struyfconsulting.be&labelColor=%23e2be2e&countColor=%23e2be2e&slug=app"
+        alt=""
+        aria-hidden="true"
+        width={1}
+        height={1}
+        loading="eager"
+        className="absolute h-px w-px opacity-0 pointer-events-none -left-px -top-px"
+      />
     </>
   );
 }

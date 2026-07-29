@@ -24,9 +24,12 @@ export interface RecurrencePickerProps {
   /** Optional last date of the series (YYYY-MM-DD); '' for open-ended. */
   until: string;
   onUntilChange: (until: string) => void;
-  /** The task's due date — seeds a preset's day, and stands in for the day a
-   *  rule doesn't name one. */
+  /** The task's due date. For a repeating task that is where the series starts:
+   *  it seeds a preset's day, stands in for the day a rule doesn't name one, and
+   *  fixes the phase of a multi-interval rule (which months a quarterly one
+   *  lands in). '' lets the rule pick its own first slot. */
   due: string;
+  onDueChange: (due: string) => void;
 }
 
 type PresetKind = 'daily' | 'weekdays' | 'weekly' | 'biweekly' | 'monthly' | 'yearly';
@@ -170,6 +173,40 @@ function MonthDayPicker({
   );
 }
 
+/** A clearable date field. Both series bounds read the same way. */
+function DateField({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div className="flex-1 min-w-0">
+      <div className="flex items-center justify-between mb-[6px]">
+        <label className="block font-semibold text-[13px]">{label}</label>
+        {value && (
+          <button
+            type="button"
+            onClick={() => onChange('')}
+            className="text-[12px] text-info bg-none border-none cursor-pointer"
+          >
+            Clear
+          </button>
+        )}
+      </div>
+      <input
+        type="date"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full min-w-0 px-[14px] py-[9px] border border-neutral-525 rounded-[9px] text-[16px] md:text-[13.5px] bg-white"
+      />
+    </div>
+  );
+}
+
 /** Repeat controls for the task form: preset chips, the day detail for whichever
  *  preset is active, a custom expression, and the two qualifiers that change what
  *  the rule means (cadence anchor, end date). */
@@ -181,6 +218,7 @@ export function RecurrencePicker({
   until,
   onUntilChange,
   due,
+  onDueChange,
 }: RecurrencePickerProps) {
   const parsed = useMemo(() => (value.trim() ? parseRecurrence(value) : undefined), [value]);
   const repeats = value.trim().length > 0;
@@ -203,10 +241,14 @@ export function RecurrencePicker({
     }
   };
 
-  const startsOn = useMemo(
-    () => (parsed && !due.trim() ? firstOccurrence({ ...parsed, until: until || undefined }, today()) : undefined),
-    [parsed, due, until],
-  );
+  // Where the series begins: the start date if one is set, otherwise the slot the
+  // rule picks for itself from today.
+  const firstDate = useMemo(() => {
+    if (due.trim()) {
+      return due.trim();
+    }
+    return parsed ? firstOccurrence({ ...parsed, until: until || undefined }, today()) : undefined;
+  }, [parsed, due, until]);
 
   const dueParts = parseISODate(due) ?? parseISODate(today())!;
   // A rule that names no day behaves as if it named the due date's — show that,
@@ -294,55 +336,43 @@ export function RecurrencePicker({
         </div>
       )}
 
+      {/* Both bounds of the series. The start date is what fixes a multi-interval
+          rule's phase — "every 3 months on the 1st" is the same rule whether it
+          runs Jan/Apr/Jul or Feb/May/Aug, and only this says which. */}
+      {repeats && (
+        <div className="flex flex-col md:flex-row gap-[14px] mb-[14px]">
+          <DateField label="Starts on" value={due} onChange={onDueChange} />
+          <DateField label="Until" value={until} onChange={onUntilChange} />
+        </div>
+      )}
+
       {parsed && (
         <>
-          <div className="flex flex-col md:flex-row md:items-end gap-[14px]">
-            <div className="flex-1 min-w-0">
-              <label className="block font-semibold text-[13px] mb-[6px]">Next one is measured from</label>
-              <div className="flex border border-neutral-400 rounded-[7px] overflow-hidden text-[12.5px] w-fit">
-                <button
-                  type="button"
-                  onClick={() => onAnchorChange('schedule')}
-                  title="Missing one occurrence doesn't move the others"
-                  className={
-                    'px-[12px] py-[6px] cursor-pointer ' +
-                    (anchor === 'schedule' ? 'bg-brand-225 text-brand-800 font-semibold' : 'bg-white text-neutral-700')
-                  }
-                >
-                  The schedule
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onAnchorChange('completion')}
-                  title="The interval restarts on the day you actually complete it"
-                  className={
-                    'px-[12px] py-[6px] cursor-pointer border-l border-neutral-400 ' +
-                    (anchor === 'completion' ? 'bg-brand-225 text-brand-800 font-semibold' : 'bg-white text-neutral-700')
-                  }
-                >
-                  When I complete it
-                </button>
-              </div>
-            </div>
-            <div className="w-full md:w-[180px]">
-              <div className="flex items-center justify-between mb-[6px]">
-                <label className="block font-semibold text-[13px]">Until</label>
-                {until && (
-                  <button
-                    type="button"
-                    onClick={() => onUntilChange('')}
-                    className="text-[12px] text-info bg-none border-none cursor-pointer"
-                  >
-                    Clear
-                  </button>
-                )}
-              </div>
-              <input
-                type="date"
-                value={until}
-                onChange={(e) => onUntilChange(e.target.value)}
-                className="w-full min-w-0 px-[14px] py-[9px] border border-neutral-525 rounded-[9px] text-[16px] md:text-[13.5px] bg-white"
-              />
+          <div>
+            <label className="block font-semibold text-[13px] mb-[6px]">Next one is measured from</label>
+            <div className="flex border border-neutral-400 rounded-[7px] overflow-hidden text-[12.5px] w-fit">
+              <button
+                type="button"
+                onClick={() => onAnchorChange('schedule')}
+                title="Missing one occurrence doesn't move the others"
+                className={
+                  'px-[12px] py-[6px] cursor-pointer ' +
+                  (anchor === 'schedule' ? 'bg-brand-225 text-brand-800 font-semibold' : 'bg-white text-neutral-700')
+                }
+              >
+                The schedule
+              </button>
+              <button
+                type="button"
+                onClick={() => onAnchorChange('completion')}
+                title="The interval restarts on the day you actually complete it"
+                className={
+                  'px-[12px] py-[6px] cursor-pointer border-l border-neutral-400 ' +
+                  (anchor === 'completion' ? 'bg-brand-225 text-brand-800 font-semibold' : 'bg-white text-neutral-700')
+                }
+              >
+                When I complete it
+              </button>
             </div>
           </div>
           <div className="text-[12.5px] text-neutral-625 mt-[10px]">
@@ -350,9 +380,9 @@ export function RecurrencePicker({
             {formatRecurrence(parsed) !== value.trim() && (
               <span className="text-neutral-550"> · saved as “{formatRecurrence(parsed)}”</span>
             )}
-            {/* With no due date the series still has to start somewhere; say
-                where, rather than filling the date field in behind their back. */}
-            {!due.trim() && startsOn && <> · first one lands on {startsOn}</>}
+            {/* Left empty, the start date is derived rather than filled in behind
+                their back — so say out loud where the series will begin. */}
+            {firstDate && <> · first one lands on {firstDate}</>}
           </div>
         </>
       )}

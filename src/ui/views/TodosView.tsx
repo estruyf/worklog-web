@@ -88,7 +88,7 @@ function CompletedTodos({ doneTasks }: { doneTasks: Task[] }) {
 }
 
 export function TodosView() {
-  const { openTodoModal } = useData();
+  const { openTodoForm } = useData();
   const { openRows, openCount, doneTasks } = useTodosData();
 
   return (
@@ -103,7 +103,7 @@ export function TodosView() {
             </span>
           </div>
           <button
-            onClick={openTodoModal}
+            onClick={openTodoForm}
             className="flex items-center gap-[7px] px-[14px] py-[8px] rounded-[8px] text-[13px] font-semibold cursor-pointer border border-brand-500 bg-brand-450 text-brand-800 hover:bg-brand-475"
           >
             <PlusIcon size={15} />

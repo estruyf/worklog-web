@@ -9,7 +9,7 @@ type DayHeaderProps = {
   setEditDayOpen: (open: boolean) => void;
   onSelectDate: (date: string) => void;
   isFuture: boolean;
-  openModalForDue: (date: string) => void;
+  openTaskFormForDue: (date: string) => void;
 };
 
 export function DayHeader({
@@ -20,7 +20,7 @@ export function DayHeader({
   setEditDayOpen,
   onSelectDate,
   isFuture,
-  openModalForDue,
+  openTaskFormForDue,
 }: DayHeaderProps) {
   return (
     <div className="flex flex-col gap-3 mb-7 sm:flex-row sm:items-center">
@@ -62,7 +62,7 @@ export function DayHeader({
         )}
         {isFuture && (
           <button
-            onClick={() => openModalForDue(selectedDate)}
+            onClick={() => openTaskFormForDue(selectedDate)}
             title="Add a task due on this day"
             className="flex-1 sm:flex-none flex items-center justify-center gap-[6px] px-[14px] py-[8px] border border-brand-500 rounded-[8px] bg-brand-450 text-brand-800 font-semibold text-[13px] cursor-pointer hover:bg-brand-475 whitespace-nowrap"
           >

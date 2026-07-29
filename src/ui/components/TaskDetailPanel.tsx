@@ -83,7 +83,7 @@ function RepeatSummary({
  * hidden — the breadcrumb handles that — and parent/subtask navigation pushes the
  * matching task route. */
 export function TaskDetailPanel({ routed = false }: { routed?: boolean } = {}) {
-  const { statusMeta, colorOf, clientName, assetsBase, reopen, toggleWorked, markDone, openEdit: onEdit, deleteTask: onDelete, saveDescription: onSaveDescription, openChildModal, addNote, deleteNote, openTagSearch } = useData();
+  const { statusMeta, colorOf, clientName, assetsBase, reopen, toggleWorked, markDone, openEdit: onEdit, deleteTask: onDelete, saveDescription: onSaveDescription, openSubtaskForm, addNote, deleteNote, openTagSearch } = useData();
   const { selectedDate, descDraft, setDescDraft, descMode, setDescMode, setDetailId, noteDraft, setNoteDraft } = useUi();
   const { task, parent, subtasks, occurrences, descDirty } = useDetailData();
   const img = useMarkdownImages(descDraft, setDescDraft);
@@ -175,7 +175,7 @@ export function TaskDetailPanel({ routed = false }: { routed?: boolean } = {}) {
               Edit details
             </button>
             {!isDone(task) && (
-              <button onClick={() => openChildModal(task)} className="px-[14px] py-[7px] border border-neutral-400 rounded-[7px] bg-white text-neutral-750 font-semibold text-[13px] cursor-pointer hover:bg-neutral-200">
+              <button onClick={() => openSubtaskForm(task)} className="px-[14px] py-[7px] border border-neutral-400 rounded-[7px] bg-white text-neutral-750 font-semibold text-[13px] cursor-pointer hover:bg-neutral-200">
                 Add subtask
               </button>
             )}

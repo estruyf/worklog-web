@@ -38,7 +38,9 @@ export function useWorklogUiState() {
     setTagFilter([]);
   }, [searchOpen]);
 
-  const [modalOpen, setModalOpen] = useState(false);
+  // The task form is a route (/app/new, /app/task/<id>/edit), so nothing here
+  // tracks whether it's open — these are just the fields it edits, kept in app
+  // state so navigating to the form can seed them first.
   const [editingId, setEditingId] = useState<string | null>(null);
   const [mTitle, setMTitle] = useState("");
   const [mClient, setMClient] = useState("");
@@ -117,8 +119,6 @@ export function useWorklogUiState() {
     setTagFilter,
     searchSel,
     setSearchSel,
-    modalOpen,
-    setModalOpen,
     editingId,
     setEditingId,
     mTitle,
