@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import type { WorklogEntry } from '../../model/types';
 import { eventTypeFromClientId, formatEventTypeLabel, isEventWorklogClientId } from '../../model/worklog';
+import { CalendarArrowUpIcon, ChevronLeftIcon, ChevronRightIcon } from 'lucide-react';
 import { useData, useUi } from '../context';
 import { navigateToView } from '../router';
 import {
@@ -84,6 +85,10 @@ export function CalendarView() {
   // list every client that logged time rather than collapsing into "+n more".
   const isWeek = mode === 'week';
   const maxPerCell = isWeek ? 6 : 3;
+  // A week grid holds exactly its own seven days, so today being among the cells
+  // means it's the current week; a month grid pads with neighbouring days, so
+  // that check would light up on the months either side — compare the month.
+  const isCurrentPeriod = isWeek ? cells.includes(today) : ymOf(cursor) === ymOf(today);
 
   return (
     <div className="flex-1 overflow-auto px-6 pt-8 pb-20">
@@ -105,17 +110,24 @@ export function CalendarView() {
               </button>
             ))}
           </div>
-          <div className="flex items-center gap-3">
-            <button onClick={() => setCursor(shiftPeriod(mode, cursor, -1, weekStart))} title={isWeek ? 'Previous week' : 'Previous month'} className="w-7 h-7 border border-neutral-400 rounded-md bg-white text-neutral-700 cursor-pointer flex items-center justify-center hover:bg-neutral-200">
-              {'<'}
+          {/* Same control order as the Day view: Today, then the arrows, then the
+           * period label — so stepping through periods leaves the buttons put. */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setCursor(today)}
+              disabled={isCurrentPeriod}
+              title={isWeek ? 'Jump to this week' : 'Jump to this month'}
+              className="shrink-0 flex items-center gap-1.5 h-7 px-2.5 border border-neutral-400 rounded-lg bg-white text-[12px] font-semibold text-neutral-825 cursor-pointer hover:bg-neutral-200 disabled:text-neutral-625 disabled:cursor-default disabled:hover:bg-white"
+            >
+              <CalendarArrowUpIcon size={14} className="text-neutral-675" /> Today
             </button>
-            <div className="flex-1 md:flex-none text-[15px] font-semibold md:min-w-[150px] text-center whitespace-nowrap">{periodLabel(mode, cursor, weekStart)}</div>
-            <button onClick={() => setCursor(shiftPeriod(mode, cursor, 1, weekStart))} title={isWeek ? 'Next week' : 'Next month'} className="w-7 h-7 border border-neutral-400 rounded-md bg-white text-neutral-700 cursor-pointer flex items-center justify-center hover:bg-neutral-200">
-              {'>'}
+            <button onClick={() => setCursor(shiftPeriod(mode, cursor, -1, weekStart))} title={isWeek ? 'Previous week' : 'Previous month'} className="w-7 h-7 rounded-lg bg-transparent border-none text-neutral-700 cursor-pointer flex items-center justify-center hover:bg-neutral-225">
+              <ChevronLeftIcon size={16} />
             </button>
-            <button onClick={() => { openDay(today); setCursor(today); }} className="text-[12px] text-info border border-neutral-525 rounded-md bg-white cursor-pointer px-[10px] py-[5px] hover:bg-neutral-200">
-              Today
+            <button onClick={() => setCursor(shiftPeriod(mode, cursor, 1, weekStart))} title={isWeek ? 'Next week' : 'Next month'} className="w-7 h-7 rounded-lg bg-transparent border-none text-neutral-700 cursor-pointer flex items-center justify-center hover:bg-neutral-225">
+              <ChevronRightIcon size={16} />
             </button>
+            <div className="flex-1 md:flex-none text-[15px] font-semibold whitespace-nowrap">{periodLabel(mode, cursor, weekStart)}</div>
           </div>
         </div>
 

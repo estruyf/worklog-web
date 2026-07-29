@@ -148,8 +148,8 @@ function RepoFooter({ repo, onSwitchRepo, onSignOut }: SidebarRepoProps) {
 /** The shared inner content — rendered once for the static desktop rail and once
  * for the mobile drawer. `onNavigate` lets the drawer close itself on selection. */
 function SidebarContent({ onNavigate, repoProps }: { onNavigate?: () => void; repoProps?: SidebarRepoProps }) {
-  const { view, setSearchOpen } = useUi();
-  const { noClients, tasks, triggerGitSync: onGitSync, openTaskForm: onNewTask, gitPending } = useData();
+  const { view, setSearchOpen, setSelectedDate } = useUi();
+  const { noClients, tasks, today, triggerGitSync: onGitSync, openTaskForm: onNewTask, gitPending } = useData();
 
   // Open general to-dos get a count badge — they're the one nav target whose list
   // isn't tied to the selected day, so nothing else surfaces that they're waiting.
@@ -159,8 +159,13 @@ function SidebarContent({ onNavigate, repoProps }: { onNavigate?: () => void; re
   );
 
   // Navigating away closes an open task detail overlay on its own — it rides the
-  // same history entry the navigation replaces.
+  // same history entry the navigation replaces. Picking Day snaps back to today:
+  // a date left over from browsing the calendar isn't what the tab means when you
+  // deliberately click it.
   const go = (v: AppView) => {
+    if (v === 'day' && today) {
+      setSelectedDate(today);
+    }
     navigateToView(v);
     onNavigate?.();
   };
@@ -273,7 +278,8 @@ function SidebarContent({ onNavigate, repoProps }: { onNavigate?: () => void; re
  */
 export function Sidebar(repoProps: SidebarRepoProps = {}) {
   const [open, setOpen] = React.useState(false);
-  const { openTaskForm: onNewTask, noClients } = useData();
+  const { openTaskForm: onNewTask, noClients, today } = useData();
+  const { setSelectedDate } = useUi();
 
   // Close the drawer on Escape and lock body scroll while it's open.
   React.useEffect(() => {
@@ -301,7 +307,12 @@ export function Sidebar(repoProps: SidebarRepoProps = {}) {
           <MenuIcon size={18} />
         </button>
         <button
-          onClick={() => navigateToView('day')}
+          onClick={() => {
+            if (today) {
+              setSelectedDate(today);
+            }
+            navigateToView('day');
+          }}
           className="flex items-center gap-2 font-bold text-[15px] cursor-pointer bg-transparent border-none text-left"
           title="Go to Day view"
         >
