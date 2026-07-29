@@ -55,7 +55,7 @@ export function TaskFormPage() {
     newClientName,
     setNewClientName,
   } = useUi();
-  const { snap, tasks, clients, allClients, colorOf, assetsBase, allTags, saveTask: onSave, createClient: onCreateClient, deleteTask: onDelete } = useData();
+  const { snap, tasks, clients, allClients, colorOf, assetUrl, allTags, saveTask: onSave, createClient: onCreateClient, deleteTask: onDelete } = useData();
   const route = useRoute();
   // Usage-ranked, so the picker offers the tags actually in circulation first.
   const knownTags = useMemo(() => allTags.map((t) => t.tag), [allTags]);
@@ -71,7 +71,7 @@ export function TaskFormPage() {
   // first snapshot lands so the shortcut is never a stale or empty date.
   const todayKey = snap?.today || today();
   const img = useMarkdownImages(description, setDescription);
-  const resolveImage = useMemo(() => makeImageResolver(assetsBase), [assetsBase]);
+  const resolveImage = useMemo(() => makeImageResolver(assetUrl), [assetUrl]);
 
   // The form owns its shortcuts while it's up — the shell's global handler stands
   // down for this route. Esc leaves, ⌘S / ⌘↵ saves; ⌘S because the browser's own

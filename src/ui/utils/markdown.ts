@@ -14,27 +14,28 @@ function escapeHtml(s: string): string {
 
 /**
  * Resolves a Markdown image `src` to a URL the app may load, or `null` to
- * block it (the alt text is shown instead). Callers pass one built from the
- * snapshot's `assetsBase` so stored `assets/…` refs become app URLs.
+ * block it (the alt text is shown instead). Callers pass one built over the
+ * store's asset lookup so stored `assets/…` refs become loadable URLs.
  */
 export type ImageResolver = (src: string) => string | null;
 
 /**
- * Builds an {@link ImageResolver} that passes through http(s)/data URLs and maps
- * stored `assets/<file>` refs onto the app's assets base URL. Anything else
- * (bare relative/absolute paths) is blocked so descriptions can't reach into the
- * filesystem via crafted markdown.
+ * Builds an {@link ImageResolver} that passes through http(s)/data URLs and hands
+ * stored `assets/<file>` refs to `lookup` — the store resolves them against the
+ * in-memory bytes, so an image shows the moment it is pasted and keeps showing in
+ * a private repo (a raw.githubusercontent URL would need auth and a pushed
+ * commit). Anything else (bare relative/absolute paths) is blocked so
+ * descriptions can't reach into the app via crafted markdown.
  */
-export function makeImageResolver(assetsBase: string): ImageResolver {
+export function makeImageResolver(
+  lookup: (ref: string) => string | null,
+): ImageResolver {
   return (src) => {
     if (/^(https?:|data:)/i.test(src)) {
       return src;
     }
-    const asset = /^assets\/(.+)$/.exec(src);
-    if (asset && assetsBase) {
-      return `${assetsBase}/${asset[1]}`;
-    }
-    return null;
+    // Only a flat `assets/<file>` ref resolves — no path traversal.
+    return /^assets\/[^/]+$/.test(src) ? lookup(src) : null;
   };
 }
 

@@ -84,11 +84,11 @@ function RepeatSummary({
  * hidden — the breadcrumb handles that — and parent/subtask navigation pushes the
  * matching task route. */
 export function TaskDetailPanel({ routed = false }: { routed?: boolean } = {}) {
-  const { statusMeta, colorOf, clientName, assetsBase, reopen, toggleWorked, markDone, openEdit: onEdit, deleteTask: onDelete, saveDescription: onSaveDescription, openSubtaskForm, addNote, deleteNote, openTagSearch } = useData();
+  const { statusMeta, colorOf, clientName, assetUrl, reopen, toggleWorked, markDone, openEdit: onEdit, deleteTask: onDelete, saveDescription: onSaveDescription, openSubtaskForm, addNote, deleteNote, openTagSearch } = useData();
   const { selectedDate, descDraft, setDescDraft, descMode, setDescMode, setDetailId, noteDraft, setNoteDraft } = useUi();
   const { task, parent, subtasks, occurrences, descDirty } = useDetailData();
   const img = useMarkdownImages(descDraft, setDescDraft);
-  const resolveImage = useMemo(() => makeImageResolver(assetsBase), [assetsBase]);
+  const resolveImage = useMemo(() => makeImageResolver(assetUrl), [assetUrl]);
   if (!task) {
     return null;
   }

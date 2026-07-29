@@ -122,6 +122,8 @@ class WorklogStore {
   private watching = false;
   // A recovered snapshot loaded on open, held until the user restores or discards it.
   private recovered?: PendingSnapshot;
+  /** `assets/<file>` -> object URL handed to the markdown renderer (see assetUrl). */
+  private assetUrls = new Map<string, string>();
 
   private subscribers = new Set<Subscriber>();
   private toastListeners = new Set<ToastListener>();
@@ -545,6 +547,25 @@ class WorklogStore {
     return ref;
   }
 
+  /** Displayable URL for an `assets/<file>` markdown ref, or null when the file
+   *  map doesn't hold it. Served from the in-memory bytes rather than a raw
+   *  GitHub URL so a just-pasted image renders before it is ever committed, and
+   *  so images in a private repo render at all (raw URLs there need a token an
+   *  `<img>` can't send). URLs are cached per path and revoked on reload. */
+  assetUrl(ref: string): string | null {
+    const cached = this.assetUrls.get(ref);
+    if (cached) {
+      return cached;
+    }
+    const bytes = this.fm.binary.get(ref);
+    if (!bytes) {
+      return null;
+    }
+    const url = URL.createObjectURL(new Blob([bytes as BlobPart], { type: mimeOfAsset(ref) }));
+    this.assetUrls.set(ref, url);
+    return url;
+  }
+
   // ---- internals ------------------------------------------------------------
 
   /** Run a mutating action, surfacing any failure as a toast. */
@@ -558,16 +579,12 @@ class WorklogStore {
 
   private deriveState(): WorklogState {
     const config = this.store.getConfig();
-    const assetsBase = this.repo
-      ? `https://raw.githubusercontent.com/${this.repo.owner}/${this.repo.repo}/${this.repo.branch}/`
-      : '';
     return {
       today: today(),
       hoursPerDay: config.hoursPerDay,
       weekStart: config.weekStart,
       todosPerPage: config.todosPerPage,
       autoSync: config.autoSync,
-      assetsBase,
       statuses: config.statuses,
       // The general to-do bucket is a task-only concept; keep it out of the
       // client list so it never surfaces in billing (log form, dashboard, totals).
@@ -578,6 +595,11 @@ class WorklogStore {
   }
 
   private applyLoad(data: LoadResponse): void {
+    // The old file map's bytes are about to go away; drop the URLs pointing at them.
+    for (const url of this.assetUrls.values()) {
+      URL.revokeObjectURL(url);
+    }
+    this.assetUrls.clear();
     this.fm = new FileMap();
     for (const [path, text] of Object.entries(data.text)) {
       this.fm.text.set(path, text);
@@ -830,6 +852,25 @@ function base64ToBytes(base64: string): Uint8Array {
     bytes[i] = binary.charCodeAt(i);
   }
   return bytes;
+}
+
+/** Content type for an asset path, from its extension (see services/assets for
+ *  the extensions written). Unknown ones fall back to PNG, matching that writer. */
+function mimeOfAsset(path: string): string {
+  const ext = (path.split('.').pop() ?? '').toLowerCase();
+  switch (ext) {
+    case 'jpg':
+    case 'jpeg':
+      return 'image/jpeg';
+    case 'gif':
+      return 'image/gif';
+    case 'webp':
+      return 'image/webp';
+    case 'svg':
+      return 'image/svg+xml';
+    default:
+      return 'image/png';
+  }
 }
 
 function bytesToBase64(bytes: Uint8Array): string {

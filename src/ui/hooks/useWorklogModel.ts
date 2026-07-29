@@ -63,8 +63,12 @@ export function useWorklogModel(
   const weekStart = snap?.weekStart ?? 0;
   const todosPerPage = snap?.todosPerPage ?? 5;
   const autoSync = snap?.autoSync ?? { enabled: false, delayMinutes: 5 };
-  const assetsBase = snap?.assetsBase ?? "";
   const { selectedDate } = ui;
+
+  // Markdown image refs resolve against the store's in-memory asset bytes, so a
+  // pasted image renders before it is ever committed. Stable — it reads the store
+  // at call time, and the renderer resolves every ref on each render.
+  const assetUrl = useCallback((ref: string) => worklogStore.assetUrl(ref), []);
 
   // O(1) lookups by id, rebuilt only when the snapshot's clients/statuses change.
   // Built from *all* clients so an archived one still resolves to its name and
@@ -671,7 +675,7 @@ export function useWorklogModel(
     weekStart,
     todosPerPage,
     autoSync,
-    assetsBase,
+    assetUrl,
     // Archived clients still count as clients — otherwise archiving the last one
     // would drop you on the "add your first client" screen with no way back.
     noClients: allClients.length === 0,
