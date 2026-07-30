@@ -10,6 +10,7 @@ import { CalendarView } from './CalendarView';
 import { ClientsView } from './ClientsView';
 import { InsightsView } from './InsightsView';
 import { ArchiveView } from './ArchiveView';
+import { ShortcutsView } from './ShortcutsView';
 import { SettingsView } from './SettingsView';
 
 export const ROUTES: Record<AppView, React.ComponentType> = {
@@ -20,5 +21,6 @@ export const ROUTES: Record<AppView, React.ComponentType> = {
   clients: ClientsView,
   insights: InsightsView,
   archive: ArchiveView,
+  shortcuts: ShortcutsView,
   settings: SettingsView,
 };

@@ -280,7 +280,7 @@ export function useWorklogModel(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const deleteTask = useCallback(
-    (id: string, options?: { permanent?: boolean }) => {
+    async (id: string, options?: { permanent?: boolean }) => {
       const t = tasks.find((x) => x.id === id);
       if (!t) {
         return;
@@ -290,15 +290,23 @@ export function useWorklogModel(
       // onto its next occurrence — so deleting one ends the series outright.
       // Completions already logged are separate archived blocks and survive.
       const isPermanent = options?.permanent || isDone(t) || !!t.repeat;
+      const repeating = !!t.repeat && !isDone(t);
       const ok = isPermanent
-        ? window.confirm(
-            t.repeat && !isDone(t)
-              ? `Stop "${t.title}" from repeating and delete it? Completions already logged stay in the archive.`
-              : `Delete "${t.title}" forever? This also removes subtasks and cannot be undone.`,
-          )
-        : window.confirm(
-            `Move "${t.title}" to archive? You can restore it later from Archive.`,
-          );
+        ? await ui.confirm.ask({
+            title: repeating
+              ? `Stop "${t.title}" from repeating and delete it?`
+              : `Delete "${t.title}" forever?`,
+            message: repeating
+              ? "The series ends here. Completions already logged stay in the archive."
+              : "This also removes subtasks and cannot be undone.",
+            confirmLabel: repeating ? "Stop and delete" : "Delete forever",
+            tone: "danger",
+          })
+        : await ui.confirm.ask({
+            title: `Move "${t.title}" to archive?`,
+            message: "You can restore it later from Archive.",
+            confirmLabel: "Move to archive",
+          });
 
       if (!ok) {
         return;
@@ -550,21 +558,27 @@ export function useWorklogModel(
     ui.setClientModalOpen(false);
   }, []);
   const deleteClient = useCallback(
-    (c: Client) => {
+    async (c: Client) => {
       const usage = clientUsage(c.id);
       if (usage.tasks > 0 || usage.worklog > 0) {
         // Archiving is the non-destructive answer; the service refuses this too.
-        window.alert(
-          `"${c.name}" still has ${usage.tasks} task${usage.tasks === 1 ? "" : "s"} and ` +
-            `${usage.worklog} time entr${usage.worklog === 1 ? "y" : "ies"}. Archive it instead.`,
-        );
+        await ui.confirm.notify({
+          title: `"${c.name}" still has history`,
+          message:
+            `It carries ${usage.tasks} task${usage.tasks === 1 ? "" : "s"} and ` +
+            `${usage.worklog} time entr${usage.worklog === 1 ? "y" : "ies"}, so it can't be deleted. ` +
+            "Archive it instead to hide it while keeping every task and logged hour.",
+        });
         return;
       }
-      if (
-        !window.confirm(
-          `Delete "${c.name}"? It has no tasks or logged time, so nothing is lost. This cannot be undone.`,
-        )
-      ) {
+      const ok = await ui.confirm.ask({
+        title: `Delete "${c.name}"?`,
+        message:
+          "It has no tasks or logged time, so nothing is lost. This cannot be undone.",
+        confirmLabel: "Delete client",
+        tone: "danger",
+      });
+      if (!ok) {
         return;
       }
       worklogStore.deleteClient(c.id);

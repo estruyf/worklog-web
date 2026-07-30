@@ -6,7 +6,7 @@
 import React from 'react';
 import { useData, useUi } from './context';
 import { useSearchData } from './hooks';
-import { ClientFormModal, Toast, SearchOverlay, Sidebar, TaskDetailPanel, TaskFormPage } from './components';
+import { ClientFormModal, ConfirmDialog, Toast, SearchOverlay, Sidebar, TaskDetailPanel, TaskFormPage } from './components';
 import type { SidebarRepoProps } from './components/Sidebar';
 import { EmptyClientsView } from './views/EmptyClientsView';
 import { ROUTES } from './views/routes';
@@ -146,6 +146,10 @@ export function WorklogApp({ repoProps }: { repoProps?: SidebarRepoProps } = {})
       {searchOpen && <SearchOverlay />}
       {detailId && <TaskDetailPanel />}
       {clientModalOpen && <ClientFormModal />}
+
+      {/* Layers over everything, including the task form, and swallows the keys
+          while it's up — see ConfirmDialog. */}
+      <ConfirmDialog />
 
       <Toast toast={toast} />
     </div>

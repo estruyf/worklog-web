@@ -124,7 +124,9 @@ export function TaskFormPage() {
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === 'Enter') {
+            // Bare ↵ only: ⌘↵ / ctrl+↵ is the form-wide shortcut above, and
+            // handling it here too saved twice — two tasks from one keypress.
+            if (e.key === 'Enter' && !e.metaKey && !e.ctrlKey) {
               onSave();
             }
           }}
@@ -181,7 +183,9 @@ export function TaskFormPage() {
               value={newClientName}
               onChange={(e) => setNewClientName(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === 'Enter') {
+                // Bare ↵ only, for the same reason as the title field: ⌘↵ here
+                // would add the client *and* save the task in one keypress.
+                if (e.key === 'Enter' && !e.metaKey && !e.ctrlKey) {
                   onCreateClient(newClientName, 'modal');
                 }
               }}

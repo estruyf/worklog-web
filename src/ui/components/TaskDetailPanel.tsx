@@ -85,7 +85,7 @@ function RepeatSummary({
  * matching task route. */
 export function TaskDetailPanel({ routed = false }: { routed?: boolean } = {}) {
   const { statusMeta, colorOf, clientName, assetUrl, reopen, toggleWorked, markDone, openEdit: onEdit, deleteTask: onDelete, saveDescription: onSaveDescription, openSubtaskForm, addNote, deleteNote, openTagSearch } = useData();
-  const { selectedDate, descDraft, setDescDraft, descMode, setDescMode, setDetailId, noteDraft, setNoteDraft } = useUi();
+  const { selectedDate, descDraft, setDescDraft, descMode, setDescMode, setDetailId, noteDraft, setNoteDraft, confirm } = useUi();
   const { task, parent, subtasks, occurrences, descDirty } = useDetailData();
   const img = useMarkdownImages(descDraft, setDescDraft);
   const resolveImage = useMemo(() => makeImageResolver(assetUrl), [assetUrl]);
@@ -106,8 +106,14 @@ export function TaskDetailPanel({ routed = false }: { routed?: boolean } = {}) {
     addNote(task.id, text);
     setNoteDraft('');
   };
-  const onDeleteNote = (index: number) => {
-    if (window.confirm('Delete this note?')) {
+  const onDeleteNote = async (index: number) => {
+    const ok = await confirm.ask({
+      title: 'Delete this note?',
+      message: 'It is removed from the task file and cannot be recovered.',
+      confirmLabel: 'Delete note',
+      tone: 'danger',
+    });
+    if (ok) {
       deleteNote(task.id, index);
     }
   };

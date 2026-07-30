@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { AppView, SearchScope } from "../model";
 import type { RecurrenceAnchor } from "../../model/recurrence";
 import { closeTaskDetail, openTaskDetail, useDetailId } from "../router";
+import { useConfirmDialog } from "./useConfirmDialog";
 
 export function useWorklogUiState() {
   const [view, setView] = useState<AppView>("day");
@@ -100,6 +101,11 @@ export function useWorklogUiState() {
     { name: string; target: "modal" | "selected" } | undefined
   >(undefined);
 
+  // The one open confirmation / notice, plus the promise-based API actions use to
+  // raise one. Kept as its own namespace so `ui.confirm.ask(...)` reads as the
+  // question it is.
+  const confirm = useConfirmDialog();
+
   return {
     view,
     setView,
@@ -190,5 +196,6 @@ export function useWorklogUiState() {
     cLinks,
     setCLinks,
     pendingClient,
+    confirm,
   };
 }

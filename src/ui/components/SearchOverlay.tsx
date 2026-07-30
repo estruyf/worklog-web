@@ -2,15 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Icon } from './icons';
 import { useData, useUi } from '../context';
 import { useSearchData } from '../hooks';
-
-/** A small keyboard-key hint chip, e.g. ⌘F or ↵. */
-function Kbd({ children }: { children: React.ReactNode }) {
-  return (
-    <kbd className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-[5px] rounded-[5px] border border-neutral-425 bg-neutral-200 text-neutral-700 text-[11px] font-medium leading-none shadow-[0_1px_0_var(--color-neutral-425)]">
-      {children}
-    </kbd>
-  );
-}
+import { Kbd } from './Kbd';
 
 const SCOPES: { key: 'all' | 'open' | 'archived'; label: string }[] = [
   { key: 'all', label: 'All' },

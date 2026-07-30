@@ -6,6 +6,7 @@ import {
   ChevronsUpDownIcon,
   FolderSyncIcon,
   GithubIcon,
+  KeyboardIcon,
   LogOutIcon,
   MenuIcon,
   PlusIcon,
@@ -271,6 +272,20 @@ function SidebarContent({ onNavigate, repoProps }: { onNavigate?: () => void; re
           <FolderSyncIcon size={15} />
           Git sync
           {gitPending && <span className="ml-auto w-[9px] h-[9px] rounded-full bg-brand-500" />}
+        </button>
+
+        <button
+          onClick={() => go('shortcuts')}
+          className={
+            actionClass +
+            (view === 'shortcuts'
+              ? ' border-brand-425 bg-brand-225 text-brand-800'
+              : ' border-transparent text-neutral-750 hover:bg-neutral-200')
+          }
+          title="Keyboard shortcuts"
+        >
+          <KeyboardIcon size={15} strokeWidth={1.5} />
+          Shortcuts
         </button>
 
         <button
