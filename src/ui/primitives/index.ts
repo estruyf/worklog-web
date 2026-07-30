@@ -17,4 +17,6 @@ export { Select } from './Select';
 export type { SelectProps } from './Select';
 export { DateInput } from './DateInput';
 export type { DateInputProps } from './DateInput';
+export { Modal } from './Modal';
+export type { ModalLayer, ModalOffset, ModalProps, ModalSize, ModalTitleSize } from './Modal';
 export type { ControlSize, ControlVariant } from './controlStyles';

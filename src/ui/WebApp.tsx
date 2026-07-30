@@ -14,7 +14,7 @@ import React from 'react';
 import { WorklogApp } from './WorklogApp';
 import { TaskPage } from './TaskPage';
 import { WorklogProvider } from './context';
-import { Button } from './primitives';
+import { Button, Modal } from './primitives';
 import { useUnsavedGuard } from './hooks';
 import { worklogStore, type RecoveryInfo } from '../data/worklogStore';
 import { navigateToDashboard, useRoute } from './router';
@@ -151,30 +151,29 @@ function timeAgo(ms: number): string {
 function RecoveryPrompt({ info, onRestore, onDiscard }: { info: RecoveryInfo; onRestore: () => void; onDiscard: () => void }) {
   const { fileCount, savedAt, baseChanged } = info;
   return (
-    <div className="fixed inset-0 bg-overlay flex items-start justify-center pt-[12vh] z-60">
-      <div className="bg-white rounded-[14px] w-115 max-w-[92vw] px-7.5 pt-6.5 pb-6 shadow-[0_20px_60px_rgba(0,0,0,0.3)]">
-        <h2 className="text-[20px] font-bold m-0 mb-3">Recover unsynced changes?</h2>
-        <p className="text-[14px] text-neutral-700 m-0 mb-2 leading-relaxed">
-          {fileCount === 1 ? '1 file was' : `${fileCount} files were`} edited but never synced to GitHub before this tab was
-          closed, saved locally {timeAgo(savedAt)}.
+    // No `onClose`: the two buttons are the only ways out, since dismissing this
+    // would leave the recovered edits in limbo — neither restored nor discarded.
+    <Modal role="alertdialog" layer="top" size="sm" title="Recover unsynced changes?">
+      <p className="text-[14px] text-neutral-700 m-0 mt-3 mb-2 leading-relaxed">
+        {fileCount === 1 ? '1 file was' : `${fileCount} files were`} edited but never synced to GitHub before this tab was
+        closed, saved locally {timeAgo(savedAt)}.
+      </p>
+      {baseChanged && (
+        <p className="text-[13px] text-brand-600 bg-brand-150 border border-brand-375 rounded-[9px] px-3 py-2 m-0 mb-2">
+          Heads up: this branch changed on GitHub since then. Restoring will re-apply your local edits on top of the
+          latest version.
         </p>
-        {baseChanged && (
-          <p className="text-[13px] text-brand-600 bg-brand-150 border border-brand-375 rounded-[9px] px-3 py-2 m-0 mb-2">
-            Heads up: this branch changed on GitHub since then. Restoring will re-apply your local edits on top of the
-            latest version.
-          </p>
-        )}
-        <p className="text-[13px] text-neutral-650 m-0 mb-5.5">Restore to continue where you left off, then sync when ready.</p>
-        <div className="flex justify-end gap-2.5">
-          <Button variant="neutral" size="lg" onClick={onDiscard}>
-            Discard
-          </Button>
-          <Button variant="primary" size="lg" onClick={onRestore}>
-            Restore changes
-          </Button>
-        </div>
+      )}
+      <p className="text-[13px] text-neutral-650 m-0 mb-5.5">Restore to continue where you left off, then sync when ready.</p>
+      <div className="flex justify-end gap-2.5">
+        <Button variant="neutral" size="lg" onClick={onDiscard}>
+          Discard
+        </Button>
+        <Button variant="primary" size="lg" onClick={onRestore}>
+          Restore changes
+        </Button>
       </div>
-    </div>
+    </Modal>
   );
 }
 

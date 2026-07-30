@@ -8,7 +8,7 @@ and what is left.
 The ordering is deliberate. Each step is independently shippable and leaves the
 app working, so none of this has to land in one go.
 
-**Status:** steps 1–2 done. Steps 3–6 open.
+**Status:** steps 1–3 done. Steps 4–6 open.
 
 ---
 
@@ -144,28 +144,79 @@ with yet.
 
 ---
 
-## Step 3 — Modal
+## Step 3 — Modal ✅ done
 
-**Why:** this is an accessibility gap, not only duplication.
+**Why:** this was an accessibility gap, not only duplication.
 
-Four dialogs repeat the backdrop + panel + shadow, at four different levels of
-correctness:
+**Added:** [`Modal`](../src/ui/primitives/Modal.tsx).
+
+**What it collapsed.** Four dialogs repeated the backdrop + panel + shadow at
+four different levels of correctness — now one row:
 
 | File | `role`/`aria-modal` | Own Esc handler | Focus trap |
 | --- | --- | --- | --- |
-| `ConfirmDialog` | yes | yes | no |
-| `SearchOverlay` | no | shell-driven | no |
-| `ClientFormModal` | no | shell-driven | no |
-| `WebApp` (recovery) | no | no | no |
+| `ConfirmDialog` | was yes | was yes | was no |
+| `SearchOverlay` | was no | was shell-driven | was no |
+| `ClientFormModal` | was no | was shell-driven | was no |
+| `WebApp` (recovery) | was no | was no | was no |
 
-**Shape:** one `Modal` owning the backdrop, `role="dialog"`/`aria-modal`, the
-labelled-by wiring, Escape, and a focus trap — with the panel width and the
-`pt-[Xvh]` offset as props, since the four differ there legitimately.
+`ConfirmDialog` still stops keydowns in the **capture** phase — that is the
+`captureKeys` prop, and it is why the trap and the Escape handler live on a
+window capture listener rather than on the panel: a listener on the panel would
+never see an event that was already stopped above it.
 
-Note that `ConfirmDialog` stops keydowns in the **capture** phase on purpose, so
-nothing behind it reacts — in particular the task form's Esc, which would
-otherwise navigate away underneath the question just asked. That behaviour has
-to survive the extraction.
+**Behavioural notes** — four things changed, all deliberately:
+
+- **Focus starts inside the dialog and comes back out.** None of the four
+  trapped focus, so Tab walked straight out into the page behind. `Modal` takes
+  focus on mount when no child claimed it with `autoFocus`, wraps Tab and
+  Shift+Tab, and hands focus back to the element that opened the dialog when it
+  closes — unless something else claimed focus meanwhile, since closing a search
+  hit opens the task it was about and that screen focuses itself.
+- **Escape belongs to the dialog with the focus.** It is handled in the modal and
+  stopped there, so the shell's Escape branch is down to the task detail panel
+  (the one overlay that is not a dialog). This is what makes layering correct:
+  the confirm dialog raised over the client form is the one that closes, because
+  the client form's own handler stands down while it does not hold the focus.
+- **Three dialogs became dialogs.** `SearchOverlay`, `ClientFormModal` and the
+  recovery prompt had no `role`, no `aria-modal` and no accessible name; they now
+  announce as dialogs, named by their heading (or, for the search palette, which
+  has no heading, by a `label`).
+- **The recovery prompt has no `onClose` on purpose.** It is the one dialog with
+  no dismiss: leaving it would strand the recovered edits as neither restored nor
+  discarded. Passing no `onClose` is how a `Modal` says that — backdrop clicks
+  and Escape then do nothing, which is what it already did by omission.
+
+`ClientFormModal`'s close `×` is now an `IconButton`, so it has an accessible
+name; it was a bare `×` glyph in a `<button>` with nothing to announce.
+
+**Three small visual changes**, all of them drift being collapsed rather than
+intent: the confirm panel's padding (28/26/22 → 30/26/24, matching the other
+two), its max width on a phone (`max-w-full` inside a `px-4` backdrop →
+`max-w-[92vw]`, ~1px different), and the recovery prompt's width (460 → 440).
+
+**API:**
+
+```tsx
+<Modal onClose={…}                        // omit for a dialog that must be answered
+       title={…} titleSize="sm|md" showClose
+       label="…"                          // accessible name when there is no title
+       describedBy="…" role="dialog|alertdialog"
+       size="sm|md|lg"                    // 440 / 520 / 760
+       offset="xs|sm|md|lg"               // pt-8vh / 10vh / 12vh / 16vh
+       layer="base|top"                   // z-50 / z-60
+       padding="md|none" captureKeys className="max-h-… overflow-…" />
+```
+
+`Modal` deliberately owns no spacing under its heading: the gap belongs to
+whatever follows, so each dialog keeps its own rhythm (the call sites carry it as
+a `mt-` on their first child rather than a `mb-` on a header they no longer
+render).
+
+**Deliberately left alone:** [`TaskDetailPanel`](../src/ui/components/TaskDetailPanel.tsx),
+which is a full-bleed panel inside the app chrome rather than a centred dialog —
+it keeps the shell's Escape and is step 6's to split; `Sidebar`'s mobile drawer
+scrim; and the loading overlay in `WorklogApp`, which is not focusable at all.
 
 ---
 

@@ -39,7 +39,7 @@ function isEditableTarget(target: EventTarget | null): boolean {
 
 export function WorklogApp({ repoProps }: { repoProps?: SidebarRepoProps } = {}) {
   const { snap, toast, loading, noClients, today, openTaskFormFromShortcut, openLogForm } = useData();
-  const { view, searchOpen, detailId, clientModalOpen, setSearchOpen, setDetailId, setClientModalOpen, searchSel, setSearchSel, setSelectedDate } = useUi();
+  const { view, searchOpen, detailId, clientModalOpen, setSearchOpen, setDetailId, searchSel, setSearchSel, setSelectedDate } = useUi();
   const searchData = useSearchData();
   // The task form is a route, but it lives in the dashboard's main column rather
   // than a page of its own: leaving the nav behind made it read as a different app.
@@ -106,13 +106,13 @@ export function WorklogApp({ repoProps }: { repoProps?: SidebarRepoProps } = {})
         s.openLogForm();
         return;
       }
+      // Only the task detail panel is handled here. The dialogs (search, client
+      // form, confirm) are `Modal`s, which own Escape themselves and stop it
+      // before it reaches this listener — so a dialog layered over the panel
+      // closes the dialog, not the panel underneath.
       if (e.key === 'Escape') {
-        if (s.clientModalOpen) {
-          setClientModalOpen(false);
-        } else if (s.detailId) {
+        if (s.detailId) {
           setDetailId(null);
-        } else if (s.searchOpen) {
-          setSearchOpen(false);
         }
         return;
       }
@@ -141,7 +141,7 @@ export function WorklogApp({ repoProps }: { repoProps?: SidebarRepoProps } = {})
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [setSearchOpen, setDetailId, setClientModalOpen, setSearchSel, setSelectedDate]);
+  }, [setSearchOpen, setDetailId, setSearchSel, setSelectedDate]);
 
   if (!snap) {
     return <div className="min-h-screen bg-white" />;

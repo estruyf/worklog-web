@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Input, LinkButton } from '../primitives';
+import { Input, LinkButton, Modal } from '../primitives';
 import { useData, useUi } from '../context';
 import { useSearchData } from '../hooks';
 import { Kbd } from './Kbd';
@@ -49,275 +49,273 @@ export function SearchOverlay() {
   let flatIndex = 0;
 
   return (
-    <div onClick={close} className="fixed inset-0 bg-overlay flex items-start justify-center pt-[10vh] z-50">
-      <div
-        onClick={(e) => e.stopPropagation()}
-        className="bg-white rounded-[14px] w-[760px] max-w-[92vw] max-h-[78vh] flex flex-col shadow-[0_20px_60px_rgba(0,0,0,0.3)]"
-      >
-        {/* Search input */}
-        <div className="px-5 pt-5">
-          {/* The clear `×` is the last thing in the row, as it is in the archive
-              filter — so the two search fields end the same way. */}
-          <Input
-            id="worklog-search-input"
-            size="lg"
-            variant="accent"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            autoFocus={true}
-            clearable
-            onClear={() => setSearch('')}
-            leading={
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#8A9099" strokeWidth="1.5" className="shrink-0">
-                <circle cx="7" cy="7" r="4.5" />
-                <path d="M10.5 10.5L14 14" />
-              </svg>
-            }
-            trailing={
-              <>
-                {filtered && (
-                  <span className="shrink-0 text-[13px] text-neutral-650">
-                    {count} {count === 1 ? 'result' : 'results'}
-                  </span>
-                )}
-                <button className="shrink-0 text-muted hover:text-fg cursor-pointer" onClick={close} aria-label="Close search" title="Close (Esc)">
-                  <Kbd>Esc</Kbd>
-                </button>
-              </>
-            }
-            aria-label="Search tasks"
-            placeholder="Search tasks by title, link, description..."
-            inputClassName="text-input-fg"
-          />
+    // No heading of its own — the search field is the dialog, so `label` names it.
+    // `padding="none"`: the results scroll under a fixed filter block, which one
+    // padding box around the lot would break.
+    <Modal onClose={close} label="Search tasks" size="lg" offset="sm" padding="none" className="max-h-[78vh] flex flex-col">
+      {/* Search input */}
+      <div className="px-5 pt-5">
+        {/* The clear `×` is the last thing in the row, as it is in the archive
+            filter — so the two search fields end the same way. */}
+        <Input
+          id="worklog-search-input"
+          size="lg"
+          variant="accent"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          autoFocus={true}
+          clearable
+          onClear={() => setSearch('')}
+          leading={
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#8A9099" strokeWidth="1.5" className="shrink-0">
+              <circle cx="7" cy="7" r="4.5" />
+              <path d="M10.5 10.5L14 14" />
+            </svg>
+          }
+          trailing={
+            <>
+              {filtered && (
+                <span className="shrink-0 text-[13px] text-neutral-650">
+                  {count} {count === 1 ? 'result' : 'results'}
+                </span>
+              )}
+              <button className="shrink-0 text-muted hover:text-fg cursor-pointer" onClick={close} aria-label="Close search" title="Close (Esc)">
+                <Kbd>Esc</Kbd>
+              </button>
+            </>
+          }
+          aria-label="Search tasks"
+          placeholder="Search tasks by title, link, description..."
+          inputClassName="text-input-fg"
+        />
 
-          {/* Scope segmented control + client chips + reset */}
-          <div className="flex flex-wrap items-center gap-2 mt-[14px] mb-[14px]">
-            <div className="inline-flex p-[2px] rounded-[8px] bg-neutral-250 border border-neutral-400">
-              {SCOPES.map((s) => {
-                const active = searchScope === s.key;
-                return (
-                  <button
-                    key={s.key}
-                    onClick={() => setSearchScope(s.key)}
-                    className={
-                      'px-[11px] py-[5px] rounded-[6px] text-[12.5px] cursor-pointer ' +
-                      (active ? 'bg-white text-neutral-825 font-semibold shadow-[0_1px_2px_rgba(0,0,0,0.06)]' : 'text-neutral-675 font-medium')
-                    }
-                  >
-                    {s.label}
-                  </button>
-                );
-              })}
-            </div>
-
-            <span className="w-px h-[20px] bg-neutral-400 mx-1" />
-
-            <button
-              onClick={() => setSearchClient('')}
-              className={
-                'inline-flex items-center gap-[6px] px-[10px] py-[5px] rounded-full text-[12.5px] cursor-pointer border ' +
-                (searchClient === '' ? 'border-brand-500 bg-brand-225 text-brand-650 font-semibold' : 'border-neutral-400 bg-white text-neutral-700')
-              }
-            >
-              All clients
-            </button>
-            {allClients.map((c) => {
-              const active = searchClient === c.id;
+        {/* Scope segmented control + client chips + reset */}
+        <div className="flex flex-wrap items-center gap-2 mt-[14px] mb-[14px]">
+          <div className="inline-flex p-[2px] rounded-[8px] bg-neutral-250 border border-neutral-400">
+            {SCOPES.map((s) => {
+              const active = searchScope === s.key;
               return (
                 <button
-                  key={c.id}
-                  onClick={() => setSearchClient(c.id)}
-                  title={c.archived ? `${c.name} (archived)` : c.name}
+                  key={s.key}
+                  onClick={() => setSearchScope(s.key)}
                   className={
-                    'inline-flex items-center gap-[6px] px-[10px] py-[5px] rounded-full text-[12.5px] cursor-pointer border ' +
-                    (active ? 'border-brand-500 bg-brand-225 text-brand-650 font-semibold' : 'border-neutral-400 bg-white text-neutral-700') +
-                    (c.archived && !active ? ' opacity-60' : '')
+                    'px-[11px] py-[5px] rounded-[6px] text-[12.5px] cursor-pointer ' +
+                    (active ? 'bg-white text-neutral-825 font-semibold shadow-[0_1px_2px_rgba(0,0,0,0.06)]' : 'text-neutral-675 font-medium')
                   }
                 >
-                  <span className="w-2 h-2 rounded-full shrink-0" style={{ background: colorOf(c.id) }} />
-                  {c.name}
+                  {s.label}
                 </button>
               );
             })}
+          </div>
 
-            {filtersActive && (
-              <LinkButton onClick={resetFilters} className="px-1">
-                Reset
+          <span className="w-px h-[20px] bg-neutral-400 mx-1" />
+
+          <button
+            onClick={() => setSearchClient('')}
+            className={
+              'inline-flex items-center gap-[6px] px-[10px] py-[5px] rounded-full text-[12.5px] cursor-pointer border ' +
+              (searchClient === '' ? 'border-brand-500 bg-brand-225 text-brand-650 font-semibold' : 'border-neutral-400 bg-white text-neutral-700')
+            }
+          >
+            All clients
+          </button>
+          {allClients.map((c) => {
+            const active = searchClient === c.id;
+            return (
+              <button
+                key={c.id}
+                onClick={() => setSearchClient(c.id)}
+                title={c.archived ? `${c.name} (archived)` : c.name}
+                className={
+                  'inline-flex items-center gap-[6px] px-[10px] py-[5px] rounded-full text-[12.5px] cursor-pointer border ' +
+                  (active ? 'border-brand-500 bg-brand-225 text-brand-650 font-semibold' : 'border-neutral-400 bg-white text-neutral-700') +
+                  (c.archived && !active ? ' opacity-60' : '')
+                }
+              >
+                <span className="w-2 h-2 rounded-full shrink-0" style={{ background: colorOf(c.id) }} />
+                {c.name}
+              </button>
+            );
+          })}
+
+          {filtersActive && (
+            <LinkButton onClick={resetFilters} className="px-1">
+              Reset
+            </LinkButton>
+          )}
+        </div>
+
+        {/* Tag filter — a filter in its own right: with tags picked and the
+            query empty, the results below are everything carrying them. */}
+        {allTags.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2 mb-[14px]">
+            <span className="text-[11px] font-bold tracking-[0.06em] text-neutral-675 mr-[2px]">TAGS</span>
+            {visibleTags.map(({ tag, count: n }) => {
+              const active = tagFilter.includes(tag);
+              return (
+                <button
+                  key={tag}
+                  onClick={() => toggleTagFilter(tag)}
+                  title={active ? `Stop filtering by "${tag}"` : `Filter by "${tag}"`}
+                  className={
+                    'inline-flex items-center gap-[6px] px-[10px] py-[4px] rounded-full text-[12.5px] cursor-pointer border ' +
+                    (active ? 'border-brand-500 bg-brand-225 text-brand-650 font-semibold' : 'border-neutral-400 bg-white text-neutral-700')
+                  }
+                >
+                  {tag}
+                  <span className={'text-[11px] tabular-nums ' + (active ? 'text-brand-650' : 'text-neutral-625')}>{n}</span>
+                </button>
+              );
+            })}
+            {hiddenTagCount > 0 && (
+              <LinkButton onClick={() => setAllTagsShown(true)} className="px-1">
+                +{hiddenTagCount} more
+              </LinkButton>
+            )}
+            {tagFilter.length > 0 && (
+              <LinkButton onClick={clearTagFilter} className="px-1">
+                Clear tags
               </LinkButton>
             )}
           </div>
+        )}
+      </div>
 
-          {/* Tag filter — a filter in its own right: with tags picked and the
-              query empty, the results below are everything carrying them. */}
-          {allTags.length > 0 && (
-            <div className="flex flex-wrap items-center gap-2 mb-[14px]">
-              <span className="text-[11px] font-bold tracking-[0.06em] text-neutral-675 mr-[2px]">TAGS</span>
-              {visibleTags.map(({ tag, count: n }) => {
-                const active = tagFilter.includes(tag);
-                return (
-                  <button
-                    key={tag}
-                    onClick={() => toggleTagFilter(tag)}
-                    title={active ? `Stop filtering by "${tag}"` : `Filter by "${tag}"`}
-                    className={
-                      'inline-flex items-center gap-[6px] px-[10px] py-[4px] rounded-full text-[12.5px] cursor-pointer border ' +
-                      (active ? 'border-brand-500 bg-brand-225 text-brand-650 font-semibold' : 'border-neutral-400 bg-white text-neutral-700')
-                    }
-                  >
-                    {tag}
-                    <span className={'text-[11px] tabular-nums ' + (active ? 'text-brand-650' : 'text-neutral-625')}>{n}</span>
-                  </button>
-                );
-              })}
-              {hiddenTagCount > 0 && (
-                <LinkButton onClick={() => setAllTagsShown(true)} className="px-1">
-                  +{hiddenTagCount} more
-                </LinkButton>
-              )}
-              {tagFilter.length > 0 && (
-                <LinkButton onClick={clearTagFilter} className="px-1">
-                  Clear tags
-                </LinkButton>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Results (scrollable) */}
-        <div className="flex-1 overflow-auto px-5 pb-5 border-t border-neutral-325">
-          {/* Idle state */}
-          {!filtered && (
-            <div className="mt-5 rounded-[14px] border border-dashed border-neutral-500 bg-neutral-50 px-6 py-7 text-center">
-              <div className="flex items-center justify-center gap-8">
-                <div>
-                  <div className="text-[26px] font-bold text-neutral-825 leading-none">{openCount}</div>
-                  <div className="text-[12px] text-neutral-675 mt-[6px]">open</div>
-                </div>
-                <span className="w-px h-[34px] bg-neutral-400" />
-                <div>
-                  <div className="text-[26px] font-bold text-neutral-825 leading-none">{archivedCount}</div>
-                  <div className="text-[12px] text-neutral-675 mt-[6px]">archived</div>
-                </div>
+      {/* Results (scrollable) */}
+      <div className="flex-1 overflow-auto px-5 pb-5 border-t border-neutral-325">
+        {/* Idle state */}
+        {!filtered && (
+          <div className="mt-5 rounded-[14px] border border-dashed border-neutral-500 bg-neutral-50 px-6 py-7 text-center">
+            <div className="flex items-center justify-center gap-8">
+              <div>
+                <div className="text-[26px] font-bold text-neutral-825 leading-none">{openCount}</div>
+                <div className="text-[12px] text-neutral-675 mt-[6px]">open</div>
               </div>
-              <div className="flex items-center justify-center flex-wrap gap-[6px] text-[12px] text-neutral-650 mt-6">
-                <Kbd>↑</Kbd>
-                <Kbd>↓</Kbd>
-                <span>to move</span>
-                <Kbd>↵</Kbd>
-                <span>to open</span>
-                <Kbd>Esc</Kbd>
-                <span>to close</span>
+              <span className="w-px h-[34px] bg-neutral-400" />
+              <div>
+                <div className="text-[26px] font-bold text-neutral-825 leading-none">{archivedCount}</div>
+                <div className="text-[12px] text-neutral-675 mt-[6px]">archived</div>
               </div>
             </div>
-          )}
-
-          {filtered && count === 0 && (
-            <div className="text-[14px] text-neutral-625 italic mt-5">
-              No tasks match
-              {q !== '' && <> "{search}"</>}
-              {q !== '' && tagFilter.length > 0 && ' with'}
-              {tagFilter.length > 0 && ` ${tagFilter.length === 1 ? 'the tag' : 'the tags'} ${tagFilter.join(', ')}`}.
+            <div className="flex items-center justify-center flex-wrap gap-[6px] text-[12px] text-neutral-650 mt-6">
+              <Kbd>↑</Kbd>
+              <Kbd>↓</Kbd>
+              <span>to move</span>
+              <Kbd>↵</Kbd>
+              <span>to open</span>
+              <Kbd>Esc</Kbd>
+              <span>to close</span>
             </div>
-          )}
-
-          {/* Grouped results */}
-          <div className="mt-4">
-            {groups.map((g, gi) => (
-              <div key={gi} className="mb-6">
-                <div className="flex items-center gap-[8px] mb-2">
-                  <span className="w-2 h-2 rounded-full shrink-0" style={{ background: g.color }} />
-                  <span className="text-[12.5px] font-semibold text-neutral-750">{g.name}</span>
-                  <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-[6px] rounded-full bg-neutral-325 text-neutral-675 text-[11px] font-semibold">
-                    {g.count}
-                  </span>
-                </div>
-                <div>
-                  {g.rows.map((r, ri) => {
-                    const i = flatIndex++;
-                    const selected = i === searchSel;
-                    return (
-                      <div
-                        key={ri}
-                        ref={selected ? selRef : undefined}
-                        onClick={() => {
-                          r.onEdit();
-                          close();
-                        }}
-                        title="Open task"
-                        className={
-                          'flex items-start gap-[11px] py-[9px] px-[10px] rounded-[8px] cursor-pointer border ' +
-                          (selected ? 'bg-brand-75 border-brand-425' : 'border-transparent hover:bg-neutral-125')
-                        }
-                      >
-                        <span className="w-16 shrink-0 mt-[3px] text-[10.5px] font-bold tracking-[0.05em]" style={{ color: r.statusColor }}>
-                          {r.statusLabel}
-                        </span>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-[8px] flex-wrap">
-                            <span className="text-[14.5px]">
-                              {r.hasMid ? (
-                                <>
-                                  {r.pre}
-                                  <mark className="bg-brand-225 text-inherit rounded-[2px] px-[1px]">{r.mid}</mark>
-                                  {r.post}
-                                </>
-                              ) : (
-                                r.title
-                              )}
-                            </span>
-                            {r.matchBadge && (
-                              <span className="shrink-0 text-[10px] uppercase tracking-[0.04em] text-neutral-675 bg-neutral-250 border border-neutral-400 rounded-[4px] px-[5px] py-[1px]">
-                                {r.matchBadge}
-                              </span>
-                            )}
-                            {r.tags.map((tag) => {
-                              const active = tagFilter.includes(tag);
-                              return (
-                                <button
-                                  key={tag}
-                                  onClick={(e) => {
-                                    // The row itself opens the task; a tag narrows the list instead.
-                                    e.stopPropagation();
-                                    toggleTagFilter(tag);
-                                  }}
-                                  title={active ? `Stop filtering by "${tag}"` : `Filter by "${tag}"`}
-                                  className={
-                                    'shrink-0 text-[11px] rounded-full px-[8px] py-[1px] border cursor-pointer ' +
-                                    (active
-                                      ? 'border-brand-500 bg-brand-225 text-brand-650 font-semibold'
-                                      : 'text-neutral-725 bg-neutral-250 border-neutral-400 hover:border-brand-500 hover:bg-brand-175 hover:text-brand-800')
-                                  }
-                                >
-                                  {tag}
-                                </button>
-                              );
-                            })}
-                          </div>
-                          {r.snippet && <div className="text-[12.5px] text-neutral-650 mt-[3px] truncate">{r.snippet}</div>}
-                        </div>
-                        {r.hasLink && (
-                          <a
-                            href={r.link}
-                            target="_blank"
-                            rel="noreferrer noopener"
-                            onClick={(e) => e.stopPropagation()}
-                            className="text-neutral-675 leading-[0] mt-[3px] hover:text-info"
-                            title={r.link}
-                          >
-                            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-                              <path d="M6 3H3.5A1.5 1.5 0 002 4.5v8A1.5 1.5 0 003.5 14h8a1.5 1.5 0 001.5-1.5V10M10 2h4v4M14 2L7.5 8.5" />
-                            </svg>
-                          </a>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
           </div>
+        )}
+
+        {filtered && count === 0 && (
+          <div className="text-[14px] text-neutral-625 italic mt-5">
+            No tasks match
+            {q !== '' && <> "{search}"</>}
+            {q !== '' && tagFilter.length > 0 && ' with'}
+            {tagFilter.length > 0 && ` ${tagFilter.length === 1 ? 'the tag' : 'the tags'} ${tagFilter.join(', ')}`}.
+          </div>
+        )}
+
+        {/* Grouped results */}
+        <div className="mt-4">
+          {groups.map((g, gi) => (
+            <div key={gi} className="mb-6">
+              <div className="flex items-center gap-[8px] mb-2">
+                <span className="w-2 h-2 rounded-full shrink-0" style={{ background: g.color }} />
+                <span className="text-[12.5px] font-semibold text-neutral-750">{g.name}</span>
+                <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-[6px] rounded-full bg-neutral-325 text-neutral-675 text-[11px] font-semibold">
+                  {g.count}
+                </span>
+              </div>
+              <div>
+                {g.rows.map((r, ri) => {
+                  const i = flatIndex++;
+                  const selected = i === searchSel;
+                  return (
+                    <div
+                      key={ri}
+                      ref={selected ? selRef : undefined}
+                      onClick={() => {
+                        r.onEdit();
+                        close();
+                      }}
+                      title="Open task"
+                      className={
+                        'flex items-start gap-[11px] py-[9px] px-[10px] rounded-[8px] cursor-pointer border ' +
+                        (selected ? 'bg-brand-75 border-brand-425' : 'border-transparent hover:bg-neutral-125')
+                      }
+                    >
+                      <span className="w-16 shrink-0 mt-[3px] text-[10.5px] font-bold tracking-[0.05em]" style={{ color: r.statusColor }}>
+                        {r.statusLabel}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-[8px] flex-wrap">
+                          <span className="text-[14.5px]">
+                            {r.hasMid ? (
+                              <>
+                                {r.pre}
+                                <mark className="bg-brand-225 text-inherit rounded-[2px] px-[1px]">{r.mid}</mark>
+                                {r.post}
+                              </>
+                            ) : (
+                              r.title
+                            )}
+                          </span>
+                          {r.matchBadge && (
+                            <span className="shrink-0 text-[10px] uppercase tracking-[0.04em] text-neutral-675 bg-neutral-250 border border-neutral-400 rounded-[4px] px-[5px] py-[1px]">
+                              {r.matchBadge}
+                            </span>
+                          )}
+                          {r.tags.map((tag) => {
+                            const active = tagFilter.includes(tag);
+                            return (
+                              <button
+                                key={tag}
+                                onClick={(e) => {
+                                  // The row itself opens the task; a tag narrows the list instead.
+                                  e.stopPropagation();
+                                  toggleTagFilter(tag);
+                                }}
+                                title={active ? `Stop filtering by "${tag}"` : `Filter by "${tag}"`}
+                                className={
+                                  'shrink-0 text-[11px] rounded-full px-[8px] py-[1px] border cursor-pointer ' +
+                                  (active
+                                    ? 'border-brand-500 bg-brand-225 text-brand-650 font-semibold'
+                                    : 'text-neutral-725 bg-neutral-250 border-neutral-400 hover:border-brand-500 hover:bg-brand-175 hover:text-brand-800')
+                                }
+                              >
+                                {tag}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        {r.snippet && <div className="text-[12.5px] text-neutral-650 mt-[3px] truncate">{r.snippet}</div>}
+                      </div>
+                      {r.hasLink && (
+                        <a
+                          href={r.link}
+                          target="_blank"
+                          rel="noreferrer noopener"
+                          onClick={(e) => e.stopPropagation()}
+                          className="text-neutral-675 leading-[0] mt-[3px] hover:text-info"
+                          title={r.link}
+                        >
+                          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+                            <path d="M6 3H3.5A1.5 1.5 0 002 4.5v8A1.5 1.5 0 003.5 14h8a1.5 1.5 0 001.5-1.5V10M10 2h4v4M14 2L7.5 8.5" />
+                          </svg>
+                        </a>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }
