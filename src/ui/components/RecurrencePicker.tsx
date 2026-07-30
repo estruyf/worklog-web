@@ -7,6 +7,7 @@ import {
   type Recurrence,
   type RecurrenceAnchor,
 } from '../../model/recurrence';
+import { LinkButton } from '../primitives';
 import { parseISODate, today, weekdayOf } from '../../util/date';
 
 const WEEKDAY_NAMES = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
@@ -192,13 +193,9 @@ function DateField({
       <div className="flex items-center justify-between mb-[6px]">
         <label className="block font-semibold text-[13px]">{label}</label>
         {value && (
-          <button
-            type="button"
-            onClick={() => onChange('')}
-            className="text-[12px] text-info bg-none border-none cursor-pointer"
-          >
+          <LinkButton size="xs" onClick={() => onChange('')}>
             Clear
-          </button>
+          </LinkButton>
         )}
       </div>
       <input

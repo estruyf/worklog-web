@@ -7,6 +7,7 @@ import { PlusIcon } from 'lucide-react';
 import { GENERAL_TODO_COLOR, GENERAL_TODO_LABEL, isGeneralTodoClientId } from '../../model/todos';
 import type { Task } from '../../model/types';
 import { WorklogTaskRow } from '../components';
+import { Button } from '../primitives';
 import { useData } from '../context';
 import { clientIdOf, fmtShort, isDone, linksOf } from '../utils';
 
@@ -102,13 +103,10 @@ export function TodosView() {
               {openCount} open{doneTasks.length > 0 ? ` · ${doneTasks.length} completed` : ''}
             </span>
           </div>
-          <button
-            onClick={openTodoForm}
-            className="flex items-center gap-[7px] px-[14px] py-[8px] rounded-[8px] text-[13px] font-semibold cursor-pointer border border-brand-500 bg-brand-450 text-brand-800 hover:bg-brand-475"
-          >
+          <Button variant="primary" size="md" onClick={openTodoForm}>
             <PlusIcon size={15} />
             New to-do
-          </button>
+          </Button>
         </div>
 
         {openCount === 0 ? (

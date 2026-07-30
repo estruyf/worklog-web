@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import type { Client } from '../../../model/types';
+import { Button } from '../../primitives';
 import type { LogState } from '../../model';
 
 type LogFormProps = {
@@ -197,13 +198,13 @@ export function LogForm({ logState, setLogState, saveLog, removeLog, clients, co
             className="w-full px-3 py-[9px] border border-neutral-525 rounded-lg text-[13px]"
           />
         </div>
-        <button onClick={saveLog} className="px-[18px] py-[9px] border border-brand-500 rounded-lg bg-brand-450 text-brand-800 font-semibold text-[13px] cursor-pointer">
+        <Button variant="primary" size="md" onClick={saveLog}>
           {logState.editing ? 'Save' : 'Log'}
-        </button>
+        </Button>
         {logState.editing && (
-          <button onClick={removeLog} title="Remove this entry" className="px-[14px] py-[9px] border border-danger-225 rounded-lg bg-white text-danger-675 font-medium text-[13px] cursor-pointer">
+          <Button variant="danger" size="md" onClick={removeLog} title="Remove this entry">
             Remove
-          </button>
+          </Button>
         )}
       </div>
     </div>

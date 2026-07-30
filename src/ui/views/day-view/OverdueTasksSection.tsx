@@ -1,5 +1,6 @@
 import React from 'react';
 import { TriangleAlertIcon } from 'lucide-react';
+import { LinkButton } from '../../primitives';
 import { WorklogTaskRow } from '../../components';
 import { navigateToView } from '../../router';
 import type { WorklogRow } from '../../model';
@@ -23,12 +24,9 @@ export function OverdueTasksSection({ overdueRows }: { overdueRows: WorklogRow[]
         <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-[6px] rounded-full bg-danger-100 border border-danger-200 text-danger-675 text-[12px] font-semibold">
           {overdueRows.length}
         </span>
-        <button
-          onClick={() => navigateToView('overdue')}
-          className="ml-auto text-[12px] text-neutral-675 bg-transparent border-none p-0 cursor-pointer hover:text-danger-675 hover:underline"
-        >
+        <LinkButton size="xs" tone="muted" onClick={() => navigateToView('overdue')} className="ml-auto">
           See all
-        </button>
+        </LinkButton>
       </div>
       <div className="border border-danger-200 rounded-[14px] bg-white mb-[34px] px-2 py-[6px]">
         {overdueRows.map((row) => (

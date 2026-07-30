@@ -3,6 +3,7 @@ import { useData, usePublishTaskFormBar } from '../context';
 import { TagPicker } from './TagPicker';
 import { RecurrencePicker } from './RecurrencePicker';
 import { useMarkdownImages } from '../hooks';
+import { Button, LinkButton } from '../primitives';
 import { clientIdOf, isDone, linksOf, renderMarkdown, makeImageResolver } from '../utils';
 import { GENERAL_TODO_CLIENT_ID, GENERAL_TODO_COLOR, GENERAL_TODO_LABEL } from '../../model/todos';
 import { formatRecurrence, type RecurrenceAnchor } from '../../model/recurrence';
@@ -96,9 +97,9 @@ export function TaskFormPage() {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-4 bg-white text-[14px] text-neutral-675">
         This task no longer exists.
-        <button onClick={navigateToDashboard} className="text-info hover:underline cursor-pointer bg-transparent border-none">
+        <LinkButton size="inherit" onClick={navigateToDashboard}>
           ‹ Back to Worklog
-        </button>
+        </LinkButton>
       </div>
     );
   }
@@ -278,9 +279,9 @@ function TaskForm({ editingId, task, seed }: { editingId: string | null; task: T
                       </button>
                     ))}
                   </div>
-                  <button type="button" onClick={img.openFilePicker} disabled={img.uploading} className="text-[12.5px] text-info font-medium cursor-pointer disabled:opacity-50 disabled:cursor-default">
+                  <LinkButton onClick={img.openFilePicker} disabled={img.uploading} className="font-medium">
                     {img.uploading ? 'Adding…' : '+ Add image'}
-                  </button>
+                  </LinkButton>
                 </div>
                 <div>
                   {descMode === 'edit' ? (
@@ -369,12 +370,12 @@ function TaskForm({ editingId, task, seed }: { editingId: string | null; task: T
                       placeholder="New client name"
                       className="flex-1 min-w-[150px] px-[12px] py-[9px] border border-neutral-525 rounded-[9px] text-[16px] md:text-[13.5px] outline-none"
                     />
-                    <button onClick={() => void onCreateClient(newClientName)} className="px-[14px] py-[9px] border border-brand-500 rounded-[9px] bg-brand-450 text-brand-800 font-semibold text-[13.5px] cursor-pointer">
+                    <Button variant="primary" size="md" onClick={() => void onCreateClient(newClientName)}>
                       Add
-                    </button>
-                    <button onClick={() => setAddingClient(false)} className="text-info text-[13.5px] cursor-pointer">
+                    </Button>
+                    <LinkButton size="lg" onClick={() => setAddingClient(false)}>
                       Cancel
-                    </button>
+                    </LinkButton>
                   </div>
                 )}
               </SidebarSection>
@@ -402,9 +403,9 @@ function TaskForm({ editingId, task, seed }: { editingId: string | null; task: T
                       Due <span className="text-neutral-625 font-normal">(optional)</span>
                     </label>
                     {due && (
-                      <button type="button" onClick={() => setDue('')} className="text-[12px] text-info bg-none border-none cursor-pointer">
+                      <LinkButton size="xs" onClick={() => setDue('')}>
                         Clear
-                      </button>
+                      </LinkButton>
                     )}
                   </div>
                   <input
@@ -461,9 +462,9 @@ function TaskForm({ editingId, task, seed }: { editingId: string | null; task: T
                     </button>
                   </div>
                 ))}
-                <button onClick={() => setLinks([...links, ''])} className="bg-none border-none text-info text-[13.5px] font-medium cursor-pointer py-[2px]">
+                <LinkButton size="lg" onClick={() => setLinks([...links, ''])} className="font-medium py-[2px]">
                   + Add another link
-                </button>
+                </LinkButton>
               </SidebarSection>
             </div>
           </aside>
@@ -474,24 +475,21 @@ function TaskForm({ editingId, task, seed }: { editingId: string | null; task: T
         <div className="max-w-[1240px] mx-auto w-full flex items-center justify-between px-5 py-3 md:px-8">
           <div>
             {editingId && (
-              <button onClick={() => onDelete(editingId)} className="px-[14px] py-[10px] border border-danger-225 rounded-[9px] bg-white text-danger-675 text-[14px] font-semibold cursor-pointer hover:bg-danger-75">
+              <Button variant="danger" size="lg" onClick={() => onDelete(editingId)}>
                 Delete
-              </button>
+              </Button>
             )}
           </div>
           <div className="flex gap-[10px]">
-            <button onClick={closeTaskForm} className="px-5 py-[10px] border border-neutral-400 rounded-[9px] bg-neutral-250 text-[14px] font-semibold cursor-pointer">
+            <Button variant="neutral" size="lg" onClick={closeTaskForm}>
               Close
-            </button>
-            <button
-              onClick={onSave}
-              className={
-                'px-[22px] py-[10px] rounded-[9px] text-[14px] font-semibold border ' +
-                (canAdd ? 'border-brand-500 bg-brand-450 text-brand-800 cursor-pointer' : 'border-brand-375 bg-brand-175 text-brand-550 cursor-not-allowed')
-              }
-            >
+            </Button>
+            {/* `submitTask` already returns early without a title or a client, so
+                disabling here only surfaces that rule to the keyboard and to
+                assistive tech — it doesn't change what a click does. */}
+            <Button variant="primary" size="lg" onClick={onSave} disabled={!canAdd}>
               {editingId ? 'Save task' : 'Add task'}
-            </button>
+            </Button>
           </div>
         </div>
       </div>

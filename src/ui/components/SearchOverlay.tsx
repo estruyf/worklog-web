@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Icon } from './icons';
+import { LinkButton } from '../primitives';
 import { useData, useUi } from '../context';
 import { useSearchData } from '../hooks';
 import { Kbd } from './Kbd';
@@ -135,9 +136,9 @@ export function SearchOverlay() {
             })}
 
             {filtersActive && (
-              <button onClick={resetFilters} className="text-[12.5px] text-info bg-none border-none cursor-pointer px-1">
+              <LinkButton onClick={resetFilters} className="px-1">
                 Reset
-              </button>
+              </LinkButton>
             )}
           </div>
 
@@ -164,14 +165,14 @@ export function SearchOverlay() {
                 );
               })}
               {hiddenTagCount > 0 && (
-                <button onClick={() => setAllTagsShown(true)} className="text-[12.5px] text-info bg-none border-none cursor-pointer px-1">
+                <LinkButton onClick={() => setAllTagsShown(true)} className="px-1">
                   +{hiddenTagCount} more
-                </button>
+                </LinkButton>
               )}
               {tagFilter.length > 0 && (
-                <button onClick={clearTagFilter} className="text-[12.5px] text-info bg-none border-none cursor-pointer px-1">
+                <LinkButton onClick={clearTagFilter} className="px-1">
                   Clear tags
-                </button>
+                </LinkButton>
               )}
             </div>
           )}

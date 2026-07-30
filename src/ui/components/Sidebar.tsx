@@ -14,6 +14,7 @@ import {
   SettingsIcon,
   XIcon,
 } from 'lucide-react';
+import { Button, IconButton } from '../primitives';
 import type { AppView } from '../model';
 import { isGeneralTodoClientId } from '../../model/todos';
 import { collectOverdue } from '../../model/overdue';
@@ -345,13 +346,9 @@ export function Sidebar(repoProps: SidebarRepoProps = {}) {
     <>
       {/* Mobile top bar */}
       <div className="flex md:hidden items-center gap-2 h-[52px] px-3 border-b border-neutral-400 shrink-0 sticky top-0 z-40 bg-white">
-        <button
-          onClick={() => setOpen(true)}
-          className="flex items-center justify-center w-[36px] h-[36px] rounded-[8px] border border-neutral-525 bg-white text-neutral-750 cursor-pointer hover:bg-neutral-200"
-          aria-label="Open navigation"
-        >
+        <IconButton variant="outline" onClick={() => setOpen(true)} className="w-9 h-9" aria-label="Open navigation">
           <MenuIcon size={18} />
-        </button>
+        </IconButton>
         <button
           onClick={() => {
             if (today) {
@@ -367,27 +364,16 @@ export function Sidebar(repoProps: SidebarRepoProps = {}) {
         </button>
         <div className="flex-1" />
         {onForm ? (
-          <button
-            onClick={() => taskForm?.submit()}
-            className={
-              'flex items-center justify-center gap-[6px] px-[12px] h-[36px] rounded-[8px] text-[13px] font-semibold border ' +
-              (canSave
-                ? 'border-brand-500 bg-brand-450 text-brand-800 cursor-pointer hover:bg-brand-475'
-                : 'border-brand-375 bg-brand-175 text-brand-550 cursor-not-allowed')
-            }
-          >
+          <Button variant="primary" size="md" onClick={() => taskForm?.submit()} disabled={!canSave} className="h-9">
             <CheckIcon size={15} />
             {isEdit ? 'Save' : 'Add'}
-          </button>
+          </Button>
         ) : (
           !noClients && (
-            <button
-              onClick={onNewTask}
-              className="flex items-center justify-center gap-[6px] px-[12px] h-[36px] rounded-[8px] text-[13px] font-semibold cursor-pointer border border-brand-500 bg-brand-450 text-brand-800 hover:bg-brand-475"
-            >
+            <Button variant="primary" size="md" onClick={onNewTask} className="h-9">
               <PlusIcon size={15} />
               New
-            </button>
+            </Button>
           )
         )}
       </div>

@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { Client } from '../../model/types';
 import type { WorklogRow } from '../model';
 import { WorklogTaskRow } from '../components';
+import { Button } from '../primitives';
 import { useData, useUi } from '../context';
 import { clientIdOf, fmtLong, fmtShort, isDone, renderMarkdown } from '../utils';
 
@@ -197,12 +198,9 @@ export function ClientsView() {
             </div>
           );
         })}
-        <button
-          onClick={() => openClientEditor()}
-          className="flex items-center gap-[6px] w-full mt-2 px-3 py-[9px] border border-dashed border-neutral-550 rounded-lg bg-white text-neutral-700 text-[13px] cursor-pointer hover:border-brand-500 hover:text-brand-800"
-        >
+        <Button variant="dashed" size="md" onClick={() => openClientEditor()} className="w-full mt-2">
           <span className="text-[15px] leading-none">+</span> Add client
-        </button>
+        </Button>
 
         {/* Retired clients, folded away — still openable, so their history and
             the Restore button stay one click from here. */}
@@ -249,25 +247,17 @@ export function ClientsView() {
           )}
           <span className="text-[14px] text-neutral-675">{selectedLastWorked}</span>
           {selectedClientObj && (
-            <button
-              onClick={() => openClientEditor(selectedClientObj)}
-              title="Edit client"
-              className="ml-1 flex items-center gap-[5px] px-[10px] py-[5px] border border-neutral-400 rounded-md bg-white text-neutral-700 text-[12.5px] cursor-pointer hover:bg-neutral-200"
-            >
+            <Button size="xs" onClick={() => openClientEditor(selectedClientObj)} title="Edit client" className="ml-1">
               <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
                 <path d="M11.5 2.5l2 2L6 12l-3 1 1-3 7.5-7.5z" />
               </svg>
               Edit
-            </button>
+            </Button>
           )}
           {selectedClientObj?.archived && (
-            <button
-              onClick={() => setClientArchived(selectedClientObj, false)}
-              title="Bring this client back into the pickers and lists"
-              className="flex items-center gap-[5px] px-[10px] py-[5px] border border-neutral-400 rounded-md bg-white text-neutral-700 text-[12.5px] cursor-pointer hover:bg-neutral-200"
-            >
+            <Button size="xs" onClick={() => setClientArchived(selectedClientObj, false)} title="Bring this client back into the pickers and lists">
               Restore
-            </button>
+            </Button>
           )}
         </div>
 

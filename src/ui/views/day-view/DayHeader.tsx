@@ -1,5 +1,6 @@
 import React from 'react';
 import { CalendarArrowUpIcon, ChevronLeftIcon, ChevronRightIcon } from 'lucide-react';
+import { Button, IconButton } from '../../primitives';
 import { fmtLong, shiftDate } from '../../utils';
 
 type DayHeaderProps = {
@@ -29,21 +30,16 @@ export function DayHeader({
        * fixed width, so stepping through days never shifts them under the cursor
        * the way a date sandwiched between the arrows does. */}
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 min-w-0">
-        <button
-          onClick={() => onSelectDate(today)}
-          disabled={isTodaySel}
-          title="Jump to today"
-          className="shrink-0 flex items-center gap-1.5 h-8 px-3 border border-neutral-400 rounded-lg bg-white text-[13px] font-semibold text-neutral-825 cursor-pointer hover:bg-neutral-200 disabled:text-neutral-625 disabled:cursor-default disabled:hover:bg-white"
-        >
+        <Button size="md" onClick={() => onSelectDate(today)} disabled={isTodaySel} title="Jump to today" className="shrink-0">
           <CalendarArrowUpIcon size={15} className="text-neutral-675" /> Today
-        </button>
+        </Button>
         <div className="flex items-center gap-1 shrink-0">
-          <button onClick={() => onSelectDate(shiftDate(selectedDate, -1))} title="Previous day" className="w-8 h-8 rounded-lg bg-transparent border-none text-neutral-700 cursor-pointer flex items-center justify-center hover:bg-neutral-225">
+          <IconButton onClick={() => onSelectDate(shiftDate(selectedDate, -1))} title="Previous day" aria-label="Previous day">
             <ChevronLeftIcon size={18} />
-          </button>
-          <button onClick={() => onSelectDate(shiftDate(selectedDate, 1))} title="Next day" className="w-8 h-8 rounded-lg bg-transparent border-none text-neutral-700 cursor-pointer flex items-center justify-center hover:bg-neutral-225">
+          </IconButton>
+          <IconButton onClick={() => onSelectDate(shiftDate(selectedDate, 1))} title="Next day" aria-label="Next day">
             <ChevronRightIcon size={18} />
-          </button>
+          </IconButton>
         </div>
         <h1 className="text-[20px] sm:text-[24px] font-bold m-0 tracking-[-0.01em] whitespace-nowrap">{fmtLong(selectedDate)}</h1>
         {/* The date alone reads the same on any day; the pill is what says you're
@@ -72,13 +68,15 @@ export function DayHeader({
           </button>
         )}
         {isFuture && (
-          <button
+          <Button
+            variant="primary"
+            size="md"
             onClick={() => openTaskFormForDue(selectedDate)}
             title="Add a task due on this day"
-            className="flex-1 sm:flex-none flex items-center justify-center gap-[6px] px-[14px] py-[8px] border border-brand-500 rounded-[8px] bg-brand-450 text-brand-800 font-semibold text-[13px] cursor-pointer hover:bg-brand-475 whitespace-nowrap"
+            className="flex-1 sm:flex-none"
           >
             <span className="text-[15px] leading-none">+</span> Add task for this day
-          </button>
+          </Button>
         )}
       </div>
     </div>

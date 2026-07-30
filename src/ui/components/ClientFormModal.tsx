@@ -1,5 +1,6 @@
 import React from 'react';
 import { PALETTE } from '../utils';
+import { Button, LinkButton } from '../primitives';
 import { useData, useUi } from '../context';
 
 /** Add / edit client modal (name, color, notes and reference links), plus the two
@@ -100,12 +101,9 @@ export function ClientFormModal() {
             </button>
           </div>
         ))}
-        <button
-          onClick={() => setLinks([...links, { url: '', label: '' }])}
-          className="bg-none border-none text-info text-[14px] font-medium cursor-pointer py-[2px]"
-        >
+        <LinkButton size="lg" onClick={() => setLinks([...links, { url: '', label: '' }])} className="font-medium py-[2px]">
           + Add {links.length ? 'another ' : ''}link
-        </button>
+        </LinkButton>
 
         {editingClientId && <div className="text-[12px] text-neutral-625 mt-3">Client id <code className="text-neutral-675">{editingClientId}</code> stays the same; only the name, color, description and links change.</div>}
 
@@ -113,20 +111,18 @@ export function ClientFormModal() {
           <div className="mt-5 pt-4 border-t border-neutral-325">
             <div className="text-[11px] font-bold tracking-[0.06em] text-neutral-675 mb-[10px]">RETIRE THIS CLIENT</div>
             <div className="flex flex-wrap items-center gap-[10px]">
-              <button
-                onClick={() => setClientArchived(editing, !editing.archived)}
-                className="px-[14px] py-[8px] border border-neutral-400 rounded-[8px] bg-white text-neutral-750 text-[13px] font-semibold cursor-pointer hover:bg-neutral-200"
-              >
+              <Button size="md" onClick={() => setClientArchived(editing, !editing.archived)}>
                 {editing.archived ? 'Restore client' : 'Archive client'}
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="danger"
+                size="md"
                 onClick={() => deleteClient(editing)}
                 disabled={!deletable}
                 title={deletable ? 'Delete this client' : 'Only a client with no tasks and no logged time can be deleted'}
-                className="px-[14px] py-[8px] border border-danger-225 rounded-[8px] bg-white text-danger-675 text-[13px] font-semibold cursor-pointer hover:bg-danger-75 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white"
               >
                 Delete client
-              </button>
+              </Button>
             </div>
             <div className="text-[12px] text-neutral-625 mt-[10px]">
               {editing.archived
@@ -144,18 +140,15 @@ export function ClientFormModal() {
         )}
 
         <div className="flex justify-end gap-[10px] mt-[26px]">
-          <button onClick={onClose} className="px-5 py-[10px] border border-neutral-400 rounded-[9px] bg-neutral-250 text-[14px] font-semibold cursor-pointer">
+          <Button variant="neutral" size="lg" onClick={onClose}>
             Close
-          </button>
-          <button
-            onClick={onSave}
-            className={
-              'px-[22px] py-[10px] rounded-[9px] text-[14px] font-semibold border ' +
-              (name.trim() ? 'border-brand-500 bg-brand-450 text-brand-800 cursor-pointer' : 'border-brand-375 bg-brand-175 text-brand-550 cursor-not-allowed')
-            }
-          >
+          </Button>
+          {/* `saveClient` already no-ops on a blank name, so the disabled attribute
+              only makes the existing behaviour reachable by keyboard and screen
+              reader rather than changing it. */}
+          <Button variant="primary" size="lg" onClick={onSave} disabled={!name.trim()}>
             {editingClientId ? 'Save client' : 'Add client'}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

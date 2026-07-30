@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Button } from '../primitives';
 import { useData, useUi } from '../context';
 
 export function EmptyClientsView() {
@@ -31,12 +32,9 @@ export function EmptyClientsView() {
             placeholder="Client name (e.g. Acme Inc)"
             className="flex-1 px-[14px] py-[11px] border border-neutral-525 rounded-[9px] text-[14px] outline-none focus:border-brand-500 focus:shadow-[0_0_0_3px_var(--color-brand-225)]"
           />
-          <button
-            onClick={() => void onCreateClient()}
-            className="px-[18px] py-[11px] border border-brand-500 rounded-[9px] bg-brand-450 text-brand-800 font-semibold text-[14px] cursor-pointer hover:bg-brand-475"
-          >
+          <Button variant="primary" size="lg" onClick={() => void onCreateClient()}>
             Add client
-          </button>
+          </Button>
         </div>
       </div>
     </div>

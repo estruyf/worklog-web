@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ChevronLeftIcon, ChevronRightIcon } from 'lucide-react';
+import { IconButton } from '../../primitives';
 import { WorklogTaskRow } from '../../components';
 import type { WorklogRow } from '../../model';
 
@@ -36,25 +37,29 @@ export function TodoTasksSection({ todoRows, pageSize }: { todoRows: WorklogRow[
 
         {pageCount > 1 && (
           <div className="flex items-center justify-between gap-2 mt-[6px] px-2.5 py-2 border-t border-neutral-275">
-            <button
+            <IconButton
+              variant="outline"
+              size="xs"
               onClick={() => setPage(current - 1)}
               disabled={current === 0}
               title="Previous to-dos"
-              className="w-[22px] h-[22px] shrink-0 flex items-center justify-center border border-neutral-400 rounded-md bg-white text-neutral-700 cursor-pointer hover:bg-neutral-200 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white"
+              aria-label="Previous to-dos"
             >
               <ChevronLeftIcon size={13} />
-            </button>
+            </IconButton>
             <span className="text-[12px] text-neutral-675">
               {current + 1} / {pageCount}
             </span>
-            <button
+            <IconButton
+              variant="outline"
+              size="xs"
               onClick={() => setPage(current + 1)}
               disabled={current === pageCount - 1}
               title="More to-dos"
-              className="w-[22px] h-[22px] shrink-0 flex items-center justify-center border border-neutral-400 rounded-md bg-white text-neutral-700 cursor-pointer hover:bg-neutral-200 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white"
+              aria-label="More to-dos"
             >
               <ChevronRightIcon size={13} />
-            </button>
+            </IconButton>
           </div>
         )}
       </div>

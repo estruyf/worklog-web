@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { Button } from '../primitives';
 import { useUi } from '../context';
 import type { ConfirmRequest } from '../hooks/useConfirmDialog';
 
@@ -59,25 +60,13 @@ function Dialog({ request, settle }: { request: ConfirmRequest; settle: (confirm
         )}
         <div className="flex justify-end gap-[10px] mt-[26px]">
           {!request.acknowledge && (
-            <button
-              onClick={() => settle(false)}
-              className="px-5 py-[10px] border border-neutral-400 rounded-[9px] bg-neutral-250 text-[14px] font-semibold cursor-pointer hover:bg-neutral-300"
-            >
+            <Button variant="neutral" size="lg" onClick={() => settle(false)}>
               {request.cancelLabel ?? 'Cancel'}
-            </button>
+            </Button>
           )}
-          <button
-            autoFocus
-            onClick={() => settle(true)}
-            className={
-              'px-[22px] py-[10px] rounded-[9px] text-[14px] font-semibold border cursor-pointer ' +
-              (danger
-                ? 'border-danger-675 bg-danger-675 text-white hover:bg-danger-700 hover:border-danger-700'
-                : 'border-brand-500 bg-brand-450 text-brand-800 hover:bg-brand-475')
-            }
-          >
+          <Button autoFocus variant={danger ? 'dangerSolid' : 'primary'} size="lg" onClick={() => settle(true)}>
             {request.confirmLabel ?? 'Confirm'}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

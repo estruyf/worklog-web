@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Button } from '../primitives';
 import { useData } from '../context';
 
 const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -189,13 +190,9 @@ export function SettingsView() {
         )}
 
         <div className="flex items-center gap-3 mt-6">
-          <button
-            onClick={onSave}
-            disabled={!canSave}
-            className="px-[16px] py-[9px] rounded-[8px] text-[13px] font-semibold cursor-pointer border border-brand-500 bg-brand-450 text-brand-800 hover:bg-brand-475 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
+          <Button variant="primary" size="md" onClick={onSave} disabled={!canSave}>
             Save changes
-          </button>
+          </Button>
           {saved && <span className="text-[13px] text-success-500 font-medium">Saved</span>}
         </div>
       </div>

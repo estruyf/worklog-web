@@ -5,6 +5,7 @@ import type { Task } from '../../model/types';
 import { describeRecurrence } from '../../model/recurrence';
 import { isGeneralTodoClientId } from '../../model/todos';
 import { daysOverdue, formatDaysLate, isOverdue } from '../../model/overdue';
+import { Button, LinkButton } from '../primitives';
 import { useData, useUi } from '../context';
 import { useMarkdownImages } from '../hooks';
 import { navigateToDashboard, navigateToTask } from '../router';
@@ -128,24 +129,24 @@ export function TaskDetailPanel({ routed = false }: { routed?: boolean } = {}) {
         <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
           {routed ? (
             <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-[13px] text-neutral-700 min-w-0">
-              <button onClick={navigateToDashboard} className="hover:underline text-info cursor-pointer bg-transparent border-none p-0">
+              <LinkButton size="inherit" onClick={navigateToDashboard}>
                 Worklog
-              </button>
+              </LinkButton>
               {parent && (
                 <>
                   <span className="text-neutral-600">/</span>
-                  <button onClick={() => onOpenTask(parent.id)} className="hover:underline text-info cursor-pointer bg-transparent border-none p-0 truncate max-w-[220px]">
+                  <LinkButton size="inherit" onClick={() => onOpenTask(parent.id)} className="truncate max-w-[220px]">
                     {parent.title}
-                  </button>
+                  </LinkButton>
                 </>
               )}
               <span className="text-neutral-600">/</span>
               <span className="text-neutral-825 font-medium truncate max-w-[280px]">{task.title}</span>
             </nav>
           ) : (
-            <button onClick={onBack} className="flex items-center gap-[6px] text-[13px] text-neutral-700 bg-white border border-neutral-400 rounded-md px-[10px] py-[6px] cursor-pointer hover:bg-neutral-200">
+            <Button size="xs" onClick={onBack}>
               <span className="text-[15px] leading-none">‹</span> Back
-            </button>
+            </Button>
           )}
           <div className="flex flex-wrap gap-[8px]">
 
@@ -165,30 +166,20 @@ export function TaskDetailPanel({ routed = false }: { routed?: boolean } = {}) {
               </button>
             )}
             {isDone(task) ? (
-              <button onClick={() => reopen(task)} className="px-[14px] py-[7px] border border-neutral-400 rounded-[7px] bg-white text-neutral-750 font-semibold text-[13px] cursor-pointer hover:bg-neutral-200">
-                Reopen
-              </button>
+              <Button onClick={() => reopen(task)}>Reopen</Button>
             ) : (
-              <>
-                <button onClick={() => markDone(task)} title="Completes this task and all its subtasks" className="flex items-center gap-[6px] px-[14px] py-[7px] border border-success-175 rounded-[7px] bg-success-100 text-success-625 font-semibold text-[13px] cursor-pointer hover:bg-success-125">
-                  <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.2">
-                    <path d="M3.5 8.5l3 3 6-7" />
-                  </svg>
-                  Mark done
-                </button>
-              </>
+              <Button variant="success" onClick={() => markDone(task)} title="Completes this task and all its subtasks">
+                <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.2">
+                  <path d="M3.5 8.5l3 3 6-7" />
+                </svg>
+                Mark done
+              </Button>
             )}
-            <button onClick={() => onEdit(task)} className="px-[14px] py-[7px] border border-neutral-400 rounded-[7px] bg-white text-neutral-750 font-semibold text-[13px] cursor-pointer hover:bg-neutral-200">
-              Edit details
-            </button>
-            {!isDone(task) && (
-              <button onClick={() => openSubtaskForm(task)} className="px-[14px] py-[7px] border border-neutral-400 rounded-[7px] bg-white text-neutral-750 font-semibold text-[13px] cursor-pointer hover:bg-neutral-200">
-                Add subtask
-              </button>
-            )}
-            <button onClick={() => onDelete(task.id, { permanent: isDone(task) })} className="px-[14px] py-[7px] border border-danger-225 rounded-[7px] bg-white text-danger-675 font-semibold text-[13px] cursor-pointer hover:bg-danger-75">
+            <Button onClick={() => onEdit(task)}>Edit details</Button>
+            {!isDone(task) && <Button onClick={() => openSubtaskForm(task)}>Add subtask</Button>}
+            <Button variant="danger" onClick={() => onDelete(task.id, { permanent: isDone(task) })}>
               {isDone(task) ? 'Delete forever' : 'Delete'}
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -205,9 +196,9 @@ export function TaskDetailPanel({ routed = false }: { routed?: boolean } = {}) {
           {parent && (
             <span className="text-[13px] text-neutral-650">
               · in{' '}
-              <button onClick={() => onOpenTask(parent.id)} className="text-info cursor-pointer hover:underline bg-transparent border-none p-0 text-[13px]">
+              <LinkButton size="md" onClick={() => onOpenTask(parent.id)}>
                 {parent.title}
-              </button>
+              </LinkButton>
             </span>
           )}
           {/* Tags jump to the tag-filtered search, which the routed task page
@@ -243,9 +234,9 @@ export function TaskDetailPanel({ routed = false }: { routed?: boolean } = {}) {
             />
             {overdue && <span className="text-[12.5px] text-danger-675">{formatDaysLate(lateBy)}</span>}
             {task.due && (
-              <button onClick={() => onSetDue('')} className="text-[12px] text-info bg-none border-none cursor-pointer">
+              <LinkButton size="xs" onClick={() => onSetDue('')}>
                 Clear
-              </button>
+              </LinkButton>
             )}
           </div>
         )}
@@ -313,9 +304,9 @@ export function TaskDetailPanel({ routed = false }: { routed?: boolean } = {}) {
         <div className="flex items-center justify-between mb-[10px]">
           <div className="text-[11px] font-bold tracking-[0.06em] text-neutral-675">DESCRIPTION</div>
           <div className="flex items-center gap-2">
-            <button onClick={img.openFilePicker} disabled={img.uploading} className="text-[12px] text-info font-medium cursor-pointer disabled:opacity-50 disabled:cursor-default">
+            <LinkButton size="xs" onClick={img.openFilePicker} disabled={img.uploading} className="font-medium">
               {img.uploading ? 'Adding…' : '+ Add image'}
-            </button>
+            </LinkButton>
             <div className="flex border border-neutral-400 rounded-[7px] overflow-hidden text-[12px]">
               <button onClick={() => setDescMode('preview')} className={'px-[10px] py-[4px] cursor-pointer ' + (descMode === 'preview' ? 'bg-brand-225 text-brand-800 font-semibold' : 'bg-white text-neutral-700')}>
                 Preview
@@ -325,9 +316,9 @@ export function TaskDetailPanel({ routed = false }: { routed?: boolean } = {}) {
               </button>
             </div>
             {descDirty && (
-              <button onClick={onSaveDescription} className="px-[14px] py-[5px] border border-brand-500 rounded-[7px] bg-brand-450 text-brand-800 font-semibold text-[12.5px] cursor-pointer hover:bg-brand-475">
+              <Button variant="primary" size="xs" onClick={onSaveDescription} className="font-semibold">
                 Save
-              </button>
+              </Button>
             )}
           </div>
         </div>
@@ -363,13 +354,15 @@ export function TaskDetailPanel({ routed = false }: { routed?: boolean } = {}) {
                 <div key={i} className="group border border-neutral-375 rounded-[12px] bg-neutral-50 px-[16px] py-[11px]">
                   <div className="flex items-center justify-between mb-[5px]">
                     <span className="text-[11.5px] font-semibold text-neutral-650">{n.timestamp}</span>
-                    <button
+                    <LinkButton
+                      size="inherit"
+                      tone="muted"
                       onClick={() => onDeleteNote(i)}
                       title="Delete note"
-                      className="text-[11.5px] text-neutral-600 hover:text-danger-675 opacity-0 group-hover:opacity-100 cursor-pointer bg-transparent border-none p-0"
+                      className="text-[11.5px] opacity-0 group-hover:opacity-100"
                     >
                       Delete
-                    </button>
+                    </LinkButton>
                   </div>
                   <div className="wl-md text-[13.5px] leading-[1.6]" dangerouslySetInnerHTML={{ __html: renderMarkdown(n.text, resolveImage) }} />
                 </div>
@@ -392,13 +385,9 @@ export function TaskDetailPanel({ routed = false }: { routed?: boolean } = {}) {
               className="w-full min-h-[68px] px-[14px] py-[10px] border border-neutral-525 rounded-[10px] text-[13.5px] leading-[1.55] outline-none focus:border-brand-500 focus:shadow-[0_0_0_3px_var(--color-brand-225)] resize-y"
             />
             <div className="flex justify-end">
-              <button
-                onClick={onAddNote}
-                disabled={!noteDraft.trim()}
-                className="px-[16px] py-[6px] border border-brand-500 rounded-[7px] bg-brand-450 text-brand-800 font-semibold text-[12.5px] cursor-pointer hover:bg-brand-475 disabled:opacity-50 disabled:cursor-default"
-              >
+              <Button variant="primary" size="xs" onClick={onAddNote} disabled={!noteDraft.trim()} className="font-semibold">
                 Add note
-              </button>
+              </Button>
             </div>
           </div>
         </div>

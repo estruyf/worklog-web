@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Icon } from '../components/icons';
+import { Button, LinkButton } from '../primitives';
 import { useData } from '../context';
 import { ARCHIVE_PAGE_SIZES, deriveArchive, fmtShort, pageWindow } from '../utils';
 import type { ArchivePeriod } from '../utils';
@@ -132,9 +133,9 @@ function ArchiveFilterBar({
       </div>
 
       {filtersActive && (
-        <button onClick={resetFilters} className="text-[12.5px] text-info bg-none border-none cursor-pointer px-1">
+        <LinkButton onClick={resetFilters} className="px-1">
           Reset
-        </button>
+        </LinkButton>
       )}
     </div>
   );
@@ -254,9 +255,9 @@ export function ArchiveView() {
         {totalCount > 0 && filteredCount === 0 && (
           <div className="text-[14px] text-neutral-625 italic">
             No archived tasks match these filters.{' '}
-            <button onClick={resetFilters} className="text-info bg-none border-none cursor-pointer p-0 italic underline">
+            <LinkButton size="inherit" onClick={resetFilters} className="italic underline">
               Reset
-            </button>
+            </LinkButton>
           </div>
         )}
 
@@ -276,12 +277,12 @@ export function ArchiveView() {
                     {t.title}
                   </button>
                   <span className="text-[13px] text-neutral-650">{t.completed ? fmtShort(t.completed) : ''}</span>
-                  <button onClick={() => reopen(t)} className="px-[10px] py-[6px] border border-neutral-400 rounded-[7px] bg-white text-neutral-750 font-semibold text-[12px] cursor-pointer hover:bg-neutral-200">
+                  <Button size="xs" onClick={() => reopen(t)}>
                     Restore
-                  </button>
-                  <button onClick={() => deleteForever(t.id)} className="px-[10px] py-[6px] border border-danger-225 rounded-[7px] bg-white text-danger-675 font-semibold text-[12px] cursor-pointer hover:bg-danger-75">
+                  </Button>
+                  <Button size="xs" variant="danger" onClick={() => deleteForever(t.id)}>
                     Delete forever
-                  </button>
+                  </Button>
                 </div>
               ))}
             </div>

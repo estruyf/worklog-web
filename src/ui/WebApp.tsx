@@ -14,6 +14,7 @@ import React from 'react';
 import { WorklogApp } from './WorklogApp';
 import { TaskPage } from './TaskPage';
 import { WorklogProvider } from './context';
+import { Button } from './primitives';
 import { useUnsavedGuard } from './hooks';
 import { worklogStore, type RecoveryInfo } from '../data/worklogStore';
 import { navigateToDashboard, useRoute } from './router';
@@ -165,12 +166,12 @@ function RecoveryPrompt({ info, onRestore, onDiscard }: { info: RecoveryInfo; on
         )}
         <p className="text-[13px] text-neutral-650 m-0 mb-5.5">Restore to continue where you left off, then sync when ready.</p>
         <div className="flex justify-end gap-2.5">
-          <button onClick={onDiscard} className="px-5 py-2.5 border border-neutral-400 rounded-[9px] bg-neutral-250 text-[14px] font-semibold cursor-pointer">
+          <Button variant="neutral" size="lg" onClick={onDiscard}>
             Discard
-          </button>
-          <button onClick={onRestore} className="px-5.5 py-2.5 rounded-[9px] text-[14px] font-semibold border border-brand-500 bg-brand-450 text-brand-800 cursor-pointer">
+          </Button>
+          <Button variant="primary" size="lg" onClick={onRestore}>
             Restore changes
-          </button>
+          </Button>
         </div>
       </div>
     </div>
@@ -202,8 +203,8 @@ function ErrorScreen({ message, onRetry, onSwitch }: { message: string; onRetry:
           : message}
       </p>
       <div className="flex gap-2.5">
-        <button onClick={onRetry} className={btnPrimaryCls}>Retry</button>
-        <button onClick={onSwitch} className={btnSecondaryCls}>Pick another repo</button>
+        <Button variant="primary" size="md" onClick={onRetry}>Retry</Button>
+        <Button variant="neutral" size="md" onClick={onSwitch}>Pick another repo</Button>
       </div>
     </div>
   );
@@ -215,11 +216,9 @@ function NotFoundScreen({ onHome }: { onHome: () => void }) {
       <div className="text-[13px] font-bold tracking-[0.08em] text-neutral-650">404</div>
       <h2 className="m-0 text-neutral-825">Page not found</h2>
       <p className="max-w-105 text-neutral-700">This page doesn’t exist. It may have been removed or the link was mistyped.</p>
-      <button onClick={onHome} className={btnPrimaryCls}>Back to Worklog</button>
+      <Button variant="primary" size="md" onClick={onHome}>Back to Worklog</Button>
     </div>
   );
 }
 
 const splashCls = 'min-h-screen flex flex-col gap-4 items-center justify-center bg-white';
-const btnPrimaryCls = 'bg-brand-450 text-brand-800 border border-brand-500 px-4 py-[9px] rounded-lg font-semibold cursor-pointer';
-const btnSecondaryCls = 'bg-neutral-250 text-neutral-825 border border-neutral-400 px-4 py-[9px] rounded-lg font-semibold cursor-pointer';

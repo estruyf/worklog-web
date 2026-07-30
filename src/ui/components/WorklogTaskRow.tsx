@@ -2,6 +2,7 @@ import React from 'react';
 import type { WorklogRow } from '../model';
 import { BriefcaseIcon, GlobeIcon, RefreshCwIcon, SquareArrowOutUpRight } from 'lucide-react';
 import { formatDaysLate } from '../../model/overdue';
+import { Button } from '../primitives';
 import { fmtShort } from '../utils';
 
 /** Subtask completion rollup, shown inline on desktop and below the title on
@@ -164,18 +165,18 @@ export const WorklogTaskRow = React.memo(function WorklogTaskRow({ row }: { row:
         </div>
         {/* Hover actions — wide rows only; they would crowd out the title otherwise. */}
         <div className="hidden @lg:flex items-center gap-[6px] shrink-0 opacity-0 pointer-events-none transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 group-hover:pointer-events-auto group-focus-within:pointer-events-auto">
-          <button onClick={row.onView} className="px-[8px] py-[5px] border border-neutral-400 rounded-[7px] bg-white text-neutral-750 text-[12px] font-medium cursor-pointer hover:bg-neutral-200">
+          <Button size="xs" onClick={row.onView}>
             View
-          </button>
-          <button onClick={row.onOpenTab} title="Open in a separate tab" className="px-[8px] py-[5px] border border-neutral-400 rounded-[7px] bg-white text-neutral-750 leading-[0] cursor-pointer hover:bg-neutral-200">
+          </Button>
+          <Button size="xs" onClick={row.onOpenTab} title="Open in a separate tab" className="leading-[0]">
             <SquareArrowOutUpRight className="w-[14px] h-[14px]" />
-          </button>
-          <button onClick={row.onEdit} className="px-[8px] py-[5px] border border-neutral-400 rounded-[7px] bg-white text-neutral-750 text-[12px] font-medium cursor-pointer hover:bg-neutral-200">
+          </Button>
+          <Button size="xs" onClick={row.onEdit}>
             Edit
-          </button>
-          <button onClick={row.onDelete} className="px-[8px] py-[5px] border border-danger-225 rounded-[7px] bg-white text-danger-675 text-[12px] font-medium cursor-pointer hover:bg-danger-75">
+          </Button>
+          <Button size="xs" variant="danger" onClick={row.onDelete}>
             Delete
-          </button>
+          </Button>
         </div>
         {row.hasLink && (
           <span className="hidden @lg:inline-flex">
