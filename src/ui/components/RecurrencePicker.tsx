@@ -102,8 +102,10 @@ const chipClass = (active: boolean): string =>
   'px-[13px] py-[7px] rounded-full text-[13px] font-semibold cursor-pointer border text-neutral-825 ' +
   (active ? 'border-brand-500 bg-brand-450' : 'border-neutral-525 bg-neutral-350');
 
+// Sized to the row rather than fixed: seven of these have to fit across the task
+// form's side rail, and a fixed width wrapped one day onto its own line there.
 const dayChipClass = (active: boolean): string =>
-  'w-[42px] py-[6px] rounded-[8px] text-[12px] font-semibold cursor-pointer border text-center ' +
+  'flex-1 min-w-[32px] max-w-[46px] py-[6px] rounded-[8px] text-[12px] font-semibold cursor-pointer border text-center ' +
   (active
     ? 'border-brand-500 bg-brand-450 text-brand-800'
     : 'border-neutral-525 bg-white text-neutral-725 hover:bg-neutral-200');
@@ -184,7 +186,9 @@ function DateField({
   onChange: (value: string) => void;
 }) {
   return (
-    <div className="flex-1 min-w-0">
+    // Wraps rather than shrinks: a native date input squeezed below ~150px clips
+    // its own text, so in a narrow column the two bounds stack instead.
+    <div className="flex-1 min-w-[150px]">
       <div className="flex items-center justify-between mb-[6px]">
         <label className="block font-semibold text-[13px]">{label}</label>
         {value && (
@@ -270,7 +274,7 @@ export function RecurrencePicker({
   };
 
   return (
-    <div className="mb-[22px]">
+    <div>
       <label className="block font-semibold text-[14px] mb-[10px]">
         Repeat <span className="text-neutral-625 font-normal">(optional)</span>
       </label>
@@ -340,7 +344,7 @@ export function RecurrencePicker({
           rule's phase — "every 3 months on the 1st" is the same rule whether it
           runs Jan/Apr/Jul or Feb/May/Aug, and only this says which. */}
       {repeats && (
-        <div className="flex flex-col md:flex-row gap-[14px] mb-[14px]">
+        <div className="flex flex-wrap gap-[14px] mb-[14px]">
           <DateField label="Starts on" value={due} onChange={onDueChange} />
           <DateField label="Until" value={until} onChange={onUntilChange} />
         </div>
