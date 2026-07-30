@@ -8,7 +8,7 @@ and what is left.
 The ordering is deliberate. Each step is independently shippable and leaves the
 app working, so none of this has to land in one go.
 
-**Status:** steps 1–5 done. Step 6 open.
+**Status:** steps 1–6 done.
 
 ---
 
@@ -481,35 +481,102 @@ and `WorklogTaskRow`, which is the *open*-task row and already extracted.
 
 ---
 
-## Step 6 — Split the large components
+## Step 6 — Split the large components ✅ done
 
-Only worth doing after steps 1–5, since much of the bulk is inline styling that
-those steps remove.
+The pieces step 5 pulled out are the ones two files *shared*. This step is the
+opposite case: blocks that belong to one file and are only long. They move to
+their own module and stay there rather than becoming shared components — which is
+why each one lives in a folder beside its file rather than in
+`src/ui/components/`, the way [`day-view/`](../src/ui/views/day-view/) already
+did it. A barrel per folder, and nothing outside the owning file imports from it.
 
-Line counts are as they stand after step 5, which already took ~60 lines out of
-`TaskFormPage` and ~35 out of `TaskDetailPanel` and `ClientsView` each.
+| File | Before | After | Split into |
+| --- | --- | --- | --- |
+| `TaskFormPage` | 440 | 264 | [`task-form/`](../src/ui/components/task-form/) — `TitleField`, `ClientChipPicker`, `DueField`, `FormActionBar`, `SidebarSection` |
+| `RecurrencePicker` | 380 | 313 | [`model/recurrencePresets.ts`](../src/model/recurrencePresets.ts) |
+| `TaskDetailPanel` | 367 | 99 | [`task-detail/`](../src/ui/components/task-detail/) — `TaskDetailHeader`, `TaskMetaRow`, `DueEditor`, `RepeatSummary`, `SubtaskList`, `NotesSection` |
+| `Sidebar` | 355 | 63 | [`sidebar-nav/`](../src/ui/components/sidebar-nav/) — `NavList`, `SidebarActions`, `RepoFooter`, `MobileTopBar`, `SidebarContent`, `BrandMark` |
+| `CalendarView` | 340 | 91 | [`calendar-view/`](../src/ui/views/calendar-view/) — `CalendarGrid`, `DayCell`, `Legend`, `PeriodNav`, `WorkedPerClient` |
+| `ClientsView` | 293 | 121 | [`clients-view/`](../src/ui/views/clients-view/) — `ClientList`, `MobileClientDropdown`, `ClientInfoCard`, `CompletedTaskList` |
+| `SearchOverlay` | 286 | 90 | [`search-overlay/`](../src/ui/components/search-overlay/) — `SearchField`, `ScopeFilterBar`, `TagFilterBar`, `SearchIdleState`, `SearchResultRow` |
+| `InsightsView` | 212 | 155 | [`insights-view/`](../src/ui/views/insights-view/) — `HoursTable`, `StatTile` |
 
-| File | Lines | Split into |
-| --- | --- | --- |
-| `TaskFormPage` | ~440 | `TitleField`, `ClientChipPicker`, `DueField`, `FormActionBar` — `DescriptionEditor` and `LinksField` left in step 5 |
-| `Sidebar` | ~355 | `NavList`, `SidebarActions`, `RepoFooter` (exists), `MobileTopBar` — the nav glyphs already left for `icons.tsx` in step 4 |
-| `RecurrencePicker` | ~380 | move `kindOf`, `seedFor`, `isBusinessWeek` + constants (~90 lines of pure model code) next to `model/recurrence.ts` |
-| `TaskDetailPanel` | ~365 | `TaskDetailHeader`, `TaskMetaRow`, `SubtaskList`, `NotesSection`, `DueEditor` |
-| `CalendarView` | ~340 | `CalendarGrid`, `DayCell`, `Legend`, `PeriodNav`, `WorkedPerClient` |
-| `ClientsView` | ~295 | `ClientList`, `ClientInfoCard`, `CompletedTaskList` |
-| `SearchOverlay` | ~285 | `SearchField`, `ScopeFilterBar`, `TagFilterBar`, `SearchResultRow` |
-| `InsightsView` | ~210 | `HoursTable` — the monthly table is written **twice, verbatim**, for clients and events, with the same `grid-cols-[1.4fr_0.7fr_0.7fr_2.6fr]` string 6× (~70 lines saved); plus `StatTile` |
+[`ArchiveView`](../src/ui/views/ArchiveView.tsx) was the template: a data hook at
+the top, named pieces under it, and a body that reads as a list of what the view
+is made of.
 
-[`ArchiveView`](../src/ui/views/ArchiveView.tsx) is the best-decomposed file in
-the repo and is the template for the rest.
+**Props stop at the boundary the file already has.** A piece that needs the
+snapshot reaches for `useData` / `useUi` itself rather than being handed ten
+props — `ArchiveFilterBar` already did this for its client list. What stays a
+prop is what the *parent* decided: which rows to show, what a click means, and
+the handful of flags (`routed`, `isWeek`, `isTodo`) that are the parent's mode
+rather than app state.
 
-`RepeatSummary` (in `TaskDetailPanel`) and `SidebarSection` (in `TaskFormPage`)
-are already extracted locally — the right pattern, currently applied to a small
-fraction of each file.
+**`sidebar-nav`, not `sidebar`.** A folder named `sidebar/` next to `Sidebar.tsx`
+resolves to the same specifier on a case-insensitive filesystem, and TypeScript
+says so: *"declares 'MobileTopBar' locally, but it is exported as
+'SidebarRepoProps'"*. Only the sidebar hit it — every other pair differs by a
+hyphen (`search-overlay` vs `SearchOverlay`) or by name (`task-detail` vs
+`TaskDetailPanel`).
 
-The pieces step 5 pulled out are the ones two files *shared*. What is left in this
-table is the opposite case: blocks that belong to one file and are only long. They
-move to their own module and stay there, rather than becoming shared components.
+**The two genuine duplications this uncovered.**
+
+- The Insights monthly table was written **twice, verbatim** — clients and events
+  — with the same `grid-cols-[1.4fr_0.7fr_0.7fr_2.6fr]` string six times. It is
+  one `HoursTable` now, and the column string is one `COLUMNS` constant used by
+  the header, the rows and the total, so the three cannot drift out of alignment
+  with each other. The two tables differ in exactly what they should: the first
+  column's name, the total's label, and whether an empty month says so.
+- `isEventWorklogClientId(id) ? EVENT_COLOR : colorOf(id)` appeared three times
+  in `CalendarView` and the name resolver twice; both are one call now
+  ([`entryLabels.ts`](../src/ui/views/calendar-view/entryLabels.ts)). Getting the
+  event branch wrong shows a blank name in a cell, which is the kind of thing a
+  third copy eventually gets wrong.
+
+**`seedFor` stopped carrying a second copy of the grammar.** `kindOf` and
+`seedFor` are calendar reasoning over a `Recurrence`, not rendering, so they moved
+to `model/recurrencePresets.ts` — and `seedFor` now builds the rule as a
+`Recurrence` and hands it to `formatRecurrence` instead of assembling
+`` `weekly on ${weekday}` `` by hand. A seed is canonical by construction rather
+than by two copies of the grammar agreeing with each other. `recurrence.ts` now
+exports `BUSINESS_DAYS` and `isBusinessWeek`, which the picker had duplicated
+along with its own `WEEKDAY_NAMES` table; all three are gone from the UI.
+`test/recurrencePicker.test.ts` imports from the model now and is otherwise
+untouched — the same eight tests, including the one asserting that every seed
+round-trips back onto its own preset.
+
+**Behavioural notes** — four things changed, all deliberately:
+
+- **Insights' date links became buttons.** Every logged date in the monthly table
+  was an `<a onClick>` with no `href`: it looked like a link, and no keyboard
+  could reach it. They are `LinkButton size="inherit"`, which is the same blue,
+  the same underline on hover, and the same inherited size.
+- **Subtask titles became buttons**, the last `<span onClick>` of the four step 5
+  fixed elsewhere. Its "mark done" circle also gained an `aria-label` — it had a
+  `title` and no text, so it announced as an unnamed button.
+- **`DueEditor` owns all three date states.** The panel had three sibling
+  conditionals — due when open and not repeating, the repeat summary, completed
+  when done — and the first and third are the same question: what is this task's
+  one editable date? The component answers it and renders nothing for a repeating
+  task, whose due date belongs to the rule.
+- **`Sidebar`'s Escape effect stopped claiming to lock body scroll.** The comment
+  said it did; the code never had. The comment now says what the effect does.
+
+**Deliberately left alone:**
+
+- `TaskFormPage` stays the largest of the eight at 264 lines, and most of what is
+  left is its ten `useState`s and the effects that publish them. Splitting those
+  out means either prop-drilling ten setters or putting the form's fields back in
+  app-wide state, which is the thing the form was extracted *from*.
+- `SearchResultRow` stays a `div` with an `onClick` where the completed-task rows
+  became buttons: it contains its own controls — the tag chips, the external link
+  — and a button cannot hold buttons. The palette's keyboard path is the shell's
+  ↑/↓/↵ over the same ordered list, not Tab through the rows.
+- The mobile client dropdown moved but stayed its own component rather than
+  folding into `ClientList`. It is a combobox, as step 5 already noted; the two
+  share `ClientListItem`, which is the part that was actually the same.
+- The two files [out of scope](#out-of-scope-but-noted) below are still out of
+  scope.
 
 ---
 

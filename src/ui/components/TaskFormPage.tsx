@@ -4,14 +4,13 @@ import { TagPicker } from './TagPicker';
 import { RecurrencePicker } from './RecurrencePicker';
 import { DescriptionEditor } from './DescriptionEditor';
 import { LinksField } from './LinksField';
-import { Button, Chip, DateInput, Field, Input, LinkButton, Select } from '../primitives';
+import { ClientChipPicker, DueField, FormActionBar, SidebarSection, TitleField } from './task-form';
+import { Field, LinkButton, Select } from '../primitives';
 import { clientIdOf, isDone } from '../utils';
-import { GENERAL_TODO_CLIENT_ID, GENERAL_TODO_COLOR, GENERAL_TODO_LABEL } from '../../model/todos';
 import { formatRecurrence, type RecurrenceAnchor } from '../../model/recurrence';
 import type { Task } from '../../model/types';
 import type { TaskFormFields } from '../model';
 import { closeTaskForm, navigateToDashboard, useRoute, useTaskFormInstance, type TaskFormSeed } from '../router';
-import { today } from '../../util/date';
 
 /** The fields a form starts with: the task's own values when editing, the seed's
  *  when adding. Read once, at mount — from there the form owns them, and a fresh
@@ -44,33 +43,6 @@ function initialFields(task: Task | undefined, seed: TaskFormSeed): TaskFormFiel
     tags: task.tags ?? [],
     description: task.description || '',
   };
-}
-
-/** One labelled block in the form's right-hand rail. The rule above each block
- *  is what keeps a stack of unrelated fields readable at this width — there's no
- *  room for the whitespace a single column would use. `divider` is off for the
- *  block that opens the rail, which has nothing above it to be separated from. */
-function SidebarSection({
-  title,
-  hint,
-  divider = true,
-  children,
-}: {
-  title?: string;
-  hint?: string;
-  divider?: boolean;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className={'pb-[18px] ' + (divider ? 'border-t border-neutral-375 pt-[18px]' : '')}>
-      {title && (
-        <label className="block font-semibold text-body mb-[10px]">
-          {title} {hint && <span className="text-neutral-625 font-normal">({hint})</span>}
-        </label>
-      )}
-      {children}
-    </section>
-  );
 }
 
 /** Resolves what the form should start from, then mounts it under a key that
@@ -145,10 +117,8 @@ function TaskForm({ editingId, task, seed }: { editingId: string | null; task: T
   const [description, setDescription] = useState(initial.description);
   // An existing description opens as a preview; an empty one opens ready to type.
   const [descMode, setDescMode] = useState<'preview' | 'edit'>(initial.description ? 'preview' : 'edit');
-  const [addingClient, setAddingClient] = useState(false);
-  const [newClientName, setNewClientName] = useState('');
 
-  const { snap, tasks, clients, allClients, colorOf, allTags, submitTask, createClient, deleteTask: onDelete } = useData();
+  const { tasks, allTags, submitTask, deleteTask: onDelete } = useData();
   // Usage-ranked, so the picker offers the tags actually in circulation first.
   const knownTags = useMemo(() => allTags.map((t) => t.tag), [allTags]);
   const parentOptions = useMemo(
@@ -156,29 +126,14 @@ function TaskForm({ editingId, task, seed }: { editingId: string | null; task: T
     [tasks, clientId, editingId],
   );
   const canAdd = title.trim().length > 0 && !!clientId;
-  // Archived clients aren't offered for new work, but a task already filed under
-  // one keeps showing it — otherwise editing that task looks unassigned and the
-  // next click silently moves it to another client.
-  const pickableClients = useMemo(() => {
-    const current = allClients.find((c) => c.id === clientId);
-    return current?.archived ? [...clients, current] : clients;
-  }, [clients, allClients, clientId]);
-  // The snapshot's day rolls over with the app; fall back to the clock before the
-  // first snapshot lands so the shortcut is never a stale or empty date.
-  const todayKey = snap?.today || today();
 
   const onSave = () =>
     submitTask(editingId, { title, clientId, parentId, links, due, repeat, repeatFrom, repeatUntil, tags, description });
 
-  // Adding a client from inside the form switches to it once the write lands.
-  const onCreateClient = async (name: string) => {
-    const id = await createClient(name);
-    if (id) {
-      setClientId(id);
-      setParentId('');
-      setAddingClient(false);
-      setNewClientName('');
-    }
+  // Changing client invalidates the parent, whose options are that client's tasks.
+  const onPickClient = (id: string) => {
+    setClientId(id);
+    setParentId('');
   };
 
   // Saving goes through a ref so the subscribers below don't have to re-bind on
@@ -236,24 +191,7 @@ function TaskForm({ editingId, task, seed }: { editingId: string | null; task: T
         <div className="flex flex-col lg:flex-row lg:gap-8">
           <div className="contents lg:block lg:flex-1 lg:min-w-0">
             <div className="order-1">
-              <Field label="Title" className="mb-[22px]">
-                <Input
-                  autoFocus
-                  size="lg"
-                  variant="accent"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  onKeyDown={(e) => {
-                    // Bare ↵ only: ⌘↵ / ctrl+↵ is the form-wide shortcut above, and
-                    // handling it here too saved twice — two tasks from one keypress.
-                    if (e.key === 'Enter' && !e.metaKey && !e.ctrlKey) {
-                      onSave();
-                    }
-                  }}
-                  placeholder="Add a title for this task"
-                  className="w-full"
-                />
-              </Field>
+              <TitleField value={title} onChange={setTitle} onSubmit={onSave} />
             </div>
 
             <div className="order-3">
@@ -273,70 +211,7 @@ function TaskForm({ editingId, task, seed }: { editingId: string | null; task: T
 
           <aside className="contents lg:block lg:w-[320px] lg:shrink-0 lg:border-l lg:border-neutral-375 lg:pl-8">
             <div className="order-2">
-              <SidebarSection title="Client" divider={false}>
-                <div className="flex flex-wrap gap-[10px]">
-                  {pickableClients.map((c) => {
-                    const active = c.id === clientId;
-                    return (
-                      <Chip
-                        key={c.id}
-                        variant="select"
-                        selected={active}
-                        onClick={() => {
-                          setClientId(c.id);
-                          setParentId('');
-                        }}
-                        title={c.archived ? `${c.name} (archived)` : c.name}
-                      >
-                        <span className="w-[9px] h-[9px] rounded-full" style={{ background: colorOf(c.id) }} />
-                        {c.name}
-                      </Chip>
-                    );
-                  })}
-                  <Chip
-                    variant="select"
-                    selected={clientId === GENERAL_TODO_CLIENT_ID}
-                    onClick={() => {
-                      setClientId(GENERAL_TODO_CLIENT_ID);
-                      setParentId('');
-                    }}
-                    title="A general to-do not linked to any client"
-                  >
-                    <span className="w-[9px] h-[9px] rounded-full" style={{ background: GENERAL_TODO_COLOR }} />
-                    {GENERAL_TODO_LABEL}
-                  </Chip>
-                  {!addingClient && (
-                    <Chip variant="add" onClick={() => setAddingClient(true)}>
-                      + Add client
-                    </Chip>
-                  )}
-                </div>
-                {addingClient && (
-                  <div className="flex flex-wrap gap-2 mt-[10px]">
-                    <Input
-                      autoFocus
-                      value={newClientName}
-                      onChange={(e) => setNewClientName(e.target.value)}
-                      onKeyDown={(e) => {
-                        // Bare ↵ only, for the same reason as the title field: ⌘↵ here
-                        // would add the client *and* save the task in one keypress.
-                        if (e.key === 'Enter' && !e.metaKey && !e.ctrlKey) {
-                          void onCreateClient(newClientName);
-                        }
-                      }}
-                      aria-label="New client name"
-                      placeholder="New client name"
-                      className="flex-1 min-w-[150px]"
-                    />
-                    <Button variant="primary" size="md" onClick={() => void onCreateClient(newClientName)}>
-                      Add
-                    </Button>
-                    <LinkButton size="lg" onClick={() => setAddingClient(false)}>
-                      Cancel
-                    </LinkButton>
-                  </div>
-                )}
-              </SidebarSection>
+              <ClientChipPicker value={clientId} onChange={onPickClient} />
             </div>
 
             <div className="order-4 mt-[22px] lg:mt-0">
@@ -356,36 +231,7 @@ function TaskForm({ editingId, task, seed }: { editingId: string | null; task: T
                 </Field>
               </SidebarSection>
 
-              {/* With a repeat rule this date isn't a deadline — it's where the series
-                  starts, and it rolls forward on its own from there. The repeat block
-                  owns it in that case, next to the rule it belongs to. */}
-              {!repeat.trim() && (
-                <SidebarSection>
-                  <Field
-                    label="Due"
-                    hint="optional"
-                    action={
-                      due && (
-                        <LinkButton size="xs" onClick={() => setDue('')}>
-                          Clear
-                        </LinkButton>
-                      )
-                    }
-                  >
-                    <DateInput value={due} onChange={(e) => setDue(e.target.value)} className="w-full" />
-                    {/* Today is by far the most common due date, and picking it from the
-                        native date input takes more clicks than it's worth. */}
-                    <Chip
-                      variant="filter"
-                      selected={due === todayKey}
-                      onClick={() => setDue(due === todayKey ? '' : todayKey)}
-                      className="mt-2"
-                    >
-                      Today
-                    </Chip>
-                  </Field>
-                </SidebarSection>
-              )}
+              {!repeat.trim() && <DueField value={due} onChange={setDue} />}
 
               <SidebarSection>
                 <RecurrencePicker
@@ -412,29 +258,7 @@ function TaskForm({ editingId, task, seed }: { editingId: string | null; task: T
         </div>
       </div>
 
-      <div className="sticky bottom-0 bg-white border-t border-neutral-375">
-        <div className="max-w-[1240px] mx-auto w-full flex items-center justify-between px-5 py-3 md:px-8">
-          <div>
-            {editingId && (
-              <Button variant="danger" size="lg" onClick={() => onDelete(editingId)}>
-                Delete
-              </Button>
-            )}
-          </div>
-          <div className="flex gap-[10px]">
-            <Button variant="neutral" size="lg" onClick={closeTaskForm}>
-              Close
-            </Button>
-            {/* `submitTask` already returns early without a title or a client, so
-                disabling here only surfaces that rule to the keyboard and to
-                assistive tech — it doesn't change what a click does. */}
-            <Button variant="primary" size="lg" onClick={onSave} disabled={!canAdd}>
-              {editingId ? 'Save task' : 'Add task'}
-            </Button>
-          </div>
-        </div>
-      </div>
-
+      <FormActionBar editingId={editingId} canSave={canAdd} onSave={onSave} onDelete={onDelete} />
     </div>
   );
 }

@@ -4,7 +4,7 @@
 // and a preset that names no day lets the series drift.
 
 import { describe, it, expect } from 'vitest';
-import { kindOf, seedFor } from '../src/ui/components/RecurrencePicker';
+import { kindOf, seedFor } from '../src/model/recurrencePresets';
 import { formatRecurrence, parseRecurrence, type Recurrence } from '../src/model/recurrence';
 
 function rec(expr: string): Recurrence {

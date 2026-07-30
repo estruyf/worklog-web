@@ -1,0 +1,65 @@
+import React from 'react';
+import type { AppView } from '../../model';
+import { Badge } from '../../primitives';
+import { useData, useUi } from '../../context';
+import { isGeneralTodoClientId } from '../../../model/todos';
+import { collectOverdue } from '../../../model/overdue';
+import { clientIdOf, isDone } from '../../utils';
+import {
+  NavArchiveIcon,
+  NavCalendarIcon,
+  NavClientsIcon,
+  NavDayIcon,
+  NavInsightsIcon,
+  NavOverdueIcon,
+  NavTodosIcon,
+} from '../icons';
+import { navItemClass } from './styles';
+
+/** Nav tabs, in display order. Each keeps the app's tuned glyph — see `icons.tsx`. */
+const NAV_ITEMS: { view: AppView; label: string; icon: React.ReactNode }[] = [
+  { view: 'day', label: 'Day', icon: <NavDayIcon /> },
+  { view: 'overdue', label: 'Overdue', icon: <NavOverdueIcon /> },
+  { view: 'todos', label: 'To-dos', icon: <NavTodosIcon /> },
+  { view: 'calendar', label: 'Calendar', icon: <NavCalendarIcon /> },
+  { view: 'clients', label: 'Clients', icon: <NavClientsIcon /> },
+  { view: 'insights', label: 'Insights', icon: <NavInsightsIcon /> },
+  { view: 'archive', label: 'Archive', icon: <NavArchiveIcon /> },
+];
+
+/** The seven view tabs, with counts on the two that would otherwise go unnoticed. */
+export function NavList({ onGo }: { onGo: (view: AppView) => void }) {
+  const { view } = useUi();
+  const { tasks, today } = useData();
+
+  // Open general to-dos get a count badge — they're the one nav target whose list
+  // isn't tied to the selected day, so nothing else surfaces that they're waiting.
+  const todoCount = React.useMemo(
+    () => tasks.filter((t) => isGeneralTodoClientId(clientIdOf(t)) && !isDone(t)).length,
+    [tasks],
+  );
+  // What has slipped past its due date, counted against today rather than the
+  // day being browsed: the rail says the same thing wherever you are in the app.
+  const overdueCount = React.useMemo(() => collectOverdue(tasks, today).length, [tasks, today]);
+
+  return (
+    <nav className="flex flex-col gap-[3px] px-[10px]">
+      {NAV_ITEMS.map((item) => (
+        <button key={item.view} onClick={() => onGo(item.view)} className={navItemClass(view === item.view)}>
+          <span className="shrink-0">{item.icon}</span>
+          {item.label}
+          {item.view === 'todos' && todoCount > 0 && (
+            <Badge size="sm" className="ml-auto">
+              {todoCount}
+            </Badge>
+          )}
+          {item.view === 'overdue' && overdueCount > 0 && (
+            <Badge size="sm" tone="danger" className="ml-auto">
+              {overdueCount}
+            </Badge>
+          )}
+        </button>
+      ))}
+    </nav>
+  );
+}

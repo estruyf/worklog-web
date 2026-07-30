@@ -7,14 +7,13 @@ import {
   type Recurrence,
   type RecurrenceAnchor,
 } from '../../model/recurrence';
+import { kindOf, RECURRENCE_PRESETS, seedFor } from '../../model/recurrencePresets';
 import { Chip, DateInput, Field, Input, LinkButton, Select, SegmentedControl } from '../primitives';
 import { parseISODate, today, weekdayOf } from '../../util/date';
 
-const WEEKDAY_NAMES = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
 const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 /** Monday-first, the way a work week reads; the values are still 0 = Sunday. */
 const WEEKDAY_ORDER = [1, 2, 3, 4, 5, 6, 0];
-const BUSINESS_DAYS = [1, 2, 3, 4, 5];
 
 export interface RecurrencePickerProps {
   /** Canonical repeat expression; '' means the task does not repeat. */
@@ -31,72 +30,6 @@ export interface RecurrencePickerProps {
    *  lands in). '' lets the rule pick its own first slot. */
   due: string;
   onDueChange: (due: string) => void;
-}
-
-type PresetKind = 'daily' | 'weekdays' | 'weekly' | 'biweekly' | 'monthly' | 'yearly';
-
-const PRESETS: { kind: PresetKind; label: string }[] = [
-  { kind: 'daily', label: 'Daily' },
-  { kind: 'weekdays', label: 'Weekdays' },
-  { kind: 'weekly', label: 'Weekly' },
-  { kind: 'biweekly', label: 'Every 2 weeks' },
-  { kind: 'monthly', label: 'Monthly' },
-  { kind: 'yearly', label: 'Yearly' },
-];
-
-function isBusinessWeek(weekdays: number[] | undefined): boolean {
-  return !!weekdays && weekdays.length === 5 && BUSINESS_DAYS.every((d) => weekdays.includes(d));
-}
-
-/**
- * Which preset chip a rule belongs to, matched on its *shape* (unit + interval)
- * rather than its exact text. Picking a different weekday or day-of-month has to
- * leave the chip selected — matching on text would drop every edited rule into
- * "Custom" the moment it stopped being the seeded default.
- */
-export function kindOf(rec: Recurrence): PresetKind | undefined {
-  if (rec.unit === 'day' && rec.interval === 1) {
-    return 'daily';
-  }
-  if (rec.unit === 'week' && rec.interval === 1) {
-    return isBusinessWeek(rec.weekdays) ? 'weekdays' : 'weekly';
-  }
-  if (rec.unit === 'week' && rec.interval === 2) {
-    return 'biweekly';
-  }
-  if (rec.unit === 'month' && rec.interval === 1) {
-    return 'monthly';
-  }
-  if (rec.unit === 'year' && rec.interval === 1) {
-    return 'yearly';
-  }
-  return undefined;
-}
-
-/**
- * The expression a preset chip starts from. Presets name their day explicitly
- * ("weekly on thu", not "weekly") and take it from the due date: a rule with no
- * day named falls back to whatever date it is next stepped from, which lets a
- * month-end clamp pull the series permanently earlier.
- */
-export function seedFor(kind: PresetKind, due: string): string {
-  const parts = parseISODate(due) ?? parseISODate(today())!;
-  const iso = `${String(parts.y).padStart(4, '0')}-${String(parts.m).padStart(2, '0')}-${String(parts.d).padStart(2, '0')}`;
-  const weekday = WEEKDAY_NAMES[weekdayOf(iso)];
-  switch (kind) {
-    case 'daily':
-      return 'daily';
-    case 'weekdays':
-      return 'weekdays';
-    case 'weekly':
-      return `weekly on ${weekday}`;
-    case 'biweekly':
-      return `every 2 weeks on ${weekday}`;
-    case 'monthly':
-      return `monthly on ${parts.d}`;
-    case 'yearly':
-      return `yearly on ${String(parts.m).padStart(2, '0')}-${String(parts.d).padStart(2, '0')}`;
-  }
 }
 
 // Sized to the row rather than fixed: seven of these have to fit across the task
@@ -271,7 +204,7 @@ export function RecurrencePicker({
         <Chip variant="select" selected={!repeats && !customMode} onClick={() => pick('')}>
           Never
         </Chip>
-        {PRESETS.map((p) => (
+        {RECURRENCE_PRESETS.map((p) => (
           <Chip
             key={p.kind}
             variant="select"

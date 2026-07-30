@@ -6,7 +6,8 @@ import { EVENT_COLOR, monthLabel, num } from '../utils';
 import { HoursByClientChart } from '../components/charts/HoursByClientChart';
 import { MonthlyTrendChart, type TrendPoint } from '../components/charts/MonthlyTrendChart';
 import { isEventWorklogClientId } from '../../model/worklog';
-import { Card, EmptyState, Select } from '../primitives';
+import { Select } from '../primitives';
+import { HoursTable, StatTile } from './insights-view';
 
 /** Rolls up the selected month's worklog into per-client hours/days rows. */
 function useInsightsData() {
@@ -115,93 +116,35 @@ export function InsightsView() {
         </div>
 
         <div className="grid grid-cols-3 gap-[14px] mb-[26px]">
-          <div className="bg-neutral-225 rounded-[11px] px-5 py-[18px]">
-            <div className="text-control text-neutral-675 mb-2">Clients</div>
-            <div className="text-[28px] font-bold">{clientCount}</div>
-          </div>
-          <div className="bg-neutral-225 rounded-[11px] px-5 py-[18px]">
-            <div className="text-control text-neutral-675 mb-2">Total hours</div>
-            <div className="text-[28px] font-bold">{totalHours}</div>
-          </div>
-          <div className="bg-neutral-225 rounded-[11px] px-5 py-[18px]">
-            <div className="text-control text-neutral-675 mb-2">Total days</div>
-            <div className="text-[28px] font-bold">{totalDays}</div>
-          </div>
+          <StatTile label="Clients" value={clientCount} />
+          <StatTile label="Total hours" value={totalHours} />
+          <StatTile label="Total days" value={totalDays} />
         </div>
 
         <HoursByClientChart rows={monthlyRows} />
 
-        <Card className="overflow-hidden">
-          <div className="grid grid-cols-[1.4fr_0.7fr_0.7fr_2.6fr] gap-3 px-[18px] py-3 bg-neutral-150 border-b border-neutral-375 text-eyebrow font-bold tracking-eyebrow text-neutral-675">
-            <span>CLIENT</span>
-            <span className="text-right">HOURS</span>
-            <span className="text-right">DAYS</span>
-            <span className="pl-[14px]">DATES</span>
-          </div>
-          {monthlyRows.map((r, i) => (
-            <div key={i} className="grid grid-cols-[1.4fr_0.7fr_0.7fr_2.6fr] gap-3 px-[18px] py-[13px] border-b border-neutral-275 items-center text-body">
-              <span className="flex items-center gap-[9px]">
-                <span className="w-[9px] h-[9px] rounded-full" style={{ background: r.color }} />
-                {r.name}
-              </span>
-              <span className="text-right tabular-nums">{r.hours}</span>
-              <span className="text-right tabular-nums">{r.days}</span>
-              <div className="pl-[14px] flex flex-wrap gap-2">
-                {r.dates.map((d, idx) => (
-                  <span key={d.date}>
-                    <a onClick={() => onOpenDate(d.date)} className="text-info cursor-pointer tabular-nums hover:underline">
-                      {d.label}
-                    </a>
-                    {idx < r.dates.length - 1 && <span className="text-neutral-675">,</span>}
-                  </span>
-                ))}
-              </div>
-            </div>
-          ))}
-          {monthlyRows.length === 0 && <EmptyState className="px-[18px] py-[13px]">No time logged this month.</EmptyState>}
-          <div className="grid grid-cols-[1.4fr_0.7fr_0.7fr_2.6fr] gap-3 px-[18px] py-[13px] bg-neutral-75 text-body font-bold">
-            <span>Total</span>
-            <span className="text-right tabular-nums">{totalHours}</span>
-            <span className="text-right tabular-nums">{totalDays}</span>
-            <span />
-          </div>
-        </Card>
+        <HoursTable
+          heading="Client"
+          rows={monthlyRows}
+          totalLabel="Total"
+          totalHours={totalHours}
+          totalDays={totalDays}
+          onOpenDate={onOpenDate}
+          empty="No time logged this month."
+        />
 
+        {/* Events are their own table rather than more rows: they are not clients,
+            and folding them in would double-count the month's total. */}
         {eventRows.length > 0 && (
-          <Card className="overflow-hidden mt-[18px]">
-            <div className="grid grid-cols-[1.4fr_0.7fr_0.7fr_2.6fr] gap-3 px-[18px] py-3 bg-neutral-150 border-b border-neutral-375 text-eyebrow font-bold tracking-eyebrow text-neutral-675">
-              <span>EVENT</span>
-              <span className="text-right">HOURS</span>
-              <span className="text-right">DAYS</span>
-              <span className="pl-[14px]">DATES</span>
-            </div>
-            {eventRows.map((r, i) => (
-              <div key={i} className="grid grid-cols-[1.4fr_0.7fr_0.7fr_2.6fr] gap-3 px-[18px] py-[13px] border-b border-neutral-275 items-center text-body">
-                <span className="flex items-center gap-[9px]">
-                  <span className="w-[9px] h-[9px] rounded-full" style={{ background: r.color }} />
-                  {r.name}
-                </span>
-                <span className="text-right tabular-nums">{r.hours}</span>
-                <span className="text-right tabular-nums">{r.days}</span>
-                <div className="pl-[14px] flex flex-wrap gap-2">
-                  {r.dates.map((d, idx) => (
-                    <span key={d.date}>
-                      <a onClick={() => onOpenDate(d.date)} className="text-info cursor-pointer tabular-nums hover:underline">
-                        {d.label}
-                      </a>
-                      {idx < r.dates.length - 1 && <span className="text-neutral-675">,</span>}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            ))}
-            <div className="grid grid-cols-[1.4fr_0.7fr_0.7fr_2.6fr] gap-3 px-[18px] py-[13px] bg-neutral-75 text-body font-bold">
-              <span>Total events</span>
-              <span className="text-right tabular-nums">{eventTotalHours}</span>
-              <span className="text-right tabular-nums">{eventTotalDays}</span>
-              <span />
-            </div>
-          </Card>
+          <HoursTable
+            heading="Event"
+            rows={eventRows}
+            totalLabel="Total events"
+            totalHours={eventTotalHours}
+            totalDays={eventTotalDays}
+            onOpenDate={onOpenDate}
+            className="mt-[18px]"
+          />
         )}
         <div className="text-control text-neutral-625 mt-[14px]">Days derived as hours / {hoursPerDay} (hoursPerDay). Click a date to open that day.</div>
 

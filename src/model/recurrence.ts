@@ -56,7 +56,8 @@ const WEEKDAY_ALIASES: Record<string, number> = {
   fri: 5, friday: 5,
   sat: 6, saturday: 6,
 };
-const BUSINESS_DAYS = [1, 2, 3, 4, 5];
+/** Mon-Fri, 0 = Sunday. Exported because a "weekdays" rule is built from it. */
+export const BUSINESS_DAYS = [1, 2, 3, 4, 5];
 
 /** Upper bound on occurrence stepping, so a malformed rule can never hang the tab. */
 const MAX_STEPS = 800;
@@ -242,7 +243,8 @@ function formatSpec(rec: Recurrence): string | undefined {
   }
 }
 
-function isBusinessWeek(weekdays: number[] | undefined): boolean {
+/** A full Mon-Fri set, which both the formatter and the presets read as "weekdays". */
+export function isBusinessWeek(weekdays: number[] | undefined): boolean {
   return !!weekdays && weekdays.length === 5 && BUSINESS_DAYS.every((d) => weekdays.includes(d));
 }
 

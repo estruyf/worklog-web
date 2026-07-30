@@ -1,30 +1,15 @@
 import React, { useMemo, useState } from 'react';
 import type { WorklogEntry } from '../../model/types';
-import { eventTypeFromClientId, formatEventTypeLabel, isEventWorklogClientId } from '../../model/worklog';
-import { CalendarArrowUpIcon, ChevronLeftIcon, ChevronRightIcon } from 'lucide-react';
-import { Badge, Button, Card, EmptyState, IconButton, LinkButton, SectionLabel, SegmentedControl } from '../primitives';
-import { DisclosureIcon } from '../components';
 import { useData, useUi } from '../context';
 import { navigateToView } from '../router';
-import {
-  calendarCells,
-  deriveWorkedByClient,
-  EVENT_COLOR,
-  fmtShort,
-  num,
-  periodLabel,
-  shiftPeriod,
-  WEEKDAYS,
-  ymOf,
-  type CalendarMode,
-  type ClientWorkGroup,
-} from '../utils';
+import { calendarCells, deriveWorkedByClient, WEEKDAYS, ymOf, type CalendarMode } from '../utils';
+import { CalendarGrid, colorFor, labelFor, Legend, PeriodNav, WorkedPerClient, type LegendEntry } from './calendar-view';
 
 /** Month- or week-grid overview of who you worked for each day, with the period's
  * work rolled up per client underneath. Clicking a day opens it in the Day view,
  * where past days can be edited and future days can be planned. */
 export function CalendarView() {
-  const { worklog, tasks, colorOf, clientName, hoursPerDay, today, weekStart, openDetail } = useData();
+  const { worklog, tasks, colorOf, clientName, today, weekStart, openDetail } = useData();
   const { selectedDate, setSelectedDate } = useUi();
   const [mode, setMode] = useState<CalendarMode>('month');
   // A full date, not a YYYY-MM: switching between month and week then keeps the
@@ -52,16 +37,13 @@ export function CalendarView() {
 
   // Colors used across the visible period, deduped by client/event id, so the
   // mobile color-only cells can be decoded via a legend underneath the grid.
-  const legend = useMemo(() => {
+  const legend = useMemo<LegendEntry[]>(() => {
     const seen = new Map<string, { color: string; label: string }>();
     for (const date of cells) {
       if (!date) continue;
       for (const l of logsByDate.get(date) ?? []) {
         if (seen.has(l.clientId)) continue;
-        seen.set(l.clientId, {
-          color: isEventWorklogClientId(l.clientId) ? EVENT_COLOR : colorOf(l.clientId),
-          label: labelFor(l.clientId, clientName),
-        });
+        seen.set(l.clientId, { color: colorFor(l.clientId, colorOf), label: labelFor(l.clientId, clientName) });
       }
     }
     return [...seen.entries()].map(([id, e]) => ({ id, ...e }));
@@ -83,10 +65,7 @@ export function CalendarView() {
       openDetail(t);
     }
   };
-  // A week shows a seventh of the days a month does, so its cells get the room to
-  // list every client that logged time rather than collapsing into "+n more".
   const isWeek = mode === 'week';
-  const maxPerCell = isWeek ? 6 : 3;
   // A week grid holds exactly its own seven days, so today being among the cells
   // means it's the current week; a month grid pads with neighbouring days, so
   // that check would light up on the months either side — compare the month.
@@ -98,243 +77,15 @@ export function CalendarView() {
         <div className="flex flex-col md:flex-row md:items-center gap-3 mb-7">
           <h1 className="text-[24px] font-bold m-0 tracking-[-0.01em]">Calendar</h1>
           <div className="hidden md:block flex-1" />
-          <SegmentedControl
-            aria-label="Calendar period"
-            size="sm"
-            options={[
-              { value: 'month', label: 'Month' },
-              { value: 'week', label: 'Week' },
-            ]}
-            value={mode}
-            onChange={(m: CalendarMode) => setMode(m)}
-            className="self-start md:self-auto"
-          />
-          {/* Same control order as the Day view: Today, then the arrows, then the
-           * period label — so stepping through periods leaves the buttons put. */}
-          <div className="flex items-center gap-2">
-            <Button
-              size="xs"
-              onClick={() => setCursor(today)}
-              disabled={isCurrentPeriod}
-              title={isWeek ? 'Jump to this week' : 'Jump to this month'}
-              className="shrink-0"
-            >
-              <CalendarArrowUpIcon size={14} className="text-neutral-675" /> Today
-            </Button>
-            <IconButton
-              size="sm"
-              onClick={() => setCursor(shiftPeriod(mode, cursor, -1, weekStart))}
-              title={isWeek ? 'Previous week' : 'Previous month'}
-              aria-label={isWeek ? 'Previous week' : 'Previous month'}
-            >
-              <ChevronLeftIcon size={16} />
-            </IconButton>
-            <IconButton
-              size="sm"
-              onClick={() => setCursor(shiftPeriod(mode, cursor, 1, weekStart))}
-              title={isWeek ? 'Next week' : 'Next month'}
-              aria-label={isWeek ? 'Next week' : 'Next month'}
-            >
-              <ChevronRightIcon size={16} />
-            </IconButton>
-            <div className="flex-1 md:flex-none text-[15px] font-semibold whitespace-nowrap">{periodLabel(mode, cursor, weekStart)}</div>
-          </div>
+          <PeriodNav mode={mode} onModeChange={setMode} cursor={cursor} onCursorChange={setCursor} isCurrentPeriod={isCurrentPeriod} />
         </div>
 
-        <div className="grid grid-cols-7 gap-[6px] mb-2">
-          {weekdays.map((w) => (
-            <SectionLabel key={w} className="justify-center py-1">
-              {w}
-            </SectionLabel>
-          ))}
-        </div>
+        <CalendarGrid weekdays={weekdays} cells={cells} logsByDate={logsByDate} cursor={cursor} isWeek={isWeek} onOpenDay={openDay} />
 
-        <div className="grid grid-cols-7 gap-[6px]">
-          {cells.map((date, i) => {
-            if (!date) {
-              return <div key={`pad-${i}`} className="min-h-[84px] rounded-[10px] bg-neutral-100" />;
-            }
-            const day = Number(date.slice(8, 10));
-            const logs = logsByDate.get(date) ?? [];
-            const isToday = date === today;
-            const isSel = date === selectedDate;
-            const isOtherMonth = !isWeek && ymOf(date) !== ymOf(cursor);
-            return (
-              <button
-                key={date}
-                onClick={() => openDay(date)}
-                title={logs.length ? logs.map((l) => `${labelFor(l.clientId, clientName)} · ${l.hours}h`).join('\n') : undefined}
-                className={
-                  'rounded-[10px] border p-[7px] text-left cursor-pointer flex flex-col gap-[6px] transition-colors ' +
-                  (isWeek ? 'min-h-[150px] ' : 'min-h-[84px] ') +
-                  (isSel
-                    ? 'border-brand-500 bg-brand-225'
-                    : isOtherMonth
-                      ? 'border-neutral-375 bg-neutral-100 hover:bg-neutral-200 hover:border-neutral-475'
-                      : 'border-neutral-375 bg-white hover:bg-neutral-200 hover:border-neutral-475')
-                }
-              >
-                <span
-                  className={
-                    'text-control leading-none w-[22px] h-[22px] flex items-center justify-center rounded-full self-start ' +
-                    (isToday ? 'bg-neutral-825 text-white font-semibold' : 'text-neutral-750 font-medium')
-                  }
-                >
-                  {day}
-                </span>
-                {logs.length > 0 && (
-                  <span className="flex md:hidden flex-wrap gap-[3px] w-full">
-                    {Array.from(new Set(logs.map((l) => (isEventWorklogClientId(l.clientId) ? EVENT_COLOR : colorOf(l.clientId))))).map((c, j) => (
-                      <span key={j} className="w-[11px] h-[11px] rounded-full shrink-0" style={{ background: c }} />
-                    ))}
-                  </span>
-                )}
-                {logs.length > 0 && (
-                  <span className="hidden md:flex flex-col gap-[3px] w-full overflow-hidden">
-                    {logs.slice(0, maxPerCell).map((l, j) => (
-                      <span key={j} className="flex items-center gap-[5px] min-w-0">
-                        <span
-                          className="w-[7px] h-[7px] rounded-full shrink-0"
-                          style={{ background: isEventWorklogClientId(l.clientId) ? EVENT_COLOR : colorOf(l.clientId) }}
-                        />
-                        <span className="text-eyebrow text-neutral-750 truncate">{labelFor(l.clientId, clientName)}</span>
-                      </span>
-                    ))}
-                    {logs.length > maxPerCell && <span className="text-status text-neutral-650 pl-[12px]">+{logs.length - maxPerCell} more</span>}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
+        <Legend entries={legend} />
 
-        {legend.length > 0 && (
-          <div className="flex md:hidden flex-wrap gap-x-4 gap-y-2 mt-5">
-            {legend.map((e) => (
-              <span key={e.id} className="flex items-center gap-[6px]">
-                <span className="w-[11px] h-[11px] rounded-full shrink-0" style={{ background: e.color }} />
-                <span className="text-meta text-neutral-750">{e.label}</span>
-              </span>
-            ))}
-          </div>
-        )}
-
-        <WorkedPerClient groups={groups} isWeek={isWeek} hoursPerDay={hoursPerDay} onOpenDay={openDay} onOpenTask={openTask} />
+        <WorkedPerClient groups={groups} isWeek={isWeek} onOpenDay={openDay} onOpenTask={openTask} />
       </div>
     </div>
   );
-}
-
-type WorkedPerClientProps = {
-  groups: ClientWorkGroup[];
-  isWeek: boolean;
-  hoursPerDay: number;
-  onOpenDay: (date: string) => void;
-  onOpenTask: (id: string) => void;
-};
-
-/** The visible period's work, one collapsed row per client: over a month the task
- * lists add up to far more than a screen, so a row stays a single line — dot, name,
- * hours, task count — until it's opened. Its tasks then unfold underneath, each
- * with the days it was touched. */
-function WorkedPerClient({ groups, isWeek, hoursPerDay, onOpenDay, onOpenTask }: WorkedPerClientProps) {
-  const [openIds, setOpenIds] = useState<string[]>([]);
-  const totalHours = groups.reduce((sum, g) => sum + g.hours, 0);
-  const daysOf = (hours: number) => (hoursPerDay ? num(Math.round((hours / hoursPerDay) * 100) / 100) : '0');
-  const allOpen = groups.length > 0 && groups.every((g) => openIds.includes(g.id));
-  const toggle = (id: string) => setOpenIds((ids) => (ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]));
-
-  return (
-    <div className="mt-10">
-      <div className="flex items-center gap-[10px] mb-[14px]">
-        <SectionLabel>{isWeek ? 'Worked this week' : 'Worked this month'}</SectionLabel>
-        {totalHours > 0 && (
-          <Badge tone="brand" size="sm">
-            {num(totalHours)}h · {daysOf(totalHours)}d
-          </Badge>
-        )}
-        {groups.length > 1 && (
-          <LinkButton size="xs" onClick={() => setOpenIds(allOpen ? [] : groups.map((g) => g.id))} className="ml-auto">
-            {allOpen ? 'Collapse all' : 'Expand all'}
-          </LinkButton>
-        )}
-      </div>
-
-      {groups.length === 0 ? (
-        <EmptyState>No time logged or tasks worked in this {isWeek ? 'week' : 'month'}.</EmptyState>
-      ) : (
-        <Card className="overflow-hidden">
-          {groups.map((g, i) => {
-            const open = openIds.includes(g.id);
-            return (
-              <div key={g.id} className={i > 0 ? 'border-t border-neutral-375' : ''}>
-                <button
-                  onClick={() => toggle(g.id)}
-                  className={
-                    'w-full flex items-center gap-[10px] px-[14px] py-[11px] border-none text-left cursor-pointer hover:bg-neutral-150 ' +
-                    (open ? 'bg-neutral-100' : 'bg-transparent')
-                  }
-                >
-                  <span className="text-neutral-625">
-                    <DisclosureIcon open={open} />
-                  </span>
-                  <span className="w-[9px] h-[9px] rounded-full shrink-0" style={{ background: g.color }} />
-                  <span className="font-semibold text-body truncate">{g.name}</span>
-                  <span className="ml-auto flex items-center gap-[10px] shrink-0">
-                    {g.hours > 0 && (
-                      <span className="text-chip text-neutral-700 tabular-nums">
-                        {num(g.hours)}h · {daysOf(g.hours)}d
-                      </span>
-                    )}
-                    {g.items.length > 0 && <Badge>{g.items.length}</Badge>}
-                  </span>
-                </button>
-
-                {open && (
-                  <div className="px-2 pb-[8px] pl-[32px] bg-neutral-100">
-                    {g.hours > 0 && (
-                      <div className="px-2.5 pb-1 text-meta text-neutral-675 tabular-nums">
-                        {num(g.hours)}h logged over {g.loggedDays} {g.loggedDays === 1 ? 'day' : 'days'}
-                      </div>
-                    )}
-                    {g.items.map((item) => (
-                      <div key={item.id} className="flex flex-wrap items-center gap-x-[10px] gap-y-1 py-[6px] px-2.5 rounded-lg hover:bg-neutral-225">
-                        <button
-                          onClick={() => onOpenTask(item.id)}
-                          title="Open task"
-                          className={
-                            'text-body text-left bg-transparent border-none p-0 cursor-pointer hover:underline ' +
-                            (item.done ? 'text-neutral-700 line-through decoration-neutral-550' : 'text-neutral-825')
-                          }
-                        >
-                          {item.title}
-                        </button>
-                        <span className="ml-auto flex flex-wrap gap-x-[8px] gap-y-1">
-                          {item.dates.map((d) => (
-                            <LinkButton key={d} size="xs" onClick={() => onOpenDay(d)} title="Open this day" className="tabular-nums">
-                              {fmtShort(d)}
-                            </LinkButton>
-                          ))}
-                        </span>
-                      </div>
-                    ))}
-                    {g.items.length === 0 && (
-                      <EmptyState size="sm" className="px-2.5 py-1">
-                        No tasks marked as worked.
-                      </EmptyState>
-                    )}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </Card>
-      )}
-    </div>
-  );
-}
-
-/** Display name for a worklog client id, resolving event pseudo-clients. */
-function labelFor(clientId: string, clientName: (id: string) => string): string {
-  return isEventWorklogClientId(clientId) ? formatEventTypeLabel(eventTypeFromClientId(clientId)) : clientName(clientId);
 }
