@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Icon } from './icons';
-import { LinkButton } from '../primitives';
+import { Input, LinkButton } from '../primitives';
 import { useData, useUi } from '../context';
 import { useSearchData } from '../hooks';
 import { Kbd } from './Kbd';
@@ -57,33 +56,39 @@ export function SearchOverlay() {
       >
         {/* Search input */}
         <div className="px-5 pt-5">
-          <div className="flex items-center gap-[10px] px-[14px] py-[10px] border border-brand-500 rounded-[9px] shadow-[0_0_0_3px_var(--color-brand-225)]">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#8A9099" strokeWidth="1.5">
-              <circle cx="7" cy="7" r="4.5" />
-              <path d="M10.5 10.5L14 14" />
-            </svg>
-            <input
-              id="worklog-search-input"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              autoFocus={true}
-              className="flex-1 bg-transparent text-input-fg outline-none focus-visible:outline-none!"
-              placeholder="Search tasks by title, link, description..."
-            />
-            {filtered && (
-              <span className="shrink-0 text-[13px] text-neutral-650">
-                {count} {count === 1 ? 'result' : 'results'}
-              </span>
-            )}
-            {search && (
-              <button className="text-muted hover:text-fg cursor-pointer" onClick={() => setSearch('')} aria-label="Clear">
-                <Icon name="close" />
-              </button>
-            )}
-            <button className="text-muted hover:text-fg cursor-pointer" onClick={close} aria-label="Close search" title="Close (Esc)">
-              <Kbd>Esc</Kbd>
-            </button>
-          </div>
+          {/* The clear `×` is the last thing in the row, as it is in the archive
+              filter — so the two search fields end the same way. */}
+          <Input
+            id="worklog-search-input"
+            size="lg"
+            variant="accent"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            autoFocus={true}
+            clearable
+            onClear={() => setSearch('')}
+            leading={
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#8A9099" strokeWidth="1.5" className="shrink-0">
+                <circle cx="7" cy="7" r="4.5" />
+                <path d="M10.5 10.5L14 14" />
+              </svg>
+            }
+            trailing={
+              <>
+                {filtered && (
+                  <span className="shrink-0 text-[13px] text-neutral-650">
+                    {count} {count === 1 ? 'result' : 'results'}
+                  </span>
+                )}
+                <button className="shrink-0 text-muted hover:text-fg cursor-pointer" onClick={close} aria-label="Close search" title="Close (Esc)">
+                  <Kbd>Esc</Kbd>
+                </button>
+              </>
+            }
+            aria-label="Search tasks"
+            placeholder="Search tasks by title, link, description..."
+            inputClassName="text-input-fg"
+          />
 
           {/* Scope segmented control + client chips + reset */}
           <div className="flex flex-wrap items-center gap-2 mt-[14px] mb-[14px]">

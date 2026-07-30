@@ -5,7 +5,7 @@ import type { Task } from '../../model/types';
 import { describeRecurrence } from '../../model/recurrence';
 import { isGeneralTodoClientId } from '../../model/todos';
 import { daysOverdue, formatDaysLate, isOverdue } from '../../model/overdue';
-import { Button, LinkButton } from '../primitives';
+import { Button, DateInput, LinkButton, TextArea } from '../primitives';
 import { useData, useUi } from '../context';
 import { useMarkdownImages } from '../hooks';
 import { navigateToDashboard, navigateToTask } from '../router';
@@ -226,11 +226,14 @@ export function TaskDetailPanel({ routed = false }: { routed?: boolean } = {}) {
         {!isDone(task) && !task.repeat && (
           <div className="flex items-center gap-[10px] mb-4 text-[13px] text-neutral-700">
             <span className={'font-semibold ' + (overdue ? 'text-danger-675' : '')}>{overdue ? 'Overdue · due' : 'Due'}</span>
-            <input
-              type="date"
+            {/* Overdue is a validation state, not a colour choice — `invalid`
+                is what paints the border and the text red. */}
+            <DateInput
+              size="sm"
+              invalid={overdue}
               value={task.due ?? ''}
               onChange={(e) => onSetDue(e.target.value)}
-              className={'px-3 py-[7px] border rounded-[8px] text-[13px] ' + (overdue ? 'border-danger-225 text-danger-675' : 'border-neutral-525')}
+              aria-label="Due date"
             />
             {overdue && <span className="text-[12.5px] text-danger-675">{formatDaysLate(lateBy)}</span>}
             {task.due && (
@@ -244,8 +247,8 @@ export function TaskDetailPanel({ routed = false }: { routed?: boolean } = {}) {
         {isDone(task) && (
           <div className="flex items-center gap-[10px] mb-4 text-[13px] text-neutral-700">
             <span className="font-semibold">Completed on</span>
-            <input
-              type="date"
+            <DateInput
+              size="sm"
               value={task.completed ?? ''}
               onChange={(e) => {
                 const nextDate = e.target.value;
@@ -253,7 +256,7 @@ export function TaskDetailPanel({ routed = false }: { routed?: boolean } = {}) {
                   onSetCompletedDate(task.id, nextDate);
                 }
               }}
-              className="px-3 py-[7px] border border-neutral-525 rounded-[8px] text-[13px]"
+              aria-label="Completion date"
             />
           </div>
         )}
@@ -325,14 +328,16 @@ export function TaskDetailPanel({ routed = false }: { routed?: boolean } = {}) {
 
         <input ref={img.fileInputRef} type="file" accept="image/*" multiple onChange={img.onFileChange} className="hidden" />
         {descMode === 'edit' ? (
-          <textarea
+          <TextArea
+            size="lg"
             value={descDraft}
             onChange={(e) => setDescDraft(e.target.value)}
             onPaste={img.onPaste}
             onDrop={img.onDrop}
             onDragOver={img.onDragOver}
+            aria-label="Description"
             placeholder={'Add a description in Markdown…\n\n## Notes\n- supports **bold**, *italic*, `code`\n- [links](https://example.com), lists, > quotes\n- paste, drop or add an image'}
-            className="w-full min-h-[280px] px-[14px] py-[12px] border border-neutral-525 rounded-[10px] text-[13.5px] leading-[1.6] outline-none focus:border-brand-500 focus:shadow-[0_0_0_3px_var(--color-brand-225)] resize-y"
+            className="w-full min-h-[280px] leading-[1.6]"
             style={{ fontFamily: "'JetBrains Mono', ui-monospace, monospace" }}
           />
         ) : descDraft.trim() ? (
@@ -372,7 +377,7 @@ export function TaskDetailPanel({ routed = false }: { routed?: boolean } = {}) {
             <div className="text-[13px] text-neutral-625 italic mb-3">No notes yet. Add one below to track progress on this task.</div>
           )}
           <div className="flex flex-col gap-2">
-            <textarea
+            <TextArea
               value={noteDraft}
               onChange={(e) => setNoteDraft(e.target.value)}
               onKeyDown={(e) => {
@@ -381,8 +386,9 @@ export function TaskDetailPanel({ routed = false }: { routed?: boolean } = {}) {
                   onAddNote();
                 }
               }}
+              aria-label="New note"
               placeholder="Add a note… (⌘/Ctrl+Enter to save). Supports Markdown."
-              className="w-full min-h-[68px] px-[14px] py-[10px] border border-neutral-525 rounded-[10px] text-[13.5px] leading-[1.55] outline-none focus:border-brand-500 focus:shadow-[0_0_0_3px_var(--color-brand-225)] resize-y"
+              className="w-full min-h-[68px] leading-[1.55]"
             />
             <div className="flex justify-end">
               <Button variant="primary" size="xs" onClick={onAddNote} disabled={!noteDraft.trim()} className="font-semibold">

@@ -3,7 +3,7 @@ import { useData, usePublishTaskFormBar } from '../context';
 import { TagPicker } from './TagPicker';
 import { RecurrencePicker } from './RecurrencePicker';
 import { useMarkdownImages } from '../hooks';
-import { Button, LinkButton } from '../primitives';
+import { Button, DateInput, Field, Input, LinkButton, Select } from '../primitives';
 import { clientIdOf, isDone, linksOf, renderMarkdown, makeImageResolver } from '../utils';
 import { GENERAL_TODO_CLIENT_ID, GENERAL_TODO_COLOR, GENERAL_TODO_LABEL } from '../../model/todos';
 import { formatRecurrence, type RecurrenceAnchor } from '../../model/recurrence';
@@ -237,21 +237,24 @@ function TaskForm({ editingId, task, seed }: { editingId: string | null; task: T
         <div className="flex flex-col lg:flex-row lg:gap-8">
           <div className="contents lg:block lg:flex-1 lg:min-w-0">
             <div className="order-1">
-              <label className="block font-semibold text-[14px] mb-2">Title</label>
-              <input
-                autoFocus
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                onKeyDown={(e) => {
-                  // Bare ↵ only: ⌘↵ / ctrl+↵ is the form-wide shortcut above, and
-                  // handling it here too saved twice — two tasks from one keypress.
-                  if (e.key === 'Enter' && !e.metaKey && !e.ctrlKey) {
-                    onSave();
-                  }
-                }}
-                placeholder="Add a title for this task"
-                className="w-full px-[14px] py-[11px] border border-brand-500 rounded-[9px] text-[16px] md:text-[14px] shadow-[0_0_0_3px_var(--color-brand-225)] mb-[22px] outline-none"
-              />
+              <Field label="Title" className="mb-[22px]">
+                <Input
+                  autoFocus
+                  size="lg"
+                  variant="accent"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  onKeyDown={(e) => {
+                    // Bare ↵ only: ⌘↵ / ctrl+↵ is the form-wide shortcut above, and
+                    // handling it here too saved twice — two tasks from one keypress.
+                    if (e.key === 'Enter' && !e.metaKey && !e.ctrlKey) {
+                      onSave();
+                    }
+                  }}
+                  placeholder="Add a title for this task"
+                  className="w-full"
+                />
+              </Field>
             </div>
 
             <div className="order-3">
@@ -356,7 +359,7 @@ function TaskForm({ editingId, task, seed }: { editingId: string | null; task: T
                 </div>
                 {addingClient && (
                   <div className="flex flex-wrap gap-2 mt-[10px]">
-                    <input
+                    <Input
                       autoFocus
                       value={newClientName}
                       onChange={(e) => setNewClientName(e.target.value)}
@@ -367,8 +370,9 @@ function TaskForm({ editingId, task, seed }: { editingId: string | null; task: T
                           void onCreateClient(newClientName);
                         }
                       }}
+                      aria-label="New client name"
                       placeholder="New client name"
-                      className="flex-1 min-w-[150px] px-[12px] py-[9px] border border-neutral-525 rounded-[9px] text-[16px] md:text-[13.5px] outline-none"
+                      className="flex-1 min-w-[150px]"
                     />
                     <Button variant="primary" size="md" onClick={() => void onCreateClient(newClientName)}>
                       Add
@@ -382,15 +386,20 @@ function TaskForm({ editingId, task, seed }: { editingId: string | null; task: T
             </div>
 
             <div className="order-4 mt-[22px] lg:mt-0">
-              <SidebarSection title="Parent" hint="optional">
-                <select value={parentId} onChange={(e) => setParentId(e.target.value)} className="w-full px-[12px] py-[9px] border border-neutral-525 rounded-[9px] text-[16px] md:text-[13.5px] bg-white">
-                  <option value="">— none —</option>
-                  {parentOptions.map((o) => (
-                    <option key={o.id} value={o.id}>
-                      {o.title}
-                    </option>
-                  ))}
-                </select>
+              {/* The label lives in a `Field` rather than on the section, so it
+                  points at the select — a section titles a group, and this group
+                  is one control. */}
+              <SidebarSection>
+                <Field label="Parent" hint="optional">
+                  <Select value={parentId} onChange={(e) => setParentId(e.target.value)} className="w-full">
+                    <option value="">— none —</option>
+                    {parentOptions.map((o) => (
+                      <option key={o.id} value={o.id}>
+                        {o.title}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
               </SidebarSection>
 
               {/* With a repeat rule this date isn't a deadline — it's where the series
@@ -398,34 +407,31 @@ function TaskForm({ editingId, task, seed }: { editingId: string | null; task: T
                   owns it in that case, next to the rule it belongs to. */}
               {!repeat.trim() && (
                 <SidebarSection>
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="block font-semibold text-[14px]">
-                      Due <span className="text-neutral-625 font-normal">(optional)</span>
-                    </label>
-                    {due && (
-                      <LinkButton size="xs" onClick={() => setDue('')}>
-                        Clear
-                      </LinkButton>
-                    )}
-                  </div>
-                  <input
-                    type="date"
-                    value={due}
-                    onChange={(e) => setDue(e.target.value)}
-                    className="w-full min-w-0 px-[12px] py-[9px] border border-neutral-525 rounded-[9px] text-[16px] md:text-[13.5px] bg-white"
-                  />
-                  {/* Today is by far the most common due date, and picking it from the
-                      native date input takes more clicks than it's worth. */}
-                  <button
-                    type="button"
-                    onClick={() => setDue(due === todayKey ? '' : todayKey)}
-                    className={
-                      'mt-2 px-[11px] py-[4px] rounded-full text-[12px] font-semibold cursor-pointer border ' +
-                      (due === todayKey ? 'border-brand-500 bg-brand-450 text-brand-800' : 'border-neutral-525 bg-white text-neutral-725 hover:bg-neutral-200')
+                  <Field
+                    label="Due"
+                    hint="optional"
+                    action={
+                      due && (
+                        <LinkButton size="xs" onClick={() => setDue('')}>
+                          Clear
+                        </LinkButton>
+                      )
                     }
                   >
-                    Today
-                  </button>
+                    <DateInput value={due} onChange={(e) => setDue(e.target.value)} className="w-full" />
+                    {/* Today is by far the most common due date, and picking it from the
+                        native date input takes more clicks than it's worth. */}
+                    <button
+                      type="button"
+                      onClick={() => setDue(due === todayKey ? '' : todayKey)}
+                      className={
+                        'mt-2 px-[11px] py-[4px] rounded-full text-[12px] font-semibold cursor-pointer border ' +
+                        (due === todayKey ? 'border-brand-500 bg-brand-450 text-brand-800' : 'border-neutral-525 bg-white text-neutral-725 hover:bg-neutral-200')
+                      }
+                    >
+                      Today
+                    </button>
+                  </Field>
                 </SidebarSection>
               )}
 
@@ -449,7 +455,13 @@ function TaskForm({ editingId, task, seed }: { editingId: string | null; task: T
               <SidebarSection title="Links" hint="optional">
                 {links.map((l, i) => (
                   <div key={i} className="flex gap-2 mb-2">
-                    <input value={l} onChange={(e) => setLinks(links.map((x, j) => (j === i ? e.target.value : x)))} placeholder="https://github.com/.../pull/34" className="flex-1 min-w-0 px-[12px] py-[9px] border border-neutral-525 rounded-[9px] text-[16px] md:text-[13.5px]" />
+                    <Input
+                      value={l}
+                      onChange={(e) => setLinks(links.map((x, j) => (j === i ? e.target.value : x)))}
+                      aria-label={`Link ${i + 1}`}
+                      placeholder="https://github.com/.../pull/34"
+                      className="flex-1 min-w-0"
+                    />
                     <button
                       onClick={() => {
                         const next = links.filter((_, j) => j !== i);

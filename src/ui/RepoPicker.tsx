@@ -3,6 +3,7 @@
 // surfaces the last-opened repo for quick re-entry.
 
 import React from 'react';
+import { Input } from './primitives';
 
 interface RepoRef {
   owner: string;
@@ -130,9 +131,10 @@ export function RepoPicker({ onPick, lastRepo }: { onPick: (ref: RepoRef) => voi
         )}
 
         <form onSubmit={submitManual} className="flex gap-2 mt-1 mb-[14px]">
-          <input
+          <Input
             value={manual}
             onChange={(e) => setManual(e.target.value)}
+            aria-label="Repository"
             placeholder="owner/repo (or owner/repo@branch)"
             className={inputCls}
           />
@@ -167,9 +169,10 @@ export function RepoPicker({ onPick, lastRepo }: { onPick: (ref: RepoRef) => voi
 
             {initMode === 'create' ? (
               <>
-                <input
+                <Input
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
+                  aria-label="New repository name"
                   placeholder="repository name (e.g. my-timesheet)"
                   className={`${inputCls} mb-[10px]`}
                   disabled={initBusy}
@@ -180,9 +183,10 @@ export function RepoPicker({ onPick, lastRepo }: { onPick: (ref: RepoRef) => voi
                 </label>
               </>
             ) : (
-              <input
+              <Input
                 value={existingRepo}
                 onChange={(e) => setExistingRepo(e.target.value)}
+                aria-label="Existing repository"
                 placeholder="owner/repo (or owner/repo@branch)"
                 className={`${inputCls} mb-3`}
                 disabled={initBusy}
@@ -197,9 +201,10 @@ export function RepoPicker({ onPick, lastRepo }: { onPick: (ref: RepoRef) => voi
           </form>
         )}
 
-        <input
+        <Input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
+          aria-label="Search your repositories"
           placeholder="Search your repositories…"
           className={`${inputCls} mb-[10px]`}
         />
@@ -228,8 +233,9 @@ export function RepoPicker({ onPick, lastRepo }: { onPick: (ref: RepoRef) => voi
   );
 }
 
-// Shared class sets for the repeated form controls.
-const inputCls = 'flex-1 w-full px-3 py-[9px] border border-neutral-525 rounded-lg text-[14px] text-neutral-825';
+// Shared class sets for the repeated form controls. `inputCls` is layout only —
+// the border, padding and focus treatment come from `Input`'s default size.
+const inputCls = 'flex-1 w-full text-neutral-825';
 const goBtnCls = 'bg-brand-450 text-brand-800 border border-brand-500 px-4 rounded-lg font-semibold cursor-pointer';
 const segOnCls = 'flex-1 px-[10px] py-[7px] border border-brand-500 bg-brand-225 text-brand-800 rounded-lg font-semibold text-[13px] cursor-pointer';
 const segOffCls = 'flex-1 px-[10px] py-[7px] border border-neutral-525 bg-white text-neutral-700 rounded-lg font-semibold text-[13px] cursor-pointer';

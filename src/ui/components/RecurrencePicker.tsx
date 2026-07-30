@@ -7,7 +7,7 @@ import {
   type Recurrence,
   type RecurrenceAnchor,
 } from '../../model/recurrence';
-import { LinkButton } from '../primitives';
+import { DateInput, Field, Input, LinkButton, Select } from '../primitives';
 import { parseISODate, today, weekdayOf } from '../../util/date';
 
 const WEEKDAY_NAMES = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
@@ -153,12 +153,14 @@ function MonthDayPicker({
   onChange: (day: number | 'last') => void;
 }) {
   return (
-    <div>
-      <label className="block font-semibold text-[13px] mb-[6px]">On day</label>
-      <select
+    <Field
+      label="On day"
+      labelSize="sm"
+      help={typeof value === 'number' && value > 28 ? 'Shorter months fall back to their last day.' : undefined}
+    >
+      <Select
         value={String(value)}
         onChange={(e) => onChange(e.target.value === 'last' ? 'last' : Number(e.target.value))}
-        className="px-[14px] py-[9px] border border-neutral-525 rounded-[9px] text-[16px] md:text-[13.5px] bg-white"
       >
         {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
           <option key={d} value={d}>
@@ -166,13 +168,8 @@ function MonthDayPicker({
           </option>
         ))}
         <option value="last">Last day</option>
-      </select>
-      {typeof value === 'number' && value > 28 && (
-        <div className="text-[12px] text-neutral-625 mt-[6px]">
-          Shorter months fall back to their last day.
-        </div>
-      )}
-    </div>
+      </Select>
+    </Field>
   );
 }
 
@@ -189,22 +186,20 @@ function DateField({
   return (
     // Wraps rather than shrinks: a native date input squeezed below ~150px clips
     // its own text, so in a narrow column the two bounds stack instead.
-    <div className="flex-1 min-w-[150px]">
-      <div className="flex items-center justify-between mb-[6px]">
-        <label className="block font-semibold text-[13px]">{label}</label>
-        {value && (
+    <Field
+      label={label}
+      labelSize="sm"
+      className="flex-1 min-w-[150px]"
+      action={
+        value && (
           <LinkButton size="xs" onClick={() => onChange('')}>
             Clear
           </LinkButton>
-        )}
-      </div>
-      <input
-        type="date"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full min-w-0 px-[14px] py-[9px] border border-neutral-525 rounded-[9px] text-[16px] md:text-[13.5px] bg-white"
-      />
-    </div>
+        )
+      }
+    >
+      <DateInput value={value} onChange={(e) => onChange(e.target.value)} className="w-full" />
+    </Field>
   );
 }
 
@@ -306,18 +301,24 @@ export function RecurrencePicker({
       </div>
 
       {custom && (
-        <div className="mb-[10px]">
-          <input
+        <Field
+          className="mb-[10px]"
+          help={
+            <>
+              e.g. <code>daily</code>, <code>weekdays</code>, <code>every 3 days</code>,{' '}
+              <code>weekly on mon,thu</code>, <code>monthly on last</code>, <code>yearly on 03-14</code>
+            </>
+          }
+        >
+          <Input
+            size="lg"
             value={value}
             onChange={(e) => onChange(e.target.value)}
+            aria-label="Custom repeat rule"
             placeholder="every 3 days"
-            className="w-full px-[14px] py-[11px] border border-neutral-525 rounded-[9px] text-[16px] md:text-[14px] outline-none"
+            className="w-full"
           />
-          <div className="text-[12.5px] text-neutral-625 mt-[6px] leading-[1.5]">
-            e.g. <code>daily</code>, <code>weekdays</code>, <code>every 3 days</code>,{' '}
-            <code>weekly on mon,thu</code>, <code>monthly on last</code>, <code>yearly on 03-14</code>
-          </div>
-        </div>
+        </Field>
       )}
 
       {repeats && !parsed && (

@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Icon } from '../components/icons';
-import { Button, LinkButton } from '../primitives';
+import { Button, Input, LinkButton, Select } from '../primitives';
 import { useData } from '../context';
 import { ARCHIVE_PAGE_SIZES, deriveArchive, fmtShort, pageWindow } from '../utils';
 import type { ArchivePeriod } from '../utils';
@@ -82,37 +81,32 @@ function ArchiveFilterBar({
   const allCount = allClients.reduce((n, c) => n + (clientCounts[c.id] ?? 0), 0);
   return (
     <div className="flex flex-wrap items-center gap-2 mb-5">
-      <div className="flex items-center gap-[10px] flex-1 min-w-[220px] px-[12px] py-[8px] border border-neutral-525 rounded-[9px] bg-white focus-within:border-brand-500">
-        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="#8A9099" strokeWidth="1.5" className="shrink-0">
-          <circle cx="7" cy="7" r="4.5" />
-          <path d="M10.5 10.5L14 14" />
-        </svg>
-        <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          className="flex-1 min-w-0 bg-transparent text-[16px] md:text-[14px] text-input-fg outline-none focus-visible:outline-none!"
-          placeholder="Filter by title, tag, link..."
-        />
-        {query && (
-          <button className="text-muted hover:text-fg cursor-pointer shrink-0" onClick={() => setQuery('')} aria-label="Clear filter">
-            <Icon name="close" />
-          </button>
-        )}
-      </div>
+      <Input
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        clearable
+        onClear={() => setQuery('')}
+        clearLabel="Clear filter"
+        leading={
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="#8A9099" strokeWidth="1.5" className="shrink-0">
+            <circle cx="7" cy="7" r="4.5" />
+            <path d="M10.5 10.5L14 14" />
+          </svg>
+        }
+        aria-label="Filter archived tasks"
+        placeholder="Filter by title, tag, link..."
+        className="flex-1 min-w-[220px]"
+        inputClassName="text-input-fg"
+      />
 
-      <select
-        value={clientId}
-        onChange={(e) => setClientId(e.target.value)}
-        aria-label="Filter by client"
-        className="px-3 py-[8px] border border-neutral-525 rounded-[9px] text-[14px] bg-white cursor-pointer focus:outline-none focus:border-brand-500"
-      >
+      <Select value={clientId} onChange={(e) => setClientId(e.target.value)} aria-label="Filter by client">
         <option value="">All clients ({allCount})</option>
         {allClients.map((c) => (
           <option key={c.id} value={c.id}>
             {c.name} ({clientCounts[c.id] ?? 0})
           </option>
         ))}
-      </select>
+      </Select>
 
       <div className="inline-flex p-[2px] rounded-[8px] bg-neutral-250 border border-neutral-400">
         {PERIODS.map((p) => {
@@ -184,17 +178,13 @@ function ArchivePager({
       </div>
       <label className="flex items-center gap-2 text-[12.5px] text-neutral-675">
         Per page
-        <select
-          value={pageSize}
-          onChange={(e) => setPageSize(Number(e.target.value))}
-          className="px-2 py-[5px] border border-neutral-525 rounded-[7px] text-[13px] bg-white cursor-pointer focus:outline-none focus:border-brand-500"
-        >
+        <Select size="xs" value={pageSize} onChange={(e) => setPageSize(Number(e.target.value))}>
           {ARCHIVE_PAGE_SIZES.map((n) => (
             <option key={n} value={n}>
               {n}
             </option>
           ))}
-        </select>
+        </Select>
       </label>
     </div>
   );

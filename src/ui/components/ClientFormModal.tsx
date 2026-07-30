@@ -1,6 +1,6 @@
 import React from 'react';
 import { PALETTE } from '../utils';
-import { Button, LinkButton } from '../primitives';
+import { Button, Field, Input, LinkButton, TextArea } from '../primitives';
 import { useData, useUi } from '../context';
 
 /** Add / edit client modal (name, color, notes and reference links), plus the two
@@ -34,19 +34,22 @@ export function ClientFormModal() {
           </button>
         </div>
 
-        <label className="block font-semibold text-[14px] mb-2">Name</label>
-        <input
-          autoFocus
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              onSave();
-            }
-          }}
-          placeholder="Acme Inc"
-          className="w-full px-[14px] py-[11px] border border-brand-500 rounded-[9px] text-[14px] shadow-[0_0_0_3px_var(--color-brand-225)] mb-[22px] outline-none"
-        />
+        <Field label="Name" className="mb-[22px]">
+          <Input
+            autoFocus
+            size="lg"
+            variant="accent"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                onSave();
+              }
+            }}
+            placeholder="Acme Inc"
+            className="w-full"
+          />
+        </Field>
 
         <label className="block font-semibold text-[14px] mb-[10px]">Color</label>
         <div className="flex flex-wrap gap-[10px] mb-2">
@@ -64,33 +67,35 @@ export function ClientFormModal() {
           })}
         </div>
 
-        <label className="block font-semibold text-[14px] mt-[22px] mb-2">
-          Description <span className="text-neutral-625 font-normal">(optional)</span>
-        </label>
-        <textarea
-          value={desc}
-          onChange={(e) => setDesc(e.target.value)}
-          rows={4}
-          placeholder={'Who they are, the contact, the agreed rate…\nSupports **bold**, *italic*, `code`, [links](https://example.com) and lists.'}
-          className="w-full px-[14px] py-[11px] border border-neutral-525 rounded-[9px] text-[14px] resize-y outline-none focus:border-brand-500"
-        />
+        <Field label="Description" hint="optional" className="mt-[22px]">
+          <TextArea
+            size="lg"
+            value={desc}
+            onChange={(e) => setDesc(e.target.value)}
+            rows={4}
+            placeholder={'Who they are, the contact, the agreed rate…\nSupports **bold**, *italic*, `code`, [links](https://example.com) and lists.'}
+            className="w-full"
+          />
+        </Field>
 
         <label className="block font-semibold text-[14px] mt-[22px] mb-2">
           Links <span className="text-neutral-625 font-normal">(optional)</span>
         </label>
         {links.map((l, i) => (
           <div key={i} className="flex gap-2 mb-2">
-            <input
+            <Input
               value={l.url}
               onChange={(e) => setLinks(links.map((x, j) => (j === i ? { ...x, url: e.target.value } : x)))}
+              aria-label={`Link ${i + 1} URL`}
               placeholder="https://github.com/acme/website"
-              className="flex-[2] min-w-0 px-[14px] py-[9px] border border-neutral-525 rounded-[9px] text-[14px] outline-none focus:border-brand-500"
+              className="flex-[2] min-w-0"
             />
-            <input
+            <Input
               value={l.label}
               onChange={(e) => setLinks(links.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)))}
+              aria-label={`Link ${i + 1} label`}
               placeholder="Label"
-              className="flex-1 min-w-0 px-[14px] py-[9px] border border-neutral-525 rounded-[9px] text-[14px] outline-none focus:border-brand-500"
+              className="flex-1 min-w-0"
             />
             <button
               onClick={() => setLinks(links.filter((_, j) => j !== i))}

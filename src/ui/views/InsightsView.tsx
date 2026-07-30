@@ -6,6 +6,7 @@ import { EVENT_COLOR, monthLabel, num } from '../utils';
 import { HoursByClientChart } from '../components/charts/HoursByClientChart';
 import { MonthlyTrendChart, type TrendPoint } from '../components/charts/MonthlyTrendChart';
 import { isEventWorklogClientId } from '../../model/worklog';
+import { Select } from '../primitives';
 
 /** Rolls up the selected month's worklog into per-client hours/days rows. */
 function useInsightsData() {
@@ -104,13 +105,13 @@ export function InsightsView() {
       <div className="max-w-[920px] mx-auto">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-[24px] font-bold m-0">Insights</h1>
-          <select value={month} onChange={(e) => setMonth(e.target.value)} className="px-3 py-2 border border-neutral-525 rounded-lg text-[14px] bg-white cursor-pointer">
+          <Select value={month} onChange={(e) => setMonth(e.target.value)} aria-label="Month">
             {monthsList.map((m) => (
               <option key={m} value={m}>
                 {monthLabel(m)}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
 
         <div className="grid grid-cols-3 gap-[14px] mb-[26px]">

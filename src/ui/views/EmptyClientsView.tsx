@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Button } from '../primitives';
+import { Button, Input } from '../primitives';
 import { useData, useUi } from '../context';
 
 export function EmptyClientsView() {
@@ -20,8 +20,9 @@ export function EmptyClientsView() {
         <div className="text-[22px] font-bold mb-2 tracking-[-0.01em]">Welcome to Worklog</div>
         <div className="text-[14px] text-neutral-675 mb-7">No clients yet. Add your first client to get started.</div>
         <div className="flex gap-2">
-          <input
+          <Input
             autoFocus
+            size="lg"
             value={newClientName}
             onChange={(e) => setNewClientName(e.target.value)}
             onKeyDown={(e) => {
@@ -29,8 +30,9 @@ export function EmptyClientsView() {
                 void onCreateClient();
               }
             }}
+            aria-label="Client name"
             placeholder="Client name (e.g. Acme Inc)"
-            className="flex-1 px-[14px] py-[11px] border border-neutral-525 rounded-[9px] text-[14px] outline-none focus:border-brand-500 focus:shadow-[0_0_0_3px_var(--color-brand-225)]"
+            className="flex-1"
           />
           <Button variant="primary" size="lg" onClick={() => void onCreateClient()}>
             Add client

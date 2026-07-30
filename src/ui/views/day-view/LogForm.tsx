@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import type { Client } from '../../../model/types';
-import { Button } from '../../primitives';
+import { Button, Field, Input, Select } from '../../primitives';
 import type { LogState } from '../../model';
 
 type LogFormProps = {
@@ -85,19 +85,20 @@ export function LogForm({ logState, setLogState, saveLog, removeLog, clients, co
         <div>
           {logState.isEvent ? (
             <>
-              <div className="text-[11px] text-neutral-675 mb-[6px]">Event</div>
-              <select
-                value={logState.eventType}
-                onChange={(e) => setLogState({ ...logState, eventType: e.target.value })}
-                className="px-3 py-[9px] border border-neutral-525 rounded-lg text-[13px] bg-white"
-              >
-                <option value="vacation">Vacation</option>
-                <option value="public-holiday">Public holiday</option>
-                <option value="out-of-office">Out of office</option>
-                <option value="conference">Conference</option>
-                <option value="sick">Sick day</option>
-                <option value="other">Other</option>
-              </select>
+              <Field label="Event" labelSize="xs">
+                <Select
+                  size="sm"
+                  value={logState.eventType}
+                  onChange={(e) => setLogState({ ...logState, eventType: e.target.value })}
+                >
+                  <option value="vacation">Vacation</option>
+                  <option value="public-holiday">Public holiday</option>
+                  <option value="out-of-office">Out of office</option>
+                  <option value="conference">Conference</option>
+                  <option value="sick">Sick day</option>
+                  <option value="other">Other</option>
+                </Select>
+              </Field>
             </>
           ) : (
             <>
@@ -117,11 +118,13 @@ export function LogForm({ logState, setLogState, saveLog, removeLog, clients, co
                 </button>
                 {clientPickerOpen && (
                   <div className="absolute left-0 top-full mt-2 w-[280px] max-w-[80vw] border border-neutral-525 rounded-[10px] bg-white shadow-[0_14px_30px_rgba(0,0,0,0.14)] p-2 z-20">
-                    <input
+                    <Input
+                      size="sm"
                       value={clientQuery}
                       onChange={(e) => setClientQuery(e.target.value)}
+                      aria-label="Search client"
                       placeholder="Search client"
-                      className="w-full px-3 py-[8px] border border-neutral-400 rounded-[8px] text-[13px] mb-2 outline-none"
+                      className="w-full mb-2"
                     />
                     <div className="max-h-[180px] overflow-auto pr-1">
                       {filteredClients.map((c) => {
@@ -177,27 +180,27 @@ export function LogForm({ logState, setLogState, saveLog, removeLog, clients, co
           </div>
         </div>
         {logState.type === 'hours' && (
-          <div className="w-24">
-            <div className="text-[11px] text-neutral-675 mb-[6px]">Hours</div>
-            <input
+          <Field label="Hours" labelSize="xs" className="w-24">
+            <Input
+              size="sm"
               value={logState.hours}
               onChange={(e) => setLogState({ ...logState, hours: e.target.value })}
               type="number"
               min="0"
               step="0.5"
-              className="w-full px-3 py-[9px] border border-neutral-525 rounded-lg text-[13px]"
+              className="w-full"
             />
-          </div>
+          </Field>
         )}
-        <div className="flex-1 min-w-[180px]">
-          <div className="text-[11px] text-neutral-675 mb-[6px]">Note (optional)</div>
-          <input
+        <Field label="Note" hint="optional" labelSize="xs" className="flex-1 min-w-[180px]">
+          <Input
+            size="sm"
             value={logState.note}
             onChange={(e) => setLogState({ ...logState, note: e.target.value })}
             placeholder="what you worked on"
-            className="w-full px-3 py-[9px] border border-neutral-525 rounded-lg text-[13px]"
+            className="w-full"
           />
-        </div>
+        </Field>
         <Button variant="primary" size="md" onClick={saveLog}>
           {logState.editing ? 'Save' : 'Log'}
         </Button>
