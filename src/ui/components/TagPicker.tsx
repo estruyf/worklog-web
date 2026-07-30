@@ -94,17 +94,17 @@ export function TagPicker({
     >
       <div
         onClick={() => inputRef.current?.focus()}
-        className="flex flex-wrap items-center gap-[6px] w-full px-[10px] py-[7px] border border-neutral-525 rounded-[9px] bg-white cursor-text focus-within:border-brand-500"
+        className="flex flex-wrap items-center gap-[6px] w-full px-[10px] py-[7px] border border-neutral-525 rounded-control-lg bg-white cursor-text focus-within:border-brand-500"
       >
         {value.map((tag) => (
-          <span key={tag} className="inline-flex items-center gap-[5px] text-[12.5px] text-neutral-725 bg-neutral-250 border border-neutral-400 rounded-full pl-[9px] pr-[5px] py-[3px]">
+          <span key={tag} className="inline-flex items-center gap-[5px] text-chip text-neutral-725 bg-neutral-250 border border-neutral-400 rounded-full pl-[9px] pr-[5px] py-[3px]">
             {tag}
             <button
               type="button"
               onClick={() => onChange(removeTag(value, tag))}
               title={`Remove "${tag}"`}
               aria-label={`Remove ${tag}`}
-              className="leading-none text-[13px] text-neutral-650 cursor-pointer hover:text-danger-675"
+              className="leading-none text-control text-neutral-650 cursor-pointer hover:text-danger-675"
             >
               ×
             </button>
@@ -136,7 +136,7 @@ export function TagPicker({
           onFocus={() => setOpen(true)}
           onKeyDown={onKeyDown}
           placeholder={value.length === 0 ? 'Pick a tag or type a new one' : ''}
-          className="flex-1 min-w-[130px] px-[4px] py-[4px] bg-transparent text-[16px] md:text-[14px] outline-none focus-visible:outline-none!"
+          className="flex-1 min-w-[130px] px-[4px] py-[4px] bg-transparent text-touch md:text-body outline-none focus-visible:outline-none!"
         />
       </div>
 
@@ -152,7 +152,7 @@ export function TagPicker({
                 inputRef.current?.focus();
               }}
               className={
-                'flex items-center justify-between w-full text-left px-3 py-[7px] text-[13.5px] cursor-pointer ' +
+                'flex items-center justify-between w-full text-left px-3 py-[7px] text-control-lg cursor-pointer ' +
                 (i === at ? 'bg-brand-225 text-brand-800' : 'text-neutral-750 hover:bg-neutral-200')
               }
             >
@@ -168,7 +168,7 @@ export function TagPicker({
                 inputRef.current?.focus();
               }}
               className={
-                'flex items-center gap-[6px] w-full text-left px-3 py-[7px] text-[13.5px] cursor-pointer ' +
+                'flex items-center gap-[6px] w-full text-left px-3 py-[7px] text-control-lg cursor-pointer ' +
                 (suggestions.length > 0 ? 'border-t border-neutral-300 ' : '') +
                 (at === suggestions.length ? 'bg-brand-225 text-brand-800' : 'text-neutral-750 hover:bg-neutral-200')
               }
@@ -183,7 +183,7 @@ export function TagPicker({
       {/* Reassure that a differently-cased spelling folds onto the existing tag
           rather than adding a second one. */}
       {!canCreate && matchExistingTag(query, known) && matchExistingTag(query, known) !== normalizeTag(query) && (
-        <div className="text-[12px] text-neutral-625 mt-[6px]">
+        <div className="text-meta text-neutral-625 mt-[6px]">
           Uses the existing tag “{matchExistingTag(query, known)}”.
         </div>
       )}

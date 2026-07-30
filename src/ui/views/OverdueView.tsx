@@ -8,6 +8,7 @@ import { TriangleAlertIcon } from 'lucide-react';
 import { collectOverdue, daysOverdue, formatDaysLate } from '../../model/overdue';
 import type { Task } from '../../model/types';
 import { WorklogTaskRow } from '../components';
+import { Badge, Card, EmptyState, SectionLabel } from '../primitives';
 import { useData } from '../context';
 import type { ClientTaskGroup } from '../model';
 import { clientIdOf, dueOn, isDone } from '../utils';
@@ -61,7 +62,7 @@ export function OverdueView() {
         <div className="flex flex-wrap items-center gap-[10px] mb-6">
           <TriangleAlertIcon size={20} className={overdueCount > 0 ? 'text-danger-675' : 'text-neutral-650'} />
           <h1 className="text-[24px] font-bold m-0">Overdue</h1>
-          <span className="text-[13px] text-neutral-675">
+          <span className="text-control text-neutral-675">
             {overdueCount === 0
               ? 'nothing late'
               : `${overdueCount} task${overdueCount === 1 ? '' : 's'} · worst ${formatDaysLate(worstDays).toLowerCase()}`}
@@ -69,35 +70,25 @@ export function OverdueView() {
         </div>
 
         {overdueCount === 0 ? (
-          <div className="text-[14px] text-neutral-625 italic">
+          <EmptyState>
             Nothing is past its due date. Tasks land here the day after they were due — including a recurring one
             that fell on a weekend and is still waiting.
-          </div>
+          </EmptyState>
         ) : (
-          groups.map((group) => (
-            <GroupCard
-              key={group.id}
-              group={group}
-              cardClassName="border border-danger-200 rounded-[14px] bg-white mb-[14px] overflow-hidden"
-              headerClassName="flex items-center gap-[9px] px-[18px] py-[13px] bg-danger-75 border-b border-danger-200 whitespace-nowrap"
-              countBadgeClassName="inline-flex items-center justify-center min-w-[20px] h-5 px-[6px] rounded-full bg-danger-100 border border-danger-200 text-danger-675 text-[12px] font-semibold"
-            />
-          ))
+          groups.map((group) => <GroupCard key={group.id} group={group} tone="overdue" />)
         )}
 
         {dueTodayRows.length > 0 && (
           <>
             <div className="flex items-center gap-[10px] mt-9 mb-3">
-              <span className="text-[11px] font-bold tracking-[0.06em] text-neutral-675">DUE TODAY</span>
-              <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-[6px] rounded-full bg-neutral-325 text-neutral-675 text-[12px] font-semibold">
-                {dueTodayRows.length}
-              </span>
+              <SectionLabel>Due today</SectionLabel>
+              <Badge>{dueTodayRows.length}</Badge>
             </div>
-            <div className="border border-neutral-375 rounded-[14px] bg-white px-2 py-[6px]">
+            <Card padding="list">
               {dueTodayRows.map((row) => (
                 <WorklogTaskRow key={row.id} row={row} />
               ))}
-            </div>
+            </Card>
           </>
         )}
       </div>

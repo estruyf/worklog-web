@@ -3,11 +3,11 @@
 // to that day's work); this view is the place to see and manage them all.
 
 import React, { useMemo, useState } from 'react';
-import { PlusIcon } from 'lucide-react';
+import { CheckIcon, ExternalLinkIcon, PlusIcon } from 'lucide-react';
 import { GENERAL_TODO_COLOR, GENERAL_TODO_LABEL, isGeneralTodoClientId } from '../../model/todos';
 import type { Task } from '../../model/types';
-import { WorklogTaskRow } from '../components';
-import { Button } from '../primitives';
+import { DisclosureIcon, WorklogTaskRow } from '../components';
+import { Button, Card, EmptyState, SectionLabel } from '../primitives';
 import { useData } from '../context';
 import { clientIdOf, fmtShort, isDone, linksOf } from '../utils';
 
@@ -40,33 +40,31 @@ function CompletedTodos({ doneTasks }: { doneTasks: Task[] }) {
     <>
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-2 mt-9 mb-[14px] bg-transparent border-none p-0 cursor-pointer text-[11px] font-bold tracking-[0.06em] text-neutral-675 hover:text-neutral-825"
+        className="group flex items-center gap-2 mt-9 mb-[14px] bg-transparent border-none p-0 cursor-pointer text-neutral-675"
       >
-        <span className={'transition-transform ' + (open ? 'rotate-90' : '')}>›</span>
-        COMPLETED ({doneTasks.length})
+        <DisclosureIcon open={open} size={10} />
+        <SectionLabel className="group-hover:text-neutral-825">Completed ({doneTasks.length})</SectionLabel>
       </button>
 
       {open && (
-        <div className="border border-neutral-375 rounded-[14px] bg-neutral-50 px-2 py-[6px]">
+        <Card tone="muted" padding="list">
           {doneTasks.map((t) => (
             <div key={t.id} className="flex items-center gap-[11px] py-2 px-2.5 rounded-lg hover:bg-neutral-225">
               <button
                 onClick={() => reopen(t)}
                 title="Reopen"
-                className="w-[17px] h-[17px] shrink-0 border-none rounded-full bg-success-500 cursor-pointer p-0 flex items-center justify-center"
+                className="w-[17px] h-[17px] shrink-0 border-none rounded-full bg-success-500 text-white cursor-pointer p-0 flex items-center justify-center"
               >
-                <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="#fff" strokeWidth="2.5">
-                  <path d="M3.5 8.5l3 3 6-7" />
-                </svg>
+                <CheckIcon size={11} strokeWidth={2.5} />
               </button>
               <span
                 onClick={() => openDetail(t)}
                 title="Open task"
-                className="text-[14.5px] text-neutral-700 flex-1 line-through decoration-neutral-550 cursor-pointer"
+                className="text-row text-neutral-700 flex-1 line-through decoration-neutral-550 cursor-pointer"
               >
                 {t.title}
               </span>
-              <span className="text-[13px] text-neutral-650">{t.completed ? fmtShort(t.completed) : ''}</span>
+              <span className="text-control text-neutral-650">{t.completed ? fmtShort(t.completed) : ''}</span>
               {linksOf(t).length > 0 && (
                 <a
                   href={linksOf(t)[0]}
@@ -75,14 +73,12 @@ function CompletedTodos({ doneTasks }: { doneTasks: Task[] }) {
                   className="text-neutral-625 leading-[0] hover:text-info"
                   title={linksOf(t)[0]}
                 >
-                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-                    <path d="M6 3H3.5A1.5 1.5 0 002 4.5v8A1.5 1.5 0 003.5 14h8a1.5 1.5 0 001.5-1.5V10M10 2h4v4M14 2L7.5 8.5" />
-                  </svg>
+                  <ExternalLinkIcon size={14} />
                 </a>
               )}
             </div>
           ))}
-        </div>
+        </Card>
       )}
     </>
   );
@@ -99,7 +95,7 @@ export function TodosView() {
           <div className="flex items-center gap-[10px]">
             <span className="w-[10px] h-[10px] rounded-full shrink-0" style={{ background: GENERAL_TODO_COLOR }} />
             <h1 className="text-[24px] font-bold m-0">{GENERAL_TODO_LABEL}</h1>
-            <span className="text-[13px] text-neutral-675">
+            <span className="text-control text-neutral-675">
               {openCount} open{doneTasks.length > 0 ? ` · ${doneTasks.length} completed` : ''}
             </span>
           </div>
@@ -110,15 +106,13 @@ export function TodosView() {
         </div>
 
         {openCount === 0 ? (
-          <div className="text-[14px] text-neutral-625 italic">
-            No open to-dos. These are the tasks that aren&apos;t linked to a client.
-          </div>
+          <EmptyState>No open to-dos. These are the tasks that aren&apos;t linked to a client.</EmptyState>
         ) : (
-          <div className="border border-neutral-375 rounded-[14px] bg-white px-2 py-[6px]">
+          <Card padding="list">
             {openRows.map((row) => (
               <WorklogTaskRow key={row.id} row={row} />
             ))}
-          </div>
+          </Card>
         )}
 
         <CompletedTodos doneTasks={doneTasks} />

@@ -154,17 +154,17 @@ function RecoveryPrompt({ info, onRestore, onDiscard }: { info: RecoveryInfo; on
     // No `onClose`: the two buttons are the only ways out, since dismissing this
     // would leave the recovered edits in limbo — neither restored nor discarded.
     <Modal role="alertdialog" layer="top" size="sm" title="Recover unsynced changes?">
-      <p className="text-[14px] text-neutral-700 m-0 mt-3 mb-2 leading-relaxed">
+      <p className="text-body text-neutral-700 m-0 mt-3 mb-2 leading-relaxed">
         {fileCount === 1 ? '1 file was' : `${fileCount} files were`} edited but never synced to GitHub before this tab was
         closed, saved locally {timeAgo(savedAt)}.
       </p>
       {baseChanged && (
-        <p className="text-[13px] text-brand-600 bg-brand-150 border border-brand-375 rounded-[9px] px-3 py-2 m-0 mb-2">
+        <p className="text-control text-brand-600 bg-brand-150 border border-brand-375 rounded-control-lg px-3 py-2 m-0 mb-2">
           Heads up: this branch changed on GitHub since then. Restoring will re-apply your local edits on top of the
           latest version.
         </p>
       )}
-      <p className="text-[13px] text-neutral-650 m-0 mb-5.5">Restore to continue where you left off, then sync when ready.</p>
+      <p className="text-control text-neutral-650 m-0 mb-5.5">Restore to continue where you left off, then sync when ready.</p>
       <div className="flex justify-end gap-2.5">
         <Button variant="neutral" size="lg" onClick={onDiscard}>
           Discard
@@ -212,7 +212,7 @@ function ErrorScreen({ message, onRetry, onSwitch }: { message: string; onRetry:
 function NotFoundScreen({ onHome }: { onHome: () => void }) {
   return (
     <div className={`${splashCls} p-6 text-center`}>
-      <div className="text-[13px] font-bold tracking-[0.08em] text-neutral-650">404</div>
+      <div className="text-control font-bold tracking-[0.08em] text-neutral-650">404</div>
       <h2 className="m-0 text-neutral-825">Page not found</h2>
       <p className="max-w-105 text-neutral-700">This page doesn’t exist. It may have been removed or the link was mistyped.</p>
       <Button variant="primary" size="md" onClick={onHome}>Back to Worklog</Button>

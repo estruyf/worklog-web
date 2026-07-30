@@ -204,7 +204,7 @@ export function Modal({
         tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
         className={cn(
-          'bg-white rounded-[14px] shadow-[0_20px_60px_rgba(0,0,0,0.3)] outline-none',
+          'bg-white rounded-card shadow-[0_20px_60px_rgba(0,0,0,0.3)] outline-none',
           SIZES[size],
           padding === 'md' && 'px-7.5 pt-6.5 pb-6',
           className,

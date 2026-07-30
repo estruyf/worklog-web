@@ -2,7 +2,8 @@ import React, { useMemo, useState } from 'react';
 import type { WorklogEntry } from '../../model/types';
 import { eventTypeFromClientId, formatEventTypeLabel, isEventWorklogClientId } from '../../model/worklog';
 import { CalendarArrowUpIcon, ChevronLeftIcon, ChevronRightIcon } from 'lucide-react';
-import { Button, IconButton, LinkButton } from '../primitives';
+import { Badge, Button, Card, EmptyState, IconButton, LinkButton, SectionLabel, SegmentedControl } from '../primitives';
+import { DisclosureIcon } from '../components';
 import { useData, useUi } from '../context';
 import { navigateToView } from '../router';
 import {
@@ -97,20 +98,17 @@ export function CalendarView() {
         <div className="flex flex-col md:flex-row md:items-center gap-3 mb-7">
           <h1 className="text-[24px] font-bold m-0 tracking-[-0.01em]">Calendar</h1>
           <div className="hidden md:block flex-1" />
-          <div className="flex items-center gap-1 p-[3px] rounded-lg bg-neutral-225 border border-neutral-400 self-start md:self-auto">
-            {(['month', 'week'] as CalendarMode[]).map((m) => (
-              <button
-                key={m}
-                onClick={() => setMode(m)}
-                className={
-                  'text-[12px] font-semibold capitalize rounded-md px-[10px] py-[4px] cursor-pointer border ' +
-                  (mode === m ? 'bg-white border-neutral-475 text-neutral-825' : 'bg-transparent border-transparent text-neutral-675 hover:text-neutral-825')
-                }
-              >
-                {m}
-              </button>
-            ))}
-          </div>
+          <SegmentedControl
+            aria-label="Calendar period"
+            size="sm"
+            options={[
+              { value: 'month', label: 'Month' },
+              { value: 'week', label: 'Week' },
+            ]}
+            value={mode}
+            onChange={(m: CalendarMode) => setMode(m)}
+            className="self-start md:self-auto"
+          />
           {/* Same control order as the Day view: Today, then the arrows, then the
            * period label — so stepping through periods leaves the buttons put. */}
           <div className="flex items-center gap-2">
@@ -145,9 +143,9 @@ export function CalendarView() {
 
         <div className="grid grid-cols-7 gap-[6px] mb-2">
           {weekdays.map((w) => (
-            <div key={w} className="text-[11px] font-bold tracking-[0.06em] text-neutral-675 text-center py-1">
-              {w.toUpperCase()}
-            </div>
+            <SectionLabel key={w} className="justify-center py-1">
+              {w}
+            </SectionLabel>
           ))}
         </div>
 
@@ -178,7 +176,7 @@ export function CalendarView() {
               >
                 <span
                   className={
-                    'text-[13px] leading-none w-[22px] h-[22px] flex items-center justify-center rounded-full self-start ' +
+                    'text-control leading-none w-[22px] h-[22px] flex items-center justify-center rounded-full self-start ' +
                     (isToday ? 'bg-neutral-825 text-white font-semibold' : 'text-neutral-750 font-medium')
                   }
                 >
@@ -199,10 +197,10 @@ export function CalendarView() {
                           className="w-[7px] h-[7px] rounded-full shrink-0"
                           style={{ background: isEventWorklogClientId(l.clientId) ? EVENT_COLOR : colorOf(l.clientId) }}
                         />
-                        <span className="text-[11px] text-neutral-750 truncate">{labelFor(l.clientId, clientName)}</span>
+                        <span className="text-eyebrow text-neutral-750 truncate">{labelFor(l.clientId, clientName)}</span>
                       </span>
                     ))}
-                    {logs.length > maxPerCell && <span className="text-[10.5px] text-neutral-650 pl-[12px]">+{logs.length - maxPerCell} more</span>}
+                    {logs.length > maxPerCell && <span className="text-status text-neutral-650 pl-[12px]">+{logs.length - maxPerCell} more</span>}
                   </span>
                 )}
               </button>
@@ -215,7 +213,7 @@ export function CalendarView() {
             {legend.map((e) => (
               <span key={e.id} className="flex items-center gap-[6px]">
                 <span className="w-[11px] h-[11px] rounded-full shrink-0" style={{ background: e.color }} />
-                <span className="text-[12px] text-neutral-750">{e.label}</span>
+                <span className="text-meta text-neutral-750">{e.label}</span>
               </span>
             ))}
           </div>
@@ -249,11 +247,11 @@ function WorkedPerClient({ groups, isWeek, hoursPerDay, onOpenDay, onOpenTask }:
   return (
     <div className="mt-10">
       <div className="flex items-center gap-[10px] mb-[14px]">
-        <span className="text-[11px] font-bold tracking-[0.06em] text-neutral-675">{isWeek ? 'WORKED THIS WEEK' : 'WORKED THIS MONTH'}</span>
+        <SectionLabel>{isWeek ? 'Worked this week' : 'Worked this month'}</SectionLabel>
         {totalHours > 0 && (
-          <span className="inline-flex items-center px-[9px] py-[2px] rounded-full bg-brand-225 border border-brand-350 text-brand-650 text-[11px] font-semibold">
+          <Badge tone="brand" size="sm">
             {num(totalHours)}h · {daysOf(totalHours)}d
-          </span>
+          </Badge>
         )}
         {groups.length > 1 && (
           <LinkButton size="xs" onClick={() => setOpenIds(allOpen ? [] : groups.map((g) => g.id))} className="ml-auto">
@@ -263,9 +261,9 @@ function WorkedPerClient({ groups, isWeek, hoursPerDay, onOpenDay, onOpenTask }:
       </div>
 
       {groups.length === 0 ? (
-        <div className="text-[14px] text-neutral-625 italic">No time logged or tasks worked in this {isWeek ? 'week' : 'month'}.</div>
+        <EmptyState>No time logged or tasks worked in this {isWeek ? 'week' : 'month'}.</EmptyState>
       ) : (
-        <div className="border border-neutral-375 rounded-[14px] bg-white overflow-hidden">
+        <Card className="overflow-hidden">
           {groups.map((g, i) => {
             const open = openIds.includes(g.id);
             return (
@@ -277,27 +275,25 @@ function WorkedPerClient({ groups, isWeek, hoursPerDay, onOpenDay, onOpenTask }:
                     (open ? 'bg-neutral-100' : 'bg-transparent')
                   }
                 >
-                  <span className={'text-neutral-625 leading-none transition-transform ' + (open ? 'rotate-90' : '')}>›</span>
+                  <span className="text-neutral-625">
+                    <DisclosureIcon open={open} />
+                  </span>
                   <span className="w-[9px] h-[9px] rounded-full shrink-0" style={{ background: g.color }} />
-                  <span className="font-semibold text-[14px] truncate">{g.name}</span>
+                  <span className="font-semibold text-body truncate">{g.name}</span>
                   <span className="ml-auto flex items-center gap-[10px] shrink-0">
                     {g.hours > 0 && (
-                      <span className="text-[12.5px] text-neutral-700 tabular-nums">
+                      <span className="text-chip text-neutral-700 tabular-nums">
                         {num(g.hours)}h · {daysOf(g.hours)}d
                       </span>
                     )}
-                    {g.items.length > 0 && (
-                      <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-[6px] rounded-full bg-neutral-275 text-neutral-700 text-[12px] font-semibold">
-                        {g.items.length}
-                      </span>
-                    )}
+                    {g.items.length > 0 && <Badge>{g.items.length}</Badge>}
                   </span>
                 </button>
 
                 {open && (
                   <div className="px-2 pb-[8px] pl-[32px] bg-neutral-100">
                     {g.hours > 0 && (
-                      <div className="px-2.5 pb-1 text-[12px] text-neutral-675 tabular-nums">
+                      <div className="px-2.5 pb-1 text-meta text-neutral-675 tabular-nums">
                         {num(g.hours)}h logged over {g.loggedDays} {g.loggedDays === 1 ? 'day' : 'days'}
                       </div>
                     )}
@@ -307,7 +303,7 @@ function WorkedPerClient({ groups, isWeek, hoursPerDay, onOpenDay, onOpenTask }:
                           onClick={() => onOpenTask(item.id)}
                           title="Open task"
                           className={
-                            'text-[14px] text-left bg-transparent border-none p-0 cursor-pointer hover:underline ' +
+                            'text-body text-left bg-transparent border-none p-0 cursor-pointer hover:underline ' +
                             (item.done ? 'text-neutral-700 line-through decoration-neutral-550' : 'text-neutral-825')
                           }
                         >
@@ -323,14 +319,16 @@ function WorkedPerClient({ groups, isWeek, hoursPerDay, onOpenDay, onOpenTask }:
                       </div>
                     ))}
                     {g.items.length === 0 && (
-                      <div className="px-2.5 py-1 text-[13px] text-neutral-625 italic">No tasks marked as worked.</div>
+                      <EmptyState size="sm" className="px-2.5 py-1">
+                        No tasks marked as worked.
+                      </EmptyState>
                     )}
                   </div>
                 )}
               </div>
             );
           })}
-        </div>
+        </Card>
       )}
     </div>
   );

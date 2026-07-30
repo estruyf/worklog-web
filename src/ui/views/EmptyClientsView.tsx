@@ -18,7 +18,7 @@ export function EmptyClientsView() {
     <div className="flex flex-1 items-center justify-center px-6">
       <div className="w-[440px] max-w-[92vw] text-center">
         <div className="text-[22px] font-bold mb-2 tracking-[-0.01em]">Welcome to Worklog</div>
-        <div className="text-[14px] text-neutral-675 mb-7">No clients yet. Add your first client to get started.</div>
+        <div className="text-body text-neutral-675 mb-7">No clients yet. Add your first client to get started.</div>
         <div className="flex gap-2">
           <Input
             autoFocus

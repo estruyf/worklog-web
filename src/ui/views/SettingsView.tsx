@@ -1,5 +1,5 @@
 import React, { useEffect, useId, useState } from 'react';
-import { Button, Input, Select } from '../primitives';
+import { Button, Card, Input, Select, Toggle } from '../primitives';
 import { useData } from '../context';
 
 const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -22,10 +22,10 @@ function SettingRow({
   return (
     <div className="flex items-start justify-between gap-6 px-[18px] py-[18px]">
       <div>
-        <label htmlFor={id} className="text-[14.5px] font-semibold">
+        <label htmlFor={id} className="text-row font-semibold">
           {title}
         </label>
-        <div className="text-[13px] text-neutral-675 mt-[3px]">{description}</div>
+        <div className="text-control text-neutral-675 mt-[3px]">{description}</div>
       </div>
       {children}
     </div>
@@ -99,12 +99,12 @@ export function SettingsView() {
       <div className="max-w-[920px] mx-auto">
         <div className="mb-8">
           <h1 className="text-[24px] font-bold m-0">Settings</h1>
-          <p className="text-[13px] text-neutral-675 mt-1 mb-0">
-            App configuration, stored in <code className="text-[12px] bg-neutral-250 rounded px-[5px] py-[1px]">.worklog/config.json</code> in this repository.
+          <p className="text-control text-neutral-675 mt-1 mb-0">
+            App configuration, stored in <code className="text-meta bg-neutral-250 rounded-chip px-[5px] py-[1px]">.worklog/config.json</code> in this repository.
           </p>
         </div>
 
-        <div className="border border-neutral-375 rounded-[14px] bg-white divide-y divide-neutral-250">
+        <Card className="divide-y divide-neutral-250">
           <SettingRow
             id={`${ids}-hours`}
             title="Hours per day"
@@ -160,28 +160,16 @@ export function SettingsView() {
 
           <div className="flex items-start justify-between gap-6 px-[18px] py-[18px]">
             <div>
-              <div className="text-[14.5px] font-semibold">Automatic Git sync</div>
-              <div className="text-[13px] text-neutral-675 mt-[3px]">
+              {/* Not a `<label htmlFor>` like the rows above: clicking a label
+                  forwards its click to the control, and a switch flipping because
+                  you clicked anywhere in this paragraph is not what a reader
+                  means. The `Toggle` carries its own name instead. */}
+              <div className="text-row font-semibold">Automatic Git sync</div>
+              <div className="text-control text-neutral-675 mt-[3px]">
                 Commit and push in the background shortly after you log time, so your timesheet doesn’t sit unpushed. Only errors are shown.
               </div>
             </div>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={syncEnabled}
-              onClick={() => setSyncEnabled((v) => !v)}
-              className={
-                'relative shrink-0 w-[42px] h-[24px] rounded-full transition-colors cursor-pointer border ' +
-                (syncEnabled ? 'bg-brand-450 border-brand-500' : 'bg-neutral-400 border-neutral-525')
-              }
-            >
-              <span
-                className={
-                  'absolute top-[2px] w-[18px] h-[18px] rounded-full bg-white shadow transition-all ' +
-                  (syncEnabled ? 'left-[21px]' : 'left-[2px]')
-                }
-              />
-            </button>
+            <Toggle checked={syncEnabled} onChange={setSyncEnabled} aria-label="Automatic Git sync" />
           </div>
 
           {syncEnabled && (
@@ -201,27 +189,27 @@ export function SettingsView() {
                   onChange={(e) => setSyncDelay(e.target.value)}
                   className="w-[80px] text-right"
                 />
-                <span className="text-[13px] text-neutral-675">min</span>
+                <span className="text-control text-neutral-675">min</span>
               </div>
             </SettingRow>
           )}
-        </div>
+        </Card>
 
         {!hoursValid && (
-          <div className="text-[13px] text-danger-675 mt-3">Hours per day must be greater than 0.</div>
+          <div className="text-control text-danger-675 mt-3">Hours per day must be greater than 0.</div>
         )}
         {!todoPageValid && (
-          <div className="text-[13px] text-danger-675 mt-3">To-dos per page must be a whole number of at least 1.</div>
+          <div className="text-control text-danger-675 mt-3">To-dos per page must be a whole number of at least 1.</div>
         )}
         {syncEnabled && !delayValid && (
-          <div className="text-[13px] text-danger-675 mt-3">Sync delay must be a whole number of at least 1 minute.</div>
+          <div className="text-control text-danger-675 mt-3">Sync delay must be a whole number of at least 1 minute.</div>
         )}
 
         <div className="flex items-center gap-3 mt-6">
           <Button variant="primary" size="md" onClick={onSave} disabled={!canSave}>
             Save changes
           </Button>
-          {saved && <span className="text-[13px] text-success-500 font-medium">Saved</span>}
+          {saved && <span className="text-control text-success-500 font-medium">Saved</span>}
         </div>
       </div>
     </div>

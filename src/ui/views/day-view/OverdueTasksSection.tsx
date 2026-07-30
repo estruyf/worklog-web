@@ -1,6 +1,6 @@
 import React from 'react';
 import { TriangleAlertIcon } from 'lucide-react';
-import { LinkButton } from '../../primitives';
+import { Badge, Card, LinkButton, SectionLabel } from '../../primitives';
 import { WorklogTaskRow } from '../../components';
 import { navigateToView } from '../../router';
 import type { WorklogRow } from '../../model';
@@ -17,22 +17,20 @@ export function OverdueTasksSection({ overdueRows }: { overdueRows: WorklogRow[]
   return (
     <>
       <div className="flex items-center gap-[10px] mb-3">
-        <span className="flex items-center gap-[6px] text-[11px] font-bold tracking-[0.06em] text-danger-675">
+        <SectionLabel tone="danger">
           <TriangleAlertIcon size={13} strokeWidth={2} />
-          OVERDUE
-        </span>
-        <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-[6px] rounded-full bg-danger-100 border border-danger-200 text-danger-675 text-[12px] font-semibold">
-          {overdueRows.length}
-        </span>
+          Overdue
+        </SectionLabel>
+        <Badge tone="danger">{overdueRows.length}</Badge>
         <LinkButton size="xs" tone="muted" onClick={() => navigateToView('overdue')} className="ml-auto">
           See all
         </LinkButton>
       </div>
-      <div className="border border-danger-200 rounded-[14px] bg-white mb-[34px] px-2 py-[6px]">
+      <Card tone="danger" padding="list" className="mb-[34px]">
         {overdueRows.map((row) => (
           <WorklogTaskRow key={row.id} row={row} />
         ))}
-      </div>
+      </Card>
     </>
   );
 }

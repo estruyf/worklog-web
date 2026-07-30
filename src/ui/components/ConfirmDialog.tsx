@@ -38,7 +38,7 @@ function Dialog({ request, settle }: { request: ConfirmRequest; settle: (confirm
       describedBy={request.message ? 'worklog-confirm-message' : undefined}
     >
       {request.message && (
-        <p id="worklog-confirm-message" className="text-[14px] text-neutral-700 leading-[1.55] mt-[10px] mb-0">
+        <p id="worklog-confirm-message" className="text-body text-neutral-700 leading-[1.55] mt-[10px] mb-0">
           {request.message}
         </p>
       )}

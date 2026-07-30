@@ -50,7 +50,7 @@ export function LogForm({ logState, setLogState, saveLog, removeLog, clients, co
   return (
     <div className="px-5 py-[18px] bg-neutral-75 border border-neutral-400 rounded-xl mb-[34px]">
       <div className="flex items-center justify-between mb-4">
-        <div className="text-[13px] font-semibold">{logState.editing ? 'Edit logged time' : 'Log time'}</div>
+        <div className="text-control font-semibold">{logState.editing ? 'Edit logged time' : 'Log time'}</div>
         <button
           onClick={() => setLogState({ ...logState, open: false })}
           className="bg-none border-none text-[17px] text-neutral-625 cursor-pointer leading-none"
@@ -60,12 +60,12 @@ export function LogForm({ logState, setLogState, saveLog, removeLog, clients, co
       </div>
       <div className="flex flex-wrap items-end gap-[14px]">
         <div>
-          <div className="text-[11px] text-neutral-675 mb-[6px]">Type</div>
+          <div className="text-eyebrow text-neutral-675 mb-[6px]">Type</div>
           <div className="flex gap-[6px]">
             <button
               onClick={() => setLogState({ ...logState, isEvent: false })}
               className={
-                'px-3 py-[7px] rounded-[7px] text-[13px] cursor-pointer border ' +
+                'px-3 py-[7px] rounded-control text-control cursor-pointer border ' +
                 (!logState.isEvent ? 'border-brand-500 bg-brand-225 font-semibold' : 'border-neutral-525 bg-white font-normal')
               }
             >
@@ -74,7 +74,7 @@ export function LogForm({ logState, setLogState, saveLog, removeLog, clients, co
             <button
               onClick={() => setLogState({ ...logState, isEvent: true })}
               className={
-                'px-3 py-[7px] rounded-[7px] text-[13px] cursor-pointer border ' +
+                'px-3 py-[7px] rounded-control text-control cursor-pointer border ' +
                 (logState.isEvent ? 'border-brand-500 bg-brand-225 font-semibold' : 'border-neutral-525 bg-white font-normal')
               }
             >
@@ -102,11 +102,11 @@ export function LogForm({ logState, setLogState, saveLog, removeLog, clients, co
             </>
           ) : (
             <>
-              <div className="text-[11px] text-neutral-675 mb-[6px]">Client</div>
+              <div className="text-eyebrow text-neutral-675 mb-[6px]">Client</div>
               <div ref={clientPickerRef} className="relative min-w-[220px]">
                 <button
                   onClick={() => setClientPickerOpen((v) => !v)}
-                  className="w-full flex items-center justify-between gap-3 px-3 py-[9px] border border-neutral-525 rounded-lg bg-white text-[13px] cursor-pointer"
+                  className="w-full flex items-center justify-between gap-3 px-3 py-[9px] border border-neutral-525 rounded-control-md bg-white text-control cursor-pointer"
                 >
                   <span className="flex items-center gap-2 min-w-0">
                     <span className="w-2 h-2 rounded-full shrink-0" style={{ background: selectedClient ? colorOf(selectedClient.id) : '#9AA0A6' }} />
@@ -138,7 +138,7 @@ export function LogForm({ logState, setLogState, saveLog, removeLog, clients, co
                               setClientQuery('');
                             }}
                             className={
-                              'w-full flex items-center gap-2 px-3 py-2 rounded-[8px] text-[13px] text-left cursor-pointer mb-1 border ' +
+                              'w-full flex items-center gap-2 px-3 py-2 rounded-control-md text-control text-left cursor-pointer mb-1 border ' +
                               (active ? 'border-brand-500 bg-brand-225 font-semibold text-brand-800' : 'border-transparent bg-white text-neutral-825 hover:bg-neutral-225')
                             }
                           >
@@ -147,7 +147,7 @@ export function LogForm({ logState, setLogState, saveLog, removeLog, clients, co
                           </button>
                         );
                       })}
-                      {filteredClients.length === 0 && <div className="px-3 py-2 text-[12px] italic text-neutral-650">No clients found</div>}
+                      {filteredClients.length === 0 && <div className="px-3 py-2 text-meta italic text-neutral-650">No clients found</div>}
                     </div>
                   </div>
                 )}
@@ -156,7 +156,7 @@ export function LogForm({ logState, setLogState, saveLog, removeLog, clients, co
           )}
         </div>
         <div>
-          <div className="text-[11px] text-neutral-675 mb-[6px]">Amount</div>
+          <div className="text-eyebrow text-neutral-675 mb-[6px]">Amount</div>
           <div className="flex gap-[6px]">
             {[
               { t: 'full', label: 'Full day' },
@@ -169,7 +169,7 @@ export function LogForm({ logState, setLogState, saveLog, removeLog, clients, co
                   key={t}
                   onClick={() => setLogState({ ...logState, type: t })}
                   className={
-                    'px-3 py-[7px] rounded-[7px] text-[13px] cursor-pointer border ' +
+                    'px-3 py-[7px] rounded-control text-control cursor-pointer border ' +
                     (active ? 'border-brand-500 bg-brand-225 font-semibold' : 'border-neutral-525 bg-white font-normal')
                   }
                 >

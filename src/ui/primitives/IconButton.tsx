@@ -9,9 +9,9 @@ export type IconButtonSize = 'xs' | 'sm' | 'md';
 const BASE = 'inline-flex items-center justify-center shrink-0 cursor-pointer disabled:cursor-not-allowed';
 
 const SIZES: Record<IconButtonSize, string> = {
-  xs: 'w-[22px] h-[22px] rounded-md',
-  sm: 'w-7 h-7 rounded-lg',
-  md: 'w-8 h-8 rounded-lg',
+  xs: 'w-[22px] h-[22px] rounded-control',
+  sm: 'w-7 h-7 rounded-control-md',
+  md: 'w-8 h-8 rounded-control-md',
 };
 
 const VARIANTS: Record<IconButtonVariant, string> = {

@@ -3,7 +3,7 @@ import { useData, usePublishTaskFormBar } from '../context';
 import { TagPicker } from './TagPicker';
 import { RecurrencePicker } from './RecurrencePicker';
 import { useMarkdownImages } from '../hooks';
-import { Button, DateInput, Field, Input, LinkButton, Select } from '../primitives';
+import { Button, Chip, DateInput, Field, Input, LinkButton, SegmentedControl, Select } from '../primitives';
 import { clientIdOf, isDone, linksOf, renderMarkdown, makeImageResolver } from '../utils';
 import { GENERAL_TODO_CLIENT_ID, GENERAL_TODO_COLOR, GENERAL_TODO_LABEL } from '../../model/todos';
 import { formatRecurrence, type RecurrenceAnchor } from '../../model/recurrence';
@@ -63,7 +63,7 @@ function SidebarSection({
   return (
     <section className={'pb-[18px] ' + (divider ? 'border-t border-neutral-375 pt-[18px]' : '')}>
       {title && (
-        <label className="block font-semibold text-[14px] mb-[10px]">
+        <label className="block font-semibold text-body mb-[10px]">
           {title} {hint && <span className="text-neutral-625 font-normal">({hint})</span>}
         </label>
       )}
@@ -95,7 +95,7 @@ export function TaskFormPage() {
   // to start the fields from, so say so instead of showing an empty "edit" form.
   if (editingId && !task) {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-4 bg-white text-[14px] text-neutral-675">
+      <div className="flex flex-1 flex-col items-center justify-center gap-4 bg-white text-body text-neutral-675">
         This task no longer exists.
         <LinkButton size="inherit" onClick={navigateToDashboard}>
           ‹ Back to Worklog
@@ -258,30 +258,24 @@ function TaskForm({ editingId, task, seed }: { editingId: string | null; task: T
             </div>
 
             <div className="order-3">
-              <label className="block font-semibold text-[14px] mb-2">
+              <label className="block font-semibold text-body mb-2">
                 Description <span className="text-neutral-625 font-normal">(optional, Markdown)</span>
               </label>
               <input ref={img.fileInputRef} type="file" accept="image/*" multiple onChange={img.onFileChange} className="hidden" />
               {/* Write / Preview as tabs on the editor itself rather than a toggle
                   floating beside the label: the two modes swap the same box, so the
                   control belongs on the box. */}
-              <div className="border border-neutral-450 rounded-[10px] overflow-hidden">
+              <div className="border border-neutral-450 rounded-panel overflow-hidden">
                 <div className="flex items-center justify-between gap-3 px-[10px] py-[7px] border-b border-neutral-450 bg-neutral-150">
-                  <div className="flex gap-[6px]">
-                    {(['edit', 'preview'] as const).map((mode) => (
-                      <button
-                        key={mode}
-                        type="button"
-                        onClick={() => setDescMode(mode)}
-                        className={
-                          'px-[13px] py-[5px] rounded-[7px] text-[13px] cursor-pointer border ' +
-                          (descMode === mode ? 'bg-white border-neutral-450 font-semibold text-neutral-825' : 'border-transparent text-neutral-700 hover:text-neutral-825')
-                        }
-                      >
-                        {mode === 'edit' ? 'Write' : 'Preview'}
-                      </button>
-                    ))}
-                  </div>
+                  <SegmentedControl
+                    aria-label="Description mode"
+                    options={[
+                      { value: 'edit', label: 'Write' },
+                      { value: 'preview', label: 'Preview' },
+                    ]}
+                    value={descMode}
+                    onChange={setDescMode}
+                  />
                   <LinkButton onClick={img.openFilePicker} disabled={img.uploading} className="font-medium">
                     {img.uploading ? 'Adding…' : '+ Add image'}
                   </LinkButton>
@@ -295,7 +289,7 @@ function TaskForm({ editingId, task, seed }: { editingId: string | null; task: T
                       onDrop={img.onDrop}
                       onDragOver={img.onDragOver}
                       placeholder={'Add a description in Markdown…\n\n## Notes\n- supports **bold**, *italic*, `code`\n- [links](https://example.com), lists, > quotes\n- paste, drop or add an image'}
-                      className="block w-full min-h-[300px] lg:min-h-[420px] px-[14px] py-[12px] text-[16px] md:text-[13.5px] leading-[1.6] outline-none focus:outline-brand-500 focus:shadow-[0_0_0_3px_var(--color-brand-225)] resize-y focus-visible:outline-brand-500!"
+                      className="block w-full min-h-[300px] lg:min-h-[420px] px-[14px] py-[12px] text-touch md:text-control-lg leading-[1.6] outline-none focus:outline-brand-500 focus:shadow-[0_0_0_3px_var(--color-brand-225)] resize-y focus-visible:outline-brand-500!"
                       style={{ fontFamily: "'JetBrains Mono', ui-monospace, monospace" }}
                     />
                   ) : description.trim() ? (
@@ -303,13 +297,13 @@ function TaskForm({ editingId, task, seed }: { editingId: string | null; task: T
                     // resize the page under the pointer.
                     <div className="wl-md min-h-[300px] lg:min-h-[420px] px-[8px] py-[4px]" dangerouslySetInnerHTML={{ __html: renderMarkdown(description, resolveImage) }} />
                   ) : (
-                    <div onClick={() => setDescMode('edit')} className="min-h-[300px] lg:min-h-[420px] px-[18px] py-[18px] text-[14px] text-neutral-625 italic cursor-text">
+                    <div onClick={() => setDescMode('edit')} className="min-h-[300px] lg:min-h-[420px] px-[18px] py-[18px] text-body text-neutral-625 italic cursor-text">
                       Nothing to preview yet. Click to add Markdown notes.
                     </div>
                   )}
                 </div>
               </div>
-              {img.error && <div className="text-[12.5px] text-danger-675 mt-2">{img.error}</div>}
+              {img.error && <div className="text-chip text-danger-675 mt-2">{img.error}</div>}
             </div>
           </div>
 
@@ -320,41 +314,37 @@ function TaskForm({ editingId, task, seed }: { editingId: string | null; task: T
                   {pickableClients.map((c) => {
                     const active = c.id === clientId;
                     return (
-                      <button
+                      <Chip
                         key={c.id}
+                        variant="select"
+                        selected={active}
                         onClick={() => {
                           setClientId(c.id);
                           setParentId('');
                         }}
                         title={c.archived ? `${c.name} (archived)` : c.name}
-                        className={
-                          'flex items-center gap-2 px-[13px] py-[7px] rounded-full text-[13px] font-semibold cursor-pointer border text-neutral-825 ' +
-                          (active ? 'border-brand-500 bg-brand-450' : 'border-neutral-525 bg-neutral-350')
-                        }
                       >
                         <span className="w-[9px] h-[9px] rounded-full" style={{ background: colorOf(c.id) }} />
                         {c.name}
-                      </button>
+                      </Chip>
                     );
                   })}
-                  <button
+                  <Chip
+                    variant="select"
+                    selected={clientId === GENERAL_TODO_CLIENT_ID}
                     onClick={() => {
                       setClientId(GENERAL_TODO_CLIENT_ID);
                       setParentId('');
                     }}
                     title="A general to-do not linked to any client"
-                    className={
-                      'flex items-center gap-2 px-[13px] py-[7px] rounded-full text-[13px] font-semibold cursor-pointer border text-neutral-825 ' +
-                      (clientId === GENERAL_TODO_CLIENT_ID ? 'border-brand-500 bg-brand-450' : 'border-neutral-525 bg-neutral-350')
-                    }
                   >
                     <span className="w-[9px] h-[9px] rounded-full" style={{ background: GENERAL_TODO_COLOR }} />
                     {GENERAL_TODO_LABEL}
-                  </button>
+                  </Chip>
                   {!addingClient && (
-                    <button onClick={() => setAddingClient(true)} className="flex items-center gap-[6px] px-[13px] py-[7px] border border-dashed border-neutral-550 rounded-full bg-white text-neutral-700 text-[13px] cursor-pointer">
+                    <Chip variant="add" onClick={() => setAddingClient(true)}>
                       + Add client
-                    </button>
+                    </Chip>
                   )}
                 </div>
                 {addingClient && (
@@ -421,16 +411,14 @@ function TaskForm({ editingId, task, seed }: { editingId: string | null; task: T
                     <DateInput value={due} onChange={(e) => setDue(e.target.value)} className="w-full" />
                     {/* Today is by far the most common due date, and picking it from the
                         native date input takes more clicks than it's worth. */}
-                    <button
-                      type="button"
+                    <Chip
+                      variant="filter"
+                      selected={due === todayKey}
                       onClick={() => setDue(due === todayKey ? '' : todayKey)}
-                      className={
-                        'mt-2 px-[11px] py-[4px] rounded-full text-[12px] font-semibold cursor-pointer border ' +
-                        (due === todayKey ? 'border-brand-500 bg-brand-450 text-brand-800' : 'border-neutral-525 bg-white text-neutral-725 hover:bg-neutral-200')
-                      }
+                      className="mt-2"
                     >
                       Today
-                    </button>
+                    </Chip>
                   </Field>
                 </SidebarSection>
               )}
@@ -468,7 +456,7 @@ function TaskForm({ editingId, task, seed }: { editingId: string | null; task: T
                         setLinks(next.length ? next : ['']);
                       }}
                       aria-label="Remove link"
-                      className="w-[36px] shrink-0 border border-neutral-525 rounded-[9px] bg-white text-neutral-650 cursor-pointer text-[15px]"
+                      className="w-[36px] shrink-0 border border-neutral-525 rounded-control-lg bg-white text-neutral-650 cursor-pointer text-[15px]"
                     >
                       ×
                     </button>

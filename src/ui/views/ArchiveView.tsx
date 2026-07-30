@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Button, Input, LinkButton, Select } from '../primitives';
+import { SearchIcon } from 'lucide-react';
+import { Badge, Button, Card, EmptyState, Input, LinkButton, Pager, SegmentedControl, Select } from '../primitives';
 import { useData } from '../context';
 import { ARCHIVE_PAGE_SIZES, deriveArchive, fmtShort, pageWindow } from '../utils';
 import type { ArchivePeriod } from '../utils';
@@ -87,12 +88,7 @@ function ArchiveFilterBar({
         clearable
         onClear={() => setQuery('')}
         clearLabel="Clear filter"
-        leading={
-          <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="#8A9099" strokeWidth="1.5" className="shrink-0">
-            <circle cx="7" cy="7" r="4.5" />
-            <path d="M10.5 10.5L14 14" />
-          </svg>
-        }
+        leading={<SearchIcon size={15} className="shrink-0 text-neutral-650" />}
         aria-label="Filter archived tasks"
         placeholder="Filter by title, tag, link..."
         className="flex-1 min-w-[220px]"
@@ -108,23 +104,12 @@ function ArchiveFilterBar({
         ))}
       </Select>
 
-      <div className="inline-flex p-[2px] rounded-[8px] bg-neutral-250 border border-neutral-400">
-        {PERIODS.map((p) => {
-          const active = period === p.key;
-          return (
-            <button
-              key={p.key}
-              onClick={() => setPeriod(p.key)}
-              className={
-                'px-[11px] py-[5px] rounded-[6px] text-[12.5px] cursor-pointer ' +
-                (active ? 'bg-white text-neutral-825 font-semibold shadow-[0_1px_2px_rgba(0,0,0,0.06)]' : 'text-neutral-675 font-medium')
-              }
-            >
-              {p.label}
-            </button>
-          );
-        })}
-      </div>
+      <SegmentedControl
+        aria-label="Filter by period"
+        options={PERIODS.map((p) => ({ value: p.key, label: p.label }))}
+        value={period}
+        onChange={setPeriod}
+      />
 
       {filtersActive && (
         <LinkButton onClick={resetFilters} className="px-1">
@@ -149,34 +134,10 @@ function ArchivePager({
   setPage: (v: number) => void;
   setPageSize: (v: number) => void;
 }) {
-  const btn = 'min-w-[32px] h-8 px-[9px] border rounded-[7px] bg-white text-[13px] font-semibold cursor-pointer disabled:opacity-40 disabled:cursor-default';
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 mt-5">
-      <div className="flex items-center gap-[5px]">
-        <button onClick={() => setPage(page - 1)} disabled={page <= 1} className={btn + ' border-neutral-400 text-neutral-750 hover:bg-neutral-200'} aria-label="Previous page">
-          ‹
-        </button>
-        {pageWindow(page, pageCount).map((p, i) =>
-          p === null ? (
-            <span key={`gap-${i}`} className="px-1 text-[13px] text-neutral-625">
-              …
-            </span>
-          ) : (
-            <button
-              key={p}
-              onClick={() => setPage(p)}
-              aria-current={p === page ? 'page' : undefined}
-              className={btn + (p === page ? ' border-brand-500 bg-brand-225 text-brand-650' : ' border-neutral-400 text-neutral-750 hover:bg-neutral-200')}
-            >
-              {p}
-            </button>
-          ),
-        )}
-        <button onClick={() => setPage(page + 1)} disabled={page >= pageCount} className={btn + ' border-neutral-400 text-neutral-750 hover:bg-neutral-200'} aria-label="Next page">
-          ›
-        </button>
-      </div>
-      <label className="flex items-center gap-2 text-[12.5px] text-neutral-675">
+      <Pager page={page} pageCount={pageCount} onPage={setPage} pages={pageWindow(page, pageCount)} />
+      <label className="flex items-center gap-2 text-chip text-neutral-675">
         Per page
         <Select size="xs" value={pageSize} onChange={(e) => setPageSize(Number(e.target.value))}>
           {ARCHIVE_PAGE_SIZES.map((n) => (
@@ -219,7 +180,7 @@ export function ArchiveView() {
       <div className="max-w-[920px] mx-auto">
         <div className="flex items-center justify-between gap-3 mb-6">
           <h1 className="text-[24px] font-bold m-0">Archive</h1>
-          <span className="text-[13px] text-neutral-675">
+          <span className="text-control text-neutral-675">
             {filteredCount === 0
               ? `${totalCount} task${totalCount === 1 ? '' : 's'}`
               : `${from}–${to} of ${filteredCount}${filteredCount === totalCount ? '' : ` (of ${totalCount})`}`}
@@ -240,33 +201,33 @@ export function ArchiveView() {
           />
         )}
 
-        {totalCount === 0 && <div className="text-[14px] text-neutral-625 italic">No archived tasks yet.</div>}
+        {totalCount === 0 && <EmptyState>No archived tasks yet.</EmptyState>}
 
         {totalCount > 0 && filteredCount === 0 && (
-          <div className="text-[14px] text-neutral-625 italic">
+          <EmptyState>
             No archived tasks match these filters.{' '}
             <LinkButton size="inherit" onClick={resetFilters} className="italic underline">
               Reset
             </LinkButton>
-          </div>
+          </EmptyState>
         )}
 
         {groups.map((g) => (
-          <div key={g.id} className="border border-neutral-375 rounded-[14px] bg-neutral-50 mb-[14px] overflow-hidden">
+          <Card key={g.id} tone="muted" className="mb-[14px] overflow-hidden">
             <div className="flex items-center gap-[9px] px-[18px] py-[13px] bg-neutral-175 border-b border-neutral-375 whitespace-nowrap">
               <span className="w-[9px] h-[9px] rounded-full shrink-0" style={{ background: g.color }} />
-              <span className="font-bold text-[14.5px]">{g.name}</span>
-              <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-[6px] rounded-full bg-neutral-325 text-neutral-675 text-[12px] font-semibold">{g.count}</span>
+              <span className="font-bold text-row">{g.name}</span>
+              <Badge>{g.count}</Badge>
             </div>
 
             <div className="px-2 py-[6px]">
               {g.tasks.map((t) => (
                 <div key={t.id} className="flex items-center gap-[11px] py-2 px-2.5 rounded-lg hover:bg-neutral-225">
-                  <span className="w-16 shrink-0 text-[10.5px] font-bold tracking-[0.05em] text-success-500">{statusMeta(t.status, true).label}</span>
-                  <button onClick={() => openDetail(t)} title="Open task" className="text-[14.5px] text-neutral-700 flex-1 text-left line-through decoration-neutral-550 bg-transparent border-none cursor-pointer hover:underline p-0">
+                  <span className="w-16 shrink-0 text-status font-bold tracking-status text-success-500">{statusMeta(t.status, true).label}</span>
+                  <button onClick={() => openDetail(t)} title="Open task" className="text-row text-neutral-700 flex-1 text-left line-through decoration-neutral-550 bg-transparent border-none cursor-pointer hover:underline p-0">
                     {t.title}
                   </button>
-                  <span className="text-[13px] text-neutral-650">{t.completed ? fmtShort(t.completed) : ''}</span>
+                  <span className="text-control text-neutral-650">{t.completed ? fmtShort(t.completed) : ''}</span>
                   <Button size="xs" onClick={() => reopen(t)}>
                     Restore
                   </Button>
@@ -276,7 +237,7 @@ export function ArchiveView() {
                 </div>
               ))}
             </div>
-          </div>
+          </Card>
         ))}
 
         {pageCount > 1 && <ArchivePager page={page} pageCount={pageCount} pageSize={pageSize} setPage={setPage} setPageSize={setPageSize} />}

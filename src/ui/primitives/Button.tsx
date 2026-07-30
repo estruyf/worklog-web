@@ -23,10 +23,10 @@ const BASE =
   'inline-flex items-center justify-center gap-[6px] border cursor-pointer whitespace-nowrap disabled:cursor-not-allowed';
 
 const SIZES: Record<ButtonSize, string> = {
-  xs: 'px-2 py-[5px] rounded-[7px] text-[12px] font-medium',
-  sm: 'px-[14px] py-[7px] rounded-[7px] text-[13px] font-semibold',
-  md: 'px-[14px] py-[9px] rounded-[8px] text-[13px] font-semibold',
-  lg: 'px-5 py-[10px] rounded-[9px] text-[14px] font-semibold',
+  xs: 'px-2 py-[5px] rounded-control text-meta font-medium',
+  sm: 'px-[14px] py-[7px] rounded-control text-control font-semibold',
+  md: 'px-[14px] py-[9px] rounded-control-md text-control font-semibold',
+  lg: 'px-5 py-[10px] rounded-control-lg text-body font-semibold',
 };
 
 const VARIANTS: Record<ButtonVariant, string> = {

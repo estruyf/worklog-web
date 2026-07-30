@@ -1,8 +1,8 @@
 import React from 'react';
 import type { WorklogRow } from '../model';
-import { BriefcaseIcon, GlobeIcon, RefreshCwIcon, SquareArrowOutUpRight } from 'lucide-react';
+import { BriefcaseIcon, CalendarIcon, GlobeIcon, RefreshCwIcon, SquareArrowOutUpRight } from 'lucide-react';
 import { formatDaysLate } from '../../model/overdue';
-import { Button } from '../primitives';
+import { Button, Chip } from '../primitives';
 import { fmtShort } from '../utils';
 
 /** Subtask completion rollup, shown inline on desktop and below the title on
@@ -11,7 +11,7 @@ function ProgressChip({ progress, barWidth }: { progress: NonNullable<WorklogRow
   return (
     <span
       title={`${progress.done} of ${progress.total} subtasks done`}
-      className="shrink-0 flex items-center gap-[6px] text-[11px] text-neutral-675 tabular-nums"
+      className="shrink-0 flex items-center gap-[6px] text-eyebrow text-neutral-675 tabular-nums"
     >
       <span className="h-[5px] rounded-full bg-neutral-375 overflow-hidden" style={{ width: barWidth }}>
         <span className="block h-full bg-success-500" style={{ width: `${progress.total ? (progress.done / progress.total) * 100 : 0}%` }} />
@@ -29,14 +29,11 @@ function DueChip({ due, overdue, days }: { due: string; overdue: boolean; days?:
     <span
       title={overdue ? `${formatDaysLate(days ?? 0)} — was due ${due}` : `Due ${due}`}
       className={
-        'shrink-0 flex items-center gap-[4px] text-[11px] font-semibold px-[7px] py-[2px] rounded-full ' +
+        'shrink-0 flex items-center gap-[4px] text-eyebrow font-semibold px-[7px] py-[2px] rounded-full ' +
         (overdue ? 'text-danger-675 bg-danger-75 border border-danger-200' : 'text-neutral-675 bg-neutral-250 border border-neutral-400')
       }
     >
-      <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6">
-        <rect x="2.5" y="3.5" width="11" height="10" rx="1.5" />
-        <path d="M2.5 6.5h11M5.5 2v2M10.5 2v2" />
-      </svg>
+      <CalendarIcon size={10} strokeWidth={1.6} />
       {fmtShort(due)}
       {overdue && !!days && <span className="opacity-80">· {days}d</span>}
     </span>
@@ -50,7 +47,7 @@ function RepeatChip({ label }: { label: string }) {
     <span
       title={label}
       aria-label={label}
-      className="shrink-0 flex items-center gap-[4px] text-[11px] font-semibold px-[7px] py-[2px] rounded-full text-brand-800 bg-brand-175 border border-brand-375"
+      className="shrink-0 flex items-center gap-[4px] text-eyebrow font-semibold px-[7px] py-[2px] rounded-full text-brand-800 bg-brand-175 border border-brand-375"
     >
       <RefreshCwIcon size={9} strokeWidth={2.4} />
       Repeats
@@ -61,26 +58,25 @@ function RepeatChip({ label }: { label: string }) {
 /** Tag chips. Clickable when the row supplies `onTagClick`, which opens the
  * tag-filtered search — otherwise plain labels. */
 function TagChips({ tags, onTagClick }: { tags: string[]; onTagClick?: (tag: string) => void }) {
-  const base = 'shrink-0 text-[11px] text-neutral-725 bg-neutral-250 border border-neutral-400 rounded-full px-[8px] py-[2px]';
   return (
     <>
       {tags.map((tag) =>
         onTagClick ? (
-          <button
+          <Chip
             key={tag}
+            variant="tag"
             onClick={(e) => {
               e.stopPropagation();
               onTagClick(tag);
             }}
             title={`Show everything tagged "${tag}"`}
-            className={base + ' cursor-pointer hover:border-brand-500 hover:bg-brand-175 hover:text-brand-800'}
           >
             {tag}
-          </button>
+          </Chip>
         ) : (
-          <span key={tag} className={base}>
+          <Chip key={tag} variant="tag" as="span">
             {tag}
-          </span>
+          </Chip>
         ),
       )}
     </>
@@ -133,7 +129,7 @@ export const WorklogTaskRow = React.memo(function WorklogTaskRow({ row }: { row:
         {/* Status column — wide rows only; when narrow it moves to the meta row
             below. Absent for rows without a meaningful status (to-dos). */}
         {row.statusLabel && (
-          <button onClick={row.onCycle} title="Change status" className="hidden @lg:block w-16 shrink-0 text-left text-[10.5px] font-bold tracking-[0.05em] bg-transparent border-none cursor-pointer p-0" style={{ color: row.statusColor }}>
+          <button onClick={row.onCycle} title="Change status" className="hidden @lg:block w-16 shrink-0 text-left text-status font-bold tracking-status bg-transparent border-none cursor-pointer p-0" style={{ color: row.statusColor }}>
             {row.statusLabel}
           </button>
         )}
@@ -152,7 +148,7 @@ export const WorklogTaskRow = React.memo(function WorklogTaskRow({ row }: { row:
             }
           }}
           title="View task · middle-click to open in a new tab"
-          className="text-[14.5px] text-neutral-825 flex-1 min-w-0 text-left bg-transparent border-none cursor-pointer p-0 hover:underline whitespace-normal leading-[1.35] @lg:whitespace-nowrap @lg:overflow-hidden @lg:text-ellipsis @lg:leading-normal"
+          className="text-row text-neutral-825 flex-1 min-w-0 text-left bg-transparent border-none cursor-pointer p-0 hover:underline whitespace-normal leading-[1.35] @lg:whitespace-nowrap @lg:overflow-hidden @lg:text-ellipsis @lg:leading-normal"
         >
           {row.title}
         </button>
@@ -191,7 +187,7 @@ export const WorklogTaskRow = React.memo(function WorklogTaskRow({ row }: { row:
       {hasNarrowMeta && (
         <div className={'flex @lg:hidden flex-wrap items-center gap-x-[10px] gap-y-[6px] mt-[6px] ' + (row.onWorked ? 'pl-[45px]' : 'pl-[28px]')}>
           {row.statusLabel && (
-            <button onClick={row.onCycle} title="Change status" className="text-[10.5px] font-bold tracking-[0.05em] bg-transparent border-none cursor-pointer p-0" style={{ color: row.statusColor }}>
+            <button onClick={row.onCycle} title="Change status" className="text-status font-bold tracking-status bg-transparent border-none cursor-pointer p-0" style={{ color: row.statusColor }}>
               {row.statusLabel}
             </button>
           )}

@@ -7,6 +7,7 @@
 import React from 'react';
 import { KeyboardIcon } from 'lucide-react';
 import { Kbd } from '../components';
+import { Card, SectionLabel } from '../primitives';
 
 /** One binding: the chords that trigger it, what it does, and any caveat about
  *  where or when it applies. Multiple combos read as "A or B" — the handlers
@@ -106,7 +107,7 @@ function Combos({ combos }: { combos: string[][] }) {
     <span className="flex items-center gap-[6px] shrink-0">
       {combos.map((combo, i) => (
         <React.Fragment key={combo.join('+')}>
-          {i > 0 && <span className="text-[11.5px] text-neutral-650">or</span>}
+          {i > 0 && <span className="text-count text-neutral-650">or</span>}
           <span className="flex items-center gap-[3px]">
             {combo.map((key, k) => (
               <Kbd key={`${key}-${k}`}>{key}</Kbd>
@@ -127,7 +128,7 @@ export function ShortcutsView() {
             <KeyboardIcon size={20} className="text-neutral-650" />
             <h1 className="text-[24px] font-bold m-0">Keyboard shortcuts</h1>
           </div>
-          <p className="text-[13px] text-neutral-675 mt-2 mb-0">
+          <p className="text-control text-neutral-675 mt-2 mb-0">
             Every shortcut the app binds. Modifier keys work as {MOD === '⌘' ? '⌘ or Ctrl' : 'Ctrl or ⌘'} — whichever your
             keyboard has.
           </p>
@@ -136,24 +137,24 @@ export function ShortcutsView() {
         {GROUPS.map((group) => (
           <section key={group.title} className="mb-7">
             <div className="mb-3">
-              <div className="text-[11px] font-bold tracking-[0.06em] text-neutral-675">{group.title.toUpperCase()}</div>
-              <div className="text-[13px] text-neutral-675 mt-[5px]">{group.hint}</div>
+              <SectionLabel>{group.title}</SectionLabel>
+              <div className="text-control text-neutral-675 mt-[5px]">{group.hint}</div>
             </div>
 
-            <div className="border border-neutral-375 rounded-[14px] bg-white divide-y divide-neutral-250">
+            <Card className="divide-y divide-neutral-250">
               {group.items.map((item, i) => (
                 <div
                   key={`${item.label}-${i}`}
                   className="flex items-start justify-between gap-5 px-[18px] py-[13px]"
                 >
                   <div className="min-w-0">
-                    <div className="text-[14px] font-medium">{item.label}</div>
-                    {item.note && <div className="text-[12.5px] text-neutral-675 mt-[3px]">{item.note}</div>}
+                    <div className="text-body font-medium">{item.label}</div>
+                    {item.note && <div className="text-chip text-neutral-675 mt-[3px]">{item.note}</div>}
                   </div>
                   <Combos combos={item.combos} />
                 </div>
               ))}
-            </div>
+            </Card>
           </section>
         ))}
       </div>

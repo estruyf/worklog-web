@@ -1,6 +1,6 @@
 import React from 'react';
 import { CalendarArrowUpIcon, ChevronLeftIcon, ChevronRightIcon } from 'lucide-react';
-import { Button, IconButton } from '../../primitives';
+import { Badge, Button, IconButton } from '../../primitives';
 import { fmtLong, shiftDate } from '../../utils';
 
 type DayHeaderProps = {
@@ -45,9 +45,9 @@ export function DayHeader({
         {/* The date alone reads the same on any day; the pill is what says you're
          * looking at the current one, now that the heading no longer says "Today". */}
         {isTodaySel && (
-          <span className="inline-flex items-center px-[9px] py-[2px] rounded-full bg-brand-225 border border-brand-350 text-brand-650 text-[11px] font-semibold uppercase tracking-[0.04em]">
+          <Badge tone="brand" size="sm" className="uppercase tracking-eyebrow">
             Today
-          </span>
+          </Badge>
         )}
       </div>
 
@@ -58,7 +58,7 @@ export function DayHeader({
           <button
             onClick={() => setEditDayOpen(!editDayOpen)}
             className={
-              'text-[12px] border rounded-md cursor-pointer px-2 py-[5px] ' +
+              'text-meta border rounded-control cursor-pointer px-2 py-[5px] ' +
               (editDayOpen
                 ? 'text-brand-650 border-brand-500 bg-brand-225'
                 : 'text-info border-neutral-525 bg-white')

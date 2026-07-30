@@ -1,6 +1,5 @@
 // Barrel for UI presentational components.
-export { Icon } from './icons';
-export type { IconName } from './icons';
+export { DisclosureIcon } from './icons';
 export { Kbd } from './Kbd';
 export { WorklogTaskRow } from './WorklogTaskRow';
 export { Sidebar } from './Sidebar';

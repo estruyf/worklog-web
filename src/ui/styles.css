@@ -161,6 +161,36 @@
   /* Overlay — modal scrim */
   --color-overlay: rgba(30, 33, 40, 0.45);
 
+  /* ---- Radius ladder ----
+     Three control steps plus the two boxes. Named after what wears them rather
+     than sized t-shirt style, because that is the decision at the call site:
+     `rounded-card`, not "is this the 14 or the 12 one". */
+  --radius-chip: 5px; /* the smallest boxed thing: a key hint, a match tag */
+  --radius-control: 7px; /* xs / sm controls */
+  --radius-control-md: 8px;
+  --radius-control-lg: 9px;
+  --radius-panel: 12px; /* a box inside a card */
+  --radius-card: 14px; /* the card, and a dialog's panel */
+
+  /* ---- Type ladder ----
+     Half-pixel steps that only mean anything by role, so they are named for it.
+     `text-touch` is the 16px floor Safari needs on a focused control — it zooms
+     the viewport under that and does not zoom back out — which is why every
+     control opens at `text-touch` and only steps down from `md:` up. */
+  --text-status: 10.5px; /* the status column on a task row */
+  --text-eyebrow: 11px; /* the uppercase section label */
+  --text-count: 11.5px; /* a count badge */
+  --text-meta: 12px; /* chips, hints, the small print under a control */
+  --text-chip: 12.5px;
+  --text-control: 13px; /* a button or a field at rest */
+  --text-control-lg: 13.5px;
+  --text-body: 14px;
+  --text-row: 14.5px; /* a task title in a list */
+  --text-touch: 16px;
+
+  --tracking-eyebrow: 0.06em;
+  --tracking-status: 0.05em;
+
   --font-sans: var(--ui-font-family);
   --text-base: var(--ui-font-size, 13px);
 }

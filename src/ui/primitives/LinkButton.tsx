@@ -24,10 +24,10 @@ const TONES: Record<LinkButtonTone, string> = {
 
 const SIZES: Record<LinkButtonSize, string> = {
   inherit: '',
-  xs: 'text-[12px]',
-  sm: 'text-[12.5px]',
-  md: 'text-[13px]',
-  lg: 'text-[13.5px]',
+  xs: 'text-meta',
+  sm: 'text-chip',
+  md: 'text-control',
+  lg: 'text-control-lg',
 };
 
 export interface LinkButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {

@@ -13,8 +13,8 @@ import {
 } from './controlStyles';
 import { useControlAria } from './Field';
 
-/** Same glyph as `Icon name="close"`, inlined so the primitives stay free of
- *  imports from `components/`. */
+/** The close glyph, inlined so the primitives stay free of imports from
+ *  `components/`. */
 const CLOSE_PATH =
   'M8 6.94 11.06 3.88l1.06 1.06L9.06 8l3.06 3.06-1.06 1.06L8 9.06l-3.06 3.06-1.06-1.06L6.94 8 3.88 4.94l1.06-1.06L8 6.94Z';
 

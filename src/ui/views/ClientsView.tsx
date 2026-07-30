@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { Client } from '../../model/types';
 import type { WorklogRow } from '../model';
-import { WorklogTaskRow } from '../components';
-import { Button } from '../primitives';
+import { ChevronDownIcon, ExternalLinkIcon, PencilIcon } from 'lucide-react';
+import { DisclosureIcon, WorklogTaskRow } from '../components';
+import { Badge, Button, Card, EmptyState, SectionLabel } from '../primitives';
 import { useData, useUi } from '../context';
 import { clientIdOf, fmtLong, fmtShort, isDone, renderMarkdown } from '../utils';
 
@@ -86,15 +87,13 @@ function MobileClientDropdown({
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="flex items-center justify-between w-full px-3 py-[11px] border border-neutral-525 rounded-[9px] bg-white cursor-pointer"
+        className="flex items-center justify-between w-full px-3 py-[11px] border border-neutral-525 rounded-control-lg bg-white cursor-pointer"
       >
         <span className="flex items-center gap-[9px] min-w-0">
           <span className="w-[9px] h-[9px] rounded-full shrink-0" style={{ background: colorOf(selectedClient) }} />
           <span className="font-semibold text-[15px] truncate">{selectedName || 'Select client'}</span>
         </span>
-        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#57606A" strokeWidth="1.6" className={'shrink-0 transition-transform ' + (open ? 'rotate-180' : '')}>
-          <path d="M4 6l4 4 4-4" />
-        </svg>
+        <ChevronDownIcon size={14} className={'shrink-0 text-neutral-700 transition-transform ' + (open ? 'rotate-180' : '')} />
       </button>
       {open && (
         <div className="absolute left-[14px] right-[14px] top-[calc(100%-4px)] z-20 max-h-[50vh] overflow-auto border border-neutral-400 rounded-[10px] bg-white shadow-lg py-[6px]">
@@ -109,17 +108,17 @@ function MobileClientDropdown({
               >
                 <span className="flex items-center gap-[9px] min-w-0">
                   <span className="w-[9px] h-[9px] rounded-full shrink-0" style={{ background: colorOf(c.id) }} />
-                  <span className="font-semibold text-[14px] truncate">{c.name}</span>
+                  <span className="font-semibold text-body truncate">{c.name}</span>
                 </span>
-                <span className="text-neutral-625 text-[13px]">{cnt}</span>
+                <span className="text-neutral-625 text-control">{cnt}</span>
               </div>
             );
           })}
           {archivedClients.length > 0 && (
             <>
-              <div className="mx-3 mt-[10px] mb-[6px] pt-[10px] border-t border-neutral-325 text-[10.5px] font-bold tracking-[0.06em] text-neutral-675">
-                ARCHIVED · {archivedClients.length}
-              </div>
+              <SectionLabel size="sm" className="mx-3 mt-[10px] mb-[6px] pt-[10px] border-t border-neutral-325">
+                Archived · {archivedClients.length}
+              </SectionLabel>
               {archivedClients.map((c) => (
                 <div
                   key={c.id}
@@ -131,16 +130,16 @@ function MobileClientDropdown({
                 >
                   <span className="flex items-center gap-[9px] min-w-0 opacity-65">
                     <span className="w-[9px] h-[9px] rounded-full shrink-0" style={{ background: colorOf(c.id) }} />
-                    <span className="font-semibold text-[14px] truncate">{c.name}</span>
+                    <span className="font-semibold text-body truncate">{c.name}</span>
                   </span>
-                  <span className="text-neutral-625 text-[13px]">{clientOpenCounts[c.id] ?? 0}</span>
+                  <span className="text-neutral-625 text-control">{clientOpenCounts[c.id] ?? 0}</span>
                 </div>
               ))}
             </>
           )}
           <div
             onClick={() => { onAdd(); setOpen(false); }}
-            className="flex items-center gap-[6px] mx-[6px] mt-[6px] px-3 py-[10px] border border-dashed border-neutral-550 rounded-lg text-neutral-700 text-[13px] cursor-pointer hover:border-brand-500 hover:text-brand-800"
+            className="flex items-center gap-[6px] mx-[6px] mt-[6px] px-3 py-[10px] border border-dashed border-neutral-550 rounded-lg text-neutral-700 text-control cursor-pointer hover:border-brand-500 hover:text-brand-800"
           >
             <span className="text-[15px] leading-none">+</span> Add client
           </div>
@@ -192,9 +191,9 @@ export function ClientsView() {
             >
               <span className="flex items-center gap-[9px]">
                 <span className="w-[9px] h-[9px] rounded-full" style={{ background: colorOf(c.id) }} />
-                <span className="font-semibold text-[14px]">{c.name}</span>
+                <span className="font-semibold text-body">{c.name}</span>
               </span>
-              <span className="text-neutral-625 text-[13px]">{cnt}</span>
+              <span className="text-neutral-625 text-control">{cnt}</span>
             </div>
           );
         })}
@@ -208,12 +207,12 @@ export function ClientsView() {
           <div className="mt-4 pt-3 border-t border-neutral-325">
             <button
               onClick={() => setShowArchivedClients(!showArchivedClients)}
-              className="flex items-center gap-[6px] w-full px-3 py-[6px] bg-transparent border-none text-[11px] font-bold tracking-[0.06em] text-neutral-675 cursor-pointer hover:text-neutral-825"
+              className="group flex items-center gap-[6px] w-full px-3 py-[6px] bg-transparent border-none cursor-pointer text-neutral-675"
             >
-              <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" className={'transition-transform ' + (showArchivedClients ? 'rotate-90' : '')}>
-                <path d="M6 3l5 5-5 5" />
-              </svg>
-              ARCHIVED · {archivedClients.length}
+              <DisclosureIcon open={showArchivedClients} size={10} />
+              <SectionLabel className="group-hover:text-neutral-825">
+                Archived · {archivedClients.length}
+              </SectionLabel>
             </button>
             {showArchivedClients &&
               archivedClients.map((c) => {
@@ -227,9 +226,9 @@ export function ClientsView() {
                   >
                     <span className="flex items-center gap-[9px] opacity-65">
                       <span className="w-[9px] h-[9px] rounded-full" style={{ background: colorOf(c.id) }} />
-                      <span className="font-semibold text-[14px]">{c.name}</span>
+                      <span className="font-semibold text-body">{c.name}</span>
                     </span>
-                    <span className="text-neutral-625 text-[13px]">{clientOpenCounts[c.id] ?? 0}</span>
+                    <span className="text-neutral-625 text-control">{clientOpenCounts[c.id] ?? 0}</span>
                   </div>
                 );
               })}
@@ -241,16 +240,14 @@ export function ClientsView() {
           <span className="w-[11px] h-[11px] rounded-full" style={{ background: selectedColor }} />
           <h1 className="text-[24px] font-bold m-0">{selectedName}</h1>
           {selectedClientObj?.archived && (
-            <span title="Hidden from the pickers and lists; its history is untouched" className="text-[10.5px] font-bold tracking-[0.05em] text-neutral-675 bg-neutral-250 border border-neutral-400 rounded-full px-[9px] py-[3px]">
-              ARCHIVED
-            </span>
+            <Badge tone="outline" size="sm" title="Hidden from the pickers and lists; its history is untouched">
+              Archived
+            </Badge>
           )}
-          <span className="text-[14px] text-neutral-675">{selectedLastWorked}</span>
+          <span className="text-body text-neutral-675">{selectedLastWorked}</span>
           {selectedClientObj && (
             <Button size="xs" onClick={() => openClientEditor(selectedClientObj)} title="Edit client" className="ml-1">
-              <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-                <path d="M11.5 2.5l2 2L6 12l-3 1 1-3 7.5-7.5z" />
-              </svg>
+              <PencilIcon size={13} />
               Edit
             </Button>
           )}
@@ -264,10 +261,10 @@ export function ClientsView() {
         {/* Who the client is and where their things live — the context you want
             in front of you before touching their tasks. */}
         {hasClientInfo && (
-          <div className="border border-neutral-375 rounded-[14px] bg-white px-[18px] py-[14px] mb-7">
+          <Card padding="md" className="mb-7">
             {clientDescription && (
               <div
-                className="wl-md text-[14px] leading-[1.6] text-neutral-825"
+                className="wl-md text-body leading-[1.6] text-neutral-825"
                 dangerouslySetInnerHTML={{ __html: renderMarkdown(clientDescription) }}
               />
             )}
@@ -279,39 +276,37 @@ export function ClientsView() {
                     href={l.url}
                     target="_blank"
                     rel="noreferrer noopener"
-                    className="flex items-center gap-[7px] text-[13.5px] text-info hover:underline w-fit"
+                    className="flex items-center gap-[7px] text-control-lg text-info hover:underline w-fit"
                   >
-                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-                      <path d="M6 3H3.5A1.5 1.5 0 002 4.5v8A1.5 1.5 0 003.5 14h8a1.5 1.5 0 001.5-1.5V10M10 2h4v4M14 2L7.5 8.5" />
-                    </svg>
+                    <ExternalLinkIcon size={14} />
                     {l.label || l.url}
                   </a>
                 ))}
               </div>
             )}
-          </div>
+          </Card>
         )}
 
-        <div className="text-[11px] font-bold tracking-[0.06em] text-neutral-675 mb-[14px]">OPEN TASKS · {selectedOpenCount}</div>
-        <div className="border border-neutral-375 rounded-[14px] bg-white px-2 py-[6px] mb-[38px]">
+        <SectionLabel className="mb-[14px]">Open tasks · {selectedOpenCount}</SectionLabel>
+        <Card padding="list" className="mb-[38px]">
           {selectedOpenRows.map((r) => <WorklogTaskRow key={r.id} row={r} />)}
-          {selectedOpenCount === 0 && <div className="text-[14px] text-neutral-625 italic py-2 px-2.5">No open tasks.</div>}
-        </div>
+          {selectedOpenCount === 0 && <EmptyState className="py-2 px-2.5">No open tasks.</EmptyState>}
+        </Card>
 
-        <div className="text-[11px] font-bold tracking-[0.06em] text-neutral-675 mb-[14px]">RECENTLY COMPLETED</div>
-        {selectedDone.length === 0 && <div className="text-[14px] text-neutral-625 italic">Nothing archived yet for {selectedName || 'this client'}.</div>}
+        <SectionLabel className="mb-[14px]">Recently completed</SectionLabel>
+        {selectedDone.length === 0 && <EmptyState>Nothing archived yet for {selectedName || 'this client'}.</EmptyState>}
         {selectedDone.length > 0 && (
-          <div className="border border-neutral-375 rounded-[14px] bg-neutral-50 px-2 py-[6px]">
+          <Card tone="muted" padding="list">
             {selectedDone.map((t) => (
               <div key={t.id} className="flex items-center gap-[11px] py-2 px-2.5 rounded-lg hover:bg-neutral-225">
-                <span className="w-16 shrink-0 text-[10.5px] font-bold tracking-[0.05em] text-success-500">{statusMeta(t.status, true).label}</span>
-                <span onClick={() => openDetail(t)} title="Open task" className="text-[14.5px] text-neutral-700 flex-1 line-through decoration-neutral-550 cursor-pointer">
+                <span className="w-16 shrink-0 text-status font-bold tracking-status text-success-500">{statusMeta(t.status, true).label}</span>
+                <span onClick={() => openDetail(t)} title="Open task" className="text-row text-neutral-700 flex-1 line-through decoration-neutral-550 cursor-pointer">
                   {t.title}
                 </span>
-                <span className="text-[13px] text-neutral-650">{t.completed ? fmtShort(t.completed) : ''}</span>
+                <span className="text-control text-neutral-650">{t.completed ? fmtShort(t.completed) : ''}</span>
               </div>
             ))}
-          </div>
+          </Card>
         )}
       </div>
     </div>

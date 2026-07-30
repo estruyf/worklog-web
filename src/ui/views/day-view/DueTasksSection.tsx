@@ -1,5 +1,6 @@
 import React from 'react';
 import { WorklogTaskRow } from '../../components';
+import { Card, SectionLabel } from '../../primitives';
 import type { WorklogRow } from '../../model';
 
 export function DueTasksSection({ dueRows }: { dueRows: WorklogRow[] }) {
@@ -9,12 +10,12 @@ export function DueTasksSection({ dueRows }: { dueRows: WorklogRow[] }) {
 
   return (
     <>
-      <div className="text-[11px] font-bold tracking-[0.06em] text-neutral-675 mb-3">DUE THIS DAY</div>
-      <div className="border border-neutral-375 rounded-[14px] bg-white mb-[34px] px-2 py-[6px]">
+      <SectionLabel className="mb-3">Due this day</SectionLabel>
+      <Card padding="list" className="mb-[34px]">
         {dueRows.map((row) => (
           <WorklogTaskRow key={row.id} row={row} />
         ))}
-      </div>
+      </Card>
     </>
   );
 }

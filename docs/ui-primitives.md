@@ -8,7 +8,7 @@ and what is left.
 The ordering is deliberate. Each step is independently shippable and leaves the
 app working, so none of this has to land in one go.
 
-**Status:** steps 1–3 done. Steps 4–6 open.
+**Status:** steps 1–4 done. Steps 5–6 open.
 
 ---
 
@@ -220,43 +220,148 @@ scrim; and the loading overlay in `WorklogApp`, which is not focusable at all.
 
 ---
 
-## Step 4 — Card / SectionLabel / EmptyState / Badge / Chip / SegmentedControl / Toggle / Pager
+## Step 4 — Card / SectionLabel / EmptyState / Badge / Chip / SegmentedControl / Toggle / Pager ✅ done
 
-Purely mechanical, high volume:
+**Added:** [`Card`](../src/ui/primitives/Card.tsx),
+[`SectionLabel`](../src/ui/primitives/SectionLabel.tsx),
+[`EmptyState`](../src/ui/primitives/EmptyState.tsx),
+[`Badge`](../src/ui/primitives/Badge.tsx),
+[`Chip`](../src/ui/primitives/Chip.tsx),
+[`SegmentedControl`](../src/ui/primitives/SegmentedControl.tsx),
+[`Toggle`](../src/ui/primitives/Toggle.tsx),
+[`Pager`](../src/ui/primitives/Pager.tsx).
 
-| Control | Occurrences | Note |
+**What it collapsed:**
+
+| Control | Call sites | What varied |
 | --- | --- | --- |
-| `SectionLabel` (uppercase eyebrow) | 19 | identical string every time |
-| `Card` (`border-neutral-375 rounded-[14px]`) | 15 | bg varies white / neutral-50 / brand-50 |
-| `EmptyState` (`text-[14px] text-neutral-625 italic`) | 13 | |
-| `Badge` (count pill) | 8 | tones: neutral, danger, brand |
-| `Chip` | 3 families | selectable, filter, tag |
-| `SegmentedControl` | 4 | two pairs are byte-identical to each other |
-| `Pager` | 2 | `ArchiveView` and `TodoTasksSection` |
+| `SectionLabel` | 22 | 11 / 10.5px, `tracking` .06 / .05em, bold / semibold |
+| `Card` | 22 | white / neutral-50 / brand-50 / danger-bordered, 14 / 12 / 11px corners |
+| `EmptyState` | 14 | 14 / 13px |
+| `Badge` | 13 | 5 tone spellings across neutral, brand and danger |
+| `Chip` | 4 families | select, add, filter, tag |
+| `SegmentedControl` | 6 | 3 shapes, one of them written twice byte-for-byte |
+| `Pager` | 2 | numbered window, and a "2 / 5" stepper |
 | `Toggle` | 1 | `SettingsView` only, still worth naming |
 
-Two strong signals that these want to be components:
+The two signals the audit called out were both right.
+[`GroupCard`](../src/ui/views/day-view/GroupCard.tsx) took `cardClassName`,
+`headerClassName` and `countBadgeClassName` as props; it now takes
+`tone="plain|worked|overdue"` and derives all three. `chipClass` in
+`RecurrencePicker` and its inlined twin in `TaskFormPage` are one `Chip`;
+`TagChips` and its two re-implementations are the same `Chip variant="tag"`,
+hover states and all.
 
-- [`GroupCard`](../src/ui/views/day-view/GroupCard.tsx) takes
-  `cardClassName`, `headerClassName` and `countBadgeClassName` as **props** —
-  it is a `Card` + `Badge` with a `tone`, written the long way.
-- `chipClass` is already extracted in `RecurrencePicker` and then inlined
-  identically in `TaskFormPage`; `TagChips` is already extracted in
-  `WorklogTaskRow` and then re-implemented in `TaskDetailPanel` and
-  `SearchOverlay`, hover states and all.
+**Design tokens.** The scales live in the `@theme` block of
+[`styles.css`](../src/ui/styles.css) and every primitive reads from them, so the
+numbers are retired rather than rehoused:
 
-**Do the design tokens here too.** The primitives currently centralise magic
-numbers (`rounded-[7px]`, `text-[13.5px]`, `py-[9px]`) rather than retire them.
-Promoting them to named scales in the `@theme` block of
-[`styles.css`](../src/ui/styles.css) belongs with this step — otherwise the
-values just moved house.
+```css
+--radius-chip: 5px;  --radius-control: 7px;     --radius-control-md: 8px;
+--radius-control-lg: 9px;  --radius-panel: 12px;  --radius-card: 14px;
 
-**Icons, while here.** [`icons.tsx`](../src/ui/components/icons.tsx) already
-exists with 12 paths, and `lucide-react` is already a dependency — yet `Icon` is
-used in exactly two places. Raw inline `<svg>` is duplicated for the
-external-link glyph in 5 files, the checkmark in 4, and the search glyph in 2.
-[`Sidebar`](../src/ui/components/Sidebar.tsx) carries 76 lines of inline nav SVG
-that belongs in `icons.tsx`.
+--text-status: 10.5px;  --text-eyebrow: 11px;   --text-count: 11.5px;
+--text-meta: 12px;      --text-chip: 12.5px;    --text-control: 13px;
+--text-control-lg: 13.5px;  --text-body: 14px;  --text-row: 14.5px;
+--text-touch: 16px;
+
+--tracking-eyebrow: 0.06em;  --tracking-status: 0.05em;
+```
+
+They are named for the thing that wears them, not sized t-shirt style, because
+that is the decision at the call site: `rounded-card`, not "is this the 14 or
+the 12 one". `text-touch` is the iOS floor from step 2 — naming it is what makes
+`text-touch md:text-control` legible as *"opens at the floor, steps down on a
+real screen"* rather than as two numbers. The names avoid every existing colour
+token (`--color-badge` already owns `text-badge`, hence `--text-count`).
+
+The sweep went past the primitives: 0 uses of these values as arbitrary
+`text-[…]` / `rounded-[…]` / `tracking-[…]` remain anywhere under `src/ui`.
+Sizes outside the ladder — the 15px "+" glyphs, the 17/20/22/24/26px headings,
+the calendar cell's 10px corner — were left as they are; they are not a scale,
+they are one-offs.
+
+**Icons.** `icons.tsx`'s `Icon` and its 12 paths turned out to be used in *zero*
+places, not two — a whole second icon system nothing called. It is deleted. The
+file now holds what is genuinely the app's own: the seven nav glyphs
+[`Sidebar`](../src/ui/components/Sidebar.tsx) carried inline (76 lines, tuned to
+read at 16px against the rail's weight), plus a `DisclosureIcon` for the fold-open
+triangle that had been written three ways — an SVG path in `ClientsView`, a `›`
+character in `TodosView` and another in `CalendarView`. Everything that was
+duplicated *and* has a lucide equivalent now uses it: the external-link glyph
+(5 files), the checkmark (5, including `Toast`'s), the search glyph (2). The rule
+the file now states: hand-rolled glyphs are the nav's, everything else is lucide.
+
+**Behavioural notes** — three things changed, all deliberately:
+
+- **The segmented controls became one control.** Each is now a `role="group"` of
+  `aria-pressed` buttons with an `aria-label` on the group, which is required by
+  the type — read one segment at a time, "All" and "Open" say nothing about what
+  they switch. A `Chip` gets `aria-pressed` only when the call site passes
+  `selected`, so a tag that opens a search is a button and a tag that toggles a
+  filter is a toggle, and neither pretends to be the other.
+- **`TodoTasksSection`'s pager counts from 1.** It kept a 0-based page and
+  rendered `current + 1`; `Pager` is 1-based throughout, so the state and the
+  label are the same number. The clamp-don't-reset behaviour is unchanged.
+- **The Git-sync switch is named, and its title is no longer a `<label>`.** It
+  had `role="switch"` and `aria-checked` but no accessible name at all. `Toggle`
+  requires an `aria-label` the way `IconButton` does. The title stays a plain
+  `<div>` on purpose: `<label htmlFor>` works on a `<button>`, and it would mean
+  a click anywhere in that paragraph flips the switch.
+
+**Visual changes** — all of them drift being collapsed, none of them intent:
+
+- The worked-group count badge (`bg-brand-250 text-brand-625`, no border) became
+  the shared brand badge, which has one.
+- The calendar's month/week toggle and the task form's Write/Preview tabs both
+  became the raised track the archive and search filters already used.
+- `Sidebar`'s "Repository" eyebrow was semibold neutral-650 where every other one
+  is bold neutral-675.
+- The two chart headings and Insights' table headers tracked at 0.05em where the
+  other 20 eyebrows track at 0.06em.
+- Insights' two tables and both chart boxes were `border-neutral-400` at an 11px
+  corner; they are `Card`s now (neutral-375, 14px).
+- `ClientsView`'s "Archived" pill dropped its extra bold and letter-spacing.
+- The archive pager's `‹ ›` characters became the lucide chevrons the to-do pager
+  already used.
+- `IconButton`'s `xs` corner moved 6px → 7px, joining the control ladder.
+
+**API:**
+
+```tsx
+<Card tone="plain|muted|brand|danger" padding="none|list|md" radius="card|panel" />
+<SectionLabel size="sm|md" tone="muted|danger" />   // uppercases its own text
+<EmptyState size="sm|md" />
+<Badge tone="neutral|outline|brand|danger" size="xs|sm|md" />
+<Chip variant="select|add|filter|tag" selected as="button|span" />
+<SegmentedControl options={[{value, label, title}]} value onChange
+                  variant="raised|joined" size="sm|md" aria-label="…" />  // aria-label required
+<Toggle checked onChange aria-label="…" />                               // aria-label required
+<Pager page={1} pageCount onPage variant="numbers|compact"
+       pages={pageWindow(page, pageCount)} previousLabel nextLabel />
+```
+
+`Card`'s corner is a `radius` prop rather than a `className`, for the same reason
+its fill is a `tone`: `cn` cannot override what a variant already set, and a card
+nested inside a card wants the smaller corner often enough to be worth naming.
+`Pager` takes its page window rather than computing one — how much of a long list
+is worth showing is a decision about that list, and `pageWindow` already exists in
+[`utils/archive.ts`](../src/ui/utils/archive.ts).
+
+**Deliberately left alone:**
+
+- `LogForm`'s Type and Amount groups — bordered chips sitting in a row of fields,
+  not a track; a raised segment there would read as a second toolbar.
+- `RepoPicker`'s Existing/New pair, which is pre-auth and has its own look.
+- `SearchOverlay`'s match badge — square, 10px, uppercase: a match-kind tag, not a
+  count.
+- `LoggedSection`'s log entries — a chip with structure inside it (dot · client ·
+  type · hours · note) and an edit action; that is a component, and it is step 5's.
+- `RecurrencePicker`'s weekday toggles, squared off so a week reads as a row of
+  days rather than seven pills.
+- The two "click to add a description" dashed boxes, which are step 5's
+  `DescriptionEditor`, and Insights' three stat tiles, which are step 6's
+  `StatTile`.
 
 ---
 
@@ -292,13 +397,13 @@ those steps remove.
 | File | Lines | Split into |
 | --- | --- | --- |
 | `TaskFormPage` | ~500 | `TitleField`, `DescriptionEditor`, `ClientChipPicker`, `DueField`, `LinksField`, `FormActionBar` |
-| `Sidebar` | ~420 | nav glyphs → `icons.tsx`, then `NavList`, `SidebarActions`, `RepoFooter` (exists), `MobileTopBar` |
+| `Sidebar` | ~355 | `NavList`, `SidebarActions`, `RepoFooter` (exists), `MobileTopBar` — the nav glyphs already left for `icons.tsx` in step 4 |
 | `TaskDetailPanel` | ~400 | `TaskDetailHeader`, `TaskMetaRow`, `SubtaskList`, `NotesSection`, `DueEditor` |
-| `RecurrencePicker` | ~395 | move `kindOf`, `seedFor`, `isBusinessWeek` + constants (~90 lines of pure model code) next to `model/recurrence.ts` |
-| `CalendarView` | ~338 | `CalendarGrid`, `DayCell`, `Legend`, `PeriodNav`, `WorkedPerClient` |
-| `ClientsView` | ~330 | `ClientList`, `ClientInfoCard`, `CompletedTaskList` |
-| `SearchOverlay` | ~317 | `SearchField`, `ScopeFilterBar`, `TagFilterBar`, `SearchResultRow` |
-| `InsightsView` | ~211 | `HoursTable` — the monthly table is written **twice, verbatim**, for clients and events, with the same `grid-cols-[1.4fr_0.7fr_0.7fr_2.6fr]` string 6× (~70 lines saved); plus `StatTile` |
+| `RecurrencePicker` | ~380 | move `kindOf`, `seedFor`, `isBusinessWeek` + constants (~90 lines of pure model code) next to `model/recurrence.ts` |
+| `CalendarView` | ~340 | `CalendarGrid`, `DayCell`, `Legend`, `PeriodNav`, `WorkedPerClient` |
+| `ClientsView` | ~315 | `ClientList`, `ClientInfoCard`, `CompletedTaskList` |
+| `SearchOverlay` | ~285 | `SearchField`, `ScopeFilterBar`, `TagFilterBar`, `SearchResultRow` |
+| `InsightsView` | ~210 | `HoursTable` — the monthly table is written **twice, verbatim**, for clients and events, with the same `grid-cols-[1.4fr_0.7fr_0.7fr_2.6fr]` string 6× (~70 lines saved); plus `StatTile` |
 
 [`ArchiveView`](../src/ui/views/ArchiveView.tsx) is the best-decomposed file in
 the repo and is the template for the rest.

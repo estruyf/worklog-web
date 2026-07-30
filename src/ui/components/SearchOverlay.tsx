@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Input, LinkButton, Modal } from '../primitives';
+import { ExternalLinkIcon, SearchIcon } from 'lucide-react';
+import { Badge, Chip, EmptyState, Input, LinkButton, Modal, SectionLabel, SegmentedControl } from '../primitives';
 import { useData, useUi } from '../context';
 import { useSearchData } from '../hooks';
 import { Kbd } from './Kbd';
@@ -66,16 +67,11 @@ export function SearchOverlay() {
           autoFocus={true}
           clearable
           onClear={() => setSearch('')}
-          leading={
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#8A9099" strokeWidth="1.5" className="shrink-0">
-              <circle cx="7" cy="7" r="4.5" />
-              <path d="M10.5 10.5L14 14" />
-            </svg>
-          }
+          leading={<SearchIcon size={16} className="shrink-0 text-neutral-650" />}
           trailing={
             <>
               {filtered && (
-                <span className="shrink-0 text-[13px] text-neutral-650">
+                <span className="shrink-0 text-control text-neutral-650">
                   {count} {count === 1 ? 'result' : 'results'}
                 </span>
               )}
@@ -91,51 +87,31 @@ export function SearchOverlay() {
 
         {/* Scope segmented control + client chips + reset */}
         <div className="flex flex-wrap items-center gap-2 mt-[14px] mb-[14px]">
-          <div className="inline-flex p-[2px] rounded-[8px] bg-neutral-250 border border-neutral-400">
-            {SCOPES.map((s) => {
-              const active = searchScope === s.key;
-              return (
-                <button
-                  key={s.key}
-                  onClick={() => setSearchScope(s.key)}
-                  className={
-                    'px-[11px] py-[5px] rounded-[6px] text-[12.5px] cursor-pointer ' +
-                    (active ? 'bg-white text-neutral-825 font-semibold shadow-[0_1px_2px_rgba(0,0,0,0.06)]' : 'text-neutral-675 font-medium')
-                  }
-                >
-                  {s.label}
-                </button>
-              );
-            })}
-          </div>
+          <SegmentedControl
+            aria-label="Search scope"
+            options={SCOPES.map((s) => ({ value: s.key, label: s.label }))}
+            value={searchScope}
+            onChange={setSearchScope}
+          />
 
           <span className="w-px h-[20px] bg-neutral-400 mx-1" />
 
-          <button
-            onClick={() => setSearchClient('')}
-            className={
-              'inline-flex items-center gap-[6px] px-[10px] py-[5px] rounded-full text-[12.5px] cursor-pointer border ' +
-              (searchClient === '' ? 'border-brand-500 bg-brand-225 text-brand-650 font-semibold' : 'border-neutral-400 bg-white text-neutral-700')
-            }
-          >
+          <Chip selected={searchClient === ''} onClick={() => setSearchClient('')}>
             All clients
-          </button>
+          </Chip>
           {allClients.map((c) => {
             const active = searchClient === c.id;
             return (
-              <button
+              <Chip
                 key={c.id}
+                selected={active}
                 onClick={() => setSearchClient(c.id)}
                 title={c.archived ? `${c.name} (archived)` : c.name}
-                className={
-                  'inline-flex items-center gap-[6px] px-[10px] py-[5px] rounded-full text-[12.5px] cursor-pointer border ' +
-                  (active ? 'border-brand-500 bg-brand-225 text-brand-650 font-semibold' : 'border-neutral-400 bg-white text-neutral-700') +
-                  (c.archived && !active ? ' opacity-60' : '')
-                }
+                className={c.archived && !active ? 'opacity-60' : undefined}
               >
                 <span className="w-2 h-2 rounded-full shrink-0" style={{ background: colorOf(c.id) }} />
                 {c.name}
-              </button>
+              </Chip>
             );
           })}
 
@@ -150,22 +126,19 @@ export function SearchOverlay() {
             query empty, the results below are everything carrying them. */}
         {allTags.length > 0 && (
           <div className="flex flex-wrap items-center gap-2 mb-[14px]">
-            <span className="text-[11px] font-bold tracking-[0.06em] text-neutral-675 mr-[2px]">TAGS</span>
+            <SectionLabel className="mr-[2px]">Tags</SectionLabel>
             {visibleTags.map(({ tag, count: n }) => {
               const active = tagFilter.includes(tag);
               return (
-                <button
+                <Chip
                   key={tag}
+                  selected={active}
                   onClick={() => toggleTagFilter(tag)}
                   title={active ? `Stop filtering by "${tag}"` : `Filter by "${tag}"`}
-                  className={
-                    'inline-flex items-center gap-[6px] px-[10px] py-[4px] rounded-full text-[12.5px] cursor-pointer border ' +
-                    (active ? 'border-brand-500 bg-brand-225 text-brand-650 font-semibold' : 'border-neutral-400 bg-white text-neutral-700')
-                  }
                 >
                   {tag}
-                  <span className={'text-[11px] tabular-nums ' + (active ? 'text-brand-650' : 'text-neutral-625')}>{n}</span>
-                </button>
+                  <span className={'text-eyebrow tabular-nums ' + (active ? 'text-brand-650' : 'text-neutral-625')}>{n}</span>
+                </Chip>
               );
             })}
             {hiddenTagCount > 0 && (
@@ -186,19 +159,19 @@ export function SearchOverlay() {
       <div className="flex-1 overflow-auto px-5 pb-5 border-t border-neutral-325">
         {/* Idle state */}
         {!filtered && (
-          <div className="mt-5 rounded-[14px] border border-dashed border-neutral-500 bg-neutral-50 px-6 py-7 text-center">
+          <div className="mt-5 rounded-card border border-dashed border-neutral-500 bg-neutral-50 px-6 py-7 text-center">
             <div className="flex items-center justify-center gap-8">
               <div>
                 <div className="text-[26px] font-bold text-neutral-825 leading-none">{openCount}</div>
-                <div className="text-[12px] text-neutral-675 mt-[6px]">open</div>
+                <div className="text-meta text-neutral-675 mt-[6px]">open</div>
               </div>
               <span className="w-px h-[34px] bg-neutral-400" />
               <div>
                 <div className="text-[26px] font-bold text-neutral-825 leading-none">{archivedCount}</div>
-                <div className="text-[12px] text-neutral-675 mt-[6px]">archived</div>
+                <div className="text-meta text-neutral-675 mt-[6px]">archived</div>
               </div>
             </div>
-            <div className="flex items-center justify-center flex-wrap gap-[6px] text-[12px] text-neutral-650 mt-6">
+            <div className="flex items-center justify-center flex-wrap gap-[6px] text-meta text-neutral-650 mt-6">
               <Kbd>↑</Kbd>
               <Kbd>↓</Kbd>
               <span>to move</span>
@@ -211,12 +184,12 @@ export function SearchOverlay() {
         )}
 
         {filtered && count === 0 && (
-          <div className="text-[14px] text-neutral-625 italic mt-5">
+          <EmptyState className="mt-5">
             No tasks match
             {q !== '' && <> "{search}"</>}
             {q !== '' && tagFilter.length > 0 && ' with'}
             {tagFilter.length > 0 && ` ${tagFilter.length === 1 ? 'the tag' : 'the tags'} ${tagFilter.join(', ')}`}.
-          </div>
+          </EmptyState>
         )}
 
         {/* Grouped results */}
@@ -225,10 +198,8 @@ export function SearchOverlay() {
             <div key={gi} className="mb-6">
               <div className="flex items-center gap-[8px] mb-2">
                 <span className="w-2 h-2 rounded-full shrink-0" style={{ background: g.color }} />
-                <span className="text-[12.5px] font-semibold text-neutral-750">{g.name}</span>
-                <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-[6px] rounded-full bg-neutral-325 text-neutral-675 text-[11px] font-semibold">
-                  {g.count}
-                </span>
+                <span className="text-chip font-semibold text-neutral-750">{g.name}</span>
+                <Badge size="xs">{g.count}</Badge>
               </div>
               <div>
                 {g.rows.map((r, ri) => {
@@ -244,16 +215,16 @@ export function SearchOverlay() {
                       }}
                       title="Open task"
                       className={
-                        'flex items-start gap-[11px] py-[9px] px-[10px] rounded-[8px] cursor-pointer border ' +
+                        'flex items-start gap-[11px] py-[9px] px-[10px] rounded-control-md cursor-pointer border ' +
                         (selected ? 'bg-brand-75 border-brand-425' : 'border-transparent hover:bg-neutral-125')
                       }
                     >
-                      <span className="w-16 shrink-0 mt-[3px] text-[10.5px] font-bold tracking-[0.05em]" style={{ color: r.statusColor }}>
+                      <span className="w-16 shrink-0 mt-[3px] text-status font-bold tracking-status" style={{ color: r.statusColor }}>
                         {r.statusLabel}
                       </span>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-[8px] flex-wrap">
-                          <span className="text-[14.5px]">
+                          <span className="text-row">
                             {r.hasMid ? (
                               <>
                                 {r.pre}
@@ -265,34 +236,30 @@ export function SearchOverlay() {
                             )}
                           </span>
                           {r.matchBadge && (
-                            <span className="shrink-0 text-[10px] uppercase tracking-[0.04em] text-neutral-675 bg-neutral-250 border border-neutral-400 rounded-[4px] px-[5px] py-[1px]">
+                            <span className="shrink-0 text-[10px] uppercase tracking-[0.04em] text-neutral-675 bg-neutral-250 border border-neutral-400 rounded-chip px-[5px] py-[1px]">
                               {r.matchBadge}
                             </span>
                           )}
                           {r.tags.map((tag) => {
                             const active = tagFilter.includes(tag);
                             return (
-                              <button
+                              <Chip
                                 key={tag}
+                                variant="tag"
+                                selected={active}
                                 onClick={(e) => {
                                   // The row itself opens the task; a tag narrows the list instead.
                                   e.stopPropagation();
                                   toggleTagFilter(tag);
                                 }}
                                 title={active ? `Stop filtering by "${tag}"` : `Filter by "${tag}"`}
-                                className={
-                                  'shrink-0 text-[11px] rounded-full px-[8px] py-[1px] border cursor-pointer ' +
-                                  (active
-                                    ? 'border-brand-500 bg-brand-225 text-brand-650 font-semibold'
-                                    : 'text-neutral-725 bg-neutral-250 border-neutral-400 hover:border-brand-500 hover:bg-brand-175 hover:text-brand-800')
-                                }
                               >
                                 {tag}
-                              </button>
+                              </Chip>
                             );
                           })}
                         </div>
-                        {r.snippet && <div className="text-[12.5px] text-neutral-650 mt-[3px] truncate">{r.snippet}</div>}
+                        {r.snippet && <div className="text-chip text-neutral-650 mt-[3px] truncate">{r.snippet}</div>}
                       </div>
                       {r.hasLink && (
                         <a
@@ -303,9 +270,7 @@ export function SearchOverlay() {
                           className="text-neutral-675 leading-[0] mt-[3px] hover:text-info"
                           title={r.link}
                         >
-                          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-                            <path d="M6 3H3.5A1.5 1.5 0 002 4.5v8A1.5 1.5 0 003.5 14h8a1.5 1.5 0 001.5-1.5V10M10 2h4v4M14 2L7.5 8.5" />
-                          </svg>
+                          <ExternalLinkIcon size={14} />
                         </a>
                       )}
                     </div>

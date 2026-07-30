@@ -16,23 +16,23 @@ export type ControlVariant = 'default' | 'accent';
 /** Padding and radius. Kept apart from the font size so a shell can take the
  *  geometry while the bare input inside it takes only the text. */
 export const CONTROL_GEOMETRY: Record<ControlSize, string> = {
-  xs: 'px-2 py-[5px] rounded-[7px]',
-  sm: 'px-3 py-[8px] rounded-[8px]',
-  md: 'px-[12px] py-[9px] rounded-[9px]',
-  lg: 'px-[14px] py-[11px] rounded-[9px]',
+  xs: 'px-2 py-[5px] rounded-control',
+  sm: 'px-3 py-[8px] rounded-control-md',
+  md: 'px-[12px] py-[9px] rounded-control-lg',
+  lg: 'px-[14px] py-[11px] rounded-control-lg',
 };
 
-/** Every size opens at 16px and only steps down from `md` up.
+/** Every size opens at `text-touch` (16px) and only steps down from `md` up.
  *
  *  Safari zooms the whole viewport when a focused control's font is under 16px,
  *  and it does not zoom back out afterwards — so the phone-sized floor is not a
  *  per-field decision. Setting it here is the point of the size table: a control
  *  cannot be given a smaller mobile font without editing this line. */
 export const CONTROL_TEXT: Record<ControlSize, string> = {
-  xs: 'text-[16px] md:text-[13px]',
-  sm: 'text-[16px] md:text-[13.5px]',
-  md: 'text-[16px] md:text-[14px]',
-  lg: 'text-[16px] md:text-[14px]',
+  xs: 'text-touch md:text-control',
+  sm: 'text-touch md:text-control-lg',
+  md: 'text-touch md:text-body',
+  lg: 'text-touch md:text-body',
 };
 
 /** Width is deliberately absent: it is layout, so it belongs to the call site's

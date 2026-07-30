@@ -29,7 +29,7 @@ export function TaskPage({ taskId }: { taskId: string }) {
       {exists ? (
         <TaskDetailPanel routed />
       ) : (
-        <div className="flex min-h-screen flex-col items-center justify-center gap-4 text-[14px] text-neutral-675">
+        <div className="flex min-h-screen flex-col items-center justify-center gap-4 text-body text-neutral-675">
           This task no longer exists.
           <button onClick={navigateToDashboard} className="text-info hover:underline cursor-pointer bg-transparent border-none">
             ‹ Back to Worklog

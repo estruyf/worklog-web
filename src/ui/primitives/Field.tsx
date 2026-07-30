@@ -32,9 +32,9 @@ export function useControlAria(own: {
 export type FieldLabelSize = 'xs' | 'sm' | 'md';
 
 const LABELS: Record<FieldLabelSize, string> = {
-  xs: 'text-[11px] text-neutral-675',
-  sm: 'text-[13px] font-semibold',
-  md: 'text-[14px] font-semibold',
+  xs: 'text-eyebrow text-neutral-675',
+  sm: 'text-control font-semibold',
+  md: 'text-body font-semibold',
 };
 
 const LABEL_GAP: Record<FieldLabelSize, string> = {
@@ -103,12 +103,12 @@ export function Field({
         )}
         {children}
         {help && (
-          <div id={helpId} className="text-[12px] text-neutral-625 mt-[6px] leading-[1.5]">
+          <div id={helpId} className="text-meta text-neutral-625 mt-[6px] leading-[1.5]">
             {help}
           </div>
         )}
         {error && (
-          <div id={errorId} className="text-[12.5px] text-danger-675 mt-[6px]">
+          <div id={errorId} className="text-chip text-danger-675 mt-[6px]">
             {error}
           </div>
         )}

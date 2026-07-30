@@ -7,7 +7,7 @@ import {
   type Recurrence,
   type RecurrenceAnchor,
 } from '../../model/recurrence';
-import { DateInput, Field, Input, LinkButton, Select } from '../primitives';
+import { Chip, DateInput, Field, Input, LinkButton, Select, SegmentedControl } from '../primitives';
 import { parseISODate, today, weekdayOf } from '../../util/date';
 
 const WEEKDAY_NAMES = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
@@ -99,14 +99,11 @@ export function seedFor(kind: PresetKind, due: string): string {
   }
 }
 
-const chipClass = (active: boolean): string =>
-  'px-[13px] py-[7px] rounded-full text-[13px] font-semibold cursor-pointer border text-neutral-825 ' +
-  (active ? 'border-brand-500 bg-brand-450' : 'border-neutral-525 bg-neutral-350');
-
 // Sized to the row rather than fixed: seven of these have to fit across the task
 // form's side rail, and a fixed width wrapped one day onto its own line there.
+// Squared off rather than a `Chip`, so a week reads as a row of days.
 const dayChipClass = (active: boolean): string =>
-  'flex-1 min-w-[32px] max-w-[46px] py-[6px] rounded-[8px] text-[12px] font-semibold cursor-pointer border text-center ' +
+  'flex-1 min-w-[32px] max-w-[46px] py-[6px] rounded-control-md text-meta font-semibold cursor-pointer border text-center ' +
   (active
     ? 'border-brand-500 bg-brand-450 text-brand-800'
     : 'border-neutral-525 bg-white text-neutral-725 hover:bg-neutral-200');
@@ -122,7 +119,7 @@ function WeekdayPicker({
 }) {
   return (
     <div>
-      <label className="block font-semibold text-[13px] mb-[6px]">On these days</label>
+      <label className="block font-semibold text-control mb-[6px]">On these days</label>
       <div className="flex flex-wrap gap-[6px]">
         {WEEKDAY_ORDER.map((d) => {
           const active = selected.includes(d);
@@ -267,25 +264,26 @@ export function RecurrencePicker({
 
   return (
     <div>
-      <label className="block font-semibold text-[14px] mb-[10px]">
+      <label className="block font-semibold text-body mb-[10px]">
         Repeat <span className="text-neutral-625 font-normal">(optional)</span>
       </label>
       <div className="flex flex-wrap gap-2 mb-[10px]">
-        <button type="button" onClick={() => pick('')} className={chipClass(!repeats && !customMode)}>
+        <Chip variant="select" selected={!repeats && !customMode} onClick={() => pick('')}>
           Never
-        </button>
+        </Chip>
         {PRESETS.map((p) => (
-          <button
+          <Chip
             key={p.kind}
-            type="button"
+            variant="select"
+            selected={!customMode && activeKind === p.kind}
             onClick={() => pick(seedFor(p.kind, due))}
-            className={chipClass(!customMode && activeKind === p.kind)}
           >
             {p.label}
-          </button>
+          </Chip>
         ))}
-        <button
-          type="button"
+        <Chip
+          variant="select"
+          selected={custom}
           onClick={() => {
             setCustomMode(true);
             // Seed the box from the current rule so switching to Custom starts
@@ -294,10 +292,9 @@ export function RecurrencePicker({
               onChange('every 3 days');
             }
           }}
-          className={chipClass(custom)}
         >
           Custom
-        </button>
+        </Chip>
       </div>
 
       {custom && (
@@ -322,7 +319,7 @@ export function RecurrencePicker({
       )}
 
       {repeats && !parsed && (
-        <div className="text-[12.5px] text-danger-675 mb-[10px]">
+        <div className="text-chip text-danger-675 mb-[10px]">
           Not a repeat rule I understand — the task will be saved without one.
         </div>
       )}
@@ -351,33 +348,23 @@ export function RecurrencePicker({
       {parsed && (
         <>
           <div>
-            <label className="block font-semibold text-[13px] mb-[6px]">Next one is measured from</label>
-            <div className="flex border border-neutral-400 rounded-[7px] overflow-hidden text-[12.5px] w-fit">
-              <button
-                type="button"
-                onClick={() => onAnchorChange('schedule')}
-                title="Missing one occurrence doesn't move the others"
-                className={
-                  'px-[12px] py-[6px] cursor-pointer ' +
-                  (anchor === 'schedule' ? 'bg-brand-225 text-brand-800 font-semibold' : 'bg-white text-neutral-700')
-                }
-              >
-                The schedule
-              </button>
-              <button
-                type="button"
-                onClick={() => onAnchorChange('completion')}
-                title="The interval restarts on the day you actually complete it"
-                className={
-                  'px-[12px] py-[6px] cursor-pointer border-l border-neutral-400 ' +
-                  (anchor === 'completion' ? 'bg-brand-225 text-brand-800 font-semibold' : 'bg-white text-neutral-700')
-                }
-              >
-                When I complete it
-              </button>
-            </div>
+            <span className="block font-semibold text-control mb-[6px]">Next one is measured from</span>
+            <SegmentedControl
+              aria-label="Next one is measured from"
+              variant="joined"
+              options={[
+                { value: 'schedule', label: 'The schedule', title: "Missing one occurrence doesn't move the others" },
+                {
+                  value: 'completion',
+                  label: 'When I complete it',
+                  title: 'The interval restarts on the day you actually complete it',
+                },
+              ]}
+              value={anchor}
+              onChange={onAnchorChange}
+            />
           </div>
-          <div className="text-[12.5px] text-neutral-625 mt-[10px]">
+          <div className="text-chip text-neutral-625 mt-[10px]">
             {describeRecurrence({ ...parsed, anchor, until: until || undefined })}
             {formatRecurrence(parsed) !== value.trim() && (
               <span className="text-neutral-550"> · saved as “{formatRecurrence(parsed)}”</span>

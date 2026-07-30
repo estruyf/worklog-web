@@ -1,6 +1,6 @@
 import React from 'react';
 import { PALETTE } from '../utils';
-import { Button, Field, Input, LinkButton, Modal, TextArea } from '../primitives';
+import { Button, Field, Input, LinkButton, Modal, SectionLabel, TextArea } from '../primitives';
 import { useData, useUi } from '../context';
 
 /** Add / edit client modal (name, color, notes and reference links), plus the two
@@ -49,7 +49,7 @@ export function ClientFormModal() {
         />
       </Field>
 
-      <label className="block font-semibold text-[14px] mb-[10px]">Color</label>
+      <label className="block font-semibold text-body mb-[10px]">Color</label>
       <div className="flex flex-wrap gap-[10px] mb-2">
         {PALETTE.map((p) => {
           const active = color.toLowerCase() === p.toLowerCase();
@@ -76,7 +76,7 @@ export function ClientFormModal() {
         />
       </Field>
 
-      <label className="block font-semibold text-[14px] mt-[22px] mb-2">
+      <label className="block font-semibold text-body mt-[22px] mb-2">
         Links <span className="text-neutral-625 font-normal">(optional)</span>
       </label>
       {links.map((l, i) => (
@@ -98,7 +98,7 @@ export function ClientFormModal() {
           <button
             onClick={() => setLinks(links.filter((_, j) => j !== i))}
             title="Remove this link"
-            className="w-[38px] shrink-0 border border-neutral-525 rounded-[9px] bg-white text-neutral-650 cursor-pointer text-[15px]"
+            className="w-[38px] shrink-0 border border-neutral-525 rounded-control-lg bg-white text-neutral-650 cursor-pointer text-[15px]"
           >
             ×
           </button>
@@ -108,11 +108,11 @@ export function ClientFormModal() {
         + Add {links.length ? 'another ' : ''}link
       </LinkButton>
 
-      {editingClientId && <div className="text-[12px] text-neutral-625 mt-3">Client id <code className="text-neutral-675">{editingClientId}</code> stays the same; only the name, color, description and links change.</div>}
+      {editingClientId && <div className="text-meta text-neutral-625 mt-3">Client id <code className="text-neutral-675">{editingClientId}</code> stays the same; only the name, color, description and links change.</div>}
 
       {editing && (
         <div className="mt-5 pt-4 border-t border-neutral-325">
-          <div className="text-[11px] font-bold tracking-[0.06em] text-neutral-675 mb-[10px]">RETIRE THIS CLIENT</div>
+          <SectionLabel className="mb-[10px]">Retire this client</SectionLabel>
           <div className="flex flex-wrap items-center gap-[10px]">
             <Button size="md" onClick={() => setClientArchived(editing, !editing.archived)}>
               {editing.archived ? 'Restore client' : 'Archive client'}
@@ -127,7 +127,7 @@ export function ClientFormModal() {
               Delete client
             </Button>
           </div>
-          <div className="text-[12px] text-neutral-625 mt-[10px]">
+          <div className="text-meta text-neutral-625 mt-[10px]">
             {editing.archived
               ? 'Archived: hidden from the pickers, the day view and the log form. Its history is untouched and still shows in Insights, Archive and search.'
               : 'Archiving hides it from the pickers and lists but keeps every task and logged hour.'}
