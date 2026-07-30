@@ -5,9 +5,9 @@ import type { Task } from '../../model/types';
 import { describeRecurrence } from '../../model/recurrence';
 import { isGeneralTodoClientId } from '../../model/todos';
 import { daysOverdue, formatDaysLate, isOverdue } from '../../model/overdue';
-import { Button, Card, Chip, DateInput, EmptyState, LinkButton, SectionLabel, SegmentedControl, TextArea } from '../primitives';
+import { Button, Card, Chip, DateInput, EmptyState, LinkButton, SectionLabel, TextArea } from '../primitives';
+import { DescriptionEditor } from './DescriptionEditor';
 import { useData, useUi } from '../context';
-import { useMarkdownImages } from '../hooks';
 import { navigateToDashboard, navigateToTask } from '../router';
 import { worklogStore } from '../../data/worklogStore';
 
@@ -88,7 +88,8 @@ export function TaskDetailPanel({ routed = false }: { routed?: boolean } = {}) {
   const { statusMeta, colorOf, clientName, assetUrl, reopen, toggleWorked, markDone, openEdit: onEdit, deleteTask: onDelete, saveDescription: onSaveDescription, openSubtaskForm, addNote, deleteNote, openTagSearch } = useData();
   const { selectedDate, descDraft, setDescDraft, descMode, setDescMode, setDetailId, noteDraft, setNoteDraft, confirm } = useUi();
   const { task, parent, subtasks, occurrences, descDirty } = useDetailData();
-  const img = useMarkdownImages(descDraft, setDescDraft);
+  // Notes render Markdown too; the description's own resolver lives inside
+  // `DescriptionEditor`.
   const resolveImage = useMemo(() => makeImageResolver(assetUrl), [assetUrl]);
   if (!task) {
     return null;
@@ -300,53 +301,19 @@ export function TaskDetailPanel({ routed = false }: { routed?: boolean } = {}) {
           </div>
         )}
 
-        <div className="flex items-center justify-between mb-[10px]">
-          <SectionLabel>Description</SectionLabel>
-          <div className="flex items-center gap-2">
-            <LinkButton size="xs" onClick={img.openFilePicker} disabled={img.uploading} className="font-medium">
-              {img.uploading ? 'Adding…' : '+ Add image'}
-            </LinkButton>
-            <SegmentedControl
-              aria-label="Description mode"
-              variant="joined"
-              size="sm"
-              options={[
-                { value: 'preview', label: 'Preview' },
-                { value: 'edit', label: 'Edit' },
-              ]}
-              value={descMode}
-              onChange={setDescMode}
-            />
-            {descDirty && (
+        <DescriptionEditor
+          value={descDraft}
+          onChange={setDescDraft}
+          mode={descMode}
+          onModeChange={setDescMode}
+          action={
+            descDirty && (
               <Button variant="primary" size="xs" onClick={onSaveDescription} className="font-semibold">
                 Save
               </Button>
-            )}
-          </div>
-        </div>
-
-        <input ref={img.fileInputRef} type="file" accept="image/*" multiple onChange={img.onFileChange} className="hidden" />
-        {descMode === 'edit' ? (
-          <TextArea
-            size="lg"
-            value={descDraft}
-            onChange={(e) => setDescDraft(e.target.value)}
-            onPaste={img.onPaste}
-            onDrop={img.onDrop}
-            onDragOver={img.onDragOver}
-            aria-label="Description"
-            placeholder={'Add a description in Markdown…\n\n## Notes\n- supports **bold**, *italic*, `code`\n- [links](https://example.com), lists, > quotes\n- paste, drop or add an image'}
-            className="w-full min-h-[280px] leading-[1.6]"
-            style={{ fontFamily: "'JetBrains Mono', ui-monospace, monospace" }}
-          />
-        ) : descDraft.trim() ? (
-          <Card tone="muted" padding="md" radius="panel" className="wl-md" dangerouslySetInnerHTML={{ __html: renderMarkdown(descDraft, resolveImage) }} />
-        ) : (
-          <div onClick={() => setDescMode('edit')} className="border border-dashed border-neutral-450 rounded-panel px-[18px] py-[22px] text-body text-neutral-625 italic cursor-text">
-            No description yet. Click to add Markdown notes.
-          </div>
-        )}
-        {img.error && <div className="text-chip text-danger-675 mt-2">{img.error}</div>}
+            )
+          }
+        />
 
         <div className="mt-9">
           <SectionLabel className="mb-[10px]">Notes{notes.length > 0 ? ` · ${notes.length}` : ''}</SectionLabel>

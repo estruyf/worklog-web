@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import type { AppView, SearchScope } from "../model";
+import type { AppView, LinkDraft, SearchScope } from "../model";
 import { closeTaskDetail, openTaskDetail, useDetailId } from "../router";
 import { useConfirmDialog } from "./useConfirmDialog";
 
@@ -77,9 +77,9 @@ export function useWorklogUiState() {
   const [cName, setCName] = useState("");
   const [cColor, setCColor] = useState("");
   const [cDesc, setCDesc] = useState("");
-  // Link drafts stay as plain strings while editing — they only become
-  // {url,label} records on save, so a half-typed row can't break anything.
-  const [cLinks, setCLinks] = useState<{ url: string; label: string }[]>([]);
+  // The same draft shape the task form's links use, so both go through
+  // `LinksField`: a blank label is '' while typing and dropped on save.
+  const [cLinks, setCLinks] = useState<LinkDraft[]>([]);
 
   // The one open confirmation / notice, plus the promise-based API actions use to
   // raise one. Kept as its own namespace so `ui.confirm.ask(...)` reads as the

@@ -3,13 +3,13 @@
 // to that day's work); this view is the place to see and manage them all.
 
 import React, { useMemo, useState } from 'react';
-import { CheckIcon, ExternalLinkIcon, PlusIcon } from 'lucide-react';
+import { PlusIcon } from 'lucide-react';
 import { GENERAL_TODO_COLOR, GENERAL_TODO_LABEL, isGeneralTodoClientId } from '../../model/todos';
 import type { Task } from '../../model/types';
-import { DisclosureIcon, WorklogTaskRow } from '../components';
+import { CompletedTaskRow, DisclosureIcon, WorklogTaskRow } from '../components';
 import { Button, Card, EmptyState, SectionLabel } from '../primitives';
 import { useData } from '../context';
-import { clientIdOf, fmtShort, isDone, linksOf } from '../utils';
+import { clientIdOf, fmtShort, isDone } from '../utils';
 
 /** Splits the to-do bucket into open rows and completed tasks (newest first). */
 function useTodosData() {
@@ -49,34 +49,14 @@ function CompletedTodos({ doneTasks }: { doneTasks: Task[] }) {
       {open && (
         <Card tone="muted" padding="list">
           {doneTasks.map((t) => (
-            <div key={t.id} className="flex items-center gap-[11px] py-2 px-2.5 rounded-lg hover:bg-neutral-225">
-              <button
-                onClick={() => reopen(t)}
-                title="Reopen"
-                className="w-[17px] h-[17px] shrink-0 border-none rounded-full bg-success-500 text-white cursor-pointer p-0 flex items-center justify-center"
-              >
-                <CheckIcon size={11} strokeWidth={2.5} />
-              </button>
-              <span
-                onClick={() => openDetail(t)}
-                title="Open task"
-                className="text-row text-neutral-700 flex-1 line-through decoration-neutral-550 cursor-pointer"
-              >
-                {t.title}
-              </span>
-              <span className="text-control text-neutral-650">{t.completed ? fmtShort(t.completed) : ''}</span>
-              {linksOf(t).length > 0 && (
-                <a
-                  href={linksOf(t)[0]}
-                  target="_blank"
-                  rel="noreferrer noopener"
-                  className="text-neutral-625 leading-[0] hover:text-info"
-                  title={linksOf(t)[0]}
-                >
-                  <ExternalLinkIcon size={14} />
-                </a>
-              )}
-            </div>
+            <CompletedTaskRow
+              key={t.id}
+              task={t}
+              onOpen={() => openDetail(t)}
+              onReopen={() => reopen(t)}
+              meta={t.completed ? fmtShort(t.completed) : ''}
+              showLink
+            />
           ))}
         </Card>
       )}

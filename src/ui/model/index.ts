@@ -11,5 +11,6 @@ export type {
   SearchResult,
   SearchGroup,
   LogState,
+  LinkDraft,
   TaskFormFields,
 } from './viewModels';

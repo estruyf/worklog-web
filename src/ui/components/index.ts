@@ -2,6 +2,14 @@
 export { DisclosureIcon } from './icons';
 export { Kbd } from './Kbd';
 export { WorklogTaskRow } from './WorklogTaskRow';
+export { CompletedTaskRow } from './CompletedTaskRow';
+export type { CompletedTaskRowProps } from './CompletedTaskRow';
+export { ClientListItem } from './ClientListItem';
+export type { ClientListItemProps } from './ClientListItem';
+export { DescriptionEditor } from './DescriptionEditor';
+export type { DescriptionEditorProps, DescriptionEditorVariant, DescriptionMode } from './DescriptionEditor';
+export { LinksField } from './LinksField';
+export type { LinksFieldProps } from './LinksField';
 export { Sidebar } from './Sidebar';
 export { TaskFormPage } from './TaskFormPage';
 export { TagPicker } from './TagPicker';

@@ -8,14 +8,15 @@ import { serializeTask } from '../parser/taskParser';
 import { today } from '../util/date';
 import { appendTaskBlock } from '../commands/shared';
 import { withSeededDue } from '../model/recurringTask';
-import { writeText, readText, ensureDir, deleteFile, listTextPaths, parseClientLinks } from '../workspace/paths';
+import { writeText, readText, ensureDir, deleteFile, listTextPaths, parseClientLinks, parseLinks } from '../workspace/paths';
 import { GENERAL_TODO_CLIENT_ID, generalTodoClient, isGeneralTodoClientId } from '../model/todos';
 
 export interface NewTaskInput {
   title: string;
   clientId: string;
   parentId?: string;
-  links?: string[];
+  /** Reference links (a bare url string is accepted too). */
+  links?: (TaskLink | string)[];
   description?: string;
   due?: string;
   tags?: string[];
@@ -73,7 +74,7 @@ export async function createTask(store: Store, input: NewTaskInput): Promise<Tas
     status: 'open',
     parentId: input.parentId || undefined,
     clientIds: [client.id],
-    links: (input.links ?? []).map((url) => url.trim()).filter(Boolean).map((url) => ({ url })),
+    links: parseLinks(input.links),
     created: today(),
     due: input.due?.trim() || undefined,
     repeat: input.repeat,

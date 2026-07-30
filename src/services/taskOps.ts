@@ -3,7 +3,7 @@
 // refreshes the cache + app state afterwards.
 
 import { Store } from "../store";
-import type { Recurrence, Task, TaskNote } from "../model/types";
+import type { Recurrence, Task, TaskLink, TaskNote } from "../model/types";
 import {
   inProgressStatusId,
   isTerminalStatus,
@@ -16,7 +16,7 @@ import { withSeededDue } from "../model/recurringTask";
 import { parseTaskFile, serializeTask } from "../parser/taskParser";
 import { extractBlock, replaceBlock } from "../parser/blocks";
 import { newTaskId } from "../parser/ids";
-import { readText, writeText } from "../workspace/paths";
+import { parseLinks, readText, writeText } from "../workspace/paths";
 import { today, monthOf, nowStamp } from "../util/date";
 import { appendArchiveBlock, appendTaskBlock } from "../commands/shared";
 
@@ -487,7 +487,8 @@ export interface TaskFields {
   title?: string;
   clientId?: string;
   parentId?: string; // '' clears the parent
-  links?: string[];
+  /** Pass [] to clear the links; a bare url string is accepted too. */
+  links?: (TaskLink | string)[];
   description?: string; // markdown body; '' clears it
   due?: string; // '' clears the due date
   tags?: string[];
@@ -516,10 +517,7 @@ export async function updateTask(
       fields.title !== undefined ? fields.title.trim() || t.title : t.title,
     parentId:
       fields.parentId !== undefined ? fields.parentId || undefined : t.parentId,
-    links:
-      fields.links !== undefined
-        ? fields.links.map((u) => ({ url: u }))
-        : t.links,
+    links: fields.links !== undefined ? parseLinks(fields.links) : t.links,
     description:
       fields.description !== undefined
         ? fields.description.trim() || undefined

@@ -388,7 +388,11 @@ export function useWorklogModel(
     if (!title || !fields.clientId) {
       return;
     }
-    const links = fields.links.map((l) => l.trim()).filter(Boolean);
+    // Blank rows the user added but never filled in are dropped rather than
+    // saved — the same rule the client editor's links go through.
+    const links = fields.links
+      .map((l) => ({ url: l.url.trim(), label: l.label.trim() }))
+      .filter((l) => l.url);
     const due = fields.due.trim() || undefined;
     // An unparseable expression saves as a plain one-off rather than blocking
     // the save; the picker already flags it while you type.

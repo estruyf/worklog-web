@@ -8,7 +8,7 @@ and what is left.
 The ordering is deliberate. Each step is independently shippable and leaves the
 app working, so none of this has to land in one go.
 
-**Status:** steps 1–4 done. Steps 5–6 open.
+**Status:** steps 1–5 done. Step 6 open.
 
 ---
 
@@ -365,27 +365,119 @@ is worth showing is a decision about that list, and `pageWindow` already exists 
 
 ---
 
-## Step 5 — Shared app components
+## Step 5 — DescriptionEditor / LinksField / CompletedTaskRow / ClientListItem ✅ done
 
 Now that primitives exist, the genuine feature duplication is worth extracting.
+These are app components, not primitives: they know what a task and a client are,
+so they live in [`src/ui/components/`](../src/ui/components/) and are built *from*
+the primitives below them.
+
+**Added:** [`DescriptionEditor`](../src/ui/components/DescriptionEditor.tsx),
+[`LinksField`](../src/ui/components/LinksField.tsx),
+[`CompletedTaskRow`](../src/ui/components/CompletedTaskRow.tsx),
+[`ClientListItem`](../src/ui/components/ClientListItem.tsx).
 
 **`DescriptionEditor` — the highest-value extraction in the codebase.**
-`TaskFormPage` and `TaskDetailPanel` both implement "markdown editor with
+`TaskFormPage` and `TaskDetailPanel` both implemented "markdown editor with
 write/preview toggle, hidden file input, `useMarkdownImages` wiring, identical
-placeholder string, click-to-edit empty state, error line" — with divergent
-toggle UI and divergent styling. One component, two skins at most.
+placeholder string, click-to-edit empty state, error line". Two skins, as
+budgeted: `boxed` is the form's, where the tabs and the image action ride on the
+box the modes swap inside because that box *is* the field; `inline` is the detail
+panel's, where the controls sit in the section header beside "Description" and the
+preview is a card rather than the inside of a frame.
 
-**`LinksField`** — the URL repeater in `TaskFormPage` vs `ClientFormModal`.
-Note they differ in shape (`string[]` vs `{url, label}[]`), so the extraction
-should settle on the richer one.
+The placeholder is the reason the component had to exist rather than the toggle:
+it doubles as the Markdown cheatsheet, and two copies of a cheatsheet drift toward
+whichever one nobody is looking at.
 
-**`CompletedTaskRow`** — the strikethrough title + status + date + link row
-exists four times: `ClientsView`, `ArchiveView`, `DoneTasksSection`,
-`TodosView`.
+Both call sites lost their `useMarkdownImages` + `makeImageResolver` wiring
+(`TaskDetailPanel` keeps a resolver, but for its notes). Mode state stays outside —
+the form opens an existing description in preview and a new one ready to type,
+which is a decision about that form, and the panel's mode is app-wide UI state.
 
-**`ClientListItem`** — `ClientsView` copy-pastes its client row four times
-(desktop active/archived × mobile active/archived). One component with a
-`dimmed` flag collapses all four.
+**`LinksField` — and task links grew labels.** The two repeaters differed in shape
+(`string[]` vs `{url, label}[]`); settling on the richer one is a real gain, since
+`TaskLink.label` already existed in the model, already round-tripped through
+`- link: <url> <label>`, and was already rendered by `TaskDetailPanel` and
+`ClientsView` — the task form was simply the one place that couldn't set it.
+
+That widening reaches past the UI: `NewTaskInput.links` and `TaskFields.links` now
+take `(TaskLink | string)[]`, and both go through a new `parseLinks` in
+[`paths.ts`](../src/workspace/paths.ts) — the normalizer `parseClientLinks` already
+was, now factored out and shared. `updateTask` previously mapped links to `{url}`
+with no trimming at all; it trims and drops blanks like every other path now.
+The form's draft shape is `LinkDraft` in [`viewModels.ts`](../src/ui/model/viewModels.ts):
+`label` is always a string while typing (so a controlled input never flips to
+uncontrolled) and the blank is dropped on save.
+
+Rows wrap rather than squeeze, which is what lets one field serve a 520px dialog
+and the form's 320px rail: side by side in the dialog, label under url in the rail.
+
+**`CompletedTaskRow`.** The struck-through row existed four times — `ClientsView`,
+`ArchiveView`, `DoneTasksSection`, `TodosView` — with the same shell
+(`gap-[11px] py-2 px-2.5 rounded-lg hover:bg-neutral-225`) in all four and four
+different subsets of {reopen check, status, meta, link, actions}. `meta` is the one
+fact the surrounding list doesn't already state: the completion date in a client's
+own list, the client name in a day's.
+
+**`ClientListItem`.** `ClientsView` wrote its client row four times over — desktop
+and mobile, active and archived — and `dimmed` was the only thing that varied.
+Width is not in the component (it is layout, per step 2's rule): the desktop rail
+passes `w-full mb-[3px]`, and the dropdown's 6px inset moved from a margin on every
+row to the panel's own padding, which is what lets the rows be plain full-width
+buttons.
+
+**Behavioural notes** — four things changed, all deliberately:
+
+- **Three lists of closed tasks became keyboard-reachable.** `ClientsView`,
+  `DoneTasksSection` and `TodosView` rendered the title as a `<span onClick>`;
+  `ArchiveView` already had it right as a `<button>`, and that is the version all
+  four now share. The same fix applies to the client rows (four `<div onClick>`s,
+  now buttons carrying `aria-current` — nothing said which client was selected
+  before) and to both "click to add a description" boxes, which were a dead end in
+  preview mode for anyone not using a mouse.
+- **The description heading is no longer a `<label>`.** It had no `htmlFor` in
+  either editor, and it could not have had one: in preview mode there is no control
+  for it to point at. It is a heading, and the editor carries the name as an
+  `aria-label` — which is what `TaskDetailPanel` already did.
+- **One write/preview toggle, one order.** The detail panel's said Preview / Edit;
+  the form's said Write / Preview. Both now say Write / Preview, edit first. The
+  two empty states said different things ("Nothing to preview yet" vs "No
+  description yet"); they say the second.
+- **The remove-link buttons became `IconButton`s.** They were bare `×` glyphs in
+  36px and 38px hand-styled boxes, one with an `aria-label` and one with only a
+  `title`; both are now the outline `IconButton` with a lucide `XIcon` and a
+  numbered label ("Remove link 2"), so a repeater of them is distinguishable.
+
+**Visual changes** — all of them drift being collapsed:
+
+- The client rows' padding was `py-[9px]` on desktop and `py-[10px]` in the
+  dropdown; they are `py-[10px]`, the larger of the two, since it is also the
+  better pointer target.
+- The desktop client rows now truncate a long name, which only the mobile ones did.
+- The mobile dropdown's "Add client" was a hand-rolled dashed `<div>`; it is the
+  `Button variant="dashed"` the desktop rail already used.
+- Three of the four completed-task rows gained the `hover:underline` on their title
+  that the archive's already had.
+
+**API:**
+
+```tsx
+<DescriptionEditor variant="boxed|inline" value onChange mode onModeChange
+                   title="Description" hint="optional, Markdown" action={…} />
+<LinksField value={LinkDraft[]} onChange keepOne urlPlaceholder="…" />
+<CompletedTaskRow task onOpen onReopen={…} status={…} meta={…} showLink actions={…} />
+<ClientListItem name color count active dimmed title onClick className="w-full" />
+```
+
+`DescriptionEditor` takes a state *setter* rather than a plain callback, because an
+image dropped into it splices a ref in at the caret and that has to apply to the
+text as it is at that moment, not as it was when the handler was bound.
+
+**Deliberately left alone:** `ClientFormModal`'s colour swatches (a palette picker,
+and the only one in the app); the mobile client dropdown itself, which is a
+combobox rather than a list and belongs with `TagPicker` if it is ever generalized;
+and `WorklogTaskRow`, which is the *open*-task row and already extracted.
 
 ---
 
@@ -394,14 +486,17 @@ exists four times: `ClientsView`, `ArchiveView`, `DoneTasksSection`,
 Only worth doing after steps 1–5, since much of the bulk is inline styling that
 those steps remove.
 
+Line counts are as they stand after step 5, which already took ~60 lines out of
+`TaskFormPage` and ~35 out of `TaskDetailPanel` and `ClientsView` each.
+
 | File | Lines | Split into |
 | --- | --- | --- |
-| `TaskFormPage` | ~500 | `TitleField`, `DescriptionEditor`, `ClientChipPicker`, `DueField`, `LinksField`, `FormActionBar` |
+| `TaskFormPage` | ~440 | `TitleField`, `ClientChipPicker`, `DueField`, `FormActionBar` — `DescriptionEditor` and `LinksField` left in step 5 |
 | `Sidebar` | ~355 | `NavList`, `SidebarActions`, `RepoFooter` (exists), `MobileTopBar` — the nav glyphs already left for `icons.tsx` in step 4 |
-| `TaskDetailPanel` | ~400 | `TaskDetailHeader`, `TaskMetaRow`, `SubtaskList`, `NotesSection`, `DueEditor` |
 | `RecurrencePicker` | ~380 | move `kindOf`, `seedFor`, `isBusinessWeek` + constants (~90 lines of pure model code) next to `model/recurrence.ts` |
+| `TaskDetailPanel` | ~365 | `TaskDetailHeader`, `TaskMetaRow`, `SubtaskList`, `NotesSection`, `DueEditor` |
 | `CalendarView` | ~340 | `CalendarGrid`, `DayCell`, `Legend`, `PeriodNav`, `WorkedPerClient` |
-| `ClientsView` | ~315 | `ClientList`, `ClientInfoCard`, `CompletedTaskList` |
+| `ClientsView` | ~295 | `ClientList`, `ClientInfoCard`, `CompletedTaskList` |
 | `SearchOverlay` | ~285 | `SearchField`, `ScopeFilterBar`, `TagFilterBar`, `SearchResultRow` |
 | `InsightsView` | ~210 | `HoursTable` — the monthly table is written **twice, verbatim**, for clients and events, with the same `grid-cols-[1.4fr_0.7fr_0.7fr_2.6fr]` string 6× (~70 lines saved); plus `StatTile` |
 
@@ -411,6 +506,10 @@ the repo and is the template for the rest.
 `RepeatSummary` (in `TaskDetailPanel`) and `SidebarSection` (in `TaskFormPage`)
 are already extracted locally — the right pattern, currently applied to a small
 fraction of each file.
+
+The pieces step 5 pulled out are the ones two files *shared*. What is left in this
+table is the opposite case: blocks that belong to one file and are only long. They
+move to their own module and stay there, rather than becoming shared components.
 
 ---
 

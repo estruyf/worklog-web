@@ -29,20 +29,28 @@ export function parseAutoSync(value: unknown): AutoSyncConfig {
   return { enabled: raw.enabled === true, delayMinutes: delay };
 }
 
-/** Normalize a client's reference links: keep only entries with a usable url and
- *  drop the key entirely when none survive, so config.json stays free of empty
- *  arrays for the clients that never got any. */
-export function parseClientLinks(value: unknown): TaskLink[] | undefined {
+/** Normalize reference links from anywhere they arrive as loose data — config
+ *  json, a form, a bare url string — into the model's shape. Entries without a
+ *  usable url are dropped, and a blank label is left off rather than stored as
+ *  '', so `link.label` is absent exactly when there isn't one. */
+export function parseLinks(value: unknown): TaskLink[] {
   if (!Array.isArray(value)) {
-    return undefined;
+    return [];
   }
-  const links = value
+  return value
     .map((l) => (typeof l === 'string' ? { url: l } : (l as Partial<TaskLink> | null)))
     .filter((l): l is Partial<TaskLink> => !!l && typeof l.url === 'string' && !!l.url.trim())
     .map((l) => {
       const label = typeof l.label === 'string' ? l.label.trim() : '';
       return { url: l.url!.trim(), ...(label ? { label } : {}) };
     });
+}
+
+/** A client's links as config.json holds them: the key is dropped entirely when
+ *  none survive, so the file stays free of empty arrays for the clients that
+ *  never got any. */
+export function parseClientLinks(value: unknown): TaskLink[] | undefined {
+  const links = parseLinks(value);
   return links.length ? links : undefined;
 }
 

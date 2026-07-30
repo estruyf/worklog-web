@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { SearchIcon } from 'lucide-react';
 import { Badge, Button, Card, EmptyState, Input, LinkButton, Pager, SegmentedControl, Select } from '../primitives';
+import { CompletedTaskRow } from '../components';
 import { useData } from '../context';
 import { ARCHIVE_PAGE_SIZES, deriveArchive, fmtShort, pageWindow } from '../utils';
 import type { ArchivePeriod } from '../utils';
@@ -222,19 +223,23 @@ export function ArchiveView() {
 
             <div className="px-2 py-[6px]">
               {g.tasks.map((t) => (
-                <div key={t.id} className="flex items-center gap-[11px] py-2 px-2.5 rounded-lg hover:bg-neutral-225">
-                  <span className="w-16 shrink-0 text-status font-bold tracking-status text-success-500">{statusMeta(t.status, true).label}</span>
-                  <button onClick={() => openDetail(t)} title="Open task" className="text-row text-neutral-700 flex-1 text-left line-through decoration-neutral-550 bg-transparent border-none cursor-pointer hover:underline p-0">
-                    {t.title}
-                  </button>
-                  <span className="text-control text-neutral-650">{t.completed ? fmtShort(t.completed) : ''}</span>
-                  <Button size="xs" onClick={() => reopen(t)}>
-                    Restore
-                  </Button>
-                  <Button size="xs" variant="danger" onClick={() => deleteForever(t.id)}>
-                    Delete forever
-                  </Button>
-                </div>
+                <CompletedTaskRow
+                  key={t.id}
+                  task={t}
+                  onOpen={() => openDetail(t)}
+                  status={statusMeta(t.status, true).label}
+                  meta={t.completed ? fmtShort(t.completed) : ''}
+                  actions={
+                    <>
+                      <Button size="xs" onClick={() => reopen(t)}>
+                        Restore
+                      </Button>
+                      <Button size="xs" variant="danger" onClick={() => deleteForever(t.id)}>
+                        Delete forever
+                      </Button>
+                    </>
+                  }
+                />
               ))}
             </div>
           </Card>

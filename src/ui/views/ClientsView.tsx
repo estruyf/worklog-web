@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { Client } from '../../model/types';
 import type { WorklogRow } from '../model';
 import { ChevronDownIcon, ExternalLinkIcon, PencilIcon } from 'lucide-react';
-import { DisclosureIcon, WorklogTaskRow } from '../components';
+import { ClientListItem, CompletedTaskRow, DisclosureIcon, WorklogTaskRow } from '../components';
 import { Badge, Button, Card, EmptyState, SectionLabel } from '../primitives';
 import { useData, useUi } from '../context';
 import { clientIdOf, fmtLong, fmtShort, isDone, renderMarkdown } from '../utils';
@@ -96,53 +96,42 @@ function MobileClientDropdown({
         <ChevronDownIcon size={14} className={'shrink-0 text-neutral-700 transition-transform ' + (open ? 'rotate-180' : '')} />
       </button>
       {open && (
-        <div className="absolute left-[14px] right-[14px] top-[calc(100%-4px)] z-20 max-h-[50vh] overflow-auto border border-neutral-400 rounded-[10px] bg-white shadow-lg py-[6px]">
-          {clients.map((c) => {
-            const cnt = clientOpenCounts[c.id] ?? 0;
-            const active = c.id === selectedClient;
-            return (
-              <div
-                key={c.id}
-                onClick={() => { onSelect(c.id); setOpen(false); }}
-                className={'flex items-center justify-between px-3 py-[10px] mx-[6px] rounded-lg cursor-pointer ' + (active ? 'bg-brand-225' : 'hover:bg-neutral-200')}
-              >
-                <span className="flex items-center gap-[9px] min-w-0">
-                  <span className="w-[9px] h-[9px] rounded-full shrink-0" style={{ background: colorOf(c.id) }} />
-                  <span className="font-semibold text-body truncate">{c.name}</span>
-                </span>
-                <span className="text-neutral-625 text-control">{cnt}</span>
-              </div>
-            );
-          })}
+        // The 6px inset that used to be a margin on every row is the panel's own
+        // padding, so the rows can be plain full-width buttons.
+        <div className="absolute left-[14px] right-[14px] top-[calc(100%-4px)] z-20 max-h-[50vh] overflow-auto border border-neutral-400 rounded-[10px] bg-white shadow-lg p-[6px]">
+          {clients.map((c) => (
+            <ClientListItem
+              key={c.id}
+              name={c.name}
+              color={colorOf(c.id)}
+              count={clientOpenCounts[c.id] ?? 0}
+              active={c.id === selectedClient}
+              onClick={() => { onSelect(c.id); setOpen(false); }}
+              className="w-full"
+            />
+          ))}
           {archivedClients.length > 0 && (
             <>
-              <SectionLabel size="sm" className="mx-3 mt-[10px] mb-[6px] pt-[10px] border-t border-neutral-325">
+              <SectionLabel size="sm" className="mx-[6px] mt-[10px] mb-[6px] pt-[10px] border-t border-neutral-325">
                 Archived · {archivedClients.length}
               </SectionLabel>
               {archivedClients.map((c) => (
-                <div
+                <ClientListItem
                   key={c.id}
+                  name={c.name}
+                  color={colorOf(c.id)}
+                  count={clientOpenCounts[c.id] ?? 0}
+                  active={c.id === selectedClient}
+                  dimmed
                   onClick={() => { onSelect(c.id); setOpen(false); }}
-                  className={
-                    'flex items-center justify-between px-3 py-[10px] mx-[6px] rounded-lg cursor-pointer ' +
-                    (c.id === selectedClient ? 'bg-brand-225' : 'hover:bg-neutral-200')
-                  }
-                >
-                  <span className="flex items-center gap-[9px] min-w-0 opacity-65">
-                    <span className="w-[9px] h-[9px] rounded-full shrink-0" style={{ background: colorOf(c.id) }} />
-                    <span className="font-semibold text-body truncate">{c.name}</span>
-                  </span>
-                  <span className="text-neutral-625 text-control">{clientOpenCounts[c.id] ?? 0}</span>
-                </div>
+                  className="w-full"
+                />
               ))}
             </>
           )}
-          <div
-            onClick={() => { onAdd(); setOpen(false); }}
-            className="flex items-center gap-[6px] mx-[6px] mt-[6px] px-3 py-[10px] border border-dashed border-neutral-550 rounded-lg text-neutral-700 text-control cursor-pointer hover:border-brand-500 hover:text-brand-800"
-          >
+          <Button variant="dashed" size="md" onClick={() => { onAdd(); setOpen(false); }} className="w-full mt-[6px]">
             <span className="text-[15px] leading-none">+</span> Add client
-          </div>
+          </Button>
         </div>
       )}
     </div>
@@ -180,23 +169,17 @@ export function ClientsView() {
         onAdd={() => openClientEditor()}
       />
       <div className="hidden md:block shrink-0 md:border-r border-neutral-400 md:px-[14px] md:py-[18px] overflow-auto md:max-h-none md:w-[260px]">
-        {clients.map((c) => {
-          const cnt = clientOpenCounts[c.id] ?? 0;
-          const active = c.id === selectedClient;
-          return (
-            <div
-              key={c.id}
-              onClick={() => setSelectedClient(c.id)}
-              className={'flex items-center justify-between px-3 py-[9px] rounded-lg cursor-pointer mb-[3px] ' + (active ? 'bg-brand-225' : 'bg-transparent hover:bg-neutral-200')}
-            >
-              <span className="flex items-center gap-[9px]">
-                <span className="w-[9px] h-[9px] rounded-full" style={{ background: colorOf(c.id) }} />
-                <span className="font-semibold text-body">{c.name}</span>
-              </span>
-              <span className="text-neutral-625 text-control">{cnt}</span>
-            </div>
-          );
-        })}
+        {clients.map((c) => (
+          <ClientListItem
+            key={c.id}
+            name={c.name}
+            color={colorOf(c.id)}
+            count={clientOpenCounts[c.id] ?? 0}
+            active={c.id === selectedClient}
+            onClick={() => setSelectedClient(c.id)}
+            className="w-full mb-[3px]"
+          />
+        ))}
         <Button variant="dashed" size="md" onClick={() => openClientEditor()} className="w-full mt-2">
           <span className="text-[15px] leading-none">+</span> Add client
         </Button>
@@ -215,23 +198,19 @@ export function ClientsView() {
               </SectionLabel>
             </button>
             {showArchivedClients &&
-              archivedClients.map((c) => {
-                const active = c.id === selectedClient;
-                return (
-                  <div
-                    key={c.id}
-                    onClick={() => setSelectedClient(c.id)}
-                    title={`${c.name} — archived`}
-                    className={'flex items-center justify-between px-3 py-[9px] rounded-lg cursor-pointer mb-[3px] ' + (active ? 'bg-brand-225' : 'bg-transparent hover:bg-neutral-200')}
-                  >
-                    <span className="flex items-center gap-[9px] opacity-65">
-                      <span className="w-[9px] h-[9px] rounded-full" style={{ background: colorOf(c.id) }} />
-                      <span className="font-semibold text-body">{c.name}</span>
-                    </span>
-                    <span className="text-neutral-625 text-control">{clientOpenCounts[c.id] ?? 0}</span>
-                  </div>
-                );
-              })}
+              archivedClients.map((c) => (
+                <ClientListItem
+                  key={c.id}
+                  name={c.name}
+                  color={colorOf(c.id)}
+                  count={clientOpenCounts[c.id] ?? 0}
+                  active={c.id === selectedClient}
+                  dimmed
+                  title={`${c.name} — archived`}
+                  onClick={() => setSelectedClient(c.id)}
+                  className="w-full mb-[3px]"
+                />
+              ))}
           </div>
         )}
       </div>
@@ -298,13 +277,13 @@ export function ClientsView() {
         {selectedDone.length > 0 && (
           <Card tone="muted" padding="list">
             {selectedDone.map((t) => (
-              <div key={t.id} className="flex items-center gap-[11px] py-2 px-2.5 rounded-lg hover:bg-neutral-225">
-                <span className="w-16 shrink-0 text-status font-bold tracking-status text-success-500">{statusMeta(t.status, true).label}</span>
-                <span onClick={() => openDetail(t)} title="Open task" className="text-row text-neutral-700 flex-1 line-through decoration-neutral-550 cursor-pointer">
-                  {t.title}
-                </span>
-                <span className="text-control text-neutral-650">{t.completed ? fmtShort(t.completed) : ''}</span>
-              </div>
+              <CompletedTaskRow
+                key={t.id}
+                task={t}
+                onOpen={() => openDetail(t)}
+                status={statusMeta(t.status, true).label}
+                meta={t.completed ? fmtShort(t.completed) : ''}
+              />
             ))}
           </Card>
         )}

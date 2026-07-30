@@ -2,9 +2,10 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useData, usePublishTaskFormBar } from '../context';
 import { TagPicker } from './TagPicker';
 import { RecurrencePicker } from './RecurrencePicker';
-import { useMarkdownImages } from '../hooks';
-import { Button, Chip, DateInput, Field, Input, LinkButton, SegmentedControl, Select } from '../primitives';
-import { clientIdOf, isDone, linksOf, renderMarkdown, makeImageResolver } from '../utils';
+import { DescriptionEditor } from './DescriptionEditor';
+import { LinksField } from './LinksField';
+import { Button, Chip, DateInput, Field, Input, LinkButton, Select } from '../primitives';
+import { clientIdOf, isDone } from '../utils';
 import { GENERAL_TODO_CLIENT_ID, GENERAL_TODO_COLOR, GENERAL_TODO_LABEL } from '../../model/todos';
 import { formatRecurrence, type RecurrenceAnchor } from '../../model/recurrence';
 import type { Task } from '../../model/types';
@@ -21,7 +22,7 @@ function initialFields(task: Task | undefined, seed: TaskFormSeed): TaskFormFiel
       title: '',
       clientId: seed.clientId ?? '',
       parentId: seed.parentId ?? '',
-      links: [''],
+      links: [{ url: '', label: '' }],
       due: seed.due ?? '',
       repeat: '',
       repeatFrom: 'schedule',
@@ -30,12 +31,12 @@ function initialFields(task: Task | undefined, seed: TaskFormSeed): TaskFormFiel
       description: '',
     };
   }
-  const ls = linksOf(task);
+  const ls = task.links.map((l) => ({ url: l.url, label: l.label ?? '' }));
   return {
     title: task.title,
     clientId: clientIdOf(task),
     parentId: task.parentId || '',
-    links: ls.length ? ls : [''],
+    links: ls.length ? ls : [{ url: '', label: '' }],
     due: task.due || '',
     repeat: task.repeat ? formatRecurrence(task.repeat) : '',
     repeatFrom: task.repeat?.anchor ?? 'schedule',
@@ -147,7 +148,7 @@ function TaskForm({ editingId, task, seed }: { editingId: string | null; task: T
   const [addingClient, setAddingClient] = useState(false);
   const [newClientName, setNewClientName] = useState('');
 
-  const { snap, tasks, clients, allClients, colorOf, assetUrl, allTags, submitTask, createClient, deleteTask: onDelete } = useData();
+  const { snap, tasks, clients, allClients, colorOf, allTags, submitTask, createClient, deleteTask: onDelete } = useData();
   // Usage-ranked, so the picker offers the tags actually in circulation first.
   const knownTags = useMemo(() => allTags.map((t) => t.tag), [allTags]);
   const parentOptions = useMemo(
@@ -165,8 +166,6 @@ function TaskForm({ editingId, task, seed }: { editingId: string | null; task: T
   // The snapshot's day rolls over with the app; fall back to the clock before the
   // first snapshot lands so the shortcut is never a stale or empty date.
   const todayKey = snap?.today || today();
-  const img = useMarkdownImages(description, setDescription);
-  const resolveImage = useMemo(() => makeImageResolver(assetUrl), [assetUrl]);
 
   const onSave = () =>
     submitTask(editingId, { title, clientId, parentId, links, due, repeat, repeatFrom, repeatUntil, tags, description });
@@ -258,52 +257,17 @@ function TaskForm({ editingId, task, seed }: { editingId: string | null; task: T
             </div>
 
             <div className="order-3">
-              <label className="block font-semibold text-body mb-2">
-                Description <span className="text-neutral-625 font-normal">(optional, Markdown)</span>
-              </label>
-              <input ref={img.fileInputRef} type="file" accept="image/*" multiple onChange={img.onFileChange} className="hidden" />
               {/* Write / Preview as tabs on the editor itself rather than a toggle
                   floating beside the label: the two modes swap the same box, so the
                   control belongs on the box. */}
-              <div className="border border-neutral-450 rounded-panel overflow-hidden">
-                <div className="flex items-center justify-between gap-3 px-[10px] py-[7px] border-b border-neutral-450 bg-neutral-150">
-                  <SegmentedControl
-                    aria-label="Description mode"
-                    options={[
-                      { value: 'edit', label: 'Write' },
-                      { value: 'preview', label: 'Preview' },
-                    ]}
-                    value={descMode}
-                    onChange={setDescMode}
-                  />
-                  <LinkButton onClick={img.openFilePicker} disabled={img.uploading} className="font-medium">
-                    {img.uploading ? 'Adding…' : '+ Add image'}
-                  </LinkButton>
-                </div>
-                <div>
-                  {descMode === 'edit' ? (
-                    <textarea
-                      value={description}
-                      onChange={(e) => setDescription(e.target.value)}
-                      onPaste={img.onPaste}
-                      onDrop={img.onDrop}
-                      onDragOver={img.onDragOver}
-                      placeholder={'Add a description in Markdown…\n\n## Notes\n- supports **bold**, *italic*, `code`\n- [links](https://example.com), lists, > quotes\n- paste, drop or add an image'}
-                      className="block w-full min-h-[300px] lg:min-h-[420px] px-[14px] py-[12px] text-touch md:text-control-lg leading-[1.6] outline-none focus:outline-brand-500 focus:shadow-[0_0_0_3px_var(--color-brand-225)] resize-y focus-visible:outline-brand-500!"
-                      style={{ fontFamily: "'JetBrains Mono', ui-monospace, monospace" }}
-                    />
-                  ) : description.trim() ? (
-                    // Same minimum height as the editor, so switching tabs doesn't
-                    // resize the page under the pointer.
-                    <div className="wl-md min-h-[300px] lg:min-h-[420px] px-[8px] py-[4px]" dangerouslySetInnerHTML={{ __html: renderMarkdown(description, resolveImage) }} />
-                  ) : (
-                    <div onClick={() => setDescMode('edit')} className="min-h-[300px] lg:min-h-[420px] px-[18px] py-[18px] text-body text-neutral-625 italic cursor-text">
-                      Nothing to preview yet. Click to add Markdown notes.
-                    </div>
-                  )}
-                </div>
-              </div>
-              {img.error && <div className="text-chip text-danger-675 mt-2">{img.error}</div>}
+              <DescriptionEditor
+                variant="boxed"
+                hint="optional, Markdown"
+                value={description}
+                onChange={setDescription}
+                mode={descMode}
+                onModeChange={setDescMode}
+              />
             </div>
           </div>
 
@@ -441,30 +405,7 @@ function TaskForm({ editingId, task, seed }: { editingId: string | null; task: T
               </SidebarSection>
 
               <SidebarSection title="Links" hint="optional">
-                {links.map((l, i) => (
-                  <div key={i} className="flex gap-2 mb-2">
-                    <Input
-                      value={l}
-                      onChange={(e) => setLinks(links.map((x, j) => (j === i ? e.target.value : x)))}
-                      aria-label={`Link ${i + 1}`}
-                      placeholder="https://github.com/.../pull/34"
-                      className="flex-1 min-w-0"
-                    />
-                    <button
-                      onClick={() => {
-                        const next = links.filter((_, j) => j !== i);
-                        setLinks(next.length ? next : ['']);
-                      }}
-                      aria-label="Remove link"
-                      className="w-[36px] shrink-0 border border-neutral-525 rounded-control-lg bg-white text-neutral-650 cursor-pointer text-[15px]"
-                    >
-                      ×
-                    </button>
-                  </div>
-                ))}
-                <LinkButton size="lg" onClick={() => setLinks([...links, ''])} className="font-medium py-[2px]">
-                  + Add another link
-                </LinkButton>
+                <LinksField value={links} onChange={setLinks} keepOne urlPlaceholder="https://github.com/.../pull/34" />
               </SidebarSection>
             </div>
           </aside>

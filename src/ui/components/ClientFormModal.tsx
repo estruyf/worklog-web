@@ -1,6 +1,7 @@
 import React from 'react';
 import { PALETTE } from '../utils';
-import { Button, Field, Input, LinkButton, Modal, SectionLabel, TextArea } from '../primitives';
+import { Button, Field, Input, Modal, SectionLabel, TextArea } from '../primitives';
+import { LinksField } from './LinksField';
 import { useData, useUi } from '../context';
 
 /** Add / edit client modal (name, color, notes and reference links), plus the two
@@ -76,37 +77,12 @@ export function ClientFormModal() {
         />
       </Field>
 
-      <label className="block font-semibold text-body mt-[22px] mb-2">
+      {/* A heading, not a `<label>`: it titles a repeater of fields, each of which
+          carries its own name, rather than a single control. */}
+      <div className="font-semibold text-body mt-[22px] mb-2">
         Links <span className="text-neutral-625 font-normal">(optional)</span>
-      </label>
-      {links.map((l, i) => (
-        <div key={i} className="flex gap-2 mb-2">
-          <Input
-            value={l.url}
-            onChange={(e) => setLinks(links.map((x, j) => (j === i ? { ...x, url: e.target.value } : x)))}
-            aria-label={`Link ${i + 1} URL`}
-            placeholder="https://github.com/acme/website"
-            className="flex-[2] min-w-0"
-          />
-          <Input
-            value={l.label}
-            onChange={(e) => setLinks(links.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)))}
-            aria-label={`Link ${i + 1} label`}
-            placeholder="Label"
-            className="flex-1 min-w-0"
-          />
-          <button
-            onClick={() => setLinks(links.filter((_, j) => j !== i))}
-            title="Remove this link"
-            className="w-[38px] shrink-0 border border-neutral-525 rounded-control-lg bg-white text-neutral-650 cursor-pointer text-[15px]"
-          >
-            ×
-          </button>
-        </div>
-      ))}
-      <LinkButton size="lg" onClick={() => setLinks([...links, { url: '', label: '' }])} className="font-medium py-[2px]">
-        + Add {links.length ? 'another ' : ''}link
-      </LinkButton>
+      </div>
+      <LinksField value={links} onChange={setLinks} urlPlaceholder="https://github.com/acme/website" />
 
       {editingClientId && <div className="text-meta text-neutral-625 mt-3">Client id <code className="text-neutral-675">{editingClientId}</code> stays the same; only the name, color, description and links change.</div>}
 

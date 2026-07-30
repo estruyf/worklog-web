@@ -17,6 +17,15 @@ export type AppView =
   | "shortcuts"
   | "settings";
 
+/** One reference link while a form is editing it. `label` is always a string
+ *  ('' when unset) so a controlled input never flips to uncontrolled — the model's
+ *  `TaskLink.label` is optional, and the blank is dropped on save. The task form
+ *  and the client editor share this shape (and `LinksField`, which edits it). */
+export interface LinkDraft {
+  url: string;
+  label: string;
+}
+
 /** Everything the task form collects, in the shape the form holds it: raw text as
  *  typed, normalized on submit. `repeat` is the canonical `- repeat:` expression
  *  ('' = one-off) plus its two qualifiers, so the form and the files go through
@@ -25,7 +34,7 @@ export interface TaskFormFields {
   title: string;
   clientId: string;
   parentId: string;
-  links: string[];
+  links: LinkDraft[];
   due: string;
   repeat: string;
   repeatFrom: RecurrenceAnchor;
