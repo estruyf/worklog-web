@@ -31,6 +31,7 @@ import {
 import { removeWorklog, setEventWorklog, setWorklog } from '../services/worklog';
 import { updateSettings, type SettingsFields } from '../services/settings';
 import type { WorklogState } from '../ui/state';
+import type { Client } from '../model/types';
 import { DEFAULT_AUTO_SYNC } from '../workspace/paths';
 import {
   clearPending,
@@ -478,8 +479,12 @@ class WorklogStore {
     return this.run(() => updateTask(this.store, taskId, fields));
   }
 
-  createClient(name: string, color?: string, fields?: Omit<ClientFields, 'name' | 'color'>): Promise<void> {
-    return this.run(() => createClient(this.store, { name, color, ...fields }));
+  /** Resolves to the created client, or undefined when the write failed (the
+   *  error is already on screen as a toast). Callers need the id: a client added
+   *  from inside a form is the one that form should switch to, and there is no
+   *  other way back from a name to the id the service derived from it. */
+  createClient(name: string, color?: string, fields?: Omit<ClientFields, 'name' | 'color'>): Promise<Client | undefined> {
+    return this.runFor(() => createClient(this.store, { name, color, ...fields }));
   }
 
   updateClient(id: string, fields: ClientFields): Promise<void> {
@@ -570,10 +575,17 @@ class WorklogStore {
 
   /** Run a mutating action, surfacing any failure as a toast. */
   private async run(action: () => Promise<unknown>): Promise<void> {
+    await this.runFor(action);
+  }
+
+  /** `run` for an action whose result the caller needs; `undefined` means it
+   *  threw and the toast has already been raised. */
+  private async runFor<T>(action: () => Promise<T>): Promise<T | undefined> {
     try {
-      await action();
+      return await action();
     } catch (err) {
       this.emitToast(err instanceof Error ? err.message : String(err), 'error');
+      return undefined;
     }
   }
 

@@ -46,9 +46,15 @@ export function WorklogApp({ repoProps }: { repoProps?: SidebarRepoProps } = {})
   const formOpen = useRoute().name === 'taskForm';
 
   // Latest state/actions for the global key handler, so it can stay subscribed
-  // once instead of re-binding on every keystroke.
-  const stateRef = React.useRef({ searchOpen, detailId, clientModalOpen, formOpen, searchSel, searchData, openTaskFormFromShortcut, openLogForm });
-  stateRef.current = { searchOpen, detailId, clientModalOpen, formOpen, searchSel, searchData, openTaskFormFromShortcut, openLogForm };
+  // once instead of re-binding on every keystroke. Everything the handler reads
+  // goes through here — a value read straight from the closure would be frozen at
+  // mount, since the effect below deliberately never re-subscribes.
+  // Written after commit, not during render: a render that React discards must not
+  // leave the handler pointing at state that was never shown.
+  const stateRef = React.useRef({ view, searchOpen, detailId, clientModalOpen, formOpen, searchSel, searchData, openTaskFormFromShortcut, openLogForm });
+  React.useEffect(() => {
+    stateRef.current = { view, searchOpen, detailId, clientModalOpen, formOpen, searchSel, searchData, openTaskFormFromShortcut, openLogForm };
+  });
 
   // Global shortcuts. ⌘F/⌘S -> open the Search overlay (⌘S also suppresses the
   // browser's save dialog); ⇧N (or ⌘N in the PWA) -> New task; ⌘L on the Day view
@@ -83,7 +89,7 @@ export function WorklogApp({ repoProps }: { repoProps?: SidebarRepoProps } = {})
         s.openTaskFormFromShortcut();
         return;
       }
-      if (meta && key === 'l' && view === 'day' && idle) {
+      if (meta && key === 'l' && s.view === 'day' && idle) {
         e.preventDefault();
         s.openLogForm();
         return;

@@ -71,6 +71,30 @@ const DETAIL_KEY = 'worklogDetail';
 // Marks a history entry this app pushed for the task form, so closing the form
 // can walk back off it instead of stranding the user on an unrelated page.
 const FORM_KEY = 'worklogForm';
+// What a *new* task form should start from — which client, whose subtask, which
+// due date. None of it belongs in the URL (it's a starting point, not an
+// address), and it can't be derived from one either: /app/new is the same path
+// whether you arrived from the calendar, a parent task or the to-do list.
+const FORM_SEED_KEY = 'worklogFormSeed';
+// Distinguishes one visit to the form from the next. The path alone can't:
+// opening the form from two different parents is twice /app/new, and the fields
+// have to start over the second time. Kept in history state so back/forward
+// return to the instance that entry was showing rather than minting a new one.
+const FORM_SEQ_KEY = 'worklogFormSeq';
+
+/** Where a new task form starts. Empty for a plain "new task". */
+export interface TaskFormSeed {
+  clientId?: string;
+  parentId?: string;
+  due?: string;
+}
+
+/** One visit to the task form: what it starts from, and an identity that changes
+ *  whenever it should start over. */
+export interface TaskFormInstance {
+  seed: TaskFormSeed;
+  key: string;
+}
 
 function readDetailState(): string | null {
   const state = window.history.state as Record<string, unknown> | null;
@@ -78,10 +102,28 @@ function readDetailState(): string | null {
   return typeof id === 'string' ? id : null;
 }
 
+function readFormInstance(): TaskFormInstance {
+  const state = window.history.state as Record<string, unknown> | null;
+  const seed = state?.[FORM_SEED_KEY];
+  const seq = state?.[FORM_SEQ_KEY];
+  return {
+    seed: seed && typeof seed === 'object' ? (seed as TaskFormSeed) : {},
+    key: typeof seq === 'number' ? String(seq) : '0',
+  };
+}
+
 // Cache the current route object so useSyncExternalStore gets a stable reference
 // until the location actually changes.
 let current: Route = typeof window === 'undefined' ? { name: 'view', view: 'day' } : parseRoute(window.location.pathname);
 let overlayDetailId: string | null = typeof window === 'undefined' ? null : readDetailState();
+const EMPTY_FORM_INSTANCE: TaskFormInstance = { seed: {}, key: '0' };
+// Cached for the same reason as `current`: useSyncExternalStore compares by
+// identity, so this must not be rebuilt per read.
+let formInstance: TaskFormInstance = typeof window === 'undefined' ? EMPTY_FORM_INSTANCE : readFormInstance();
+// Counts the form openings this session, so each gets its own instance key.
+// Restarts at 0 on reload, which is harmless: a reloaded entry keeps the seq it
+// was stored with, and nothing compares keys across page loads.
+let formSeq = 0;
 // `history.back()` only lands on the next popstate, so the overlay still reads as
 // open until then. This keeps a second close request in that window (a delete
 // closes the panel from two places) from popping one entry too many.
@@ -94,6 +136,7 @@ let closingForm = false;
 function refresh(): void {
   current = parseRoute(window.location.pathname);
   overlayDetailId = readDetailState();
+  formInstance = readFormInstance();
   closingDetail = false;
   closingForm = false;
   notify();
@@ -137,17 +180,20 @@ export function navigateToDashboard(): void {
 /** Open the task form: /app/new for a new task, /app/task/<id>/edit for an
  *  existing one. Always pushes (never replaces the detail overlay's entry the
  *  way `navigate` does) so Back off the form lands on the panel you opened it
- *  from, panel included. */
-export function navigateToTaskForm(taskId?: string | null): void {
+ *  from, panel included. `seed` is what a new form starts from — the form reads
+ *  it once on mount and owns its fields from there. */
+export function navigateToTaskForm(taskId?: string | null, seed: TaskFormSeed = {}): void {
   const path = taskId ? `${APP_BASE}/task/${encodeURIComponent(taskId)}/edit` : `${APP_BASE}/new`;
   const url = path + window.location.search;
+  const state = { [FORM_KEY]: true, [FORM_SEED_KEY]: seed, [FORM_SEQ_KEY]: ++formSeq };
   // Re-opening the form you're already on (the sidebar's New task button stays
   // clickable) reseeds it in place rather than stacking a second entry that Back
-  // would have to walk off twice.
+  // would have to walk off twice. The new seq is what makes it *re*-seed: same
+  // path, new instance, so the form starts over instead of keeping what was typed.
   if (window.location.pathname === path) {
-    window.history.replaceState({ [FORM_KEY]: true }, '', url);
+    window.history.replaceState(state, '', url);
   } else {
-    window.history.pushState({ [FORM_KEY]: true }, '', url);
+    window.history.pushState(state, '', url);
   }
   refresh();
 }
@@ -196,6 +242,18 @@ export function useRoute(): Route {
     () => current,
     () => current,
   );
+}
+
+/** The open form's instance. Exported for tests; components use the hook below. */
+export function taskFormInstance(): TaskFormInstance {
+  return formInstance;
+}
+
+/** What the open task form starts from, and the identity that says when it should
+ *  start over. Mount the form under `key={…instance.key}` so React remounts it —
+ *  that remount *is* the reset; nothing has to clear the fields by hand. */
+export function useTaskFormInstance(): TaskFormInstance {
+  return useSyncExternalStore(subscribe, taskFormInstance, () => EMPTY_FORM_INSTANCE);
 }
 
 /** The task the detail view is pinned to: on /app/task/<id> the route's own task,

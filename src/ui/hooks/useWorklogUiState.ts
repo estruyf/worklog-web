@@ -1,6 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { AppView, SearchScope } from "../model";
-import type { RecurrenceAnchor } from "../../model/recurrence";
 import { closeTaskDetail, openTaskDetail, useDetailId } from "../router";
 import { useConfirmDialog } from "./useConfirmDialog";
 
@@ -39,27 +38,12 @@ export function useWorklogUiState() {
     setTagFilter([]);
   }, [searchOpen]);
 
-  // The task form is a route (/app/new, /app/task/<id>/edit), so nothing here
-  // tracks whether it's open — these are just the fields it edits, kept in app
-  // state so navigating to the form can seed them first.
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [mTitle, setMTitle] = useState("");
-  const [mClient, setMClient] = useState("");
-  const [mParent, setMParent] = useState("");
-  const [mLinks, setMLinks] = useState<string[]>([""]);
-  const [mDue, setMDue] = useState("");
-  // Recurrence is held as its canonical `- repeat:` expression ('' = one-off)
-  // plus its two qualifiers, so the form reuses the same parser the files do.
-  const [mRepeat, setMRepeat] = useState("");
-  const [mRepeatFrom, setMRepeatFrom] = useState<RecurrenceAnchor>("schedule");
-  const [mRepeatUntil, setMRepeatUntil] = useState("");
-  // The task form's tags, as a list — the picker owns normalization, so what
-  // sits here is already the exact set that will be written.
-  const [mTags, setMTags] = useState<string[]>([]);
-  const [mDescription, setMDescription] = useState("");
-  const [mDescMode, setMDescMode] = useState<"preview" | "edit">("edit");
-  const [addingClient, setAddingClient] = useState(false);
-  const [newClientName, setNewClientName] = useState("");
+  // The task form's fields are deliberately absent: it is a route
+  // (/app/new, /app/task/<id>/edit) that owns its own state and starts from the
+  // task or the seed it is mounted with (see TaskFormPage / router's
+  // useTaskFormInstance). Holding them here meant every keystroke in the form
+  // re-rendered every consumer of this hook, and it took a ref plus a route
+  // effect to keep "which task are these fields for" honest.
 
   const [logOpen, setLogOpen] = useState(false);
   const [logEditing, setLogEditing] = useState(false);
@@ -97,10 +81,6 @@ export function useWorklogUiState() {
   // {url,label} records on save, so a half-typed row can't break anything.
   const [cLinks, setCLinks] = useState<{ url: string; label: string }[]>([]);
 
-  const pendingClient = useRef<
-    { name: string; target: "modal" | "selected" } | undefined
-  >(undefined);
-
   // The one open confirmation / notice, plus the promise-based API actions use to
   // raise one. Kept as its own namespace so `ui.confirm.ask(...)` reads as the
   // question it is.
@@ -129,34 +109,6 @@ export function useWorklogUiState() {
     setTagFilter,
     searchSel,
     setSearchSel,
-    editingId,
-    setEditingId,
-    mTitle,
-    setMTitle,
-    mClient,
-    setMClient,
-    mParent,
-    setMParent,
-    mLinks,
-    setMLinks,
-    mDue,
-    setMDue,
-    mRepeat,
-    setMRepeat,
-    mRepeatFrom,
-    setMRepeatFrom,
-    mRepeatUntil,
-    setMRepeatUntil,
-    mTags,
-    setMTags,
-    mDescription,
-    setMDescription,
-    mDescMode,
-    setMDescMode,
-    addingClient,
-    setAddingClient,
-    newClientName,
-    setNewClientName,
     logOpen,
     setLogOpen,
     logEditing,
@@ -195,7 +147,6 @@ export function useWorklogUiState() {
     setCDesc,
     cLinks,
     setCLinks,
-    pendingClient,
     confirm,
   };
 }

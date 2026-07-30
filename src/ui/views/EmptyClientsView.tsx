@@ -1,10 +1,18 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useData, useUi } from '../context';
 
 export function EmptyClientsView() {
-  const { newClientName, setNewClientName } = useUi();
+  // The name being typed is this screen's own business — it exists only until the
+  // first client does.
+  const [newClientName, setNewClientName] = useState('');
+  const { setSelectedClient } = useUi();
   const { createClient } = useData();
-  const onCreateClient = () => createClient(newClientName, 'selected');
+  const onCreateClient = async () => {
+    const id = await createClient(newClientName);
+    if (id) {
+      setSelectedClient(id);
+    }
+  };
   return (
     <div className="flex flex-1 items-center justify-center px-6">
       <div className="w-[440px] max-w-[92vw] text-center">
@@ -17,14 +25,14 @@ export function EmptyClientsView() {
             onChange={(e) => setNewClientName(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
-                onCreateClient();
+                void onCreateClient();
               }
             }}
             placeholder="Client name (e.g. Acme Inc)"
             className="flex-1 px-[14px] py-[11px] border border-neutral-525 rounded-[9px] text-[14px] outline-none focus:border-brand-500 focus:shadow-[0_0_0_3px_var(--color-brand-225)]"
           />
           <button
-            onClick={onCreateClient}
+            onClick={() => void onCreateClient()}
             className="px-[18px] py-[11px] border border-brand-500 rounded-[9px] bg-brand-450 text-brand-800 font-semibold text-[14px] cursor-pointer hover:bg-brand-475"
           >
             Add client

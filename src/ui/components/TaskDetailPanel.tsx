@@ -94,7 +94,6 @@ export function TaskDetailPanel({ routed = false }: { routed?: boolean } = {}) {
   }
   const onBack = () => setDetailId(null);
   const onOpenTask = (id: string) => (routed ? navigateToTask(id) : setDetailId(id));
-  const onOpenInTab = () => navigateToTask(task.id);
   const onSetCompletedDate = (taskId: string, date: string) => worklogStore.setCompletedDate(taskId, date);
   const onSetDue = (date: string) => worklogStore.updateTask(task.id, { due: date });
   const notes = task.notes ?? [];

@@ -1,5 +1,5 @@
 import React from 'react';
-import { useData, useUi } from '../context';
+import { useData, useTaskFormBar, useUi } from '../context';
 import { navigateToView, useRoute } from '../router';
 import {
   CheckIcon,
@@ -314,13 +314,18 @@ function SidebarContent({ onNavigate, repoProps }: { onNavigate?: () => void; re
  */
 export function Sidebar(repoProps: SidebarRepoProps = {}) {
   const [open, setOpen] = React.useState(false);
-  const { openTaskForm: onNewTask, saveTask, noClients, today } = useData();
-  const { setSelectedDate, editingId, mTitle, mClient } = useUi();
+  const { openTaskForm: onNewTask, noClients, today } = useData();
+  const { setSelectedDate } = useUi();
   // The task form's own actions sit at the bottom of a long scroll; on mobile the
   // top bar is what's always in reach, so while the form is up it offers Save in
   // place of New — starting another task from inside the form makes no sense.
-  const onForm = useRoute().name === 'taskForm';
-  const canSave = mTitle.trim().length > 0 && !!mClient;
+  // The form publishes what this needs while it's mounted (see useTaskFormBar);
+  // its fields stay its own, so typing a title no longer re-renders the nav.
+  const route = useRoute();
+  const onForm = route.name === 'taskForm';
+  const isEdit = onForm && !!route.taskId;
+  const taskForm = useTaskFormBar();
+  const canSave = taskForm?.canSave ?? false;
 
   // Close the drawer on Escape and lock body scroll while it's open.
   React.useEffect(() => {
@@ -363,7 +368,7 @@ export function Sidebar(repoProps: SidebarRepoProps = {}) {
         <div className="flex-1" />
         {onForm ? (
           <button
-            onClick={saveTask}
+            onClick={() => taskForm?.submit()}
             className={
               'flex items-center justify-center gap-[6px] px-[12px] h-[36px] rounded-[8px] text-[13px] font-semibold border ' +
               (canSave
@@ -372,7 +377,7 @@ export function Sidebar(repoProps: SidebarRepoProps = {}) {
             }
           >
             <CheckIcon size={15} />
-            {editingId ? 'Save' : 'Add'}
+            {isEdit ? 'Save' : 'Add'}
           </button>
         ) : (
           !noClients && (

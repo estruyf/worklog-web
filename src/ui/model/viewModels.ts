@@ -2,6 +2,8 @@
 // the presentational views/components. Distinct from the domain records in
 // ../../model/types and the app-wide data contract in ../state.
 
+import type { RecurrenceAnchor } from "../../model/recurrence";
+
 /** The top-level tabs the shell can display. Search is not a view — it opens as
  * an overlay (see SearchOverlay) on top of whichever view is active. */
 export type AppView =
@@ -14,6 +16,23 @@ export type AppView =
   | "archive"
   | "shortcuts"
   | "settings";
+
+/** Everything the task form collects, in the shape the form holds it: raw text as
+ *  typed, normalized on submit. `repeat` is the canonical `- repeat:` expression
+ *  ('' = one-off) plus its two qualifiers, so the form and the files go through
+ *  the same parser. */
+export interface TaskFormFields {
+  title: string;
+  clientId: string;
+  parentId: string;
+  links: string[];
+  due: string;
+  repeat: string;
+  repeatFrom: RecurrenceAnchor;
+  repeatUntil: string;
+  tags: string[];
+  description: string;
+}
 
 /** Resolved status display, computed from a StatusDef + completion state. */
 export interface StatusMeta {

@@ -10,6 +10,7 @@
     "preview": "astro preview",
     "astro": "astro",
     "check": "astro check",
+    "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
     "publish": "npm run build && npx wrangler deploy"
@@ -24,11 +25,15 @@
     "recharts": "^3.2.1"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.5",
     "@tailwindcss/vite": "^4.1.0",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
+    "eslint": "^9.39.5",
+    "eslint-plugin-react-hooks": "^6.1.1",
     "tailwindcss": "^4.1.0",
     "typescript": "^5.9.0",
+    "typescript-eslint": "^8.65.0",
     "vitest": "^3.2.0"
   }
 }

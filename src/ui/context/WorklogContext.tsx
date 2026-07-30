@@ -17,6 +17,29 @@ type WorklogData = ReturnType<typeof useWorklogModel>;
 const UiContext = createContext<UiState | undefined>(undefined);
 const DataContext = createContext<WorklogData | undefined>(undefined);
 
+/** The one thing the shell needs from whatever task form is on screen: whether it
+ *  can be saved, and how. The form's fields stay the form's own — this is the
+ *  narrow seam that lets the mobile top bar offer Save from outside it. */
+export interface TaskFormBar {
+  canSave: boolean;
+  submit: () => void;
+}
+
+const TaskFormBarContext = createContext<TaskFormBar | null>(null);
+// Split from the value above so publishing never re-renders the publisher: the
+// setter is stable, the value changes.
+const PublishTaskFormBarContext = createContext<(bar: TaskFormBar | null) => void>(() => {});
+
+/** The open form's save affordance, or null when no form is mounted. */
+export function useTaskFormBar(): TaskFormBar | null {
+  return useContext(TaskFormBarContext);
+}
+
+/** For the form itself: publish on mount, clear on unmount. */
+export function usePublishTaskFormBar(): (bar: TaskFormBar | null) => void {
+  return useContext(PublishTaskFormBarContext);
+}
+
 export function useUi(): UiState {
   const ctx = useContext(UiContext);
   if (!ctx) {
@@ -64,20 +87,6 @@ export function WorklogProvider({ children }: { children: React.ReactNode }) {
         ? c
         : (snap.clients.find((x) => !x.archived) ?? snap.clients[0])?.id || '',
     );
-    const pending = ui.pendingClient.current;
-    if (pending) {
-      const match = snap.clients.find((c) => c.name === pending.name);
-      if (match) {
-        if (pending.target === 'modal') {
-          ui.setMClient(match.id);
-        } else {
-          ui.setSelectedClient(match.id);
-        }
-        ui.pendingClient.current = undefined;
-        ui.setAddingClient(false);
-        ui.setNewClientName('');
-      }
-    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [snap]);
 
@@ -111,9 +120,15 @@ export function WorklogProvider({ children }: { children: React.ReactNode }) {
 
   const data = useWorklogModel(snap, ui, toast, gitPending, loading);
 
+  const [taskFormBar, setTaskFormBar] = React.useState<TaskFormBar | null>(null);
+
   return (
     <UiContext.Provider value={ui}>
-      <DataContext.Provider value={data}>{children}</DataContext.Provider>
+      <DataContext.Provider value={data}>
+        <PublishTaskFormBarContext.Provider value={setTaskFormBar}>
+          <TaskFormBarContext.Provider value={taskFormBar}>{children}</TaskFormBarContext.Provider>
+        </PublishTaskFormBarContext.Provider>
+      </DataContext.Provider>
     </UiContext.Provider>
   );
 }

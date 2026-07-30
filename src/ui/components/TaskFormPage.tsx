@@ -1,22 +1,47 @@
-import React, { useEffect, useMemo } from 'react';
-import { useData, useUi } from '../context';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useData, usePublishTaskFormBar } from '../context';
 import { TagPicker } from './TagPicker';
 import { RecurrencePicker } from './RecurrencePicker';
 import { useMarkdownImages } from '../hooks';
-import { clientIdOf, isDone, renderMarkdown, makeImageResolver } from '../utils';
+import { clientIdOf, isDone, linksOf, renderMarkdown, makeImageResolver } from '../utils';
 import { GENERAL_TODO_CLIENT_ID, GENERAL_TODO_COLOR, GENERAL_TODO_LABEL } from '../../model/todos';
-import { closeTaskForm, navigateToDashboard, navigateToTask, useRoute } from '../router';
+import { formatRecurrence, type RecurrenceAnchor } from '../../model/recurrence';
+import type { Task } from '../../model/types';
+import type { TaskFormFields } from '../model';
+import { closeTaskForm, navigateToDashboard, useRoute, useTaskFormInstance, type TaskFormSeed } from '../router';
 import { today } from '../../util/date';
 
-/** Derives the parent-task options and save-enabled flag for the open form. */
-function useTaskFormData() {
-  const { tasks } = useData();
-  const { mClient, editingId, mTitle } = useUi();
-  const parentOptions = useMemo(
-    () => tasks.filter((t) => clientIdOf(t) === mClient && !t.parentId && !isDone(t) && t.id !== editingId),
-    [tasks, mClient, editingId],
-  );
-  return { parentOptions, canAdd: mTitle.trim().length > 0 && !!mClient };
+/** The fields a form starts with: the task's own values when editing, the seed's
+ *  when adding. Read once, at mount — from there the form owns them, and a fresh
+ *  start means a fresh mount rather than a reset. */
+function initialFields(task: Task | undefined, seed: TaskFormSeed): TaskFormFields {
+  if (!task) {
+    return {
+      title: '',
+      clientId: seed.clientId ?? '',
+      parentId: seed.parentId ?? '',
+      links: [''],
+      due: seed.due ?? '',
+      repeat: '',
+      repeatFrom: 'schedule',
+      repeatUntil: '',
+      tags: [],
+      description: '',
+    };
+  }
+  const ls = linksOf(task);
+  return {
+    title: task.title,
+    clientId: clientIdOf(task),
+    parentId: task.parentId || '',
+    links: ls.length ? ls : [''],
+    due: task.due || '',
+    repeat: task.repeat ? formatRecurrence(task.repeat) : '',
+    repeatFrom: task.repeat?.anchor ?? 'schedule',
+    repeatUntil: task.repeat?.until ?? '',
+    tags: task.tags ?? [],
+    description: task.description || '',
+  };
 }
 
 /** One labelled block in the form's right-hand rail. The rule above each block
@@ -46,12 +71,55 @@ function SidebarSection({
   );
 }
 
+/** Resolves what the form should start from, then mounts it under a key that
+ * changes whenever it should start over — a different task, or another visit to
+ * /app/new from somewhere else in the app. The remount *is* the reset, so the
+ * fields below never have to be cleared or re-seeded by hand.
+ *
+ * Mounting waits for the snapshot: seeding a form from tasks that haven't loaded
+ * would leave it empty for good, since nothing re-seeds it afterwards. */
+export function TaskFormPage() {
+  const { snap, tasks, defaultFormClientId } = useData();
+  const route = useRoute();
+  const instance = useTaskFormInstance();
+
+  if (!snap) {
+    return null;
+  }
+
+  const editingId = route.name === 'taskForm' ? route.taskId : null;
+  const task = editingId ? tasks.find((t) => t.id === editingId) : undefined;
+
+  // An edit URL for a task that isn't there (deleted, or a stale link) has nothing
+  // to start the fields from, so say so instead of showing an empty "edit" form.
+  if (editingId && !task) {
+    return (
+      <div className="flex flex-1 flex-col items-center justify-center gap-4 bg-white text-[14px] text-neutral-675">
+        This task no longer exists.
+        <button onClick={navigateToDashboard} className="text-info hover:underline cursor-pointer bg-transparent border-none">
+          ‹ Back to Worklog
+        </button>
+      </div>
+    );
+  }
+
+  // A form reached by URL alone (a pasted link, a reload) carries no seed, so the
+  // default client is worked out here instead.
+  const seed = editingId ? {} : { ...instance.seed, clientId: instance.seed.clientId || defaultFormClientId() };
+
+  return <TaskForm key={`${editingId ?? 'new'}:${instance.key}`} editingId={editingId} task={task} seed={seed} />;
+}
+
 /** The new / edit task view (/app/new and /app/task/<id>/edit). A routed view
  * rather than a dialog: the form is long enough that a centred modal runs past the
  * bottom of a short viewport with no way to scroll to the buttons. It renders in
- * the dashboard's main column, so the nav stays where it is. Field state is owned
- * by the app (seeded before navigating here, or from the route on a direct load);
- * this component only renders it.
+ * the dashboard's main column, so the nav stays where it is.
+ *
+ * Owns its fields outright. They used to live in app-wide UI state, which meant
+ * every keystroke here re-rendered every view and modal subscribed to it, and
+ * "which task are these fields for" had to be tracked separately from the route.
+ * Both problems come from the same place, and both go away when the fields sit in
+ * the component that edits them.
  *
  * Laid out the way an issue tracker lays out an issue: title and description take
  * the full width of the main column, and everything that classifies the task —
@@ -59,41 +127,33 @@ function SidebarSection({
  * description is the field that actually benefits from space, and stacking every
  * property above it used to push it below the fold. Below lg the rail unstacks
  * and follows the description, since two columns don't fit. */
-export function TaskFormPage() {
-  const {
-    editingId,
-    mTitle: title,
-    setMTitle: setTitle,
-    mClient: clientId,
-    setMClient: setClientId,
-    mParent: parentId,
-    setMParent: setParentId,
-    mLinks: links,
-    setMLinks: setLinks,
-    mDue: due,
-    setMDue: setDue,
-    mRepeat: repeat,
-    setMRepeat: setRepeat,
-    mRepeatFrom: repeatFrom,
-    setMRepeatFrom: setRepeatFrom,
-    mRepeatUntil: repeatUntil,
-    setMRepeatUntil: setRepeatUntil,
-    mTags: tags,
-    setMTags: setTags,
-    mDescription: description,
-    setMDescription: setDescription,
-    mDescMode: descMode,
-    setMDescMode: setDescMode,
-    addingClient,
-    setAddingClient,
-    newClientName,
-    setNewClientName,
-  } = useUi();
-  const { snap, tasks, clients, allClients, colorOf, assetUrl, allTags, saveTask: onSave, createClient: onCreateClient, deleteTask: onDelete } = useData();
-  const route = useRoute();
+function TaskForm({ editingId, task, seed }: { editingId: string | null; task: Task | undefined; seed: TaskFormSeed }) {
+  // Read once, at mount — later renders of the parent must not reach back in and
+  // overwrite what has been typed since.
+  const [initial] = useState(() => initialFields(task, seed));
+  const [title, setTitle] = useState(initial.title);
+  const [clientId, setClientId] = useState(initial.clientId);
+  const [parentId, setParentId] = useState(initial.parentId);
+  const [links, setLinks] = useState(initial.links);
+  const [due, setDue] = useState(initial.due);
+  const [repeat, setRepeat] = useState(initial.repeat);
+  const [repeatFrom, setRepeatFrom] = useState<RecurrenceAnchor>(initial.repeatFrom);
+  const [repeatUntil, setRepeatUntil] = useState(initial.repeatUntil);
+  const [tags, setTags] = useState(initial.tags);
+  const [description, setDescription] = useState(initial.description);
+  // An existing description opens as a preview; an empty one opens ready to type.
+  const [descMode, setDescMode] = useState<'preview' | 'edit'>(initial.description ? 'preview' : 'edit');
+  const [addingClient, setAddingClient] = useState(false);
+  const [newClientName, setNewClientName] = useState('');
+
+  const { snap, tasks, clients, allClients, colorOf, assetUrl, allTags, submitTask, createClient, deleteTask: onDelete } = useData();
   // Usage-ranked, so the picker offers the tags actually in circulation first.
   const knownTags = useMemo(() => allTags.map((t) => t.tag), [allTags]);
-  const { parentOptions, canAdd } = useTaskFormData();
+  const parentOptions = useMemo(
+    () => tasks.filter((t) => clientIdOf(t) === clientId && !t.parentId && !isDone(t) && t.id !== editingId),
+    [tasks, clientId, editingId],
+  );
+  const canAdd = title.trim().length > 0 && !!clientId;
   // Archived clients aren't offered for new work, but a task already filed under
   // one keeps showing it — otherwise editing that task looks unassigned and the
   // next click silently moves it to another client.
@@ -107,12 +167,31 @@ export function TaskFormPage() {
   const img = useMarkdownImages(description, setDescription);
   const resolveImage = useMemo(() => makeImageResolver(assetUrl), [assetUrl]);
 
+  const onSave = () =>
+    submitTask(editingId, { title, clientId, parentId, links, due, repeat, repeatFrom, repeatUntil, tags, description });
+
+  // Adding a client from inside the form switches to it once the write lands.
+  const onCreateClient = async (name: string) => {
+    const id = await createClient(name);
+    if (id) {
+      setClientId(id);
+      setParentId('');
+      setAddingClient(false);
+      setNewClientName('');
+    }
+  };
+
+  // Saving goes through a ref so the subscribers below don't have to re-bind on
+  // every keystroke. Written after commit, never during render: a render React
+  // discards must not leave a listener holding fields that were never shown.
+  const save = useRef(onSave);
+  useEffect(() => {
+    save.current = onSave;
+  });
+
   // The form owns its shortcuts while it's up — the shell's global handler stands
   // down for this route. Esc leaves, ⌘S / ⌘↵ saves; ⌘S because the browser's own
   // save dialog is what would otherwise open.
-  // Save goes through a ref so typing doesn't re-subscribe on every keystroke.
-  const save = React.useRef(onSave);
-  save.current = onSave;
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -128,19 +207,14 @@ export function TaskFormPage() {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
 
-  // An edit URL for a task that isn't there (deleted, or a stale link) has nothing
-  // to seed the fields from, so say so instead of showing an empty "edit" form.
-  const editTargetId = route.name === 'taskForm' ? route.taskId : null;
-  if (snap && editTargetId && !tasks.some((t) => t.id === editTargetId)) {
-    return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-4 bg-white text-[14px] text-neutral-675">
-        This task no longer exists.
-        <button onClick={navigateToDashboard} className="text-info hover:underline cursor-pointer bg-transparent border-none">
-          ‹ Back to Worklog
-        </button>
-      </div>
-    );
-  }
+  // The form's own actions sit at the bottom of a long scroll; on mobile the top
+  // bar is what's always in reach, so the shell offers Save up there too. It needs
+  // exactly two things, and this is the whole of what leaves the component.
+  const publishBar = usePublishTaskFormBar();
+  useEffect(() => {
+    publishBar({ canSave: canAdd, submit: () => save.current() });
+    return () => publishBar(null);
+  }, [canAdd, publishBar]);
 
   return (
     // Fills the dashboard's main column, so the nav stays put and this reads as a
@@ -289,13 +363,13 @@ export function TaskFormPage() {
                         // Bare ↵ only, for the same reason as the title field: ⌘↵ here
                         // would add the client *and* save the task in one keypress.
                         if (e.key === 'Enter' && !e.metaKey && !e.ctrlKey) {
-                          onCreateClient(newClientName, 'modal');
+                          void onCreateClient(newClientName);
                         }
                       }}
                       placeholder="New client name"
                       className="flex-1 min-w-[150px] px-[12px] py-[9px] border border-neutral-525 rounded-[9px] text-[16px] md:text-[13.5px] outline-none"
                     />
-                    <button onClick={() => onCreateClient(newClientName, 'modal')} className="px-[14px] py-[9px] border border-brand-500 rounded-[9px] bg-brand-450 text-brand-800 font-semibold text-[13.5px] cursor-pointer">
+                    <button onClick={() => void onCreateClient(newClientName)} className="px-[14px] py-[9px] border border-brand-500 rounded-[9px] bg-brand-450 text-brand-800 font-semibold text-[13.5px] cursor-pointer">
                       Add
                     </button>
                     <button onClick={() => setAddingClient(false)} className="text-info text-[13.5px] cursor-pointer">
