@@ -45,6 +45,11 @@ const GROUPS: ShortcutGroup[] = [
         note: `${MOD}N only reaches the app in the installed PWA — a browser tab keeps it for "new window" — and there, with a task's detail panel open, it starts a subtask of that task instead.`,
       },
       {
+        combos: [['⇧', 'D'], [MOD, 'D']],
+        label: 'Open the day view',
+        note: 'Snaps back to today, so a date left over from the calendar is cleared.',
+      },
+      {
         combos: [[MOD, 'L']],
         label: 'Log time',
         note: 'Day view only. Opens the log form with today’s defaults filled in.',

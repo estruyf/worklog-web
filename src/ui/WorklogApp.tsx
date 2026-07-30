@@ -10,7 +10,7 @@ import { ClientFormModal, ConfirmDialog, Toast, SearchOverlay, Sidebar, TaskDeta
 import type { SidebarRepoProps } from './components/Sidebar';
 import { EmptyClientsView } from './views/EmptyClientsView';
 import { ROUTES } from './views/routes';
-import { useRoute } from './router';
+import { navigateToView, useRoute } from './router';
 
 /** Lightweight top-of-page progress bar shown while the store is loading. */
 function Loader({ overlay = false }: { overlay?: boolean }) {
@@ -38,8 +38,8 @@ function isEditableTarget(target: EventTarget | null): boolean {
 }
 
 export function WorklogApp({ repoProps }: { repoProps?: SidebarRepoProps } = {}) {
-  const { snap, toast, loading, noClients, openTaskFormFromShortcut, openLogForm } = useData();
-  const { view, searchOpen, detailId, clientModalOpen, setSearchOpen, setDetailId, setClientModalOpen, searchSel, setSearchSel } = useUi();
+  const { snap, toast, loading, noClients, today, openTaskFormFromShortcut, openLogForm } = useData();
+  const { view, searchOpen, detailId, clientModalOpen, setSearchOpen, setDetailId, setClientModalOpen, searchSel, setSearchSel, setSelectedDate } = useUi();
   const searchData = useSearchData();
   // The task form is a route, but it lives in the dashboard's main column rather
   // than a page of its own: leaving the nav behind made it read as a different app.
@@ -51,14 +51,14 @@ export function WorklogApp({ repoProps }: { repoProps?: SidebarRepoProps } = {})
   // mount, since the effect below deliberately never re-subscribes.
   // Written after commit, not during render: a render that React discards must not
   // leave the handler pointing at state that was never shown.
-  const stateRef = React.useRef({ view, searchOpen, detailId, clientModalOpen, formOpen, searchSel, searchData, openTaskFormFromShortcut, openLogForm });
+  const stateRef = React.useRef({ view, searchOpen, detailId, clientModalOpen, formOpen, searchSel, searchData, today, openTaskFormFromShortcut, openLogForm });
   React.useEffect(() => {
-    stateRef.current = { view, searchOpen, detailId, clientModalOpen, formOpen, searchSel, searchData, openTaskFormFromShortcut, openLogForm };
+    stateRef.current = { view, searchOpen, detailId, clientModalOpen, formOpen, searchSel, searchData, today, openTaskFormFromShortcut, openLogForm };
   });
 
   // Global shortcuts. ⌘F/⌘S -> open the Search overlay (⌘S also suppresses the
-  // browser's save dialog); ⇧N (or ⌘N in the PWA) -> New task; ⌘L on the Day view
-  // -> open the in-app log form; Esc
+  // browser's save dialog); ⇧N (or ⌘N in the PWA) -> New task; ⇧D/⌘D -> the Day
+  // view; ⌘L on the Day view -> open the in-app log form; Esc
   // closes the top-most dialog; while the Search overlay is open, ↑/↓ move the
   // hit cursor and ↵ opens the selected hit and closes the overlay. The search
   // input auto-focuses on mount; re-focus it explicitly for when the overlay is
@@ -87,6 +87,18 @@ export function WorklogApp({ repoProps }: { repoProps?: SidebarRepoProps } = {})
       if ((meta && key === 'n') || (key === 'n' && e.shiftKey && !e.altKey && idle)) {
         e.preventDefault();
         s.openTaskFormFromShortcut();
+        return;
+      }
+      // ⇧D / ⌘D -> the Day view, snapped back to today the same way the sidebar's
+      // Day tab does: a date left over from browsing the calendar isn't what the
+      // shortcut means. ⌘D is the browser's "bookmark this page" — preventDefault
+      // keeps that dialog from opening over the app.
+      if ((meta && key === 'd') || (key === 'd' && e.shiftKey && !e.altKey && idle)) {
+        e.preventDefault();
+        if (s.today) {
+          setSelectedDate(s.today);
+        }
+        navigateToView('day');
         return;
       }
       if (meta && key === 'l' && s.view === 'day' && idle) {
@@ -129,7 +141,7 @@ export function WorklogApp({ repoProps }: { repoProps?: SidebarRepoProps } = {})
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [setSearchOpen, setDetailId, setClientModalOpen, setSearchSel]);
+  }, [setSearchOpen, setDetailId, setClientModalOpen, setSearchSel, setSelectedDate]);
 
   if (!snap) {
     return <div className="min-h-screen bg-white" />;
