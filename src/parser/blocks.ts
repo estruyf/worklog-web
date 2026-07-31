@@ -11,7 +11,8 @@ export interface ExtractedBlock {
   startLine: number;
 }
 
-const H2 = /^##\s+/;
+import { isTaskHeading } from './taskHeading';
+
 const ID_META = /^-\s+id\s*:\s*(.+?)\s*$/;
 
 /** One `## ` block of a task file, with its id if it declares one. */
@@ -29,7 +30,7 @@ export function splitTaskBlocks(content: string): { header: string; blocks: Task
   const lines = content.split(/\r?\n/);
   const starts: number[] = [];
   for (let i = 0; i < lines.length; i++) {
-    if (H2.test(lines[i])) {
+    if (isTaskHeading(lines, i)) {
       starts.push(i);
     }
   }
@@ -62,7 +63,7 @@ export function findBlockRange(content: string, taskId: string): { start: number
   const ranges: { start: number; end: number; matched: boolean }[] = [];
 
   for (let i = 0; i < lines.length; i++) {
-    if (H2.test(lines[i])) {
+    if (isTaskHeading(lines, i)) {
       if (blockStart !== -1) {
         ranges.push({ start: blockStart, end: i, matched });
       }

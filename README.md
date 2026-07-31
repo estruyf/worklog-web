@@ -331,6 +331,11 @@ Free-form description in Markdown.
 - 2026-06-30 14:12 — Reproduced on iOS Safari.
 ```
 
+A new task starts at a `## ` heading that has an `- id:` line directly under it.
+That means a description can use `## ` headings of its own — they stay part of the
+description. A hand-written `## ` heading with no `- id:` under it is read as prose,
+not as a task, so give new blocks an id (or create them in the app, which does).
+
 ### Recurring tasks
 
 Add a `repeat:` line and the task stops disappearing when you complete it — its

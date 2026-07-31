@@ -31,6 +31,27 @@ Move it behind a queue and stream the CSV back.
 - parent: t_u6gxft
 - created: 2026-07-24
 
+## Document the export runbook
+- id: t_h2desc
+- status: open
+- created: 2026-07-28
+
+Description prose that uses its own headings. These are not task delimiters:
+only a `## ` heading with an `- id:` under it starts a task.
+
+## Scripts
+
+```
+$ npm run export -- --range 2026-01-01..2026-12-31
+```
+
+## Resources
+
+- https://example.com/runbook
+
+### Notes
+- 2026-07-28 10:00 — The headings above round-trip as description text.
+
 ## Shared onboarding checklist
 - id: t_sh4red
 - status: open

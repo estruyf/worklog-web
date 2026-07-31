@@ -3,6 +3,7 @@
 // it is trivially unit-testable and reusable by both full and incremental paths.
 
 import type { Task, TaskLink, TaskNote } from "../model/types";
+import { isTaskHeading } from "./taskHeading";
 import {
   formatRecurrence,
   parseRecurrence,
@@ -91,7 +92,9 @@ export function parseTaskFile(
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
 
-    const h2 = H2.exec(line);
+    // A `## ` heading without an id under it is description prose, not a new
+    // task — see taskHeading.ts.
+    const h2 = isTaskHeading(lines, i) ? H2.exec(line) : null;
     if (h2) {
       flush();
       current = {
