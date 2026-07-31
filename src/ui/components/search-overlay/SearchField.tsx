@@ -1,6 +1,6 @@
 import React from 'react';
-import { SearchIcon } from 'lucide-react';
-import { Button, Input } from '../../primitives';
+import { SearchIcon, XIcon } from 'lucide-react';
+import { IconButton, Input } from '../../primitives';
 import { Kbd } from '../Kbd';
 
 export interface SearchFieldProps {
@@ -15,9 +15,9 @@ export interface SearchFieldProps {
  *  it autofocuses and why the overlay has no heading of its own.
  *
  *  The way out is spelled differently per pointer: the Esc chip is a keyboard hint
- *  and says nothing to a thumb, so below md it gives way to a Cancel button beside
- *  the field. Cancel rather than another `×`, since the field already ends in one
- *  and the two would be a coin toss between clearing and closing. */
+ *  and says nothing to a thumb, so below md it gives way to a close button beside
+ *  the field. It is outlined and sits outside the field's border, which is what
+ *  keeps it from reading as a second clear `×`. */
 export function SearchField({ value, onChange, onClose, count }: SearchFieldProps) {
   return (
     <div className="flex items-center gap-2">
@@ -36,7 +36,7 @@ export function SearchField({ value, onChange, onClose, count }: SearchFieldProp
         trailing={
           <>
             {count !== undefined && (
-              // Just the number on a phone — the field, the Cancel button and the
+              // Just the number on a phone — the field, the close button and the
               // clear `×` are already sharing one narrow row.
               <span className="shrink-0 text-control text-neutral-650">
                 {count}
@@ -58,9 +58,9 @@ export function SearchField({ value, onChange, onClose, count }: SearchFieldProp
         inputClassName="text-input-fg"
         className="flex-1 min-w-0"
       />
-      <Button variant="ghost" size="md" onClick={onClose} className="md:hidden shrink-0">
-        Cancel
-      </Button>
+      <IconButton variant="outline" onClick={onClose} aria-label="Close search" className="md:hidden w-9 h-9">
+        <XIcon size={18} />
+      </IconButton>
     </div>
   );
 }
