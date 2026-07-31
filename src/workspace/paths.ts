@@ -145,7 +145,12 @@ export async function writeBytes(path: string, bytes: Uint8Array): Promise<void>
 /** Remove a file. It commits as a tree deletion when the branch actually holds
  *  it; a file that only ever existed locally is just dropped from the pending set. */
 export async function deleteFile(path: string): Promise<void> {
-  const fm = fileMap();
+  removeFileFrom(fileMap(), path);
+}
+
+/** `deleteFile` against a map named outright, for the data layer — it holds the
+ *  map it is rebuilding and shouldn't have to route through the mount to edit it. */
+export function removeFileFrom(fm: FileMap, path: string): void {
   fm.text.delete(path);
   fm.binary.delete(path);
   if (fm.remote.has(path)) {

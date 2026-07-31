@@ -3,6 +3,10 @@ import type { AppView, LinkDraft, SearchScope } from "../model";
 import { closeTaskDetail, openTaskDetail, useDetailId } from "../router";
 import { useConfirmDialog } from "./useConfirmDialog";
 
+/** Everything the transient UI state holds — the shape `useUi()` returns, and
+ *  what the model hooks take when they need to read or drive a selection. */
+export type WorklogUiState = ReturnType<typeof useWorklogUiState>;
+
 export function useWorklogUiState() {
   const [view, setView] = useState<AppView>("day");
   const [selectedDate, setSelectedDate] = useState("");

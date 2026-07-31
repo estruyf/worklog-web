@@ -5,7 +5,10 @@ import { IconButton } from './IconButton';
 /** Panel width. The three sizes are a prompt, a form and the command palette. */
 export type ModalSize = 'sm' | 'md' | 'lg';
 /** How far down the viewport the panel hangs. A short prompt sits lower than a
- *  tall panel, which needs the room. */
+ *  tall panel, which needs the room. Below md the ladder switches to fixed
+ *  padding: a viewport-relative drop that reads as breathing room on a desktop
+ *  eats a third of a phone screen, and the panel needs that height more than the
+ *  backdrop does. */
 export type ModalOffset = 'xs' | 'sm' | 'md' | 'lg';
 /** `base` is a dialog over the app; `top` is a dialog over another dialog. */
 export type ModalLayer = 'base' | 'top';
@@ -18,10 +21,10 @@ const SIZES: Record<ModalSize, string> = {
 };
 
 const OFFSETS: Record<ModalOffset, string> = {
-  xs: 'pt-[8vh]',
-  sm: 'pt-[10vh]',
-  md: 'pt-[12vh]',
-  lg: 'pt-[16vh]',
+  xs: 'pt-4 md:pt-[8vh]',
+  sm: 'pt-6 md:pt-[10vh]',
+  md: 'pt-8 md:pt-[12vh]',
+  lg: 'pt-12 md:pt-[16vh]',
 };
 
 const LAYERS: Record<ModalLayer, string> = {

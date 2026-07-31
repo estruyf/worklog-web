@@ -7,12 +7,15 @@
 // Every persisted edit re-derives the state, marks the tree dirty, and arms a
 // debounced auto-commit. Syncing goes both ways: it first asks GitHub where the
 // branch head is, pulls when the branch moved, and pushes the dirty files back.
-// GitHub can't tell us when someone else pushes, so an open tab also polls the
-// branch head on a timer and on regaining focus, and pulls when it has no local
-// changes of its own (see `checkRemote`).
+//
+// What lives here is the sequencing — when to fetch, merge, re-parse, notify and
+// re-render. The pieces it sequences are their own modules: `repoApi` (the three
+// server calls), `fileSync` (merge/commit arithmetic over a FileMap), `recovery`
+// (the IndexedDB snapshot), `assetUrls` (image object URLs) and `remoteWatcher`
+// (the poll for commits pushed elsewhere).
 
 import { Store } from '../store';
-import { FileMap, deleteFile, mountFileMap } from '../workspace/paths';
+import { FileMap, mountFileMap } from '../workspace/paths';
 import { today } from '../util/date';
 import { createClient, createTask, deleteClient, setClientArchived, updateClient, type ClientFields, type NewTaskInput } from '../services/tasks';
 import { saveImageAsset } from '../services/assets';
@@ -33,17 +36,12 @@ import { updateSettings, type SettingsFields } from '../services/settings';
 import type { WorklogState } from '../ui/state';
 import type { Client } from '../model/types';
 import { DEFAULT_AUTO_SYNC } from '../workspace/paths';
-import {
-  clearPending,
-  clearSnapshot,
-  instanceId,
-  loadPending,
-  repoKeyOf,
-  savePending,
-  snapshotKeyOf,
-  type PendingSnapshot,
-} from './pendingStore';
-import { mergeFile } from './merge';
+import { clearPending, clearSnapshot, loadPending, repoKeyOf, savePending, type PendingSnapshot } from './pendingStore';
+import { AssetUrlCache } from './assetUrls';
+import { commitFiles, fetchHead, fetchRepo, type LoadResponse, type RepoContext } from './repoApi';
+import { fileMapOf, markPushed, mergeRemoteInto, outgoingFiles } from './fileSync';
+import { applySnapshot, snapshotOf } from './recovery';
+import { RemoteWatcher } from './remoteWatcher';
 
 /** Summary of recoverable unsynced changes found on open, for the UI prompt. */
 export interface RecoveryInfo {
@@ -61,32 +59,6 @@ export interface WorklogSnapshot {
   gitPending: boolean;
 }
 
-interface RepoContext {
-  owner: string;
-  repo: string;
-  branch: string;
-  baseCommitSha: string;
-}
-
-interface LoadResponse {
-  owner: string;
-  repo: string;
-  branch: string;
-  baseCommitSha: string;
-  text: Record<string, string>;
-  binary: Record<string, string>;
-  sha: Record<string, string>;
-}
-
-/** One file in a commit payload: written (text or base64) or removed. Mirrors
- *  `CommitFile` on the server side of /api/commit. */
-interface OutgoingFile {
-  path: string;
-  content?: string;
-  base64?: string;
-  deleted?: boolean;
-}
-
 export type ToastTone = 'loading' | 'success' | 'info' | 'error';
 
 export interface ToastMessage {
@@ -97,14 +69,9 @@ export interface ToastMessage {
 type Subscriber = () => void;
 type ToastListener = (toast: ToastMessage | null) => void;
 
-/** How often an open tab asks GitHub whether the branch moved. One ref lookup
- *  per tick — 60/hour against a 5000/hour rate limit — and only while the tab is
- *  visible, so a backgrounded tab costs nothing. */
-const REMOTE_CHECK_INTERVAL_MS = 60_000;
-
-/** Floor between two checks, so a burst of focus/visibility events (alt-tabbing,
- *  switching desktops) collapses into one request. */
-const REMOTE_CHECK_MIN_GAP_MS = 10_000;
+/** Debounce before the dirty files are mirrored to IndexedDB, so a burst of edits
+ *  coalesces into a single write. */
+const PERSIST_DEBOUNCE_MS = 800;
 
 class WorklogStore {
   private store = new Store();
@@ -115,16 +82,13 @@ class WorklogStore {
   private commitTimer: ReturnType<typeof setTimeout> | undefined;
   private persistTimer: ReturnType<typeof setTimeout> | undefined;
   private rolloverTimer: ReturnType<typeof setTimeout> | undefined;
-  private watchTimer: ReturnType<typeof setTimeout> | undefined;
-  private checkingRemote = false;
-  /** Epoch millis of the last remote head check, for the min-gap throttle. */
-  private lastRemoteCheck = 0;
-  /** True once the focus/visibility listeners are registered (added once). */
-  private watching = false;
   // A recovered snapshot loaded on open, held until the user restores or discards it.
   private recovered?: PendingSnapshot;
-  /** `assets/<file>` -> object URL handed to the markdown renderer (see assetUrl). */
-  private assetUrls = new Map<string, string>();
+  private assetUrls = new AssetUrlCache();
+  private watcher = new RemoteWatcher(
+    () => this.checkRemote(),
+    () => !!this.repo && this.loaded && !this.committing && this.fm.dirty.size === 0,
+  );
 
   private subscribers = new Set<Subscriber>();
   private toastListeners = new Set<ToastListener>();
@@ -177,7 +141,7 @@ class WorklogStore {
     this.updateSnapshot({ loading: true });
     let data: LoadResponse;
     try {
-      data = await this.fetchRepo(owner, repo, branch);
+      data = await fetchRepo(owner, repo, branch);
     } catch (err) {
       this.updateSnapshot({ loading: false });
       this.emitToast(`Could not load ${owner}/${repo}: ${err instanceof Error ? err.message : String(err)}`, 'error');
@@ -188,9 +152,18 @@ class WorklogStore {
     this.loaded = true;
     this.updateSnapshot({ data: this.deriveState(), loading: false, gitPending: false });
     this.scheduleDateRollover();
-    this.startWatchingRemote();
+    this.watcher.start();
     await this.loadRecovery();
   }
+
+  /** Reload the current repo from GitHub, discarding uncommitted in-memory edits. */
+  async reload(): Promise<void> {
+    if (this.repo) {
+      await this.open(this.repo.owner, this.repo.repo, this.repo.branch);
+    }
+  }
+
+  // ---- crash/close recovery -------------------------------------------------
 
   /** Look for a locally-saved snapshot of unsynced edits for the freshly-opened
    *  repo. Held (not applied) so the UI can offer Restore or Discard. */
@@ -217,46 +190,19 @@ class WorklogStore {
     };
   }
 
-  /** Re-apply the recovered snapshot's dirty files over the loaded repo and mark
-   *  them for the next sync. Rebuilds the domain model from the merged tree.
-   *
-   *  The branch may have moved since the snapshot was written, so a text file is
-   *  three-way merged against what was just loaded rather than written over it —
-   *  otherwise restoring would undo whatever reached the branch in the meantime. */
+  /** Re-apply the recovered snapshot over the loaded repo and rebuild the domain
+   *  model from the merged tree. */
   async restorePending(): Promise<void> {
     const saved = this.recovered;
     if (!saved) {
       return;
     }
     this.recovered = undefined;
-    const deleted = new Set(saved.deleted ?? []);
-    const conflicts: string[] = [];
-    for (const path of saved.dirty) {
-      if (Object.prototype.hasOwnProperty.call(saved.binary, path)) {
-        this.fm.binary.set(path, base64ToBytes(saved.binary[path]));
-        this.fm.markDirty(path);
-        continue;
-      }
-      const local = deleted.has(path) ? undefined : (saved.text[path] ?? '');
-      const merged = mergeFile(path, { base: saved.baseText?.[path], local, remote: this.fm.text.get(path) });
-      conflicts.push(...merged.conflicts);
-      if (merged.text === undefined) {
-        await deleteFile(path);
-      } else {
-        this.fm.text.set(path, merged.text);
-        this.fm.deleted.delete(path);
-        this.fm.markDirty(path);
-      }
-    }
+    const conflicts = applySnapshot(this.fm, saved);
     // Re-parse the merged file map; onDidChange refreshes the snapshot, re-persists
     // and arms auto-sync.
     await this.store.rebuild('restore');
-    if (conflicts.length > 0) {
-      this.emitToast(
-        conflicts.length === 1 ? conflicts[0] : `${conflicts.length} recovered changes conflicted — kept your versions`,
-        'info',
-      );
-    }
+    this.reportConflicts(conflicts, 'recovered changes conflicted — kept your versions');
   }
 
   /** Drop the recovered snapshot without applying it, and delete it from storage.
@@ -269,12 +215,7 @@ class WorklogStore {
     }
   }
 
-  /** Reload the current repo from GitHub, discarding uncommitted in-memory edits. */
-  async reload(): Promise<void> {
-    if (this.repo) {
-      await this.open(this.repo.owner, this.repo.repo, this.repo.branch);
-    }
-  }
+  // ---- sync -----------------------------------------------------------------
 
   /** Sync with the branch in both directions: pick up commits pushed elsewhere
    *  (another device, an edit on github.com) and commit the local dirty files.
@@ -296,9 +237,9 @@ class WorklogStore {
       this.emitToast('Checking for changes…', 'loading');
     }
     try {
-      const head = await this.fetchHead();
+      const head = await fetchHead(this.repo);
       // This is a head check like the watcher's — don't let one follow the other.
-      this.lastRemoteCheck = Date.now();
+      this.watcher.markChecked();
       const remoteMoved = head !== this.repo.baseCommitSha;
       if (!hasLocalChanges) {
         // Nothing to push, so the branch head is the whole story.
@@ -339,51 +280,19 @@ class WorklogStore {
   private async pushDirty(): Promise<boolean> {
     let rebased = false;
     for (let attempt = 0; attempt < 2; attempt++) {
-      const files: OutgoingFile[] = [...this.fm.dirty].map((path) => {
-        if (this.fm.deleted.has(path)) {
-          return { path, deleted: true };
-        }
-        if (this.fm.binary.has(path)) {
-          return { path, base64: bytesToBase64(this.fm.binary.get(path)!) };
-        }
-        return { path, content: this.fm.text.get(path) ?? '' };
-      });
-      const message = `chore: worklog sync ${today()}`;
-      const res = await fetch('/api/commit', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...this.repo!, message, files }),
-      });
-      if (res.status === 409) {
+      const files = outgoingFiles(this.fm);
+      const result = await commitFiles(this.repo!, `chore: worklog sync ${today()}`, files);
+      if (result.conflict) {
         // Someone pushed while this commit was in flight: merge against the new
         // head, re-base onto it and try again.
-        const head = await this.fetchHead();
+        const head = await fetchHead(this.repo!);
         await this.mergeRemote();
         this.repo!.baseCommitSha = head;
         rebased = true;
         continue;
       }
-      if (!res.ok) {
-        throw new Error(await res.text());
-      }
-      const result = (await res.json()) as { commitSha: string };
       this.repo!.baseCommitSha = result.commitSha;
-      // The branch now holds exactly what was just written, so a later delete of
-      // any of these paths knows it has to reach GitHub — and the pushed content
-      // becomes the ancestor the next merge compares against.
-      for (const f of files) {
-        if (f.deleted) {
-          this.fm.remote.delete(f.path);
-          this.fm.baseText.delete(f.path);
-        } else {
-          this.fm.remote.add(f.path);
-          if (f.content !== undefined) {
-            this.fm.baseText.set(f.path, f.content);
-          }
-        }
-      }
-      this.fm.deleted.clear();
-      this.fm.clearDirty();
+      markPushed(this.fm, files);
       this.clearPersistTimer();
       void clearPending(this.repoKey());
       this.updateSnapshot({ gitPending: false });
@@ -392,70 +301,20 @@ class WorklogStore {
     throw new Error('the branch kept moving on GitHub — try again');
   }
 
-  /** Reconcile the dirty files with the branch before pushing them.
-   *
-   *  A commit writes whole files, so pushing the local copy of a file the other
-   *  instance also changed would drop its edits without a trace. This re-reads
-   *  the branch and three-way merges every dirty text file against it (base =
-   *  what this instance loaded, see FileMap.baseText), leaving the merged
-   *  content in the file map for `pushDirty` to commit. Records added on either
-   *  side survive; one changed on both keeps the local version and is reported.
-   *
-   *  Binaries (assets) carry generated, single-use names, so there is nothing to
-   *  reconcile — the local bytes stand. */
+  /** Re-read the branch and reconcile the dirty files with it before pushing them,
+   *  leaving the merged content in the file map for `pushDirty` to commit. */
   private async mergeRemote(): Promise<void> {
     if (!this.repo || this.fm.dirty.size === 0) {
       return;
     }
-    const remote = await this.fetchRepo(this.repo.owner, this.repo.repo, this.repo.branch);
-    const conflicts: string[] = [];
-    let merged = false;
-    for (const path of [...this.fm.dirty]) {
-      if (this.fm.binary.has(path)) {
-        continue;
-      }
-      const deletedHere = this.fm.deleted.has(path);
-      const local = deletedHere ? undefined : this.fm.text.get(path);
-      const remoteText = remote.text[path];
-      const base = this.fm.baseText.get(path);
-      // Nothing to reconcile unless the branch moved this file away from the
-      // version the local edits were made on.
-      if (remoteText === base) {
-        continue;
-      }
-      const result = mergeFile(path, { base, local, remote: remoteText });
-      conflicts.push(...result.conflicts);
-      // The merge resolved against this remote version, so that's the ancestor
-      // the next merge of this file has to compare against.
-      if (remoteText !== undefined) {
-        this.fm.baseText.set(path, remoteText);
-      } else {
-        this.fm.baseText.delete(path);
-      }
-      if (result.text === local) {
-        continue;
-      }
-      merged = true;
-      if (result.text === undefined) {
-        this.fm.text.delete(path);
-        this.fm.deleted.add(path);
-      } else {
-        this.fm.text.set(path, result.text);
-        this.fm.deleted.delete(path);
-      }
-      this.fm.dirty.add(path);
-    }
+    const remote = await fetchRepo(this.repo.owner, this.repo.repo, this.repo.branch);
+    const { conflicts, merged } = mergeRemoteInto(this.fm, remote.text);
     if (merged) {
       // Show the merged tree now rather than after the push: if the commit fails,
       // what's on screen is still the version the retry will send.
       await this.store.rebuild('merge');
     }
-    if (conflicts.length > 0) {
-      this.emitToast(
-        conflicts.length === 1 ? conflicts[0] : `${conflicts.length} changes conflicted with GitHub — kept your versions`,
-        'info',
-      );
-    }
+    this.reportConflicts(conflicts, 'changes conflicted with GitHub — kept your versions');
   }
 
   /** Re-read the branch from GitHub and re-render from it. Only call with an
@@ -464,9 +323,27 @@ class WorklogStore {
     if (!this.repo) {
       return;
     }
-    this.applyLoad(await this.fetchRepo(this.repo.owner, this.repo.repo, this.repo.branch));
+    this.applyLoad(await fetchRepo(this.repo.owner, this.repo.repo, this.repo.branch));
     await this.store.rebuild('pull');
     this.updateSnapshot({ data: this.deriveState(), gitPending: false });
+  }
+
+  /** Ask where the branch head is and pull when it moved. Read-only as far as
+   *  local work goes: the watcher only calls this with a clean tree, and the merge
+   *  is left to `sync()`, which knows how to commit on top of the new head. */
+  private async checkRemote(): Promise<void> {
+    try {
+      const head = await fetchHead(this.repo!);
+      // Re-check the guards: an edit or a sync may have started in flight.
+      if (head === this.repo!.baseCommitSha || this.committing || this.fm.dirty.size > 0) {
+        return;
+      }
+      await this.pull();
+      this.emitToast('Pulled changes from GitHub', 'success');
+    } catch {
+      // Offline or a transient GitHub failure. A background check has no reason
+      // to interrupt with a toast — the next tick tries again.
+    }
   }
 
   // ---- actions (call the domain services directly) --------------------------
@@ -553,22 +430,9 @@ class WorklogStore {
   }
 
   /** Displayable URL for an `assets/<file>` markdown ref, or null when the file
-   *  map doesn't hold it. Served from the in-memory bytes rather than a raw
-   *  GitHub URL so a just-pasted image renders before it is ever committed, and
-   *  so images in a private repo render at all (raw URLs there need a token an
-   *  `<img>` can't send). URLs are cached per path and revoked on reload. */
+   *  map doesn't hold it. See data/assetUrls for why these aren't raw GitHub URLs. */
   assetUrl(ref: string): string | null {
-    const cached = this.assetUrls.get(ref);
-    if (cached) {
-      return cached;
-    }
-    const bytes = this.fm.binary.get(ref);
-    if (!bytes) {
-      return null;
-    }
-    const url = URL.createObjectURL(new Blob([bytes as BlobPart], { type: mimeOfAsset(ref) }));
-    this.assetUrls.set(ref, url);
-    return url;
+    return this.assetUrls.urlFor(ref, this.fm.binary.get(ref));
   }
 
   // ---- internals ------------------------------------------------------------
@@ -606,55 +470,13 @@ class WorklogStore {
     };
   }
 
+  /** Swap in the tree a load returned and mount it for the services. */
   private applyLoad(data: LoadResponse): void {
     // The old file map's bytes are about to go away; drop the URLs pointing at them.
-    for (const url of this.assetUrls.values()) {
-      URL.revokeObjectURL(url);
-    }
-    this.assetUrls.clear();
-    this.fm = new FileMap();
-    for (const [path, text] of Object.entries(data.text)) {
-      this.fm.text.set(path, text);
-      // The version every later edit is a change *from*, for the sync merge.
-      this.fm.baseText.set(path, text);
-    }
-    for (const [path, base64] of Object.entries(data.binary)) {
-      this.fm.binary.set(path, base64ToBytes(base64));
-    }
-    for (const [path, sha] of Object.entries(data.sha)) {
-      this.fm.baseSha.set(path, sha);
-    }
-    // Everything that came back from the branch exists there — see FileMap.remote.
-    for (const path of [...this.fm.text.keys(), ...this.fm.binary.keys()]) {
-      this.fm.remote.add(path);
-    }
+    this.assetUrls.revokeAll();
+    this.fm = fileMapOf(data);
     mountFileMap(this.fm);
     this.repo = { owner: data.owner, repo: data.repo, branch: data.branch, baseCommitSha: data.baseCommitSha };
-  }
-
-  /** Fetch a branch's Worklog files from GitHub (the token stays server-side). */
-  private async fetchRepo(owner: string, repo: string, branch?: string): Promise<LoadResponse> {
-    const params = new URLSearchParams({ owner, repo });
-    if (branch) {
-      params.set('branch', branch);
-    }
-    const res = await fetch(`/api/load?${params}`);
-    if (!res.ok) {
-      throw new Error(await res.text());
-    }
-    return (await res.json()) as LoadResponse;
-  }
-
-  /** The branch's head commit on GitHub right now. Throws when the check fails —
-   *  a sync that can't see the branch must not claim everything is up to date. */
-  private async fetchHead(): Promise<string> {
-    const { owner, repo, branch } = this.repo!;
-    const params = new URLSearchParams({ owner, repo, branch });
-    const res = await fetch(`/api/head?${params}`);
-    if (!res.ok) {
-      throw new Error(await res.text());
-    }
-    return ((await res.json()) as { commitSha: string }).commitSha;
   }
 
   /** Merge a partial into the cached snapshot (new reference) and notify. */
@@ -672,6 +494,24 @@ class WorklogStore {
     }
   }
 
+  /** Say what a merge had to decide for you: the one message when there is one,
+   *  a count and `summary` when there are several, nothing when there are none. */
+  private reportConflicts(conflicts: string[], summary: string): void {
+    if (conflicts.length === 0) {
+      return;
+    }
+    this.emitToast(conflicts.length === 1 ? conflicts[0] : `${conflicts.length} ${summary}`, 'info');
+  }
+
+  private repoKey(): string {
+    if (!this.repo) {
+      return '';
+    }
+    return repoKeyOf(this.repo.owner, this.repo.repo, this.repo.branch);
+  }
+
+  // ---- timers ---------------------------------------------------------------
+
   /** Arm the debounced auto-commit, but only when auto-sync is enabled in config.
    *  The delay comes from `autoSync.delayMinutes`; a burst of edits coalesces into
    *  a single sync. Manual "Git sync" and 409 retries bypass this. */
@@ -685,70 +525,10 @@ class WorklogStore {
     this.commitTimer = setTimeout(() => void this.sync({ silent: true }), delay);
   }
 
-  /** Start watching GitHub for commits pushed elsewhere (another device, an edit
-   *  on github.com). Nothing notifies us, so this polls: on a timer while the tab
-   *  is visible, and immediately when the tab regains focus — the case that
-   *  actually matters, since you come back to this tab after pushing from the
-   *  other device. Without it a tab that isn't edited never learns the branch
-   *  moved, because the only other head check lives in `sync()`. */
-  private startWatchingRemote(): void {
-    this.scheduleRemoteCheck();
-    if (this.watching || typeof document === 'undefined') {
-      return;
-    }
-    this.watching = true;
-    document.addEventListener('visibilitychange', this.onTabActive);
-    window.addEventListener('focus', this.onTabActive);
-  }
-
-  private onTabActive = (): void => {
-    void this.checkRemote();
-  };
-
-  private scheduleRemoteCheck(): void {
-    this.clearWatchTimer();
-    this.watchTimer = setTimeout(() => {
-      void this.checkRemote().then(() => this.scheduleRemoteCheck());
-    }, REMOTE_CHECK_INTERVAL_MS);
-  }
-
-  /** Ask where the branch head is and pull when it moved. Read-only as far as
-   *  local work goes: with dirty files this backs off entirely and leaves the
-   *  merge to `sync()`, which knows how to commit on top of the new head. */
-  private async checkRemote(): Promise<void> {
-    if (!this.repo || !this.loaded || this.committing || this.checkingRemote || this.fm.dirty.size > 0) {
-      return;
-    }
-    // A hidden tab has nothing to show; the visibility listener catches up.
-    if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
-      return;
-    }
-    const now = Date.now();
-    if (now - this.lastRemoteCheck < REMOTE_CHECK_MIN_GAP_MS) {
-      return;
-    }
-    this.lastRemoteCheck = now;
-    this.checkingRemote = true;
-    try {
-      const head = await this.fetchHead();
-      // Re-check the guards: an edit or a sync may have started in flight.
-      if (head === this.repo.baseCommitSha || this.committing || this.fm.dirty.size > 0) {
-        return;
-      }
-      await this.pull();
-      this.emitToast('Pulled changes from GitHub', 'success');
-    } catch {
-      // Offline or a transient GitHub failure. A background check has no reason
-      // to interrupt with a toast — the next tick tries again.
-    } finally {
-      this.checkingRemote = false;
-    }
-  }
-
-  private clearWatchTimer(): void {
-    if (this.watchTimer) {
-      clearTimeout(this.watchTimer);
-      this.watchTimer = undefined;
+  private clearCommitTimer(): void {
+    if (this.commitTimer) {
+      clearTimeout(this.commitTimer);
+      this.commitTimer = undefined;
     }
   }
 
@@ -779,26 +559,11 @@ class WorklogStore {
     }
   }
 
-  private clearCommitTimer(): void {
-    if (this.commitTimer) {
-      clearTimeout(this.commitTimer);
-      this.commitTimer = undefined;
-    }
-  }
-
-  private repoKey(): string {
-    if (!this.repo) {
-      return '';
-    }
-    return repoKeyOf(this.repo.owner, this.repo.repo, this.repo.branch);
-  }
-
-  /** Debounce a write of the dirty files to IndexedDB so a burst of edits
-   *  coalesces into a single mirror. Runs regardless of the auto-sync setting —
-   *  this is crash/close recovery, not a commit. */
+  /** Debounce a write of the dirty files to IndexedDB. Runs regardless of the
+   *  auto-sync setting — this is crash/close recovery, not a commit. */
   private schedulePersist(): void {
     this.clearPersistTimer();
-    this.persistTimer = setTimeout(() => void this.persistNow(), 800);
+    this.persistTimer = setTimeout(() => void this.persistNow(), PERSIST_DEBOUNCE_MS);
   }
 
   private clearPersistTimer(): void {
@@ -816,79 +581,9 @@ class WorklogStore {
     if (!this.repo || this.fm.dirty.size === 0) {
       return;
     }
-    const text: Record<string, string> = {};
-    const baseText: Record<string, string> = {};
-    const binary: Record<string, string> = {};
-    const deleted: string[] = [];
-    for (const path of this.fm.dirty) {
-      if (this.fm.deleted.has(path)) {
-        deleted.push(path);
-      } else if (this.fm.binary.has(path)) {
-        binary[path] = bytesToBase64(this.fm.binary.get(path)!);
-      } else {
-        text[path] = this.fm.text.get(path) ?? '';
-      }
-      // Mirror the ancestor too: a restore three-way merges against the branch,
-      // and by then this instance's in-memory base is gone.
-      const base = this.fm.baseText.get(path);
-      if (base !== undefined) {
-        baseText[path] = base;
-      }
-    }
-    const snapshot: PendingSnapshot = {
-      key: snapshotKeyOf(this.repoKey(), instanceId()),
-      instanceId: instanceId(),
-      repoKey: this.repoKey(),
-      owner: this.repo.owner,
-      repo: this.repo.repo,
-      branch: this.repo.branch,
-      baseCommitSha: this.repo.baseCommitSha,
-      savedAt: Date.now(),
-      text,
-      baseText,
-      binary,
-      dirty: [...this.fm.dirty],
-      deleted,
-    };
-    await savePending(snapshot);
+    await savePending(snapshotOf(this.fm, this.repo, this.repoKey(), Date.now()));
   }
 }
 
 // Singleton — the whole app shares one store (one repo mounted at a time).
 export const worklogStore = new WorklogStore();
-
-function base64ToBytes(base64: string): Uint8Array {
-  const binary = atob(base64);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) {
-    bytes[i] = binary.charCodeAt(i);
-  }
-  return bytes;
-}
-
-/** Content type for an asset path, from its extension (see services/assets for
- *  the extensions written). Unknown ones fall back to PNG, matching that writer. */
-function mimeOfAsset(path: string): string {
-  const ext = (path.split('.').pop() ?? '').toLowerCase();
-  switch (ext) {
-    case 'jpg':
-    case 'jpeg':
-      return 'image/jpeg';
-    case 'gif':
-      return 'image/gif';
-    case 'webp':
-      return 'image/webp';
-    case 'svg':
-      return 'image/svg+xml';
-    default:
-      return 'image/png';
-  }
-}
-
-function bytesToBase64(bytes: Uint8Array): string {
-  let binary = '';
-  for (let i = 0; i < bytes.length; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-  return btoa(binary);
-}

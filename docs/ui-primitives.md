@@ -575,20 +575,68 @@ round-trips back onto its own preset.
 - The mobile client dropdown moved but stayed its own component rather than
   folding into `ClientList`. It is a combobox, as step 5 already noted; the two
   share `ClientListItem`, which is the part that was actually the same.
-- The two files [out of scope](#out-of-scope-but-noted) below are still out of
-  scope.
+- `worklogStore.ts` and `useWorklogModel.ts` were left for
+  [step 7](#step-7--split-the-data-layer-and-the-read-model--done): neither is a
+  component, and both are long for reasons this step's rule doesn't address.
 
 ---
 
-## Out of scope, but noted
+## Step 7 — Split the data layer and the read-model ✅ done
 
-[`worklogStore.ts`](../src/data/worklogStore.ts) (~894 lines) and
-[`useWorklogModel.ts`](../src/ui/hooks/useWorklogModel.ts) (~690) are the two
-largest files in the repo and are past the point where splitting by concern
-(tasks / worklog / clients / sync) would help. Unrelated to the UI work above.
+The two files the previous step left out. Both were the same shape of problem as
+step 6 — long, not tangled — so both split the same way: the parts that are their
+own concern move to their own module, and what stays behind is the sequencing.
 
-`useWorklogModel.ts` also carries all 18 of the repo's current lint warnings
-(`react-hooks/exhaustive-deps`).
+| File | Before | After | Split into |
+| --- | --- | --- | --- |
+| `worklogStore.ts` | 894 | 589 | [`repoApi`](../src/data/repoApi.ts), [`fileSync`](../src/data/fileSync.ts), [`recovery`](../src/data/recovery.ts), [`assetUrls`](../src/data/assetUrls.ts), [`remoteWatcher`](../src/data/remoteWatcher.ts), [`bytes`](../src/data/bytes.ts) |
+| `useWorklogModel.ts` | 694 | 115 | [`hooks/model/`](../src/ui/hooks/model/) — `useClientModel`, `useStatusModel`, `useTagModel`, `useTaskActions`, `useTaskRows`, `useTaskFormActions`, `useLogModel` |
+
+**The store keeps the sequencing and nothing else.** What it does that no other
+module can is decide *when* to fetch, merge, re-parse, notify and re-render —
+`sync()` is that decision written out. Everything it sequences is now a module
+with no reference back to it: `repoApi` is the three `/api/*` calls and their
+shapes, `fileSync` is the merge/commit arithmetic over a `FileMap`, `recovery` is
+the IndexedDB snapshot in both directions, `assetUrls` is the object-URL cache,
+and `remoteWatcher` is the poll for commits pushed elsewhere. The split is by what
+each part talks to — the network, the file map, IndexedDB, the DOM — which is also
+what makes each one testable without a store.
+
+`recovery` needs to delete from the map it is rebuilding, and `deleteFile` only
+ever worked on the *mounted* map. It is now
+[`removeFileFrom(fm, path)`](../src/workspace/paths.ts) with `deleteFile`
+delegating to it, so the rule about what a delete means (a tree deletion for a
+path the branch holds, a plain drop for one that only ever existed locally) still
+lives in one place.
+
+**The read-model became its composition.** `useWorklogModel` now unpacks the
+snapshot, calls one hook per concern and spreads their results — the returned
+object is key-for-key what it was, so no consumer changed. Each hook in
+[`hooks/model/`](../src/ui/hooks/model/) takes exactly the slices it reads
+(`useTagModel(tasks, ui)`, `useLogModel(worklog, clients, hoursPerDay, …)`), which
+is what makes them worth having as separate files: the argument list *is* the
+dependency list.
+
+**The 18 warnings were two bugs, and both were real.**
+
+- `const tasks = snap?.tasks ?? []` hands out a **fresh array on every render**
+  whenever `snap` is null, so every `useMemo` and `useCallback` built on it
+  re-ran every render — `allTags`, `clientById`, `makeRow` and with it every row
+  in every list. The four collections are memoized on `snap` now, which is the
+  fix the rule itself suggests.
+- The `ui` object is rebuilt every render, so the callbacks that closed over it
+  couldn't list it as a dependency without re-creating themselves every render.
+  They depend on the pieces they actually use instead — `setTagFilter`,
+  `setDetailId`, `confirm.ask` — every one of which is a `useState` setter or a
+  `useCallback([])` and therefore stable. That's why the deps were omissible in
+  the first place; now it's stated rather than assumed, and a value that *isn't*
+  stable can no longer slip in unnoticed.
+
+`npm run lint` reports 0 errors and 0 warnings.
+
+**Deliberately left alone:** [`taskOps.ts`](../src/services/taskOps.ts) (605) is
+now the largest file in the repo. It is the domain's write path and was never
+part of this plan.
 
 ---
 
@@ -596,7 +644,7 @@ largest files in the repo and are past the point where splitting by concern
 
 ```bash
 npx tsc --noEmit    # type errors
-npm run lint        # 0 errors expected; 18 pre-existing warnings in useWorklogModel.ts
+npm run lint        # 0 errors and 0 warnings expected
 npm test            # 228 tests
 npm run build       # Tailwind only emits classes its @source scan finds —
                     # a primitive's classes must reach the built CSS

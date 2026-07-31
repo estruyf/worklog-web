@@ -1,0 +1,120 @@
+// Opening and submitting the task form.
+//
+// The form is a route (/app/new, /app/task/<id>/edit) that owns its own fields:
+// opening it is a navigation, nothing more. What the URL can't say — which client
+// to start on, whose subtask this is, a due date picked in the calendar — travels
+// as the route's seed, which the form reads once when it mounts.
+//
+// Nothing here holds what the form is currently showing, so nothing here has to
+// work out whether it is still showing the right thing. That question used to
+// need a ref tracking which task the fields belonged to, an effect to re-seed the
+// cases the ref didn't cover, and a second effect to clear it all on the way out;
+// a `key` on the form does the same job by remounting it.
+
+import { useCallback } from "react";
+import type { Client, Task, WorklogEntry } from "../../../model/types";
+import { GENERAL_TODO_CLIENT_ID } from "../../../model/todos";
+import { parseRecurrence } from "../../../model/recurrence";
+import { worklogStore } from "../../../data/worklogStore";
+import { closeTaskForm, navigateToTaskForm } from "../../router";
+import type { TaskFormFields } from "../../model";
+import { clientIdOf, defaultTaskClientId, isDone } from "../../utils";
+import type { WorklogUiState } from "../useWorklogUiState";
+
+interface TaskFormDeps {
+  tasks: Task[];
+  clients: Client[];
+  worklog: WorklogEntry[];
+  today: string;
+  selectedDate: string;
+  selectedClient: string;
+}
+
+export function useTaskFormActions(deps: TaskFormDeps, ui: WorklogUiState) {
+  const { tasks, clients, worklog, today, selectedDate, selectedClient } = deps;
+
+  /** Which client a brand-new task lands on: the one you're looking at, else the
+   *  one the day's work points at. */
+  const defaultFormClientId = useCallback(
+    () => defaultTaskClientId({ selectedClientId: selectedClient, selectedDate, today, clients, worklog }),
+    [selectedClient, selectedDate, today, clients, worklog],
+  );
+
+  const openTaskForm = () => navigateToTaskForm(null, { clientId: defaultFormClientId() });
+  // Open the new-task form pre-seeded with a due date, e.g. from the calendar
+  // when planning work for a future day.
+  const openTaskFormForDue = (due: string) => navigateToTaskForm(null, { clientId: defaultFormClientId(), due });
+  // Open the new-task form pre-assigned to the general to-do bucket, so the
+  // To-dos view can add straight to its own list.
+  const openTodoForm = () => navigateToTaskForm(null, { clientId: GENERAL_TODO_CLIENT_ID });
+  const openSubtaskForm = (parent: Task) =>
+    navigateToTaskForm(null, { clientId: clientIdOf(parent), parentId: parent.id });
+
+  /** The keyboard shortcut's "new task": a subtask of whatever is open, else a
+   *  plain new one. */
+  const openTaskFormFromShortcut = () => {
+    const detailTask = ui.detailId ? tasks.find((t) => t.id === ui.detailId) : undefined;
+    if (detailTask && !isDone(detailTask)) {
+      openSubtaskForm(detailTask);
+      return;
+    }
+    openTaskForm();
+  };
+
+  /** Write the open form back to the files. Takes the fields as an argument —
+   *  the form holds them, this only knows how to persist them. `editingId` is
+   *  the task being edited, or null for a new one. */
+  const submitTask = (editingId: string | null, fields: TaskFormFields) => {
+    const title = fields.title.trim();
+    if (!title || !fields.clientId) {
+      return;
+    }
+    // Blank rows the user added but never filled in are dropped rather than
+    // saved — the same rule the client editor's links go through.
+    const links = fields.links.map((l) => ({ url: l.url.trim(), label: l.label.trim() })).filter((l) => l.url);
+    const due = fields.due.trim() || undefined;
+    // An unparseable expression saves as a plain one-off rather than blocking
+    // the save; the picker already flags it while you type.
+    const parsedRepeat = fields.repeat.trim() ? parseRecurrence(fields.repeat) : undefined;
+    const repeat = parsedRepeat
+      ? { ...parsedRepeat, anchor: fields.repeatFrom, until: fields.repeatUntil.trim() || undefined }
+      : undefined;
+    // Already normalized and de-duplicated by the tag picker.
+    const tags = fields.tags;
+    const description = fields.description.trim();
+    if (editingId) {
+      worklogStore.updateTask(editingId, {
+        title,
+        clientId: fields.clientId,
+        parentId: fields.parentId,
+        links,
+        description,
+        due: due ?? "",
+        tags,
+        repeat: repeat ?? null,
+      });
+    } else {
+      worklogStore.createTask({
+        title,
+        clientId: fields.clientId,
+        parentId: fields.parentId || undefined,
+        links,
+        description: description || undefined,
+        due,
+        tags,
+        repeat,
+      });
+    }
+    closeTaskForm();
+  };
+
+  return {
+    defaultFormClientId,
+    openTaskForm,
+    openTaskFormForDue,
+    openTodoForm,
+    openSubtaskForm,
+    openTaskFormFromShortcut,
+    submitTask,
+  };
+}
