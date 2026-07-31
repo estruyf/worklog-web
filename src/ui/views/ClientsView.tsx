@@ -1,9 +1,10 @@
 import React, { useMemo } from 'react';
 import type { WorklogRow } from '../model';
 import { PencilIcon } from 'lucide-react';
-import { WorklogTaskRow } from '../components';
-import { Badge, Button, Card, EmptyState, SectionLabel } from '../primitives';
+import { TaskListToolbar, WorklogTaskRow } from '../components';
+import { Badge, Button, Card, EmptyState, LinkButton, SectionLabel } from '../primitives';
 import { useData, useUi } from '../context';
+import { useTaskListFilter } from '../hooks';
 import { clientIdOf, fmtLong, isDone } from '../utils';
 import { ClientInfoCard, ClientList, CompletedTaskList, MobileClientDropdown } from './clients-view';
 
@@ -21,7 +22,10 @@ function useClientsData() {
     [allClients, openTasks],
   );
   const scOpen = useMemo(() => tasks.filter((t) => clientIdOf(t) === selectedClient && !isDone(t)), [tasks, selectedClient]);
-  const selectedOpenRows = useMemo<WorklogRow[]>(() => openRowsFor(scOpen), [openRowsFor, scOpen]);
+  // Keyed on the client: switching to another one starts from an unfiltered list
+  // rather than making its tasks look absent.
+  const openFilter = useTaskListFilter(scOpen, { label: 'open tasks', resetKey: selectedClient });
+  const selectedOpenRows = useMemo<WorklogRow[]>(() => openRowsFor(openFilter.tasks), [openRowsFor, openFilter.tasks]);
   const selectedDone = useMemo(
     () => tasks.filter((t) => clientIdOf(t) === selectedClient && isDone(t)).sort((a, b) => (b.completed! > a.completed! ? 1 : -1)),
     [tasks, selectedClient],
@@ -44,6 +48,7 @@ function useClientsData() {
     clientOpenCounts,
     selectedOpenRows,
     selectedOpenCount: scOpen.length,
+    openFilter,
     selectedDone,
     selectedLastWorked,
   };
@@ -62,6 +67,7 @@ export function ClientsView() {
     selectedOpenCount,
     selectedDone,
     selectedLastWorked,
+    openFilter,
   } = useClientsData();
   const addClient = () => openClientEditor();
   const clientDescription = selectedClientObj?.description?.trim() ?? '';
@@ -109,9 +115,23 @@ export function ClientsView() {
         <ClientInfoCard description={clientDescription} links={clientLinks} />
 
         <SectionLabel className="mb-[14px]">Open tasks · {selectedOpenCount}</SectionLabel>
+        {openFilter.toolbar && <TaskListToolbar {...openFilter.toolbar} />}
         <Card padding="list" className="mb-[38px]">
           {selectedOpenRows.map((r) => <WorklogTaskRow key={r.id} row={r} />)}
-          {selectedOpenCount === 0 && <EmptyState className="py-2 px-2.5">No open tasks.</EmptyState>}
+          {selectedOpenRows.length === 0 && (
+            <EmptyState className="py-2 px-2.5">
+              {selectedOpenCount === 0 ? (
+                'No open tasks.'
+              ) : (
+                <>
+                  No open tasks match these filters.{' '}
+                  <LinkButton size="inherit" onClick={openFilter.reset} className="italic underline">
+                    Reset
+                  </LinkButton>
+                </>
+              )}
+            </EmptyState>
+          )}
         </Card>
 
         <CompletedTaskList tasks={selectedDone} clientName={selectedName} />

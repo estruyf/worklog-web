@@ -53,6 +53,13 @@ async function inlineHashes(html: string): Promise<{ script: string[]; style: st
   };
 }
 
+// `astro dev` serves CSS through JS: Vite injects a <style> element per module at
+// runtime, and the dev toolbar builds its shadow DOM the same way. None of that is in
+// the SSR response, so hashing the response covers none of it and the whole app loads
+// unstyled. Dev gets `'unsafe-inline'` for styles; production keeps the hashes, and
+// `npm run build && npm run preview` is where the real policy gets exercised.
+const DEV = import.meta.env.DEV;
+
 function policy(hashes: { script: string[]; style: string[] }): string {
   return [
     "default-src 'self'",
@@ -60,7 +67,9 @@ function policy(hashes: { script: string[]; style: string[] }): string {
     // response. No `'unsafe-inline'`: a hash-source would make the browser ignore it
     // anyway, and this is the directive that contains an XSS in the Markdown renderer.
     `script-src 'self' ${hashes.script.join(' ')}`.trim(),
-    `style-src 'self' ${hashes.style.join(' ')}`.trim(),
+    // A hash-source makes the browser ignore `'unsafe-inline'`, so dev omits the
+    // hashes entirely rather than listing both.
+    DEV ? "style-src 'self' 'unsafe-inline'" : `style-src 'self' ${hashes.style.join(' ')}`.trim(),
     // Tailwind arbitrary values and React `style={{…}}` props both land as style
     // attributes, which cannot be hashed. Scoping the exemption to `style-src-attr`
     // keeps it away from <style> elements, where injected CSS could actually be used

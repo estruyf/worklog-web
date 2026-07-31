@@ -6,6 +6,7 @@ import type { Task } from '../../model/types';
 import type { ArchiveGroup } from '../model';
 import { shiftDate } from './date';
 import { clientIdOf, isDone } from './task';
+import { matchesTaskQuery } from './taskFilter';
 
 /** Completion window the Archive view filters on. */
 export type ArchivePeriod = 'all' | '30d' | '90d' | 'year';
@@ -63,20 +64,6 @@ export function periodStart(period: ArchivePeriod, today: string): string {
   }
 }
 
-function matchesQuery(t: Task, q: string, clientName: string): boolean {
-  if (!q) {
-    return true;
-  }
-  return (
-    t.title.toLowerCase().includes(q) ||
-    (t.description ?? '').toLowerCase().includes(q) ||
-    (t.tags ?? []).join(' ').toLowerCase().includes(q) ||
-    t.links.some((l) => l.url.toLowerCase().includes(q)) ||
-    t.id.toLowerCase().includes(q) ||
-    clientName.toLowerCase().includes(q)
-  );
-}
-
 export function deriveArchive(tasks: Task[], filters: ArchiveFilters, deps: ArchiveDeps): ArchiveDerived {
   const { clientName, colorOf, today } = deps;
   const q = filters.query.trim().toLowerCase();
@@ -86,7 +73,7 @@ export function deriveArchive(tasks: Task[], filters: ArchiveFilters, deps: Arch
   // Query + period only: these counts drive the client picker, so they must not
   // be narrowed by the client selection itself.
   const facetMatched = archived.filter(
-    (t) => (!start || (t.completed ?? '') >= start) && matchesQuery(t, q, clientName(clientIdOf(t))),
+    (t) => (!start || (t.completed ?? '') >= start) && matchesTaskQuery(t, q, clientName(clientIdOf(t))),
   );
 
   const clientCounts: Record<string, number> = {};

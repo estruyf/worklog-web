@@ -3,6 +3,8 @@ export { useWorklogState } from "./useWorklogState";
 export { useWorklogUiState } from "./useWorklogUiState";
 export { useWorklogModel } from "./useWorklogModel";
 export { useSearchData } from "./useSearchData";
+export { useTaskListFilter } from "./useTaskListFilter";
+export type { TaskListFilterApi, TaskListFilterOptions } from "./useTaskListFilter";
 export { useImageUpload } from "./useImageUpload";
 export { useMarkdownImages } from "./useMarkdownImages";
 export { useUnsavedGuard } from "./useUnsavedGuard";

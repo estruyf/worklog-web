@@ -4,6 +4,8 @@ export { Kbd } from './Kbd';
 export { WorklogTaskRow } from './WorklogTaskRow';
 export { CompletedTaskRow } from './CompletedTaskRow';
 export type { CompletedTaskRowProps } from './CompletedTaskRow';
+export { TaskListToolbar } from './TaskListToolbar';
+export type { TaskListToolbarProps, TaskStatusOption } from './TaskListToolbar';
 export { ClientListItem } from './ClientListItem';
 export type { ClientListItemProps } from './ClientListItem';
 export { DescriptionEditor } from './DescriptionEditor';

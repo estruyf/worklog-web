@@ -6,17 +6,22 @@ import React, { useMemo, useState } from 'react';
 import { PlusIcon } from 'lucide-react';
 import { GENERAL_TODO_COLOR, GENERAL_TODO_LABEL, isGeneralTodoClientId } from '../../model/todos';
 import type { Task } from '../../model/types';
-import { CompletedTaskRow, DisclosureIcon, WorklogTaskRow } from '../components';
-import { Button, Card, EmptyState, SectionLabel } from '../primitives';
+import { CompletedTaskRow, DisclosureIcon, TaskListToolbar, WorklogTaskRow } from '../components';
+import { Button, Card, EmptyState, LinkButton, SectionLabel } from '../primitives';
 import { useData } from '../context';
+import { useTaskListFilter } from '../hooks';
 import { clientIdOf, fmtShort, isDone } from '../utils';
 
-/** Splits the to-do bucket into open rows and completed tasks (newest first). */
+/** Splits the to-do bucket into open rows and completed tasks (newest first).
+ *  The open list is filtered/sorted first, so the rows are built from what the
+ *  toolbar actually left — subtasks included, since they nest per parent. */
 function useTodosData() {
   const { tasks, openRowsFor } = useData();
   const todos = useMemo(() => tasks.filter((t) => isGeneralTodoClientId(clientIdOf(t))), [tasks]);
   const openTasks = useMemo(() => todos.filter((t) => !isDone(t)), [todos]);
-  const openRows = useMemo(() => openRowsFor(openTasks), [openTasks, openRowsFor]);
+  // A to-do's status is open-or-closed, so a status filter would say nothing.
+  const filter = useTaskListFilter(openTasks, { label: 'to-dos', withStatus: false });
+  const openRows = useMemo(() => openRowsFor(filter.tasks), [filter.tasks, openRowsFor]);
   const doneTasks = useMemo(
     () =>
       todos
@@ -24,7 +29,7 @@ function useTodosData() {
         .sort((a, b) => (b.completed ?? '').localeCompare(a.completed ?? '') || a.title.localeCompare(b.title)),
     [todos],
   );
-  return { openRows, openCount: openTasks.length, doneTasks };
+  return { openRows, openCount: openTasks.length, doneTasks, filter };
 }
 
 /** Completed to-dos, collapsed by default so the open list stays the focus. */
@@ -66,7 +71,7 @@ function CompletedTodos({ doneTasks }: { doneTasks: Task[] }) {
 
 export function TodosView() {
   const { openTodoForm } = useData();
-  const { openRows, openCount, doneTasks } = useTodosData();
+  const { openRows, openCount, doneTasks, filter } = useTodosData();
 
   return (
     <div className="flex-1 overflow-auto px-6 py-10">
@@ -88,11 +93,23 @@ export function TodosView() {
         {openCount === 0 ? (
           <EmptyState>No open to-dos. These are the tasks that aren&apos;t linked to a client.</EmptyState>
         ) : (
-          <Card padding="list">
-            {openRows.map((row) => (
-              <WorklogTaskRow key={row.id} row={row} />
-            ))}
-          </Card>
+          <>
+            {filter.toolbar && <TaskListToolbar {...filter.toolbar} />}
+            {openRows.length === 0 ? (
+              <EmptyState>
+                No to-dos match these filters.{' '}
+                <LinkButton size="inherit" onClick={filter.reset} className="italic underline">
+                  Reset
+                </LinkButton>
+              </EmptyState>
+            ) : (
+              <Card padding="list">
+                {openRows.map((row) => (
+                  <WorklogTaskRow key={row.id} row={row} />
+                ))}
+              </Card>
+            )}
+          </>
         )}
 
         <CompletedTodos doneTasks={doneTasks} />

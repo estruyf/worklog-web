@@ -4,6 +4,7 @@ import { isGeneralTodoClientId } from '../../model/todos';
 import { collectOverdue } from '../../model/overdue';
 import type { ClientTaskGroup } from '../model';
 import { useData, useUi } from '../context';
+import { useTaskListFilter } from '../hooks';
 import { clientIdOf, dueOn, isDone, workedOnDate } from '../utils';
 import {
   DayHeader,
@@ -25,16 +26,24 @@ function useDayData() {
   const openTasks = useMemo(() => tasks.filter((t) => !isDone(t)), [tasks]);
   const dayLogs = useMemo(() => logsFor(selectedDate), [logsFor, selectedDate]);
   // Only clients that logged time on the selected day are "relevant" to it, so the
-  // day view shows open tasks for those clients alone.
-  const openGroups = useMemo<ClientTaskGroup[]>(() => {
+  // day view shows open tasks for those clients alone. Narrowed to that set before
+  // the filter sees it, so the toolbar's counts and tag chips describe the section
+  // on screen rather than every open task in the repo.
+  const dayOpenTasks = useMemo(() => {
     const loggedClientIds = new Set(dayLogs.filter((l) => !isEventWorklogClientId(l.clientId)).map((l) => l.clientId));
-    return clients
-      .map((c) => {
-        const ct = openTasks.filter((t) => clientIdOf(t) === c.id);
-        return { id: c.id, name: c.name, color: colorOf(c.id), count: ct.length, rows: openRowsFor(ct) };
-      })
-      .filter((g) => g.count > 0 && loggedClientIds.has(g.id));
-  }, [clients, openTasks, dayLogs, colorOf, openRowsFor]);
+    return openTasks.filter((t) => loggedClientIds.has(clientIdOf(t)));
+  }, [openTasks, dayLogs]);
+  const openFilter = useTaskListFilter(dayOpenTasks, { label: 'open tasks', resetKey: selectedDate });
+  const openGroups = useMemo<ClientTaskGroup[]>(
+    () =>
+      clients
+        .map((c) => {
+          const ct = openFilter.tasks.filter((t) => clientIdOf(t) === c.id);
+          return { id: c.id, name: c.name, color: colorOf(c.id), count: ct.length, rows: openRowsFor(ct) };
+        })
+        .filter((g) => g.count > 0),
+    [clients, openFilter.tasks, colorOf, openRowsFor],
+  );
   // Anything already past its due date on the day being viewed. Judged against
   // the selected date rather than today, so the block always reads as "late as
   // of this day" wherever you are in the calendar.
@@ -56,23 +65,56 @@ function useDayData() {
     [openTasks, openRowsFor],
   );
   const doneTasks = useMemo(() => tasks.filter((t) => t.completed === selectedDate), [tasks, selectedDate]);
-  const workedGroups = useMemo<ClientTaskGroup[]>(() => {
-    const workedTasks = tasks.filter((t) => !isDone(t) && workedOnDate(t, selectedDate));
-    return clients
-      .map((c) => {
-        const ct = workedTasks.filter((t) => clientIdOf(t) === c.id);
-        return { id: c.id, name: c.name, color: colorOf(c.id), count: ct.length, rows: openRowsFor(ct) };
-      })
-      .filter((g) => g.count > 0);
-  }, [tasks, selectedDate, clients, colorOf, openRowsFor]);
+  // Filtered before it is bucketed, so a client whose tasks all fall out of the
+  // filter drops its card instead of leaving an empty one behind. The date keys
+  // the reset: yesterday's filter has nothing to say about today's work.
+  const workedTasks = useMemo(
+    () => tasks.filter((t) => !isDone(t) && workedOnDate(t, selectedDate)),
+    [tasks, selectedDate],
+  );
+  const workedFilter = useTaskListFilter(workedTasks, { label: 'worked tasks', resetKey: selectedDate });
+  const workedGroups = useMemo<ClientTaskGroup[]>(
+    () =>
+      clients
+        .map((c) => {
+          const ct = workedFilter.tasks.filter((t) => clientIdOf(t) === c.id);
+          return { id: c.id, name: c.name, color: colorOf(c.id), count: ct.length, rows: openRowsFor(ct) };
+        })
+        .filter((g) => g.count > 0),
+    [workedFilter.tasks, clients, colorOf, openRowsFor],
+  );
 
-  return { openTasks, dayLogs, overdueRows, dueRows, todoRows, openGroups, doneTasks, workedGroups, isTodaySel: selectedDate === today };
+  return {
+    openTasks,
+    dayLogs,
+    overdueRows,
+    dueRows,
+    todoRows,
+    openGroups,
+    openFilter,
+    doneTasks,
+    workedGroups,
+    workedFilter,
+    isTodaySel: selectedDate === today,
+  };
 }
 
 export function DayView() {
   const { today, clients, allClients, colorOf, clientName, statusMeta, reopen, openDetail, typeLabel, hoursPerDay, todosPerPage, logState, setLogState, saveLog, removeLog, editLog, openLogForm, openTaskFormForDue } = useData();
   const { selectedDate, setSelectedDate, editDayOpen, setEditDayOpen } = useUi();
-  const { openTasks, dayLogs, overdueRows, dueRows, todoRows, openGroups, doneTasks, workedGroups, isTodaySel } = useDayData();
+  const {
+    openTasks,
+    dayLogs,
+    overdueRows,
+    dueRows,
+    todoRows,
+    openGroups,
+    openFilter,
+    doneTasks,
+    workedGroups,
+    workedFilter,
+    isTodaySel,
+  } = useDayData();
   const onSelectDate = setSelectedDate;
   // New time goes to active clients only, but editing an entry logged before its
   // client was archived still shows (and keeps) that client.
@@ -143,11 +185,12 @@ export function DayView() {
               isTodaySel={isTodaySel}
               editDayOpen={editDayOpen}
               openGroups={openGroups}
+              openFilter={openFilter}
               dayLogs={dayLogs}
               openTasksCount={openTasksCount}
             />
 
-            <WorkedTasksSection isTodaySel={isTodaySel} workedGroups={workedGroups} />
+            <WorkedTasksSection isTodaySel={isTodaySel} workedGroups={workedGroups} filter={workedFilter} />
 
             <DoneTasksSection
               doneTasks={doneTasks}

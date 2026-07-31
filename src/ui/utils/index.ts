@@ -9,6 +9,15 @@ export { splitMatch, deriveSearch } from "./search";
 export type { SearchDeps, SearchDerived, SearchFilters, SplitMatch } from "./search";
 export { deriveArchive, pageWindow, periodStart, ARCHIVE_PAGE_SIZES } from "./archive";
 export type { ArchiveDeps, ArchiveDerived, ArchiveFilters, ArchivePeriod } from "./archive";
+export { deriveTaskList, matchesTaskQuery, DEFAULT_TASK_LIST_FILTERS, TASK_SORTS } from "./taskFilter";
+export type {
+  TaskListDeps,
+  TaskListDerived,
+  TaskListFilters,
+  TaskSortDirection,
+  TaskSortKey,
+  TaskTagCount,
+} from "./taskFilter";
 export {
   calendarCells,
   deriveWorkedByClient,
