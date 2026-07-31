@@ -16,7 +16,7 @@ export type DescriptionMode = 'edit' | 'preview';
  *  lives here: two copies of it drift, and the one that drifts is the one nobody
  *  is looking at. */
 const PLACEHOLDER =
-  'Add a description in Markdown…\n\n## Notes\n- supports **bold**, *italic*, `code`\n- [links](https://example.com), lists, > quotes\n- paste, drop or add an image';
+  'Add a description in Markdown…\n\n## Notes\n- supports **bold**, *italic*, `code`\n- [links](https://example.com) or plain https://example.com\n- lists, > quotes\n- paste, drop or add an image';
 
 const MODES: { value: DescriptionMode; label: string }[] = [
   { value: 'edit', label: 'Write' },

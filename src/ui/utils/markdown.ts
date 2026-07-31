@@ -1,5 +1,6 @@
 // A tiny, dependency-free Markdown -> HTML renderer for task descriptions.
-// Deliberately minimal (headings, emphasis, code, links, lists, quotes, rules).
+// Deliberately minimal (headings, emphasis, code, links and bare URLs, lists,
+// quotes, rules).
 // Block structure is detected on the raw lines; all user text is escaped inside
 // inline() before any formatting, so the output is safe to inject into the
 // app. The source of truth stays the markdown body in the client file.
@@ -39,6 +40,70 @@ export function makeImageResolver(
   };
 }
 
+const count = (s: string, ch: string) => s.split(ch).length - 1;
+
+/**
+ * Trailing prose is not part of the URL: the full stop ending a sentence, the
+ * `)` closing "(see https://x)", the `&gt;` left by an escaped `<https://x>`.
+ * A closing bracket is only prose when the URL has no opener to match it, so
+ * `https://en.wikipedia.org/wiki/Foo_(bar)` keeps its own. Returns `""` when
+ * nothing usable is left, which keeps the text unlinked.
+ */
+function trimUrlTail(url: string): string {
+  let out = url;
+  for (;;) {
+    const entity = /&(?:gt|lt|quot|amp|#\d+);$/.exec(out);
+    if (entity) {
+      out = out.slice(0, entity.index);
+      continue;
+    }
+    const last = out.slice(-1);
+    if (".,;:!?'".includes(last)) {
+      out = out.slice(0, -1);
+      continue;
+    }
+    const opener = last === ")" ? "(" : last === "]" ? "[" : null;
+    if (opener && count(out, last) > count(out, opener)) {
+      out = out.slice(0, -1);
+      continue;
+    }
+    break;
+  }
+  return /^https?:\/\/[^\s]/.test(out) ? out : "";
+}
+
+/** Linkify bare URLs in a run of already-escaped text. */
+function linkifyText(text: string): string {
+  return text.replace(/https?:\/\/[^\s]+/g, (match) => {
+    const url = trimUrlTail(match);
+    if (!url) {
+      return match;
+    }
+    return `<a href="${url}" target="_blank" rel="noreferrer noopener" class="wl-md-link">${url}</a>${match.slice(url.length)}`;
+  });
+}
+
+// An `<a>`/`<code>` element and its contents, or any other single tag. Anything
+// this matches is markup the autolinker must not touch.
+const MARKUP = /<(a|code)\b[^>]*>[\s\S]*?<\/\1>|<[^>]*>/gi;
+
+/**
+ * A pasted `https://…` with no `[label](…)` around it is the common case in a
+ * description or a note, so it links too. This runs over the assembled inline
+ * HTML rather than the raw text, skipping markup: a URL that already became an
+ * `href` or `src`, or that sits inside a code span, must survive untouched.
+ */
+function autolink(html: string): string {
+  let out = "";
+  let last = 0;
+  MARKUP.lastIndex = 0;
+  for (let m = MARKUP.exec(html); m; m = MARKUP.exec(html)) {
+    out += linkifyText(html.slice(last, m.index)) + m[0];
+    last = m.index + m[0].length;
+  }
+  return out + linkifyText(html.slice(last));
+}
+
 /** Escape, then apply inline spans: code, images, bold, italic, links. */
 function inline(text: string, resolveImage?: ImageResolver): string {
   // `code` first so its contents are not further formatted.
@@ -66,7 +131,7 @@ function inline(text: string, resolveImage?: ImageResolver): string {
       return `<a href="${url}" target="_blank" rel="noreferrer noopener" class="wl-md-link">${label}</a>`;
     },
   );
-  return out;
+  return autolink(out);
 }
 
 export function renderMarkdown(
