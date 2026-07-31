@@ -22,6 +22,18 @@ export const CONTROL_GEOMETRY: Record<ControlSize, string> = {
   lg: 'px-[14px] py-[11px] rounded-control-lg',
 };
 
+/** What a `Select` adds on top of `CONTROL_GEOMETRY`: room on the right for the
+ *  chevron the primitive paints itself (see the `select-chevron` utility in
+ *  `styles.css`), and where that chevron sits. The inset tracks the size's own
+ *  horizontal padding so the arrow lines up with the text edge above and below
+ *  it in a form; the padding is that inset plus the 14px glyph plus a gap. */
+export const SELECT_CHEVRON: Record<ControlSize, string> = {
+  xs: 'pr-[26px] [--select-chevron-inset:8px]',
+  sm: 'pr-[30px] [--select-chevron-inset:10px]',
+  md: 'pr-[32px] [--select-chevron-inset:12px]',
+  lg: 'pr-[36px] [--select-chevron-inset:14px]',
+};
+
 /** Every size opens at `text-touch` (16px) and only steps down from `md` up.
  *
  *  Safari zooms the whole viewport when a focused control's font is under 16px,

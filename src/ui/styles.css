@@ -195,6 +195,27 @@
   --text-base: var(--ui-font-size, 13px);
 }
 
+/* The chevron `Select` paints for itself. A bordered native `<select>` still
+   draws the platform's own chrome over the top — on iOS a grey pill whose text
+   is centred and which shows no indicator at all — so this is where the
+   primitive comes to be rid of it. The arrow is a background image and not a
+   sibling element on purpose: `Select` stays a single element, so a call
+   site's `w-full` / `flex-1` keeps landing on the control itself rather than on
+   a wrapper that would have to forward it. The stroke is `--color-neutral-675`
+   inlined, because a data URI cannot read `currentColor`.
+
+   It strips the appearance itself rather than leaving that to an
+   `appearance-none` beside it, so the arrow can never go missing: the strip is
+   what removes the platform's own one. Unprefixed is enough — Tailwind 4's own
+   floor is Safari 16.4, well past where `appearance` needed `-webkit-`. */
+@utility select-chevron {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='none' stroke='%236E7781' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m4 6 4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right var(--select-chevron-inset, 10px) center;
+  background-size: 14px 14px;
+}
+
 html,
 body,
 #root {

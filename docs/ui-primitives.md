@@ -115,6 +115,20 @@ rather than layering on top, so a bad field reads the same focused or not.
   button. `ArchiveView`'s filter already ended with its `×`, and the two search
   fields now end the same way.
 
+**`Select` paints its own chevron** (added after the fact, 2026-07-31). A
+bordered native `<select>` still lets the platform draw over it: on iOS that is
+a grey pill with centred text and no arrow, which is why the status, sort and
+client filters read as dead boxes in the installed PWA while the same markup
+looked fine in desktop Chrome. The `select-chevron` utility in
+[`styles.css`](../src/ui/styles.css) strips the appearance *and* supplies the
+arrow — both in one utility, so a select can't end up with neither — and
+`SELECT_CHEVRON` in the style table holds the per-size right padding and arrow
+inset. It stays a background image rather than a sibling element so `Select`
+remains one element and a call site's `w-full` / `flex-1` keeps landing on the
+control. The filter rows in `TaskListToolbar` and `ArchiveView` also give the
+query its own row below `sm:`, so the pickers split the next one evenly instead
+of wrapping to whatever width their longest option asks for.
+
 `Field` also wires `aria-describedby` to its help and error lines, and owns the
 "Clear" link that sits opposite a label on a filled date field — the pattern
 `TaskFormPage` and `RecurrencePicker` each wrote out by hand.

@@ -82,12 +82,21 @@ export function TaskListToolbar({
           leading={<SearchIcon size={14} className="shrink-0 text-neutral-650" />}
           aria-label={`Filter ${label}`}
           placeholder="Filter by title, tag, link..."
-          className="flex-1 min-w-[180px]"
+          className="basis-full min-w-[180px] sm:basis-auto sm:flex-1"
           inputClassName="text-input-fg"
         />
 
+        {/* The query takes a row of its own on a phone; the two pickers then
+            split the next one evenly instead of wrapping one per line at
+            whatever width their longest option happens to be. */}
         {statusOptions && (
-          <Select size="sm" value={status} onChange={(e) => onStatus(e.target.value)} aria-label={`Filter ${label} by status`}>
+          <Select
+            size="sm"
+            value={status}
+            onChange={(e) => onStatus(e.target.value)}
+            aria-label={`Filter ${label} by status`}
+            className="flex-1 min-w-0 sm:flex-none"
+          >
             <option value="">All statuses ({statusCount})</option>
             {statusOptions.map((o) => (
               <option key={o.id} value={o.id}>
@@ -97,7 +106,13 @@ export function TaskListToolbar({
           </Select>
         )}
 
-        <Select size="sm" value={sort} onChange={(e) => onSort(e.target.value as TaskSortKey)} aria-label={`Sort ${label}`}>
+        <Select
+          size="sm"
+          value={sort}
+          onChange={(e) => onSort(e.target.value as TaskSortKey)}
+          aria-label={`Sort ${label}`}
+          className="flex-1 min-w-0 sm:flex-none"
+        >
           {TASK_SORTS.map((s) => (
             <option key={s.key} value={s.key}>
               Sort: {s.label}
@@ -106,7 +121,7 @@ export function TaskListToolbar({
         </Select>
 
         <IconButton
-          size="sm"
+          size="md"
           variant="outline"
           onClick={onToggleDir}
           aria-label={dir === 'asc' ? `Sort ${label} descending` : `Sort ${label} ascending`}

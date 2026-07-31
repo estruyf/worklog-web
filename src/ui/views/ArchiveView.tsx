@@ -92,11 +92,19 @@ function ArchiveFilterBar({
         leading={<SearchIcon size={15} className="shrink-0 text-neutral-650" />}
         aria-label="Filter archived tasks"
         placeholder="Filter by title, tag, link..."
-        className="flex-1 min-w-[220px]"
+        className="basis-full min-w-[220px] sm:basis-auto sm:flex-1"
         inputClassName="text-input-fg"
       />
 
-      <Select value={clientId} onChange={(e) => setClientId(e.target.value)} aria-label="Filter by client">
+      {/* Same as the task-list toolbar: the query owns the first row on a phone
+          so the client picker isn't left sharing one at whatever width its
+          longest client name asks for. */}
+      <Select
+        value={clientId}
+        onChange={(e) => setClientId(e.target.value)}
+        aria-label="Filter by client"
+        className="flex-1 min-w-0 sm:flex-none"
+      >
         <option value="">All clients ({allCount})</option>
         {allClients.map((c) => (
           <option key={c.id} value={c.id}>
