@@ -8,7 +8,8 @@ import { ClientChipPicker, DueField, FormActionBar, SidebarSection, TitleField }
 import { Field, LinkButton, Select } from '../primitives';
 import { clientIdOf, isDone } from '../utils';
 import { formatRecurrence, type RecurrenceAnchor } from '../../model/recurrence';
-import type { Task } from '../../model/types';
+import { generalTodoClient } from '../../model/todos';
+import type { Client, Task } from '../../model/types';
 import type { TaskFormFields } from '../model';
 import { closeTaskForm, navigateToDashboard, useRoute, useTaskFormInstance, type TaskFormSeed } from '../router';
 
@@ -17,17 +18,18 @@ import { closeTaskForm, navigateToDashboard, useRoute, useTaskFormInstance, type
  *  start means a fresh mount rather than a reset. */
 function initialFields(task: Task | undefined, seed: TaskFormSeed): TaskFormFields {
   if (!task) {
+    const seeded = (seed.links ?? []).map((l) => ({ url: l.url, label: l.label ?? '' }));
     return {
-      title: '',
+      title: seed.title ?? '',
       clientId: seed.clientId ?? '',
       parentId: seed.parentId ?? '',
-      links: [{ url: '', label: '' }],
+      links: seeded.length ? seeded : [{ url: '', label: '' }],
       due: seed.due ?? '',
       repeat: '',
       repeatFrom: 'schedule',
       repeatUntil: '',
-      tags: [],
-      description: '',
+      tags: seed.tags ?? [],
+      description: seed.description ?? '',
     };
   }
   const ls = task.links.map((l) => ({ url: l.url, label: l.label ?? '' }));
@@ -45,6 +47,28 @@ function initialFields(task: Task | undefined, seed: TaskFormSeed): TaskFormFiel
   };
 }
 
+/** The client a seed's `clientId` refers to, or '' if it refers to nothing.
+ *
+ *  An in-app open always seeds a real id and resolves to itself. A deeplink seeds
+ *  whatever the caller wrote, so a name or a differently-cased id resolves too —
+ *  an extension shouldn't have to know Worklog's internal ids to address a client.
+ *  Anything unrecognized is cleared rather than kept: a bogus id would leave the
+ *  picker showing nothing while the form still counted itself saveable, and the
+ *  task would land in a client file that doesn't exist. Archived clients resolve
+ *  (the seed can legitimately name one), as does the reserved to-do bucket, which
+ *  is a client for form purposes but isn't in the configured list. */
+function resolveSeedClientId(seed: string | undefined, clients: Client[]): string {
+  if (!seed) {
+    return '';
+  }
+  const known = [...clients, generalTodoClient()];
+  if (known.some((c) => c.id === seed)) {
+    return seed;
+  }
+  const needle = seed.toLowerCase();
+  return known.find((c) => c.id.toLowerCase() === needle || c.name.toLowerCase() === needle)?.id ?? '';
+}
+
 /** Resolves what the form should start from, then mounts it under a key that
  * changes whenever it should start over — a different task, or another visit to
  * /app/new from somewhere else in the app. The remount *is* the reset, so the
@@ -53,7 +77,7 @@ function initialFields(task: Task | undefined, seed: TaskFormSeed): TaskFormFiel
  * Mounting waits for the snapshot: seeding a form from tasks that haven't loaded
  * would leave it empty for good, since nothing re-seeds it afterwards. */
 export function TaskFormPage() {
-  const { snap, tasks, defaultFormClientId } = useData();
+  const { snap, tasks, allClients, defaultFormClientId } = useData();
   const route = useRoute();
   const instance = useTaskFormInstance();
 
@@ -78,8 +102,11 @@ export function TaskFormPage() {
   }
 
   // A form reached by URL alone (a pasted link, a reload) carries no seed, so the
-  // default client is worked out here instead.
-  const seed = editingId ? {} : { ...instance.seed, clientId: instance.seed.clientId || defaultFormClientId() };
+  // default client is worked out here instead — and so is a deeplink's, when what
+  // it asked for isn't a client this repo has.
+  const seed = editingId
+    ? {}
+    : { ...instance.seed, clientId: resolveSeedClientId(instance.seed.clientId, allClients) || defaultFormClientId() };
 
   return <TaskForm key={`${editingId ?? 'new'}:${instance.key}`} editingId={editingId} task={task} seed={seed} />;
 }

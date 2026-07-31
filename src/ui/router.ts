@@ -9,13 +9,19 @@
 // listener covers back/forward. Route helpers preserve the current query string
 // (owner/repo/branch), which selects the mounted repo.
 //
+// /app/new doubles as the app's inbound deeplink: an extension or bookmarklet can
+// open it with the task's fields in the query string, and `consumeTaskDeeplink`
+// normalizes those into the same seed an in-app open uses. See ./deeplink.
+//
 // The dashboard's task detail panel is an overlay rather than a route — it covers
 // the app without changing the URL — so it gets a history entry of its own here
 // too (a same-URL entry tagged with the task id). Without one, Back would move
 // the app underneath the panel while the panel itself stayed put on top.
 
 import { useSyncExternalStore } from 'react';
+import { DEEPLINK_PARAMS, parseTaskDeeplink } from './deeplink';
 import type { AppView } from './model';
+import type { TaskLink } from '../model/types';
 
 const APP_BASE = '/app';
 
@@ -75,6 +81,9 @@ const FORM_KEY = 'worklogForm';
 // due date. None of it belongs in the URL (it's a starting point, not an
 // address), and it can't be derived from one either: /app/new is the same path
 // whether you arrived from the calendar, a parent task or the to-do list.
+// (A deeplink from outside the app has no history to push and so must arrive in
+// the query string; `consumeTaskDeeplink` moves it in here and clears the URL,
+// which is what keeps this the only place a seed is ever read from.)
 const FORM_SEED_KEY = 'worklogFormSeed';
 // Distinguishes one visit to the form from the next. The path alone can't:
 // opening the form from two different parents is twice /app/new, and the fields
@@ -82,11 +91,19 @@ const FORM_SEED_KEY = 'worklogFormSeed';
 // return to the instance that entry was showing rather than minting a new one.
 const FORM_SEQ_KEY = 'worklogFormSeq';
 
-/** Where a new task form starts. Empty for a plain "new task". */
+/** Where a new task form starts. Empty for a plain "new task".
+ *
+ *  In-app opens seed the first three: which client, whose subtask, which due date.
+ *  The rest only ever come from an inbound deeplink (`./deeplink`), which has an
+ *  actual task to hand over rather than a place to start from. */
 export interface TaskFormSeed {
   clientId?: string;
   parentId?: string;
   due?: string;
+  title?: string;
+  links?: TaskLink[];
+  tags?: string[];
+  description?: string;
 }
 
 /** One visit to the task form: what it starts from, and an identity that changes
@@ -112,6 +129,51 @@ function readFormInstance(): TaskFormInstance {
   };
 }
 
+// Counts the form openings this session, so each gets its own instance key.
+// Restarts at 0 on reload, which is harmless: a reloaded entry keeps the seq it
+// was stored with, and nothing compares keys across page loads.
+let formSeq = 0;
+
+/** Turn an inbound deeplink into the ordinary seed, once, on arrival.
+ *
+ *  Everything downstream then reads a seed the way it always has — a deeplink is
+ *  an entry format, not a second mechanism. Stripping the params matters as much
+ *  as reading them: `navigate` carries the current query string into every later
+ *  route (it's what keeps the mounted repo selected), so a `?title=` left in place
+ *  would still be hanging off the URL three views on.
+ *
+ *  No FORM_KEY on the entry: this one wasn't pushed by us, so closing the form has
+ *  nothing of ours to walk back off and should land on the dashboard instead of
+ *  leaving the app entirely. */
+function consumeTaskDeeplink(): void {
+  const route = parseRoute(window.location.pathname);
+  // Only the new-task form. An edit URL starts from the task's own values, so a
+  // deeplink there has nothing to say.
+  if (route.name !== 'taskForm' || route.taskId !== null) {
+    return;
+  }
+  const params = new URLSearchParams(window.location.search);
+  const seed = parseTaskDeeplink(params);
+  if (!seed) {
+    return;
+  }
+  for (const key of DEEPLINK_PARAMS) {
+    params.delete(key);
+  }
+  const query = params.toString();
+  window.history.replaceState(
+    { [FORM_SEED_KEY]: seed, [FORM_SEQ_KEY]: ++formSeq },
+    '',
+    window.location.pathname + (query ? `?${query}` : ''),
+  );
+}
+
+// Before the snapshots below are taken: they read what the deeplink has just
+// written into history state.
+if (typeof window !== 'undefined') {
+  consumeTaskDeeplink();
+}
+
 // Cache the current route object so useSyncExternalStore gets a stable reference
 // until the location actually changes.
 let current: Route = typeof window === 'undefined' ? { name: 'view', view: 'day' } : parseRoute(window.location.pathname);
@@ -120,10 +182,6 @@ const EMPTY_FORM_INSTANCE: TaskFormInstance = { seed: {}, key: '0' };
 // Cached for the same reason as `current`: useSyncExternalStore compares by
 // identity, so this must not be rebuilt per read.
 let formInstance: TaskFormInstance = typeof window === 'undefined' ? EMPTY_FORM_INSTANCE : readFormInstance();
-// Counts the form openings this session, so each gets its own instance key.
-// Restarts at 0 on reload, which is harmless: a reloaded entry keeps the seq it
-// was stored with, and nothing compares keys across page loads.
-let formSeq = 0;
 // `history.back()` only lands on the next popstate, so the overlay still reads as
 // open until then. This keeps a second close request in that window (a delete
 // closes the panel from two places) from popping one entry too many.

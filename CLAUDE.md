@@ -141,6 +141,12 @@ errors.** See the comment at the top of `eslint.config.js`.
 - Four `dangerouslySetInnerHTML` sites are fed by the hand-rolled renderer in
   `src/ui/utils/markdown.ts`. Escape before assembling attributes; the CSP is a backstop, not
   a licence.
+- `src/ui/deeplink.ts` is the one place untrusted input enters the model: `/app/new?title=…`
+  can be opened by any page. It sanitizes to what `serializeTask` can round-trip — one line per
+  title/label, no control characters, http(s)/mailto only, length caps. A new field on
+  `TaskFormSeed` that a deeplink can set gets the same treatment, or a link's `url` becomes an
+  href nobody vetted. It fills the form and nothing else: there is no unauthenticated write path,
+  and adding one would be a different decision entirely.
 
 ---
 

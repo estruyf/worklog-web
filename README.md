@@ -20,14 +20,15 @@ insights. Every edit is committed straight back to your repo.
 5. [Step 3 — Install and run](#step-3--install-and-run)
 6. [Step 4 — Sign in and pick a repo](#step-4--sign-in-and-pick-a-repo)
 7. [Using the app](#using-the-app)
-8. [Testing](#testing)
-9. [Deploying to Cloudflare](#deploying-to-cloudflare)
-10. [Environment variables](#environment-variables)
-11. [Expected repository layout](#expected-repository-layout)
-12. [How it works](#how-it-works)
-13. [Project structure](#project-structure)
-14. [Troubleshooting](#troubleshooting)
-15. [Known limitations](#known-limitations)
+8. [Quick capture — task deeplinks](#quick-capture--task-deeplinks)
+9. [Testing](#testing)
+10. [Deploying to Cloudflare](#deploying-to-cloudflare)
+11. [Environment variables](#environment-variables)
+12. [Expected repository layout](#expected-repository-layout)
+13. [How it works](#how-it-works)
+14. [Project structure](#project-structure)
+15. [Troubleshooting](#troubleshooting)
+16. [Known limitations](#known-limitations)
 
 ---
 
@@ -180,6 +181,75 @@ its own: pick one or more tags (a task must carry all of them) with or without a
 
 **Keyboard shortcuts:** `⌘/Ctrl+N` new task · `⌘/Ctrl+F` or `⌘/Ctrl+S` search · `⌘/Ctrl+L` log time
 (Day view) · `⌘/Ctrl+R` reload from GitHub · `Esc` close the top dialog.
+
+---
+
+## Quick capture — task deeplinks
+
+`/app/new` accepts the task in its query string, so anything that can open a URL — a browser
+extension, a bookmarklet, a shortcut — can hand Worklog a task instead of you retyping it. The link
+**opens the new-task form pre-filled**; it does not save anything. You review it and press Save, and
+the task goes through the normal write path from there.
+
+```
+https://<your-worklog>/app/new?title=Fix%20the%20login%20redirect
+  &url=https://github.com/acme/web/issues/12
+  &label=Issue%2012
+  &client=acme
+```
+
+| Param | Fills | Notes |
+| --- | --- | --- |
+| `title` | Title | Flattened to one line. |
+| `url` | A link's URL | Repeat it for several links. Only `http`, `https` and `mailto` are accepted. |
+| `label` | That link's label | Optional. Pairs with `url` by position: first `label` goes with first `url`. |
+| `client` | Client | The client's **id or name**, case-insensitive (`acme` and `Acme Corp` both work). `todos` is the general to-do list. Unknown values fall back to the usual default client. |
+| `parent` | Parent task | The parent task's `id`, making the new task a subtask. |
+| `due` | Due date | `YYYY-MM-DD`. Anything else is ignored. |
+| `tags` | Tags | Comma-separated (`?tags=api,billing`) or repeated (`?tags=api&tags=billing`). |
+| `description` | Description | Markdown. Line breaks survive. |
+
+Everything is editable before you save, and every param is optional — `/app/new?title=Call%20Bob`
+is a valid deeplink. Unrecognized params are left alone, so the `owner`/`repo`/`branch` query that
+selects the mounted repository can ride along.
+
+**A bookmarklet** — the fastest way to try it. Save this as a bookmark and click it on any page:
+
+```js
+javascript:(()=>{const q=new URLSearchParams({title:document.title,url:location.href});
+open('https://<your-worklog>/app/new?'+q)})()
+```
+
+**A browser extension** does the same thing with per-site rules, which is what makes one extension
+cover several clients — map the host to the client id and let the tab supply the rest:
+
+```js
+// background.js — one context-menu click sends the current tab to Worklog
+const RULES = [
+  { match: 'https://app.productive.io/', client: 'client-a', label: 'Productive' },
+  { match: 'https://github.com/acme/',   client: 'client-b', label: 'GitHub' },
+];
+
+chrome.contextMenus.onClicked.addListener((_info, tab) => {
+  const rule = RULES.find((r) => tab.url.startsWith(r.match));
+  if (!rule) return;
+  const q = new URLSearchParams({ title: tab.title, url: tab.url, label: rule.label, client: rule.client });
+  chrome.tabs.create({ url: `https://<your-worklog>/app/new?${q}` });
+});
+```
+
+Notes worth knowing:
+
+- **The params disappear from the URL** as soon as the form opens. They are read once and moved into
+  the form's starting values, so they don't trail behind you as you navigate the rest of the app.
+  (Reloading the form does restore what the link sent — that's the same as any other new-task form.)
+- **A deeplink closes to the dashboard.** Because the link arrived from outside, there's no previous
+  page in the app to go back to.
+- **Values are treated as untrusted.** They end up in Markdown that has to keep round-tripping, so
+  titles and labels are flattened to a single line, unsafe URL schemes are dropped, and each field
+  is length-capped. If a field arrives mangled, that's why — edit it in the form.
+- **Sign in first.** A deeplink opened while signed out lands on the sign-in page and the task is
+  lost; open the app once, then use the link.
 
 ---
 
@@ -371,3 +441,5 @@ test/roundtrip.test.ts   # golden round-trip tests
   the next sync, and private-repo inline image auth is a follow-up.
 - Scaffolding writes the Worklog layout only where it is missing: files that already exist in the
   target repo are left as they are.
+- A task deeplink opened without a session is dropped rather than resumed after signing in — the
+  app redirects to the sign-in page and the query goes with it.
