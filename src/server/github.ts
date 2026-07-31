@@ -107,8 +107,20 @@ export async function listRepos(token: string): Promise<RepoSummary[]> {
   return repos;
 }
 
-/** Which repo-relative paths make up a Worklog project. */
-function isWorklogPath(path: string): boolean {
+/** A commit payload named a path outside the Worklog layout. Its own type so the
+ *  route can answer 400 (the client sent something it should never send) rather
+ *  than 500 (GitHub said no). */
+export class UnsafePathError extends Error {
+  constructor(readonly paths: string[]) {
+    super(`Refusing to commit path(s) outside the Worklog layout: ${paths.join(', ')}`);
+    this.name = 'UnsafePathError';
+  }
+}
+
+/** Which repo-relative paths make up a Worklog project. Gates both directions:
+ *  which blobs {@link loadRepo} reads, and which paths {@link commitFiles} is
+ *  willing to write. */
+export function isWorklogPath(path: string): boolean {
   return (
     path === '.worklog/config.json' ||
     path === 'worklog.worklog' ||
@@ -182,6 +194,16 @@ export async function commitFiles(
 ): Promise<CommitResult> {
   if (files.length === 0) {
     return { commitSha: baseCommitSha, branch };
+  }
+
+  // The token carries the `repo` scope, so this endpoint can reach every repository
+  // the user owns — which makes the path list the only thing standing between a
+  // compromised client and a `.github/workflows/*.yml` write (code execution in
+  // their CI). `loadRepo` already refuses to read anything outside the layout;
+  // writing has to be at least as narrow.
+  const foreign = files.filter((f) => !isWorklogPath(f.path));
+  if (foreign.length > 0) {
+    throw new UnsafePathError(foreign.map((f) => f.path));
   }
 
   // Guard against a moved ref (someone/something else pushed): if the branch head

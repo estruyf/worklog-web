@@ -271,6 +271,15 @@ class WorklogStore {
     } finally {
       this.committing = false;
       this.updateSnapshot({ loading: false });
+      // Anything still dirty here has no timer coming for it. Two ways to get
+      // there: the sync above threw (offline, a GitHub blip) and left the files
+      // unpushed, or an edit landed mid-sync and `scheduleCommit` declined to arm
+      // while `committing` was set. Both used to park the changes until the user
+      // made another edit or pressed Sync — silently, which is the one failure
+      // mode a timesheet can't afford.
+      if (this.fm.dirty.size > 0) {
+        this.scheduleCommit();
+      }
     }
   }
 
@@ -293,9 +302,16 @@ class WorklogStore {
       }
       this.repo!.baseCommitSha = result.commitSha;
       markPushed(this.fm, files);
-      this.clearPersistTimer();
-      void clearPending(this.repoKey());
-      this.updateSnapshot({ gitPending: false });
+      // An edit that landed while the commit was in flight is not in what just
+      // shipped, so it stays dirty — and its recovery snapshot has to stay with it.
+      // Dropping the snapshot here regardless is how that edit used to become
+      // unrecoverable as well as uncommitted. `sync`'s `finally` arms the retry.
+      const settled = this.fm.dirty.size === 0;
+      if (settled) {
+        this.clearPersistTimer();
+        void clearPending(this.repoKey());
+      }
+      this.updateSnapshot({ gitPending: !settled });
       return rebased;
     }
     throw new Error('the branch kept moving on GitHub — try again');
@@ -516,11 +532,15 @@ class WorklogStore {
    *  The delay comes from `autoSync.delayMinutes`; a burst of edits coalesces into
    *  a single sync. Manual "Git sync" and 409 retries bypass this. */
   private scheduleCommit(): void {
+    // Disarm first, then decide: turning auto-sync off has to cancel the timer that
+    // is already running, not merely stop the next one being set.
+    this.clearCommitTimer();
     const autoSync = this.store.getConfig()?.autoSync ?? DEFAULT_AUTO_SYNC;
+    // A sync in flight would swallow the timer's call (`sync` returns early while
+    // `committing`), so don't arm one — `sync`'s own `finally` re-arms instead.
     if (!autoSync.enabled || this.committing) {
       return;
     }
-    this.clearCommitTimer();
     const delay = Math.max(1, autoSync.delayMinutes) * 60_000;
     this.commitTimer = setTimeout(() => void this.sync({ silent: true }), delay);
   }

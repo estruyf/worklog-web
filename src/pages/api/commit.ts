@@ -4,7 +4,7 @@
 
 import type { APIRoute } from 'astro';
 import { getToken } from '../../server/session';
-import { commitFiles, GitHubError, type CommitFile } from '../../server/github';
+import { commitFiles, GitHubError, UnsafePathError, type CommitFile } from '../../server/github';
 
 export const prerender = false;
 
@@ -42,6 +42,12 @@ export const POST: APIRoute = async (context) => {
         headers: { 'Content-Type': 'application/json' },
       });
     }
-    return new Response(err instanceof Error ? err.message : 'Commit failed', { status: 500 });
+    // A rejected path is the client's fault, not GitHub's — and never something a
+    // retry fixes, so say so plainly rather than reporting a server failure.
+    if (err instanceof UnsafePathError) {
+      return new Response(err.message, { status: 400 });
+    }
+    const status = err instanceof GitHubError ? err.status : 500;
+    return new Response(err instanceof Error ? err.message : 'Commit failed', { status });
   }
 };

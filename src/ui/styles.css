@@ -318,3 +318,20 @@ body {
   display: block;
   border: 1px solid #eceef1;
 }
+
+/* App chrome that used to be rendered as inline <style> elements from React
+   (WorklogApp, TaskPage). Both are static, so they belong in the stylesheet —
+   and a Content-Security-Policy that hashes Astro's server-rendered styles can't
+   hash a <style> tag React creates in the browser at runtime. */
+::selection {
+  background: #fbefc0;
+}
+
+@keyframes worklog-slide {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(400%);
+  }
+}

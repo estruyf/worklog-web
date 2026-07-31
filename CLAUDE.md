@@ -1,0 +1,172 @@
+# CLAUDE.md
+
+Worklog Web — a GitHub-backed timesheet app. Astro SSR + React islands + Tailwind 4,
+deployed to Cloudflare Workers. **Markdown in the user's repo is the source of truth.**
+
+[README.md](README.md) documents the product, the setup and the repo format the app reads.
+Read it before changing anything user-facing. This file covers how to work in the codebase.
+
+---
+
+## Commands
+
+```bash
+npm run dev      # http://localhost:4321 (needs .dev.vars — see README step 2)
+npm test         # vitest, 235 tests / 16 files — must stay green
+npm run lint     # eslint, 0 errors AND 0 warnings expected
+npx tsc --noEmit # must be clean
+npm run build    # astro build → dist/_worker.js (Cloudflare)
+```
+
+**Run all four before calling work done.** `npm run build` is not optional for UI changes:
+Tailwind only emits classes its `@source` scan finds, so a class assembled by string
+concatenation at runtime compiles fine, types fine, lints fine — and ships with no CSS.
+
+`npm run check` (`astro check`) is **broken on a clean checkout** — `@astrojs/check` is not in
+devDependencies, so it prompts interactively. Use `npx tsc --noEmit` instead.
+
+Tests run against the fixture repo in `test/fixtures/timesheet` (no network, no auth).
+`WORKLOG_DATA_DIR=/path/to/repo npm test` runs the same assertions over a real timesheet.
+
+---
+
+## Architecture — the layering is the point
+
+Dependencies flow one way. Nothing below the line knows about GitHub; nothing above it
+knows about React.
+
+```
+parser/ model/ util/     pure markdown ⇄ Task/WorklogEntry. No I/O, no React.
+workspace/ db/ store.ts  in-memory FileMap ("the filesystem"), MemoryDb, rebuild
+services/ commands/      mutations — write into the FileMap, never to disk or network
+data/                    worklogStore: sync, three-way merge, IndexedDB recovery
+ui/                      React dashboard (primitives → components → views)
+server/ pages/api/        ─── the only ring that talks to GitHub ───
+```
+
+Hold this line. A service must not import React; the parser must not import a service; the
+UI must not reach past `data/` to `server/`.
+
+### The write path, end to end
+
+`UI action → services/* → FileMap.writeText() → store.rebuild() → onDidChange →
+worklogStore derives state + arms the debounced committer → /api/commit → GitHub`.
+
+Every edit re-parses the whole file map (`workspace/indexer.ts`). That is deliberate for now —
+the dataset is one person's timesheet. Don't add caching there without a measurement.
+
+### Auth
+
+The GitHub token lives in an httpOnly + Secure + SameSite=Lax cookie and is read **only** by
+`src/pages/api/*`. It must never reach browser JS — that is why the app is SSR at all. Any new
+GitHub call gets a server route; never a `fetch` to `api.github.com` from a component.
+
+---
+
+## Rules that are easy to break
+
+### 1. Markdown round-trip must stay faithful
+
+`test/roundtrip.test.ts` parses and re-serializes the fixture repo and asserts byte fidelity.
+This is what keeps commits diff-clean and the user's Markdown portable and hand-editable.
+
+Adding a field to `Task` means touching all of these, in order:
+
+1. `src/model/types.ts` — the type
+2. `src/parser/taskParser.ts` — parse the `- key: value` meta line **and** serialize it back,
+   in the same position
+3. `src/data/merge.ts` — nothing, if the record key is unchanged (see below)
+4. `src/services/taskOps.ts` / `tasks.ts` — the mutation
+5. `test/fixtures/timesheet/**` — a fixture carrying the new field
+6. a test
+
+Skipping step 2's serializer half is the classic failure: it parses, it renders, and it
+silently drops the field on the next commit.
+
+### 2. The merge is by record, never by line
+
+`src/data/merge.ts` three-way merges structurally so conflict markers can never land in
+Markdown the parser would choke on. Record keys:
+
+| File | Key |
+| --- | --- |
+| `clients/*.md`, `archive/**.md` | the task's `- id:` |
+| `worklog/*.md` | date + client id |
+| `.worklog/config.json` arrays | entry `id` |
+
+One-sided change wins (including deletion); both-sided keeps local and notifies. Remote
+ordering is preserved so a merged file stays a small diff.
+
+Any new file kind under a synced path needs a merge strategy, or it will resolve
+last-writer-wins. `test/twoInstances.test.ts` is the pattern for proving a sync scenario —
+write one there for anything touching sync, recovery or merge.
+
+### 3. UI primitives are style-only
+
+`src/ui/primitives/` knows nothing about tasks or clients. App-aware markup lives in
+`src/ui/components/` and composes primitives. Views in `src/ui/views/` are **propless** — they
+read from context.
+
+`cn()` is *not* a Tailwind-aware merge. A `className` passed to a primitive can **add**
+utilities (layout, margin, width) but cannot reliably **override** the variant's own padding or
+colour — CSS source order decides, not attribute order. Reaching for `!` is the signal to add a
+variant or tone to the primitive instead.
+
+[docs/ui-primitives.md](docs/ui-primitives.md) is the full audit and migration record.
+
+### 4. React hooks lint warnings are load-bearing
+
+The UI keeps long-lived `window` listeners that deliberately never re-subscribe, with values
+routed through refs. `exhaustive-deps` is the only thing that catches the one that isn't — a
+shortcut handler once froze `view` at its mount value that way. **Zero warnings, not just zero
+errors.** See the comment at the top of `eslint.config.js`.
+
+### 5. Cloudflare Workers is the runtime, not Node
+
+- `react-dom/server` must resolve to `server.edge` in builds. `server.browser` uses
+  `MessageChannel`, which does not exist in Workers, and it fails **at deploy**, not at build.
+  See the comment in `astro.config.mjs` before touching `vite.resolve`.
+- Subrequests are capped per request (50 free / 1000 paid). `loadRepo` and `commitFiles` fan out
+  one request per file — bound any new fan-out.
+- No Node APIs, no disk. `src/db/memoryDb.ts` and `src/workspace/paths.ts` exist because of this.
+
+### 6. Security posture
+
+- `src/middleware.ts` builds the CSP by hashing the inline scripts in the actual response, so
+  it can't rot on an Astro upgrade. Adding an external host means editing the policy — and
+  justifying it, on a page that holds a `repo`-scoped session.
+- `isWorklogPath()` in `src/server/github.ts` gates **both** read and write. The commit path
+  must never accept an arbitrary client-supplied path — `.github/workflows/*` would be CI
+  execution in every repo the user owns. `test/commitPaths.test.ts` guards this.
+- Four `dangerouslySetInnerHTML` sites are fed by the hand-rolled renderer in
+  `src/ui/utils/markdown.ts`. Escape before assembling attributes; the CSP is a backstop, not
+  a licence.
+
+---
+
+## Style
+
+- **Comments explain *why*, not *what*.** This codebase's comments record decisions that would
+  otherwise be re-litigated — the Vite `resolve.conditions` scoping, per-browser-instance
+  snapshot keys, the layered-Escape guard in `Modal`. Match that. Don't narrate the code.
+- File-top comments state what the module owns and who is allowed to call it. New modules get one.
+- Dates are `YYYY-MM-DD` strings throughout; local-time helpers live in `src/util/date.ts`.
+  Never `new Date(str)` on a date-only string — it parses as UTC and shifts the day.
+- Nothing runs in the background. "Overdue" is a comparison, not a scan; the next recurrence is
+  computed when you tick one off. Keep it that way — no scheduled state written into user Markdown.
+
+## Known rough edges
+
+Recorded in [docs/code-audit.md](docs/code-audit.md) (2026-07-30). Live ones worth knowing:
+
+- `src/pages/index.astro` is 1263 lines with ~660 lines of hand-written `<style>` in a project
+  that has Tailwind and a primitives layer. It is the one file that ignores the rules.
+- One `DataContext` with ~60 keys and one `React.memo` in the whole UI: everything re-renders on
+  every edit. The `src/ui/hooks/model/*` split defines the seams to split the context along.
+- `src/server/*` and `src/pages/api/*` have no tests, including a `force: true` ref update.
+- `tsconfig.json` `paths` still point at `src/worklog-core`, `src/host`, `src/webview` — leftovers
+  from the VS Code extension this grew out of. No such directories exist.
+
+**Settled — do not re-raise:** the `api.visitorbadge.io` pixel in `src/ui/WebApp.tsx` and
+`src/pages/index.astro` is a service the repo owner runs. `docs/code-audit.md` lists it as its
+top finding; that finding is resolved as accepted, not outstanding.

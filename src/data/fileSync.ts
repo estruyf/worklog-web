@@ -41,25 +41,40 @@ export function outgoingFiles(fm: FileMap): OutgoingFile[] {
   });
 }
 
-/** Record a landed commit against the file map and clear the dirty set.
+/** Record a landed commit against the file map and settle the paths it carried.
  *
  *  The branch now holds exactly what was just written, so a later delete of any
  *  of these paths knows it has to reach GitHub — and the pushed content becomes
- *  the ancestor the next merge compares against. */
+ *  the ancestor the next merge compares against.
+ *
+ *  Only the paths in `files` are settled, and a text file only if it still holds
+ *  what was committed. The payload is built before the request goes out, so an
+ *  edit made while it was in flight is in the map but not in the commit; clearing
+ *  the whole dirty set (as this used to) dropped that edit on the floor — off the
+ *  next commit, out of the recovery snapshot, and gone from view on the next
+ *  reload, with the UI reporting everything as synced. */
 export function markPushed(fm: FileMap, files: OutgoingFile[]): void {
   for (const f of files) {
     if (f.deleted) {
       fm.remote.delete(f.path);
       fm.baseText.delete(f.path);
-    } else {
-      fm.remote.add(f.path);
-      if (f.content !== undefined) {
-        fm.baseText.set(f.path, f.content);
-      }
+      fm.deleted.delete(f.path);
+      fm.dirty.delete(f.path);
+      continue;
     }
+    fm.remote.add(f.path);
+    if (f.content === undefined) {
+      // A binary (asset). These carry generated, single-use names and are written
+      // once, so there is no later edit to the same path to preserve.
+      fm.dirty.delete(f.path);
+      continue;
+    }
+    fm.baseText.set(f.path, f.content);
+    if (fm.text.get(f.path) === f.content) {
+      fm.dirty.delete(f.path);
+    }
+    // else: changed since the payload was built — leave it dirty for the next push.
   }
-  fm.deleted.clear();
-  fm.clearDirty();
 }
 
 /** What a merge left behind: the messages worth showing, and whether any file in

@@ -24,8 +24,6 @@ export function TaskPage({ taskId }: { taskId: string }) {
 
   return (
     <div className="min-h-screen bg-white text-neutral-825 antialiased" style={{ fontFamily: "'Inter', -apple-system, system-ui, sans-serif" }}>
-      <style>{`::selection{background:#FBEFC0}`}</style>
-
       {exists ? (
         <TaskDetailPanel routed />
       ) : (
