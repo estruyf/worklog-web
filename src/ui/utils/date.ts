@@ -23,6 +23,14 @@ export function monthLabel(ym: string): string {
   return `${MONTHS[parseInt(m, 10) - 1]} ${y}`;
 }
 
+/** Step a YYYY-MM by whole months. Month arithmetic on the 1st, so paging can
+ *  never skip a short month the way keeping a day-of-month would. */
+export function shiftMonth(ym: string, n: number): string {
+  const [y, m] = ym.split('-').map(Number);
+  const dt = new Date(y, m - 1 + n, 1);
+  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}`;
+}
+
 export function shiftDate(d: string, n: number): string {
   const dt = new Date(d + 'T00:00:00');
   dt.setDate(dt.getDate() + n);

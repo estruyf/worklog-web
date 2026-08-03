@@ -1,6 +1,8 @@
 // Barrel for UI presentational components.
 export { DisclosureIcon } from './icons';
 export { Kbd } from './Kbd';
+export { CopyButton } from './CopyButton';
+export type { CopyButtonProps } from './CopyButton';
 export { WorklogTaskRow } from './WorklogTaskRow';
 export { CompletedTaskRow } from './CompletedTaskRow';
 export type { CompletedTaskRowProps } from './CompletedTaskRow';

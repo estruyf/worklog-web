@@ -2,25 +2,31 @@ import React, { useMemo } from 'react';
 import type { MonthlyRow } from '../model';
 import { useData, useUi } from '../context';
 import { navigateToView } from '../router';
-import { EVENT_COLOR, monthLabel, num } from '../utils';
+import { EVENT_COLOR, num } from '../utils';
 import { HoursByClientChart } from '../components/charts/HoursByClientChart';
 import { MonthlyTrendChart, type TrendPoint } from '../components/charts/MonthlyTrendChart';
 import { isEventWorklogClientId } from '../../model/worklog';
-import { Select } from '../primitives';
-import { HoursTable, StatTile } from './insights-view';
+import { HoursTable, MonthPicker, StatTile } from './insights-view';
 
 /** Rolls up the selected month's worklog into per-client hours/days rows. */
 function useInsightsData() {
   const { worklog, clientName, colorOf, hoursPerDay, typeLabel } = useData();
   const { month } = useUi();
 
-  const monthsList = useMemo(() => {
-    const list = Array.from(new Set(worklog.map((w) => w.date.slice(0, 7)))).sort().reverse();
-    if (!list.includes(month)) {
-      list.unshift(month);
-    }
-    return list;
-  }, [worklog, month]);
+  // Hours per YYYY-MM: the month picker's captions and the trend chart's points
+  // are the same rollup, so it is derived once.
+  const hoursByMonth = useMemo(() => {
+    const byMonth: Record<string, number> = {};
+    worklog.forEach((w) => {
+      const m = w.date.slice(0, 7);
+      byMonth[m] = (byMonth[m] ?? 0) + w.hours;
+    });
+    Object.keys(byMonth).forEach((m) => {
+      byMonth[m] = Math.round(byMonth[m] * 10) / 10;
+    });
+    return byMonth;
+  }, [worklog]);
+
   const { monthlyRows, totalHours, clientCount, eventRows, eventTotalHours, eventTotalDays } = useMemo(() => {
     const clientAgg: Record<string, { hours: number; dayHours: Record<string, number> }> = {};
     const eventAgg: Record<string, { hours: number; dayHours: Record<string, number> }> = {};
@@ -69,19 +75,16 @@ function useInsightsData() {
     };
   }, [worklog, month, clientName, colorOf, hoursPerDay, typeLabel]);
 
-  const trend = useMemo<TrendPoint[]>(() => {
-    const byMonth: Record<string, number> = {};
-    worklog.forEach((w) => {
-      const m = w.date.slice(0, 7);
-      byMonth[m] = (byMonth[m] ?? 0) + w.hours;
-    });
-    return Object.keys(byMonth)
-      .sort()
-      .map((m) => ({ month: m, hours: Math.round(byMonth[m] * 10) / 10 }));
-  }, [worklog]);
+  const trend = useMemo<TrendPoint[]>(
+    () =>
+      Object.keys(hoursByMonth)
+        .sort()
+        .map((m) => ({ month: m, hours: hoursByMonth[m] })),
+    [hoursByMonth],
+  );
 
   return {
-    monthsList,
+    hoursByMonth,
     monthlyRows,
     totalHours,
     clientCount,
@@ -96,7 +99,8 @@ function useInsightsData() {
 
 export function InsightsView() {
   const { month, setMonth, setSelectedDate } = useUi();
-  const { monthsList, monthlyRows, totalHours, clientCount, totalDays, eventRows, eventTotalHours, eventTotalDays, hoursPerDay, trend } = useInsightsData();
+  const { today } = useData();
+  const { hoursByMonth, monthlyRows, totalHours, clientCount, totalDays, eventRows, eventTotalHours, eventTotalDays, hoursPerDay, trend } = useInsightsData();
   const onOpenDate = (d: string) => {
     navigateToView('day');
     setSelectedDate(d);
@@ -104,15 +108,15 @@ export function InsightsView() {
   return (
     <div className="flex-1 overflow-auto px-6 py-[34px]">
       <div className="max-w-[920px] mx-auto">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-6">
           <h1 className="text-[24px] font-bold m-0">Insights</h1>
-          <Select value={month} onChange={(e) => setMonth(e.target.value)} aria-label="Month">
-            {monthsList.map((m) => (
-              <option key={m} value={m}>
-                {monthLabel(m)}
-              </option>
-            ))}
-          </Select>
+          <MonthPicker
+            value={month}
+            onChange={setMonth}
+            hoursByMonth={hoursByMonth}
+            currentMonth={today.slice(0, 7)}
+            className="self-start md:self-auto"
+          />
         </div>
 
         <div className="grid grid-cols-3 gap-[14px] mb-[26px]">

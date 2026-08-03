@@ -1,6 +1,7 @@
 import React from 'react';
 import type { MonthlyRow } from '../../model';
 import { Card, cn, EmptyState, LinkButton } from '../../primitives';
+import { CopyButton } from '../../components';
 
 // One column string for the header, the rows and the total, so the three can
 // never drift out of alignment with each other.
@@ -41,15 +42,20 @@ export function HoursTable({ heading, rows, totalLabel, totalHours, totalDays, o
           </span>
           <span className="text-right tabular-nums">{r.hours}</span>
           <span className="text-right tabular-nums">{r.days}</span>
-          <div className="pl-[14px] flex flex-wrap gap-2">
-            {r.dates.map((d, idx) => (
-              <span key={d.date}>
-                <LinkButton size="inherit" onClick={() => onOpenDate(d.date)} className="tabular-nums">
-                  {d.label}
-                </LinkButton>
-                {idx < r.dates.length - 1 && <span className="text-neutral-675">,</span>}
-              </span>
-            ))}
+          <div className="pl-[14px] flex items-start gap-2">
+            {/* Inline flow, not flex: flex items are blockified, and a copy of a
+                flexed list comes out one date per line. Inline keeps it one line. */}
+            <div className="flex-1 min-w-0 leading-[1.7]">
+              {r.dates.map((d, idx) => (
+                <React.Fragment key={d.date}>
+                  <LinkButton size="inherit" onClick={() => onOpenDate(d.date)} className="tabular-nums align-baseline">
+                    {d.label}
+                  </LinkButton>
+                  {idx < r.dates.length - 1 && <span className="text-neutral-675">{', '}</span>}
+                </React.Fragment>
+              ))}
+            </div>
+            {r.dates.length > 0 && <CopyButton value={r.dates.map((d) => d.label).join(', ')} label={`Copy ${r.name} dates`} className="mt-px" />}
           </div>
         </div>
       ))}
