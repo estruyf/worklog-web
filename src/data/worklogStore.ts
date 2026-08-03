@@ -5,8 +5,10 @@
 //   - direct async action methods (createTask, setWorklog, saveImage, …) the UI
 //     calls straight — no message bus.
 // Every persisted edit re-derives the state, marks the tree dirty, and arms a
-// debounced auto-commit. Syncing goes both ways: it first asks GitHub where the
-// branch head is, pulls when the branch moved, and pushes the dirty files back.
+// debounced auto-commit — a short one when the edit is one of the change kinds
+// configured to sync on, the configured delay otherwise (see `scheduleCommit`).
+// Syncing goes both ways: it first asks GitHub where the branch head is, pulls
+// when the branch moved, and pushes the dirty files back.
 //
 // What lives here is the sequencing — when to fetch, merge, re-parse, notify and
 // re-render. The pieces it sequences are their own modules: `repoApi` (the three
@@ -35,7 +37,8 @@ import {
 import { removeWorklog, setEventWorklog, setWorklog } from '../services/worklog';
 import { updateSettings, type SettingsFields } from '../services/settings';
 import type { WorklogState } from '../ui/state';
-import type { Client } from '../model/types';
+import type { AutoSyncConfig, Client } from '../model/types';
+import { syncsOnChange } from '../model/syncEvents';
 import { DEFAULT_AUTO_SYNC } from '../workspace/paths';
 import { clearPending, clearSnapshot, loadPending, repoKeyOf, savePending, type PendingSnapshot } from './pendingStore';
 import { AssetUrlCache } from './assetUrls';
@@ -74,6 +77,11 @@ type ToastListener = (toast: ToastMessage | null) => void;
  *  coalesces into a single write. */
 const PERSIST_DEBOUNCE_MS = 800;
 
+/** Debounce before a sync triggered by one of the configured events. Not zero:
+ *  ticking a task off is two writes often enough (close, then the note about it),
+ *  and a couple of seconds is still "right away" to the person who did it. */
+const EVENT_SYNC_DEBOUNCE_MS = 2_000;
+
 class WorklogStore {
   private store = new Store();
   private fm = new FileMap();
@@ -81,6 +89,9 @@ class WorklogStore {
   private loaded = false;
   private committing = false;
   private commitTimer: ReturnType<typeof setTimeout> | undefined;
+  /** True while `commitTimer` is the short event-triggered one rather than the
+   *  `delayMinutes` one, so a later edit can't quietly push it back. */
+  private eventSyncArmed = false;
   private persistTimer: ReturnType<typeof setTimeout> | undefined;
   private rolloverTimer: ReturnType<typeof setTimeout> | undefined;
   // A recovered snapshot loaded on open, held until the user restores or discards it.
@@ -99,10 +110,11 @@ class WorklogStore {
 
   constructor() {
     // Every persisted edit re-derives the state, flags the tree dirty, and arms
-    // the debounced auto-commit.
-    this.store.onDidChange(() => {
+    // the debounced auto-commit. The reason decides which debounce: the change
+    // kinds the user picked in Settings sync in seconds, everything else waits.
+    this.store.onDidChange((reason) => {
       this.updateSnapshot({ data: this.deriveState(), gitPending: this.fm.dirty.size > 0 });
-      this.scheduleCommit();
+      this.scheduleCommit(reason);
       this.schedulePersist();
     });
   }
@@ -279,7 +291,7 @@ class WorklogStore {
       // made another edit or pressed Sync — silently, which is the one failure
       // mode a timesheet can't afford.
       if (this.fm.dirty.size > 0) {
-        this.scheduleCommit();
+        this.scheduleRetry();
       }
     }
   }
@@ -534,24 +546,66 @@ class WorklogStore {
 
   // ---- timers ---------------------------------------------------------------
 
-  /** Arm the debounced auto-commit, but only when auto-sync is enabled in config.
-   *  The delay comes from `autoSync.delayMinutes`; a burst of edits coalesces into
-   *  a single sync. Manual "Git sync" and 409 retries bypass this. */
-  private scheduleCommit(): void {
+  /** Arm the debounced auto-commit for a change made for `reason`. Two ways in:
+   *  the change is one of the events the user asked to sync on, and it goes in
+   *  seconds; or timed auto-sync is enabled, and it waits out `delayMinutes` so a
+   *  burst of edits coalesces into one sync. With neither, nothing is armed and
+   *  the changes wait for the Sync button. Manual sync and 409 retries bypass this. */
+  private scheduleCommit(reason: string): void {
+    const autoSync = this.autoSyncConfig();
+    const onEvent = syncsOnChange(autoSync.events, reason);
+    // An event sync already counting down is not pushed back by a change that
+    // isn't itself a trigger. "Sync when I create a task" has to mean that task
+    // reaches GitHub in seconds, whatever else gets typed in the meantime.
+    if (this.eventSyncArmed && !onEvent) {
+      return;
+    }
     // Disarm first, then decide: turning auto-sync off has to cancel the timer that
     // is already running, not merely stop the next one being set.
     this.clearCommitTimer();
-    const autoSync = this.store.getConfig()?.autoSync ?? DEFAULT_AUTO_SYNC;
     // A sync in flight would swallow the timer's call (`sync` returns early while
     // `committing`), so don't arm one — `sync`'s own `finally` re-arms instead.
-    if (!autoSync.enabled || this.committing) {
+    if (this.committing || (!onEvent && !autoSync.enabled)) {
       return;
     }
-    const delay = Math.max(1, autoSync.delayMinutes) * 60_000;
-    this.commitTimer = setTimeout(() => void this.sync({ silent: true }), delay);
+    if (onEvent) {
+      this.eventSyncArmed = true;
+      this.commitTimer = setTimeout(() => {
+        // Clear before syncing, not from inside `sync`: it returns early when a
+        // sync is already running, and a flag left set would block every later
+        // timer from being armed.
+        this.eventSyncArmed = false;
+        this.commitTimer = undefined;
+        void this.sync({ silent: true });
+      }, EVENT_SYNC_DEBOUNCE_MS);
+      return;
+    }
+    this.commitTimer = setTimeout(() => void this.sync({ silent: true }), this.autoSyncDelayMs(autoSync));
+  }
+
+  /** Re-arm after a sync left files behind (it failed, or an edit landed mid-flight).
+   *  Event triggers count as automatic sync being on here: work stranded by a failed
+   *  event sync must not sit until the user happens to trigger another one. Uses the
+   *  delay rather than the event debounce — this is a retry, not a fresh change. */
+  private scheduleRetry(): void {
+    this.clearCommitTimer();
+    const autoSync = this.autoSyncConfig();
+    if (this.committing || (!autoSync.enabled && autoSync.events.length === 0)) {
+      return;
+    }
+    this.commitTimer = setTimeout(() => void this.sync({ silent: true }), this.autoSyncDelayMs(autoSync));
+  }
+
+  private autoSyncConfig(): AutoSyncConfig {
+    return this.store.getConfig()?.autoSync ?? DEFAULT_AUTO_SYNC;
+  }
+
+  private autoSyncDelayMs(autoSync: AutoSyncConfig): number {
+    return Math.max(1, autoSync.delayMinutes) * 60_000;
   }
 
   private clearCommitTimer(): void {
+    this.eventSyncArmed = false;
     if (this.commitTimer) {
       clearTimeout(this.commitTimer);
       this.commitTimer = undefined;

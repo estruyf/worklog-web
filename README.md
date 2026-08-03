@@ -157,6 +157,14 @@ The dashboard has these views:
 GitHub automatically about a minute after your last change. Click the **sync** button in the top
 bar to commit right away. Commit messages use the format `chore: worklog sync <date>`.
 
+Settings has a second lever for this: **Sync right away after** — tick the kinds of change worth
+pushing without delay (a task or to-do created, a task changing state, a task edited, time logged,
+clients or settings changed) and those are committed within seconds rather than waiting out the sync
+delay. It stands on its own, so you can leave the background timer off entirely and still have the
+changes you care about land on the branch as you make them. Everything else then waits for the sync
+button — except a failed automatic sync, which is retried on the delay either way rather than left
+sitting.
+
 A sync goes both ways: it first checks where the branch head is on GitHub and pulls in anything
 committed elsewhere — another device, an edit made on github.com — before (and, when the branch had
 moved, again after) pushing your own changes. With nothing of your own to push, sync is a plain pull.

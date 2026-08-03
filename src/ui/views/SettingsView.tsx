@@ -1,6 +1,7 @@
 import React, { useEffect, useId, useState } from 'react';
 import { Button, Card, Input, Select, Toggle } from '../primitives';
 import { useData } from '../context';
+import { AUTO_SYNC_EVENTS, type AutoSyncEvent } from '../../model/syncEvents';
 
 const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
@@ -42,8 +43,16 @@ export function SettingsView() {
   const [todoPage, setTodoPage] = useState(String(todosPerPage));
   const [syncEnabled, setSyncEnabled] = useState(autoSync.enabled);
   const [syncDelay, setSyncDelay] = useState(String(autoSync.delayMinutes));
+  const [syncEvents, setSyncEvents] = useState<AutoSyncEvent[]>(autoSync.events);
   const [saved, setSaved] = useState(false);
   const ids = useId();
+
+  // The saved event list as a value, not a reference: `autoSync` is rebuilt from
+  // config.json on every derive, so its `events` array is a fresh object each time
+  // and depending on it would re-seed — discarding what's half-ticked here — on any
+  // unrelated edit. The order is canonical (see parseAutoSyncEvents), so this is
+  // stable for as long as the setting is.
+  const savedEvents = autoSync.events.join(',');
 
   // Re-seed from the snapshot after it re-derives (initial load, save, repo switch).
   useEffect(() => {
@@ -61,6 +70,9 @@ export function SettingsView() {
   useEffect(() => {
     setSyncDelay(String(autoSync.delayMinutes));
   }, [autoSync.delayMinutes]);
+  useEffect(() => {
+    setSyncEvents(savedEvents ? (savedEvents.split(',') as AutoSyncEvent[]) : []);
+  }, [savedEvents]);
 
   const parsedHours = parseFloat(hours);
   const hoursValid = Number.isFinite(parsedHours) && parsedHours > 0;
@@ -76,9 +88,22 @@ export function SettingsView() {
     week !== weekStart ||
     (todoPageValid && parsedTodoPage !== todosPerPage) ||
     syncEnabled !== autoSync.enabled ||
-    (delayValid && parsedDelay !== autoSync.delayMinutes);
+    (delayValid && parsedDelay !== autoSync.delayMinutes) ||
+    syncEvents.join(',') !== savedEvents;
 
   const canSave = dirty && hoursValid && todoPageValid && (!syncEnabled || delayValid);
+
+  /** Tick an event on or off, keeping the list in the canonical order so saving
+   *  the same set twice writes the same config.json. */
+  const toggleEvent = (id: AutoSyncEvent, on: boolean) => {
+    setSyncEvents(AUTO_SYNC_EVENTS.filter((e) => (e.id === id ? on : syncEvents.includes(e.id))).map((e) => e.id));
+  };
+
+  // The all-switch reads as on only when every event is: a half-ticked list is
+  // not "on", and the first click from there should complete the set rather than
+  // clear the few that were chosen.
+  const allEvents = syncEvents.length === AUTO_SYNC_EVENTS.length;
+  const toggleAllEvents = (on: boolean) => setSyncEvents(on ? AUTO_SYNC_EVENTS.map((e) => e.id) : []);
 
   const onSave = () => {
     if (!canSave) {
@@ -88,7 +113,7 @@ export function SettingsView() {
       hoursPerDay: parsedHours,
       weekStart: week,
       todosPerPage: parsedTodoPage,
-      autoSync: { enabled: syncEnabled, delayMinutes: parsedDelay },
+      autoSync: { enabled: syncEnabled, delayMinutes: parsedDelay, events: syncEvents },
     });
     setSaved(true);
     window.setTimeout(() => setSaved(false), 2000);
@@ -166,7 +191,7 @@ export function SettingsView() {
                   means. The `Toggle` carries its own name instead. */}
               <div className="text-row font-semibold">Automatic Git sync</div>
               <div className="text-control text-neutral-675 mt-[3px]">
-                Commit and push in the background shortly after you log time, so your timesheet doesn’t sit unpushed. Only errors are shown.
+                Commit and push in the background a while after your last change, so your timesheet doesn’t sit unpushed. Only errors are shown.
               </div>
             </div>
             <Toggle checked={syncEnabled} onChange={setSyncEnabled} aria-label="Automatic Git sync" />
@@ -193,6 +218,39 @@ export function SettingsView() {
               </div>
             </SettingRow>
           )}
+
+          <div className="px-[18px] py-[18px]">
+            <div className="flex items-start justify-between gap-6">
+              <div>
+                <div className="text-row font-semibold">Sync right away after</div>
+                <div className="text-control text-neutral-675 mt-[3px]">
+                  Changes of these kinds are pushed within seconds instead of waiting out the delay. They work on their
+                  own — with automatic Git sync off, these are the only changes that sync by themselves.
+                </div>
+              </div>
+              {/* A fixed name, not one that changes with the state: `aria-checked`
+                  already says which way it points, and a label that reads
+                  differently on each press is what makes a switch hard to follow. */}
+              <Toggle checked={allEvents} onChange={toggleAllEvents} aria-label="Sync right away after every change" />
+            </div>
+            <div className="mt-3 divide-y divide-neutral-250 border-t border-neutral-250">
+              {AUTO_SYNC_EVENTS.map((event) => (
+                <div key={event.id} className="flex items-start justify-between gap-6 py-3">
+                  <div>
+                    {/* Same reasoning as the switch above: no `<label htmlFor>`, or
+                        clicking the explanation would flip the switch. */}
+                    <div className="text-control font-medium">{event.label}</div>
+                    <div className="text-meta text-neutral-675 mt-[2px]">{event.description}</div>
+                  </div>
+                  <Toggle
+                    checked={syncEvents.includes(event.id)}
+                    onChange={(on) => toggleEvent(event.id, on)}
+                    aria-label={`Sync right away after: ${event.label}`}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
         </Card>
 
         {!hoursValid && (

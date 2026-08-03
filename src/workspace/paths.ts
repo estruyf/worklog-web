@@ -6,11 +6,12 @@
 
 import type { AutoSyncConfig, Client, DaylogConfig, StatusDef, TaskLink } from '../model/types';
 import { DEFAULT_STATUSES } from '../model/status';
+import { parseAutoSyncEvents } from '../model/syncEvents';
 
 export const DEFAULT_HOURS_PER_DAY = 8;
 export const DEFAULT_WEEK_START = 0; // Sunday
 export const DEFAULT_TODOS_PER_PAGE = 5;
-export const DEFAULT_AUTO_SYNC: AutoSyncConfig = { enabled: false, delayMinutes: 5 };
+export const DEFAULT_AUTO_SYNC: AutoSyncConfig = { enabled: false, delayMinutes: 5, events: [] };
 
 /** Normalize a config `todosPerPage` to a whole number of at least 1, falling
  *  back to the default for missing/invalid values. */
@@ -19,14 +20,16 @@ export function parseTodosPerPage(value: unknown): number {
 }
 
 /** Normalize a config `autoSync` block, clamping the delay to a sane minimum and
- *  falling back to the defaults for missing/invalid fields. */
+ *  falling back to the defaults for missing/invalid fields. Always returns fresh
+ *  objects — `DEFAULT_AUTO_SYNC` is shared, and its `events` array must not become
+ *  a config's live one. */
 export function parseAutoSync(value: unknown): AutoSyncConfig {
   const raw = (value ?? {}) as Partial<AutoSyncConfig>;
   const delay =
     typeof raw.delayMinutes === 'number' && Number.isFinite(raw.delayMinutes) && raw.delayMinutes >= 1
       ? raw.delayMinutes
       : DEFAULT_AUTO_SYNC.delayMinutes;
-  return { enabled: raw.enabled === true, delayMinutes: delay };
+  return { enabled: raw.enabled === true, delayMinutes: delay, events: parseAutoSyncEvents(raw.events) };
 }
 
 /** Normalize reference links from anywhere they arrive as loose data — config
@@ -176,6 +179,19 @@ export async function ensureDir(_path: string): Promise<void> {
 
 // ---- Workspace layout (paths are repo-relative strings) ------------------
 
+/** The config a repo with no (or an unreadable) config.json is read as. Built
+ *  fresh per call: the caller owns the result and may edit it in place. */
+function defaultConfig(): DaylogConfig {
+  return {
+    hoursPerDay: DEFAULT_HOURS_PER_DAY,
+    weekStart: DEFAULT_WEEK_START,
+    todosPerPage: DEFAULT_TODOS_PER_PAGE,
+    clients: [],
+    statuses: DEFAULT_STATUSES,
+    autoSync: parseAutoSync(undefined),
+  };
+}
+
 export class Workspace {
   get configDir(): string {
     return '.worklog';
@@ -212,7 +228,7 @@ export class Workspace {
   async loadConfig(): Promise<DaylogConfig> {
     const raw = await readText(this.configFile);
     if (raw === undefined) {
-      return { hoursPerDay: DEFAULT_HOURS_PER_DAY, weekStart: DEFAULT_WEEK_START, todosPerPage: DEFAULT_TODOS_PER_PAGE, clients: [], statuses: DEFAULT_STATUSES, autoSync: { ...DEFAULT_AUTO_SYNC } };
+      return defaultConfig();
     }
     try {
       const parsed = JSON.parse(raw) as Partial<DaylogConfig>;
@@ -240,7 +256,7 @@ export class Workspace {
         autoSync: parseAutoSync(parsed.autoSync),
       };
     } catch {
-      return { hoursPerDay: DEFAULT_HOURS_PER_DAY, weekStart: DEFAULT_WEEK_START, todosPerPage: DEFAULT_TODOS_PER_PAGE, clients: [], statuses: DEFAULT_STATUSES, autoSync: { ...DEFAULT_AUTO_SYNC } };
+      return defaultConfig();
     }
   }
 

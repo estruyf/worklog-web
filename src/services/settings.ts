@@ -3,6 +3,7 @@
 // statuses: defaults). Writes config.json and rebuilds so views pick up the change.
 
 import { Store } from '../store';
+import { parseAutoSyncEvents, type AutoSyncEvent } from '../model/syncEvents';
 import { parseWeekStart } from '../workspace/paths';
 
 export interface SettingsFields {
@@ -12,8 +13,9 @@ export interface SettingsFields {
   weekStart?: number;
   /** How many open to-dos the day view's side list shows per page. */
   todosPerPage?: number;
-  /** Automatic Git sync after logging time. Only the provided keys are changed. */
-  autoSync?: { enabled?: boolean; delayMinutes?: number };
+  /** Automatic Git sync after logging time. Only the provided keys are changed;
+   *  `events` is the change kinds that sync right away instead of on the delay. */
+  autoSync?: { enabled?: boolean; delayMinutes?: number; events?: AutoSyncEvent[] };
 }
 
 /** Update app-wide settings in config.json, then rebuild. */
@@ -47,7 +49,11 @@ export async function updateSettings(store: Store, fields: SettingsFields): Prom
     if (!Number.isFinite(delayMinutes) || delayMinutes < 1) {
       throw new Error('Auto-sync delay must be at least 1 minute.');
     }
-    config.autoSync = { enabled, delayMinutes };
+    // Normalized rather than validated: an id this version doesn't know is a
+    // config written by a newer one, and dropping it silently beats refusing to
+    // save the rest of the settings.
+    const events = fields.autoSync.events === undefined ? config.autoSync.events : parseAutoSyncEvents(fields.autoSync.events);
+    config.autoSync = { enabled, delayMinutes, events };
   }
 
   await store.ws.saveConfig(config);

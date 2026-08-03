@@ -9,7 +9,10 @@ import { rebuild } from './workspace/indexer';
 import { Workspace } from './workspace/paths';
 import type { DaylogConfig } from './model/types';
 
-type Listener = () => void;
+/** The reason is the name the caller gave the change ("addTask", "setStatus", …).
+ *  `model/syncEvents` maps it to the event auto-sync reacts to, which is why the
+ *  strings are part of the contract and not just a debugging aid. */
+type Listener = (reason: string) => void;
 
 export class Store {
   readonly db = new MemoryDb();
@@ -18,10 +21,10 @@ export class Store {
   private readonly listeners = new Set<Listener>();
 
   /** Rebuild from the mounted file map (called once after load, then after each edit). */
-  async rebuild(_reason: string): Promise<void> {
+  async rebuild(reason: string): Promise<void> {
     this.config = await this.ws.loadConfig();
     await rebuild(this.db, this.ws);
-    this.emitChange();
+    this.emitChange(reason);
   }
 
   getConfig(): DaylogConfig {
@@ -33,9 +36,9 @@ export class Store {
     return () => this.listeners.delete(listener);
   }
 
-  private emitChange(): void {
+  private emitChange(reason: string): void {
     for (const l of this.listeners) {
-      l();
+      l(reason);
     }
   }
 }

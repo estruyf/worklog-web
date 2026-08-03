@@ -11,6 +11,7 @@
 
 import { useCallback, useMemo } from "react";
 import { worklogStore, type ToastMessage } from "../../data/worklogStore";
+import type { AutoSyncConfig, AutoSyncEvent } from "../../model/types";
 import type { WorklogState } from "../state";
 import { useClientModel } from "./model/useClientModel";
 import { useLogModel } from "./model/useLogModel";
@@ -20,6 +21,10 @@ import { useTaskActions } from "./model/useTaskActions";
 import { useTaskFormActions } from "./model/useTaskFormActions";
 import { useTaskRows } from "./model/useTaskRows";
 import type { WorklogUiState } from "./useWorklogUiState";
+
+/** What `autoSync` reads as before a repo is loaded. A module constant so the
+ *  reference is stable across renders, like the memoized collections below. */
+const NO_AUTO_SYNC: AutoSyncConfig = { enabled: false, delayMinutes: 5, events: [] };
 
 export function useWorklogModel(
   snap: WorklogState | null,
@@ -45,7 +50,7 @@ export function useWorklogModel(
   const hoursPerDay = snap?.hoursPerDay ?? 0;
   const weekStart = snap?.weekStart ?? 0;
   const todosPerPage = snap?.todosPerPage ?? 5;
-  const autoSync = snap?.autoSync ?? { enabled: false, delayMinutes: 5 };
+  const autoSync = snap?.autoSync ?? NO_AUTO_SYNC;
   const { selectedDate, selectedClient } = ui;
 
   // Markdown image refs resolve against the store's in-memory asset bytes, so a
@@ -79,7 +84,7 @@ export function useWorklogModel(
     hoursPerDay?: number;
     weekStart?: number;
     todosPerPage?: number;
-    autoSync?: { enabled?: boolean; delayMinutes?: number };
+    autoSync?: { enabled?: boolean; delayMinutes?: number; events?: AutoSyncEvent[] };
   }) => worklogStore.updateSettings(fields);
 
   return {

@@ -2,8 +2,10 @@
 // structured records the parser produces and the cache stores.
 
 import type { Recurrence } from './recurrence';
+import type { AutoSyncEvent } from './syncEvents';
 
 export type { Recurrence } from './recurrence';
+export type { AutoSyncEvent } from './syncEvents';
 
 // Statuses are configurable (see StatusDef / config.json). The type is a plain
 // string id; the configured StatusDef list supplies labels, colors and which id
@@ -96,6 +98,10 @@ export interface AutoSyncConfig {
   enabled: boolean;
   /** Minutes to wait after the last change before syncing; edits coalesce into one. */
   delayMinutes: number;
+  /** Change kinds that sync within seconds instead of waiting out `delayMinutes`.
+   *  Independent of `enabled`: ticking one is a way to have exactly the changes
+   *  that matter pushed promptly without a background timer running at all. */
+  events: AutoSyncEvent[];
 }
 
 export interface DaylogConfig {
