@@ -5,7 +5,7 @@ import { useCallback, useMemo } from "react";
 import type { Client, Task, WorklogEntry } from "../../../model/types";
 import { worklogStore } from "../../../data/worklogStore";
 import { GENERAL_TODO_COLOR, GENERAL_TODO_LABEL, isGeneralTodoClientId } from "../../../model/todos";
-import { eventTypeFromClientId, formatEventTypeLabel, isEventWorklogClientId } from "../../../model/worklog";
+import { eventLabel, eventTypeFromClientId, isEventWorklogClientId } from "../../../model/worklog";
 import { PALETTE } from "../../utils";
 import type { WorklogUiState } from "../useWorklogUiState";
 
@@ -46,7 +46,7 @@ export function useClientModel(
       (isGeneralTodoClientId(id)
         ? GENERAL_TODO_LABEL
         : isEventWorklogClientId(id)
-          ? formatEventTypeLabel(eventTypeFromClientId(id))
+          ? eventLabel(eventTypeFromClientId(id))
           : "?"),
     [clientById],
   );

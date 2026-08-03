@@ -13,6 +13,11 @@ export function fmtShort(d: string): string {
   return `${dt.getDate()} ${MONTHS[dt.getMonth()]}`;
 }
 
+/** The short weekday name of a date ("Fri"). */
+export function weekdayShort(d: string): string {
+  return WEEKDAYS[new Date(d + 'T00:00:00').getDay()];
+}
+
 export function monthLabel(ym: string): string {
   const [y, m] = ym.split('-');
   return `${MONTHS[parseInt(m, 10) - 1]} ${y}`;

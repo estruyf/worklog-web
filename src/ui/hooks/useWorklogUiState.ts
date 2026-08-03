@@ -50,7 +50,9 @@ export function useWorklogUiState() {
   // effect to keep "which task are these fields for" honest.
 
   const [logOpen, setLogOpen] = useState(false);
-  const [logEditing, setLogEditing] = useState(false);
+  // The worklog client id the editor is editing, '' while it is logging a new
+  // entry. Doubles as "is this an edit", which is why there is no separate flag.
+  const [logEditingClientId, setLogEditingClientId] = useState("");
   const [logIsEvent, setLogIsEvent] = useState(false);
   const [logEventType, setLogEventType] = useState("vacation");
   const [logClient, setLogClient] = useState("");
@@ -115,8 +117,8 @@ export function useWorklogUiState() {
     setSearchSel,
     logOpen,
     setLogOpen,
-    logEditing,
-    setLogEditing,
+    logEditingClientId,
+    setLogEditingClientId,
     logIsEvent,
     setLogIsEvent,
     logEventType,

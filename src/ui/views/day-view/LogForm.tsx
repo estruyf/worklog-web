@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import type { Client } from '../../../model/types';
+import { EVENT_TYPES } from '../../../model/worklog';
 import { Button, Field, Input, Select } from '../../primitives';
 import type { LogState } from '../../model';
 
@@ -9,11 +10,15 @@ type LogFormProps = {
   setLogState: (state: LogState) => void;
   saveLog: () => void;
   removeLog: () => void;
+  /** Closes the form *and* forgets which entry it was on — `open: false` alone
+   *  would leave the day bar highlighting a segment nothing is editing. */
+  close: () => void;
   clients: Client[];
   colorOf: (clientId: string) => string;
 };
 
-export function LogForm({ logState, setLogState, saveLog, removeLog, clients, colorOf }: LogFormProps) {
+export function LogForm({ logState, setLogState, saveLog, removeLog, close, clients, colorOf }: LogFormProps) {
+  const editing = !!logState.editingClientId;
   const [clientPickerOpen, setClientPickerOpen] = useState(false);
   const [clientQuery, setClientQuery] = useState('');
   const clientPickerRef = useRef<HTMLDivElement | null>(null);
@@ -48,11 +53,13 @@ export function LogForm({ logState, setLogState, saveLog, removeLog, clients, co
   }, [clientPickerOpen]);
 
   return (
-    <div className="px-5 py-[18px] bg-neutral-75 border border-neutral-400 rounded-xl mb-[34px]">
+    // A panel inside the day card, not a section of its own: `rounded-panel` is
+    // the corner for a box whose outer one has already been paid for.
+    <div className="px-5 py-[18px] mt-4 bg-neutral-75 border border-neutral-400 rounded-panel">
       <div className="flex items-center justify-between mb-4">
-        <div className="text-control font-semibold">{logState.editing ? 'Edit logged time' : 'Log time'}</div>
+        <div className="text-control font-semibold">{editing ? 'Edit logged time' : 'Log time'}</div>
         <button
-          onClick={() => setLogState({ ...logState, open: false })}
+          onClick={close}
           className="bg-none border-none text-[17px] text-neutral-625 cursor-pointer leading-none"
         >
           ×
@@ -91,12 +98,11 @@ export function LogForm({ logState, setLogState, saveLog, removeLog, clients, co
                   value={logState.eventType}
                   onChange={(e) => setLogState({ ...logState, eventType: e.target.value })}
                 >
-                  <option value="vacation">Vacation</option>
-                  <option value="public-holiday">Public holiday</option>
-                  <option value="out-of-office">Out of office</option>
-                  <option value="conference">Conference</option>
-                  <option value="sick">Sick day</option>
-                  <option value="other">Other</option>
+                  {EVENT_TYPES.map((e) => (
+                    <option key={e.id} value={e.id}>
+                      {e.label}
+                    </option>
+                  ))}
                 </Select>
               </Field>
             </>
@@ -160,7 +166,7 @@ export function LogForm({ logState, setLogState, saveLog, removeLog, clients, co
           <div className="flex gap-[6px]">
             {[
               { t: 'full', label: 'Full day' },
-              { t: 'half', label: '1/2 day' },
+              { t: 'half', label: '½ day' },
               { t: 'hours', label: 'Hours' },
             ].map(({ t, label }) => {
               const active = logState.type === t;
@@ -202,9 +208,9 @@ export function LogForm({ logState, setLogState, saveLog, removeLog, clients, co
           />
         </Field>
         <Button variant="primary" size="md" onClick={saveLog}>
-          {logState.editing ? 'Save' : 'Log'}
+          {editing ? 'Save' : 'Log'}
         </Button>
-        {logState.editing && (
+        {editing && (
           <Button variant="danger" size="md" onClick={removeLog} title="Remove this entry">
             Remove
           </Button>

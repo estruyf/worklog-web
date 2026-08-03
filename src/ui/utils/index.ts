@@ -1,6 +1,6 @@
 // Barrel for UI utilities.
 export { PALETTE, MONTHS, WEEKDAYS, STATUS_COLORS } from "./constants";
-export { fmtLong, fmtShort, monthLabel, shiftDate, num } from "./date";
+export { fmtLong, fmtShort, monthLabel, shiftDate, weekdayShort, num } from "./date";
 export { clientIdOf, isDone, workedOnDate, dueOn, linksOf } from "./task";
 export { resolveStatusMeta } from "./status";
 export { renderMarkdown, makeImageResolver } from "./markdown";
@@ -31,5 +31,7 @@ export {
   EVENT_COLOR,
 } from "./calendar";
 export type { CalendarMode, CalendarWorkDeps, ClientWorkGroup, WorkedItem } from "./calendar";
+export { deriveDayBar, previousLoggedDay, roundHours } from "./dayBar";
+export type { DayBarModel, DaySegment } from "./dayBar";
 export { defaultTaskClientId } from "./newTaskDefaultClient";
 export { addTag, isNewTag, matchExistingTag, normalizeTag, removeTag, suggestTags } from "./tags";

@@ -5,12 +5,13 @@ import { collectOverdue } from '../../model/overdue';
 import type { ClientTaskGroup } from '../model';
 import { useData, useUi } from '../context';
 import { useTaskListFilter } from '../hooks';
-import { clientIdOf, dueOn, isDone, workedOnDate } from '../utils';
+import { Card } from '../primitives';
+import { clientIdOf, deriveDayBar, dueOn, isDone, previousLoggedDay, workedOnDate } from '../utils';
 import {
+  DayBar,
   DayHeader,
   DoneTasksSection,
   DueTasksSection,
-  LoggedSection,
   LogForm,
   OpenTasksSection,
   OverdueTasksSection,
@@ -100,7 +101,7 @@ function useDayData() {
 }
 
 export function DayView() {
-  const { today, clients, allClients, colorOf, clientName, statusMeta, reopen, openDetail, typeLabel, hoursPerDay, todosPerPage, logState, setLogState, saveLog, removeLog, editLog, openLogForm, openTaskFormForDue } = useData();
+  const { today, worklog, clients, allClients, colorOf, clientName, statusMeta, reopen, openDetail, typeLabel, hoursPerDay, todosPerPage, logState, setLogState, saveLog, removeLog, closeLogForm, editLog, openLogForm, copyDayLogs, openTaskFormForDue } = useData();
   const { selectedDate, setSelectedDate, editDayOpen, setEditDayOpen } = useUi();
   const {
     openTasks,
@@ -124,9 +125,20 @@ export function DayView() {
   }, [clients, allClients, logState.client]);
   const openTasksCount = openTasks.length;
   const isFuture = selectedDate > today;
-  // Day rollup for the LOGGED pill: total hours and the derived days.
-  const loggedHours = dayLogs.reduce((sum, l) => sum + l.hours, 0);
-  const loggedDays = hoursPerDay ? Math.round((loggedHours / hoursPerDay) * 100) / 100 : 0;
+  // The day bar's geometry: one segment per entry, plus whatever is left of the
+  // working day. Over-logging is allowed — the bar grows past the target and says
+  // so rather than the editor refusing the hours.
+  const bar = useMemo(() => deriveDayBar(dayLogs, hoursPerDay), [dayLogs, hoursPerDay]);
+  // Offered on an empty day only, so the one-click path can never overwrite what
+  // is already there.
+  const copyFrom = useMemo(
+    () => (dayLogs.length === 0 ? previousLoggedDay(worklog, selectedDate) : undefined),
+    [dayLogs.length, worklog, selectedDate],
+  );
+  // Clicking the segment the form is already on closes it: the segment is the
+  // entry, so it is the same control either way.
+  const onEditLog = (clientId: string) =>
+    logState.open && logState.editingClientId === clientId ? closeLogForm() : editLog(clientId);
 
   return (
     <div className="flex-1 overflow-auto px-6 pt-8 pb-20">
@@ -159,27 +171,34 @@ export function DayView() {
           </aside>
 
           <div className="min-w-0 xl:col-start-1 xl:row-start-2">
-            <LoggedSection
-              dayLogs={dayLogs}
-              loggedHours={loggedHours}
-              loggedDays={loggedDays}
-              colorOf={colorOf}
-              clientName={clientName}
-              typeLabel={typeLabel}
-              editLog={editLog}
-              openLogForm={openLogForm}
-            />
-
-            {logState.open && (
-              <LogForm
-                logState={logState}
-                setLogState={setLogState}
-                saveLog={saveLog}
-                removeLog={removeLog}
-                clients={logClients}
+            {/* The day is one card: the bar, and the form for whichever slice of
+              * it you clicked. */}
+            <Card padding="md" className="mb-[34px]">
+              <DayBar
+                bar={bar}
+                selectedDate={selectedDate}
+                clientName={clientName}
                 colorOf={colorOf}
+                typeLabel={typeLabel}
+                activeClientId={logState.open ? logState.editingClientId : ''}
+                editLog={onEditLog}
+                logTime={openLogForm}
+                copyFrom={copyFrom}
+                copyDay={copyDayLogs}
               />
-            )}
+
+              {logState.open && (
+                <LogForm
+                  logState={logState}
+                  setLogState={setLogState}
+                  saveLog={saveLog}
+                  removeLog={removeLog}
+                  close={closeLogForm}
+                  clients={logClients}
+                  colorOf={colorOf}
+                />
+              )}
+            </Card>
 
             <OpenTasksSection
               isTodaySel={isTodaySel}

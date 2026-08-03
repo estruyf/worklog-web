@@ -2,7 +2,7 @@ export { DayHeader } from './DayHeader';
 export { DueTasksSection } from './DueTasksSection';
 export { GroupCard } from './GroupCard';
 export { OverdueTasksSection } from './OverdueTasksSection';
-export { LoggedSection } from './LoggedSection';
+export { DayBar } from './DayBar';
 export { LogForm } from './LogForm';
 export { OpenTasksSection } from './OpenTasksSection';
 export { WorkedTasksSection } from './WorkedTasksSection';

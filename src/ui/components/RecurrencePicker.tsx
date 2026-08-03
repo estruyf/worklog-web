@@ -7,7 +7,7 @@ import {
   type Recurrence,
   type RecurrenceAnchor,
 } from '../../model/recurrence';
-import { kindOf, RECURRENCE_PRESETS, seedFor } from '../../model/recurrencePresets';
+import { kindOf, RECURRENCE_PRESETS, retargetToStart, seedFor } from '../../model/recurrencePresets';
 import { Chip, DateInput, Field, Input, LinkButton, Select, SegmentedControl } from '../primitives';
 import { parseISODate, today, weekdayOf } from '../../util/date';
 
@@ -166,6 +166,22 @@ export function RecurrencePicker({
       onChange(formatRecurrence({ ...parsed, ...patch }));
     }
   };
+  /**
+   * Moving the start date moves whatever the preset read off it — a chip picked
+   * before the date was set would otherwise keep naming the day it was clicked.
+   * A hand-written expression is left exactly as typed: there the day is the
+   * user's own text, not something this picker derived.
+   */
+  const changeDue = (next: string) => {
+    onDueChange(next);
+    if (!parsed || custom) {
+      return;
+    }
+    const expr = formatRecurrence(retargetToStart(parsed, next));
+    if (expr !== value.trim()) {
+      onChange(expr);
+    }
+  };
 
   // Where the series begins: the start date if one is set, otherwise the slot the
   // rule picks for itself from today.
@@ -273,7 +289,7 @@ export function RecurrencePicker({
           runs Jan/Apr/Jul or Feb/May/Aug, and only this says which. */}
       {repeats && (
         <div className="flex flex-wrap gap-[14px] mb-[14px]">
-          <DateField label="Starts on" value={due} onChange={onDueChange} />
+          <DateField label="Starts on" value={due} onChange={changeDue} />
           <DateField label="Until" value={until} onChange={onUntilChange} />
         </div>
       )}

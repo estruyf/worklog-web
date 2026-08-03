@@ -1,7 +1,7 @@
-// The picker's two pure decisions: which preset a rule belongs to, and what
-// expression a preset starts from. Both are calendar reasoning over a
-// `Recurrence`, not rendering, so they live next to the rules themselves — and
-// they are what `test/recurrencePicker.test.ts` covers.
+// The picker's pure decisions: which preset a rule belongs to, what expression a
+// preset starts from, and where a rule moves when its start date does. All three
+// are calendar reasoning over a `Recurrence`, not rendering, so they live next to
+// the rules themselves — and they are what `test/recurrencePicker.test.ts` covers.
 
 import {
   BUSINESS_DAYS,
@@ -62,6 +62,38 @@ export function seedFor(kind: PresetKind, due: string): string {
   const iso = `${String(parts.y).padStart(4, '0')}-${String(parts.m).padStart(2, '0')}-${String(parts.d).padStart(2, '0')}`;
   const weekday = weekdayOf(iso);
   return formatRecurrence({ anchor: 'schedule', ...shapeFor(kind, parts, weekday) });
+}
+
+/**
+ * Re-point a rule at a new start date, keeping the parts a preset takes *from*
+ * that date in step with it.
+ *
+ * `seedFor` reads the day off the start date, but the two controls are edited in
+ * either order: picking "Yearly" on August 3rd and then setting the start to
+ * October 1st used to leave the rule reading `yearly on 08-03`, so the first
+ * occurrence landed on the chosen start and every one after it on the day the
+ * chip happened to be clicked.
+ *
+ * Only date-derived parts move. A multi-day week and a "last day" month end are
+ * choices made in their own control rather than echoes of the start date, so
+ * they stay put — as does anything with no day to move (daily, weekdays, a rule
+ * that names none).
+ */
+export function retargetToStart(rec: Recurrence, start: string): Recurrence {
+  const parts = parseISODate(start);
+  if (!parts) {
+    return rec;
+  }
+  switch (rec.unit) {
+    case 'week':
+      return rec.weekdays?.length === 1 ? { ...rec, weekdays: [weekdayOf(start)] } : rec;
+    case 'month':
+      return typeof rec.monthDay === 'number' ? { ...rec, monthDay: parts.d } : rec;
+    case 'year':
+      return typeof rec.monthDay === 'number' ? { ...rec, month: parts.m, monthDay: parts.d } : rec;
+    default:
+      return rec;
+  }
 }
 
 type PresetShape = Pick<Recurrence, 'unit' | 'interval' | 'weekdays' | 'monthDay' | 'month'>;

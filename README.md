@@ -127,10 +127,15 @@ Use the **repo pill** in the top-right to switch repositories, open the repo on 
 
 The dashboard has these views:
 
-- **Day** — the default view. Log time for the selected day (full day, half day, or custom
-  hours), or log a non-client **event** (vacation, out-of-office, …). See overdue, due, open,
-  worked, and done tasks for that day; mark a task worked, cycle its status, or close it.
-  Anything past its due date sits in an **Overdue** block at the very top.
+- **Day** — the default view. Your day is one proportional bar: every entry is drawn at the size of
+  its own hours against your working day, and whatever is left over is an **Unlogged** slot you
+  click to fill — which opens the log form on exactly those hours. Click a segment to edit that
+  entry (full day, half day, or custom hours, plus an optional note), or log a non-client **event**
+  (vacation, out-of-office, …). Logging past your working day is allowed: the bar grows past the
+  target and the day reads as over. On a day with nothing logged yet, **Same as yesterday** copies
+  the last day you logged. See overdue, due, open, worked, and done tasks for that day; mark a task
+  worked, cycle its status, or close it. Anything past its due date sits in an **Overdue** block at
+  the very top.
 - **Overdue** — everything that has slipped, across every client and the to-do list, grouped by
   client with the longest-overdue client first, plus what is due today. The nav badge counts it.
 - **To-dos** — the general to-do list: tasks that belong to no client.

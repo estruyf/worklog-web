@@ -162,10 +162,14 @@ export interface SearchGroup {
   rows: SearchResult[];
 }
 
-/** The "log time" form state, shared between the Today view and its host. */
+/** The "log time" form state, shared between the Today view and its host.
+ *
+ *  `editingClientId` is the worklog id the form was opened on ('' for a new
+ *  entry): the ledger is keyed by (date, client), so re-pointing an entry at
+ *  another client has to remove the line it came from. */
 export interface LogState {
   open: boolean;
-  editing: boolean;
+  editingClientId: string;
   isEvent: boolean;
   eventType: string;
   client: string;
