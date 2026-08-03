@@ -171,36 +171,57 @@ export async function closeTaskById(
   return closeCascade(store, taskId, terminal, completedDate);
 }
 
+/**
+ * Retire a recurring task: archive it instead of rolling it onto the next
+ * occurrence. The rule stays on the archived block, so restoring it from the
+ * Archive picks the series back up — the same shape a series that ran past its
+ * `repeatUntil` ends in. Completions already archived are separate blocks and
+ * are untouched.
+ */
+export async function endTaskSeries(
+  store: Store,
+  taskId: string,
+  completedDate = today(),
+): Promise<Task> {
+  const terminal = terminalStatusId(store.getConfig().statuses);
+  return closeCascade(store, taskId, terminal, completedDate, true);
+}
+
 async function closeCascade(
   store: Store,
   taskId: string,
   statusId: string,
   completedDate: string,
+  endSeries = false,
 ): Promise<Task> {
   const root = store.db.getTask(taskId);
   if (!root) {
     throw new Error(`Task ${taskId} not found.`);
   }
-  // Close still-open descendants first, then the task itself.
+  // Close still-open descendants first, then the task itself. Retiring a task
+  // retires the whole subtree: a subtask left repeating would outlive the
+  // parent it belongs to.
   const openDescendants = collectDescendants(store, taskId).filter(
     (t) => !isClosed(t),
   );
   for (const child of openDescendants) {
-    await closeOne(store, child, statusId, completedDate);
+    await closeOne(store, child, statusId, completedDate, endSeries);
   }
-  const closed = await closeOne(store, root, statusId, completedDate);
+  const closed = await closeOne(store, root, statusId, completedDate, endSeries);
   await store.rebuild("closeTask");
   return closed;
 }
 
 /** Move one open task from its client file into the archive, stamped closed.
  *  A recurring task rolls onto its next occurrence instead (see rollOccurrence),
- *  and only closes for good once its series runs out. */
+ *  and only closes for good once its series runs out — or when `endSeries` asks
+ *  for it to be retired now. */
 async function closeOne(
   store: Store,
   task: Task,
   statusId: string,
   completedDate: string,
+  endSeries = false,
 ): Promise<Task> {
   const clientId = task.clientIds[0];
   const clientName =
@@ -220,7 +241,7 @@ async function closeOne(
     parseTaskFile(extracted.block, clientUri, clientId).tasks[0] ?? task,
   );
 
-  if (source.repeat) {
+  if (source.repeat && !endSeries) {
     const nextDue = nextDueAfterCompletion(
       source.repeat,
       source.due,

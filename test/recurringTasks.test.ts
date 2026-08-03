@@ -6,7 +6,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { Store } from '../src/store';
 import { FileMap, mountFileMap } from '../src/workspace/paths';
-import { closeTaskById, setTaskStatus, setTaskRecurrence, updateTask } from '../src/services/taskOps';
+import { closeTaskById, endTaskSeries, setTaskStatus, setTaskRecurrence, updateTask } from '../src/services/taskOps';
 import { createTask } from '../src/services/tasks';
 import { parseTaskFile } from '../src/parser/taskParser';
 import { addMonths, today, weekdayOf } from '../src/util/date';
@@ -197,6 +197,53 @@ describe('completing a recurring task', () => {
 
     expect(fromFile('t_dentist')).toBeUndefined();
     expect(store.db.getTask('t_dentist')?.completed).toBe('2026-07-30');
+  });
+});
+
+describe('ending a series', () => {
+  it('archives the task itself instead of rolling it forward', async () => {
+    await endTaskSeries(store, 't_water', '2026-07-30');
+
+    expect(fromFile('t_water')).toBeUndefined();
+    const archived = parseTaskFile(archiveFile(), 'archive/todos/2026-07.md', 'todos').tasks.find(
+      (t) => t.id === 't_water',
+    );
+    expect(archived?.completed).toBe('2026-07-30');
+    // Its own id, no repeatOf: this is the task, not a snapshot of an occurrence.
+    expect(archived?.repeatOf).toBeUndefined();
+    // The rule stays as a record of intent, the same way an exhausted series ends.
+    expect(archived?.repeat).toMatchObject({ unit: 'week', weekdays: [1, 4] });
+  });
+
+  it('leaves earlier completions in the archive untouched', async () => {
+    await closeTaskById(store, 't_water', '2026-07-30');
+    await endTaskSeries(store, 't_water', '2026-08-03');
+
+    expect(archivedOccurrences('t_water')).toHaveLength(1);
+    expect(store.db.getTask('t_water')?.completed).toBe('2026-08-03');
+  });
+
+  it('restores the series when the archived task is reopened', async () => {
+    await endTaskSeries(store, 't_water', '2026-07-30');
+    await setTaskStatus(store, 't_water', 'open');
+
+    const live = fromFile('t_water');
+    expect(live?.completed).toBeUndefined();
+    expect(live?.repeat).toMatchObject({ unit: 'week', weekdays: [1, 4] });
+  });
+
+  it('retires open subtasks with the parent', async () => {
+    const child = await createTask(store, {
+      title: 'Refill the watering can',
+      clientId: 'todos',
+      parentId: 't_water',
+    });
+    await setTaskRecurrence(store, child.id, { unit: 'week', interval: 1, weekdays: [1] });
+
+    await endTaskSeries(store, 't_water', '2026-07-30');
+
+    expect(fromFile(child.id)).toBeUndefined();
+    expect(store.db.getTask(child.id)?.completed).toBe('2026-07-30');
   });
 });
 

@@ -25,6 +25,7 @@ import {
   closeTaskById,
   deleteTaskCascade,
   deleteTaskNote,
+  endTaskSeries,
   setTaskCompletedDate,
   setTaskStatus,
   toggleTaskWorkedOn,
@@ -398,6 +399,11 @@ class WorklogStore {
 
   closeTask(taskId: string, date?: string): Promise<void> {
     return this.run(() => closeTaskById(this.store, taskId, date));
+  }
+
+  /** Archive a recurring task instead of rolling it forward — the series ends. */
+  endSeries(taskId: string, date?: string): Promise<void> {
+    return this.run(() => endTaskSeries(this.store, taskId, date));
   }
 
   setCompletedDate(taskId: string, date: string): Promise<void> {

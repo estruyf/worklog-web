@@ -25,24 +25,26 @@ export function useTaskActions(tasks: Task[], selectedDate: string, ui: WorklogU
         return;
       }
 
-      // A repeating task can't be "moved to archive" — closing it just rolls it
-      // onto its next occurrence — so deleting one ends the series outright.
-      // Completions already logged are separate archived blocks and survive.
-      const isPermanent = options?.permanent || isDone(t) || !!t.repeat;
+      // Closing a repeating task only rolls it onto its next occurrence, so
+      // archiving one has to end the series explicitly. Completions already
+      // logged are separate archived blocks and survive either way.
+      const isPermanent = options?.permanent || isDone(t);
       const repeating = !!t.repeat && !isDone(t);
       const ok = isPermanent
         ? await ask({
-            title: repeating ? `Stop "${t.title}" from repeating and delete it?` : `Delete "${t.title}" forever?`,
-            message: repeating
-              ? "The series ends here. Completions already logged stay in the archive."
-              : "This also removes subtasks and cannot be undone.",
-            confirmLabel: repeating ? "Stop and delete" : "Delete forever",
+            title: `Delete "${t.title}" forever?`,
+            message: "This also removes subtasks and cannot be undone.",
+            confirmLabel: "Delete forever",
             tone: "danger",
           })
         : await ask({
-            title: `Move "${t.title}" to archive?`,
-            message: "You can restore it later from Archive.",
-            confirmLabel: "Move to archive",
+            title: repeating
+              ? `Stop "${t.title}" from repeating and move it to archive?`
+              : `Move "${t.title}" to archive?`,
+            message: repeating
+              ? "The series ends here. You can restore it later from Archive."
+              : "You can restore it later from Archive.",
+            confirmLabel: repeating ? "Stop and archive" : "Move to archive",
           });
 
       if (!ok) {
@@ -54,6 +56,8 @@ export function useTaskActions(tasks: Task[], selectedDate: string, ui: WorklogU
         if (detailId === id) {
           setDetailId(null);
         }
+      } else if (repeating) {
+        worklogStore.endSeries(id, selectedDate);
       } else {
         worklogStore.closeTask(id, selectedDate);
       }
