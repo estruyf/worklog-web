@@ -24,6 +24,7 @@ const INITIAL: Files = {
     2,
   ) + '\n',
   'clients/acme.md': '# Acme Corp\n\n## Existing task\n- id: t_exist\n- status: open\n- created: 2026-07-01\n',
+  'notes/2026-07.md': '# Notes 2026-07\n\n## 2026-07-01\n\nExisting note.\n',
 };
 
 let github: FakeGitHub;
@@ -77,6 +78,8 @@ async function openInstance(): Promise<typeof WorklogStore> {
 }
 
 const titles = (store: typeof WorklogStore) => store.getSnapshot().data!.tasks.map((t) => t.title).sort();
+const noteFor = (store: typeof WorklogStore, date: string) =>
+  store.getSnapshot().data!.dayNotes.find((n) => n.date === date)?.body;
 
 describe('two instances syncing the same repo', () => {
   beforeEach(() => {
@@ -154,6 +157,70 @@ describe('two instances syncing the same repo', () => {
     const config = JSON.parse(github.files['.worklog/config.json']) as { clients: { id: string }[] };
     expect(config.clients.map((c) => c.id).sort()).toEqual(['acme', 'globex', 'initech']);
     expect(one.getSnapshot().data!.clients.map((c) => c.id).sort()).toEqual(['acme', 'globex', 'initech']);
+  });
+
+  it('keeps an unsynced day note when the other instance syncs a different day first', async () => {
+    const one = await openInstance();
+    const two = await openInstance();
+
+    await one.setDayNote('2026-07-02', 'From instance one.');
+    expect(one.hasPending()).toBe(true);
+
+    await two.setDayNote('2026-07-03', 'From instance two.');
+    await two.sync();
+
+    await one.sync();
+
+    // Asserted at both levels on purpose: a bad merge can produce text that
+    // still looks like a notes file but reads back as something else.
+    expect(github.files['notes/2026-07.md']).toContain('From instance one.');
+    expect(github.files['notes/2026-07.md']).toContain('From instance two.');
+    expect(noteFor(one, '2026-07-01')).toBe('Existing note.');
+    expect(noteFor(one, '2026-07-02')).toBe('From instance one.');
+    expect(noteFor(one, '2026-07-03')).toBe('From instance two.');
+    expect(one.hasPending()).toBe(false);
+  });
+
+  it("keeps the other instance's day note when this one pushed first", async () => {
+    const one = await openInstance();
+    const two = await openInstance();
+
+    await one.setDayNote('2026-07-02', 'From instance one.');
+    await one.sync();
+
+    await two.setDayNote('2026-07-03', 'From instance two.');
+    await two.sync();
+
+    expect(noteFor(two, '2026-07-02')).toBe('From instance one.');
+    expect(noteFor(two, '2026-07-03')).toBe('From instance two.');
+  });
+
+  it('keeps the local text and reports a day both instances wrote', async () => {
+    const one = await openInstance();
+    const two = await openInstance();
+
+    await one.setDayNote('2026-07-01', 'One rewrote it.');
+    await two.setDayNote('2026-07-01', 'Two rewrote it.');
+    await two.sync();
+    await one.sync();
+
+    expect(noteFor(one, '2026-07-01')).toBe('One rewrote it.');
+    expect(github.files['notes/2026-07.md']).toContain('One rewrote it.');
+    expect(github.files['notes/2026-07.md']).not.toContain('Two rewrote it.');
+  });
+
+  it('honours a note cleared here against another day written on the branch', async () => {
+    const one = await openInstance();
+    const two = await openInstance();
+
+    await one.setDayNote('2026-07-01', '');
+    await two.setDayNote('2026-07-05', 'Still here.');
+    await two.sync();
+    await one.sync();
+
+    expect(noteFor(one, '2026-07-01')).toBeUndefined();
+    expect(noteFor(one, '2026-07-05')).toBe('Still here.');
+    expect(github.files['notes/2026-07.md']).not.toContain('Existing note.');
   });
 
   it('re-merges when the branch moves between the head check and the commit', async () => {

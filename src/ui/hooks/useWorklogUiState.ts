@@ -76,6 +76,16 @@ export function useWorklogUiState() {
   const [descMode, setDescMode] = useState<"preview" | "edit">("preview");
   const [noteDraft, setNoteDraft] = useState("");
 
+  // The day view's freeform Markdown for `selectedDate`. Distinct from
+  // `noteDraft` above, which is the *task* note composer — the two sit side by
+  // side and are never the same thing, hence `dayNote*` throughout.
+  const [dayNoteDraft, setDayNoteDraft] = useState("");
+  const [dayNoteMode, setDayNoteMode] = useState<"preview" | "edit">("preview");
+  // Local "HH:mm" of the last save, '' before one. Session-only and deliberately
+  // so: it confirms the click that just happened, which is the moment the Save
+  // button disappears and there is otherwise nothing to say the note landed.
+  const [dayNoteSavedAt, setDayNoteSavedAt] = useState("");
+
   const [clientModalOpen, setClientModalOpen] = useState(false);
   // Whether the Clients view reveals the archived clients under its list.
   const [showArchivedClients, setShowArchivedClients] = useState(false);
@@ -139,6 +149,12 @@ export function useWorklogUiState() {
     setDescMode,
     noteDraft,
     setNoteDraft,
+    dayNoteDraft,
+    setDayNoteDraft,
+    dayNoteMode,
+    setDayNoteMode,
+    dayNoteSavedAt,
+    setDayNoteSavedAt,
     clientModalOpen,
     setClientModalOpen,
     showArchivedClients,

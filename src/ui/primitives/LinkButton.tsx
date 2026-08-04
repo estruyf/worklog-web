@@ -7,8 +7,9 @@ export type LinkButtonSize = 'inherit' | 'xs' | 'sm' | 'md' | 'lg';
 
 /** `info` is the blue that reads as a link; `muted` is for the ones that sit in a
  *  section header, where blue would pull more attention than the action deserves.
- *  `danger` covers the destructive text actions. */
-export type LinkButtonTone = 'info' | 'muted' | 'danger';
+ *  `danger` covers the destructive text actions. `neutral` is the quiet verb in a
+ *  card's footer — same restraint as `muted`, without its lean towards delete. */
+export type LinkButtonTone = 'info' | 'muted' | 'danger' | 'neutral';
 
 /** No border, no background, no padding: this is a button that reads as a link.
  *  Used for the secondary escape hatches — Clear, Reset, "+ Add another link" —
@@ -20,6 +21,7 @@ const TONES: Record<LinkButtonTone, string> = {
   info: 'text-info',
   muted: 'text-neutral-675 hover:text-danger-675',
   danger: 'text-danger-675',
+  neutral: 'text-neutral-700 hover:text-neutral-900',
 };
 
 const SIZES: Record<LinkButtonSize, string> = {

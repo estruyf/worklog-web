@@ -4,24 +4,28 @@
 // the file map and calls {@link load}. Exposes exactly the query surface the
 // services, snapshot builder, and views consume.
 
-import type { Client, Task, WorklogEntry } from '../model/types';
+import type { Client, DayNote, Task, WorklogEntry } from '../model/types';
 
 export class MemoryDb {
   private clients: Client[] = [];
   private tasks: Task[] = [];
   private worklog: WorklogEntry[] = [];
+  private dayNotes: DayNote[] = [];
   private tasksById = new Map<string, Task>();
+  private notesByDate = new Map<string, DayNote>();
 
   /** Replace all cached records (called by the indexer after a full parse). */
-  load(data: { clients: Client[]; tasks: Task[]; worklog: WorklogEntry[] }): void {
+  load(data: { clients: Client[]; tasks: Task[]; worklog: WorklogEntry[]; dayNotes: DayNote[] }): void {
     this.clients = [...data.clients].sort((a, b) => a.name.localeCompare(b.name));
     this.tasks = data.tasks.filter((t) => t.id);
     this.worklog = data.worklog;
+    this.dayNotes = data.dayNotes;
     this.tasksById = new Map(this.tasks.map((t) => [t.id, t]));
+    this.notesByDate = new Map(this.dayNotes.map((n) => [n.date, n]));
   }
 
   reset(): void {
-    this.load({ clients: [], tasks: [], worklog: [] });
+    this.load({ clients: [], tasks: [], worklog: [], dayNotes: [] });
   }
 
   getClients(): Client[] {
@@ -61,6 +65,16 @@ export class MemoryDb {
   /** Every worklog entry — used to build the app state. */
   getAllWorklog(): WorklogEntry[] {
     return [...this.worklog].sort((a, b) => a.date.localeCompare(b.date) || a.clientId.localeCompare(b.clientId));
+  }
+
+  /** The note for one day, if it has one. */
+  getDayNote(date: string): DayNote | undefined {
+    return this.notesByDate.get(date);
+  }
+
+  /** Every day note, oldest first — used to build the app state. */
+  getAllDayNotes(): DayNote[] {
+    return [...this.dayNotes].sort((a, b) => a.date.localeCompare(b.date));
   }
 }
 

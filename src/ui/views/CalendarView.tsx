@@ -9,7 +9,7 @@ import { CalendarGrid, colorFor, labelFor, Legend, PeriodNav, WorkedPerClient, t
  * work rolled up per client underneath. Clicking a day opens it in the Day view,
  * where past days can be edited and future days can be planned. */
 export function CalendarView() {
-  const { worklog, tasks, colorOf, clientName, today, weekStart, openDetail } = useData();
+  const { worklog, tasks, colorOf, clientName, today, weekStart, openDetail, datesWithNotes } = useData();
   const { selectedDate, setSelectedDate } = useUi();
   const [mode, setMode] = useState<CalendarMode>('month');
   // A full date, not a YYYY-MM: switching between month and week then keeps the
@@ -80,7 +80,15 @@ export function CalendarView() {
           <PeriodNav mode={mode} onModeChange={setMode} cursor={cursor} onCursorChange={setCursor} isCurrentPeriod={isCurrentPeriod} />
         </div>
 
-        <CalendarGrid weekdays={weekdays} cells={cells} logsByDate={logsByDate} cursor={cursor} isWeek={isWeek} onOpenDay={openDay} />
+        <CalendarGrid
+          weekdays={weekdays}
+          cells={cells}
+          logsByDate={logsByDate}
+          datesWithNotes={datesWithNotes}
+          cursor={cursor}
+          isWeek={isWeek}
+          onOpenDay={openDay}
+        />
 
         <Legend entries={legend} />
 

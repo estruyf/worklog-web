@@ -208,6 +208,9 @@ export class Workspace {
   get worklogDir(): string {
     return 'worklog';
   }
+  get notesDir(): string {
+    return 'notes';
+  }
   get assetsDir(): string {
     return 'assets';
   }
@@ -223,6 +226,9 @@ export class Workspace {
   }
   worklogFile(month: string): string {
     return `worklog/${month}.md`;
+  }
+  notesFile(month: string): string {
+    return `notes/${month}.md`;
   }
 
   async loadConfig(): Promise<DaylogConfig> {

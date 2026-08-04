@@ -4,6 +4,8 @@ export { GroupCard } from './GroupCard';
 export { OverdueTasksSection } from './OverdueTasksSection';
 export { DayBar } from './DayBar';
 export { LogForm } from './LogForm';
+export { DayNote } from './DayNote';
+export { DayCardFooter } from './DayCardFooter';
 export { OpenTasksSection } from './OpenTasksSection';
 export { WorkedTasksSection } from './WorkedTasksSection';
 export { DoneTasksSection } from './DoneTasksSection';

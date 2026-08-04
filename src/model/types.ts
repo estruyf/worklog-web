@@ -77,6 +77,18 @@ export interface WorklogEntry {
   sourceLine: number;
 }
 
+/** A day's freeform Markdown note — the half of a day that is neither billed
+ *  nor a task. One per date, parsed from `notes/<YYYY-MM>.md`. */
+export interface DayNote {
+  date: string; // YYYY-MM-DD
+  /** The note body (Markdown; usually multi-line). Never empty — an emptied
+   *  note is removed from the file rather than stored blank. */
+  body: string;
+  sourceFile: string;
+  /** 0-based line of the `## <date>` heading in the source file. */
+  sourceLine: number;
+}
+
 export interface Client {
   id: string;
   name: string;

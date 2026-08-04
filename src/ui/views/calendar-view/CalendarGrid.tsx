@@ -11,12 +11,14 @@ export interface CalendarGridProps {
   /** The period's days; `null` is a month grid's padding. */
   cells: (string | null)[];
   logsByDate: Map<string, WorklogEntry[]>;
+  /** Dates carrying a freeform day note. */
+  datesWithNotes: Set<string>;
   cursor: string;
   isWeek: boolean;
   onOpenDay: (date: string) => void;
 }
 
-export function CalendarGrid({ weekdays, cells, logsByDate, cursor, isWeek, onOpenDay }: CalendarGridProps) {
+export function CalendarGrid({ weekdays, cells, logsByDate, datesWithNotes, cursor, isWeek, onOpenDay }: CalendarGridProps) {
   const { today } = useData();
   const { selectedDate } = useUi();
   // A week shows a seventh of the days a month does, so its cells get the room to
@@ -39,6 +41,7 @@ export function CalendarGrid({ weekdays, cells, logsByDate, cursor, isWeek, onOp
               key={date}
               date={date}
               logs={logsByDate.get(date) ?? []}
+              hasNote={datesWithNotes.has(date)}
               isToday={date === today}
               isSelected={date === selectedDate}
               isOtherMonth={!isWeek && ymOf(date) !== ymOf(cursor)}

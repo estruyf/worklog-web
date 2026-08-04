@@ -10,7 +10,7 @@ import { ScopeFilterBar, SearchField, SearchIdleState, SearchResultRow, TagFilte
 export function SearchOverlay() {
   const { clearTagFilter } = useData();
   const { search, setSearch, searchScope, setSearchScope, searchClient, setSearchClient, tagFilter, searchSel, setSearchOpen } = useUi();
-  const { q, filtered, groups, count, openCount, archivedCount } = useSearchData();
+  const { q, filtered, groups, count, openCount, archivedCount, noteCount } = useSearchData();
 
   const close = () => setSearchOpen(false);
 
@@ -35,7 +35,7 @@ export function SearchOverlay() {
     // No heading of its own — the search field is the dialog, so `label` names it.
     // `padding="none"`: the results scroll under a fixed filter block, which one
     // padding box around the lot would break.
-    <Modal onClose={close} label="Search tasks" size="lg" offset="sm" padding="none" className="max-h-[78vh] flex flex-col">
+    <Modal onClose={close} label="Search" size="lg" offset="sm" padding="none" className="max-h-[78vh] flex flex-col">
       <div className="px-5 pt-5">
         <SearchField value={search} onChange={setSearch} onClose={close} count={filtered ? count : undefined} />
         <ScopeFilterBar filtersActive={filtersActive} onReset={resetFilters} />
@@ -44,11 +44,11 @@ export function SearchOverlay() {
 
       {/* Results (scrollable) */}
       <div className="flex-1 overflow-auto px-5 pb-5 border-t border-neutral-325">
-        {!filtered && <SearchIdleState openCount={openCount} archivedCount={archivedCount} />}
+        {!filtered && <SearchIdleState openCount={openCount} archivedCount={archivedCount} noteCount={noteCount} />}
 
         {filtered && count === 0 && (
           <EmptyState className="mt-5">
-            No tasks match
+            Nothing matches
             {q !== '' && <> "{search}"</>}
             {q !== '' && tagFilter.length > 0 && ' with'}
             {tagFilter.length > 0 && ` ${tagFilter.length === 1 ? 'the tag' : 'the tags'} ${tagFilter.join(', ')}`}.

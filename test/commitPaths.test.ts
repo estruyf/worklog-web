@@ -18,6 +18,7 @@ describe('isWorklogPath', () => {
       'clients/todos.md',
       'archive/acme/2026-06.md',
       'worklog/2026-06.md',
+      'notes/2026-06.md',
       'assets/img-abc123.png',
     ]) {
       expect(isWorklogPath(path), path).toBe(true);
@@ -35,6 +36,9 @@ describe('isWorklogPath', () => {
       '.worklog/config.json.bak',
       'clients/nested/deep.md',
       'assets/nested/img.png',
+      'notes/nested/deep.md',
+      'notes/2026-06.md.bak',
+      'notes/2026-06.txt',
       'worklog/2026-06.md/../../evil.yml',
     ]) {
       expect(isWorklogPath(path), path).toBe(false);

@@ -3,6 +3,7 @@ import type { SearchResult } from '../../model';
 import { ExternalLinkIcon } from 'lucide-react';
 import { Chip } from '../../primitives';
 import { useData, useUi } from '../../context';
+import { NOTE_COLOR } from '../../utils';
 
 export interface SearchResultRowProps {
   row: SearchResult;
@@ -21,18 +22,22 @@ export interface SearchResultRowProps {
 export function SearchResultRow({ row, selected, onOpen, ref }: SearchResultRowProps) {
   const { toggleTagFilter } = useData();
   const { tagFilter } = useUi();
+  const note = row.kind === 'note';
   return (
     <div
       ref={ref}
       onClick={onOpen}
-      title="Open task"
+      title={note ? 'Open day' : 'Open task'}
       className={
         'flex items-start gap-[11px] py-[9px] px-[10px] rounded-control-md cursor-pointer border ' +
         (selected ? 'bg-brand-75 border-brand-425' : 'border-transparent hover:bg-neutral-125')
       }
     >
-      <span className="w-16 shrink-0 mt-[3px] text-status font-bold tracking-status" style={{ color: row.statusColor }}>
-        {row.statusLabel}
+      {/* The column stays even for a note, which has no status: it keeps every
+        * row's title on the same left edge, and "note" is the one word that says
+        * why this hit isn't a task. */}
+      <span className="w-16 shrink-0 mt-[3px] text-status font-bold tracking-status" style={{ color: note ? NOTE_COLOR : row.statusColor }}>
+        {note ? 'note' : row.statusLabel}
       </span>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-[8px] flex-wrap">

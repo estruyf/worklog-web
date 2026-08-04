@@ -11,7 +11,7 @@
 // renders `AUTO_SYNC_EVENTS`.
 
 /** A user-facing change kind that can trigger an immediate sync. */
-export type AutoSyncEvent = 'taskCreated' | 'taskStatus' | 'taskEdited' | 'timeLogged' | 'settings';
+export type AutoSyncEvent = 'taskCreated' | 'taskStatus' | 'taskEdited' | 'timeLogged' | 'settings' | 'dayNote';
 
 export interface AutoSyncEventDef {
   id: AutoSyncEvent;
@@ -34,7 +34,7 @@ export const AUTO_SYNC_EVENTS: AutoSyncEventDef[] = [
   {
     id: 'taskEdited',
     label: 'A task is edited or deleted',
-    description: 'Title, due date, links, tags, description, notes, recurrence, parent — or a deletion.',
+    description: 'Title, due date, links, tags, description, task notes, recurrence, parent — or a deletion.',
   },
   {
     id: 'timeLogged',
@@ -45,6 +45,14 @@ export const AUTO_SYNC_EVENTS: AutoSyncEventDef[] = [
     id: 'settings',
     label: 'Clients or settings change',
     description: 'A client is added, edited, archived or deleted, or these settings are saved.',
+  },
+  // Appended, not slotted in beside the other edit events: `parseAutoSyncEvents`
+  // orders a saved array by this list, so an insertion in the middle rewrites
+  // every existing config's `events` on its next save for no reason.
+  {
+    id: 'dayNote',
+    label: 'A day note is saved',
+    description: 'The freeform Markdown written on a day, saved or cleared from the day view.',
   },
 ];
 
@@ -70,6 +78,8 @@ const REASON_EVENT: Record<string, AutoSyncEvent> = {
 
   setWorklog: 'timeLogged',
   removeWorklog: 'timeLogged',
+
+  setDayNote: 'dayNote',
 
   addClient: 'settings',
   updateClient: 'settings',

@@ -9,7 +9,9 @@ import { Card } from '../primitives';
 import { clientIdOf, deriveDayBar, dueOn, isDone, previousLoggedDay, workedOnDate } from '../utils';
 import {
   DayBar,
+  DayCardFooter,
   DayHeader,
+  DayNote,
   DoneTasksSection,
   DueTasksSection,
   LogForm,
@@ -101,8 +103,8 @@ function useDayData() {
 }
 
 export function DayView() {
-  const { today, worklog, clients, allClients, colorOf, clientName, statusMeta, reopen, openDetail, typeLabel, hoursPerDay, todosPerPage, logState, setLogState, saveLog, removeLog, closeLogForm, editLog, openLogForm, copyDayLogs, openTaskFormForDue } = useData();
-  const { selectedDate, setSelectedDate, editDayOpen, setEditDayOpen } = useUi();
+  const { today, worklog, clients, allClients, colorOf, clientName, statusMeta, reopen, openDetail, typeLabel, hoursPerDay, todosPerPage, logState, setLogState, saveLog, removeLog, closeLogForm, editLog, openLogForm, copyDayLogs, openTaskFormForDue, dayNoteDirty, saveDayNote, editDayNote, cancelDayNote, hasDayNote } = useData();
+  const { selectedDate, setSelectedDate, editDayOpen, setEditDayOpen, dayNoteDraft, setDayNoteDraft, dayNoteMode, setDayNoteMode, dayNoteSavedAt } = useUi();
   const {
     openTasks,
     dayLogs,
@@ -171,8 +173,9 @@ export function DayView() {
           </aside>
 
           <div className="min-w-0 xl:col-start-1 xl:row-start-2">
-            {/* The day is one card: the bar, and the form for whichever slice of
-              * it you clicked. */}
+            {/* The day is one card: the bar, the form for whichever slice of it
+              * you clicked, whatever was written about it, and a footer holding
+              * the two verbs that apply to the day rather than to a segment. */}
             <Card padding="md" className="mb-[34px]">
               <DayBar
                 bar={bar}
@@ -198,6 +201,24 @@ export function DayView() {
                   colorOf={colorOf}
                 />
               )}
+
+              <DayNote
+                value={dayNoteDraft}
+                onChange={setDayNoteDraft}
+                mode={dayNoteMode}
+                onModeChange={setDayNoteMode}
+                dirty={dayNoteDirty}
+                onSave={saveDayNote}
+                onCancel={cancelDayNote}
+              />
+
+              <DayCardFooter
+                onLogTime={openLogForm}
+                onEditNote={editDayNote}
+                hasNote={hasDayNote}
+                editingNote={dayNoteMode === 'edit'}
+                noteSavedAt={dayNoteSavedAt}
+              />
             </Card>
 
             <OpenTasksSection

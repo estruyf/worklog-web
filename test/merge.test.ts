@@ -178,3 +178,78 @@ describe('mergeFile — unknown ancestor', () => {
     expect(text).toContain('## Theirs');
   });
 });
+
+describe('mergeFile — day notes', () => {
+  const NOTES = 'notes/2026-07.md';
+  const notes = (...days: [string, string][]) =>
+    `# Notes 2026-07\n\n${days.map(([d, body]) => `## ${d}\n\n${body}`).join('\n\n')}\n`;
+
+  it('keeps notes written for different days on both sides', () => {
+    const base = notes(['2026-07-01', 'Kickoff.']);
+    const local = notes(['2026-07-01', 'Kickoff.'], ['2026-07-02', 'Mine.']);
+    const remote = notes(['2026-07-01', 'Kickoff.'], ['2026-07-03', 'Theirs.']);
+
+    const { text, conflicts } = mergeFile(NOTES, { base, local, remote });
+
+    expect(conflicts).toEqual([]);
+    expect(text).toContain('Mine.');
+    expect(text).toContain('Theirs.');
+  });
+
+  it('keeps the local note and names the day when both sides edited it', () => {
+    const base = notes(['2026-07-01', 'Kickoff.']);
+    const local = notes(['2026-07-01', 'Mine.']);
+    const remote = notes(['2026-07-01', 'Theirs.']);
+
+    const { text, conflicts } = mergeFile(NOTES, { base, local, remote });
+
+    expect(text).toContain('Mine.');
+    expect(text).not.toContain('Theirs.');
+    expect(conflicts).toHaveLength(1);
+    expect(conflicts[0]).toContain('the note for 2026-07-01');
+  });
+
+  it('honours a note cleared on one side only', () => {
+    const base = notes(['2026-07-01', 'Kickoff.'], ['2026-07-02', 'Second.']);
+    const local = notes(['2026-07-01', 'Kickoff.']);
+    const remote = notes(['2026-07-01', 'Kickoff.'], ['2026-07-02', 'Second.'], ['2026-07-03', 'Third.']);
+
+    const { text, conflicts } = mergeFile(NOTES, { base, local, remote });
+
+    expect(conflicts).toEqual([]);
+    expect(text).not.toContain('2026-07-02');
+    expect(text).toContain('Third.');
+  });
+
+  it('leaves a body’s own markdown headings intact when another day is merged', () => {
+    // The one that catches a heading rule loose enough to split inside prose:
+    // a shredded body reads as valid markdown and is only noticed much later.
+    const body = 'Split the day.\n\n## Scripts\n\nprose\n\n### Resources\n\n- [doc](https://example.com)';
+    const base = notes(['2026-07-01', body]);
+    const local = notes(['2026-07-01', body], ['2026-07-02', 'Mine.']);
+    const remote = notes(['2026-07-01', body], ['2026-07-03', 'Theirs.']);
+
+    const { text } = mergeFile(NOTES, { base, local, remote });
+
+    expect(text).toContain(body);
+  });
+
+  it('reproduces the changed side byte for byte when only one side moved', () => {
+    // A no-op merge that reformats is a phantom dirty file — it would commit on
+    // every sync forever. This is the guard on the split/join pair agreeing.
+    const base = notes(['2026-07-01', 'Kickoff.']);
+    const local = notes(['2026-07-01', 'Kickoff.'], ['2026-07-02', 'Mine.']);
+
+    expect(mergeFile(NOTES, { base, local, remote: base }).text).toBe(local);
+  });
+
+  it('unions both sides when there is no base to compare against', () => {
+    const local = notes(['2026-07-01', 'Mine.']);
+    const remote = notes(['2026-07-02', 'Theirs.']);
+
+    const { text } = mergeFile(NOTES, { base: undefined, local, remote });
+
+    expect(text).toContain('Mine.');
+    expect(text).toContain('Theirs.');
+  });
+});

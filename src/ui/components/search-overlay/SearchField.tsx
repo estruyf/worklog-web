@@ -53,8 +53,8 @@ export function SearchField({ value, onChange, onClose, count }: SearchFieldProp
             </button>
           </>
         }
-        aria-label="Search tasks"
-        placeholder="Search tasks by title, link, description..."
+        aria-label="Search tasks and day notes"
+        placeholder="Search tasks and day notes..."
         inputClassName="text-input-fg"
         className="flex-1 min-w-0"
       />

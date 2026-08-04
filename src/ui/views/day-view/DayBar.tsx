@@ -1,7 +1,7 @@
 import React from 'react';
 import { RotateCcwIcon } from 'lucide-react';
 import { isEventWorklogClientId } from '../../../model/worklog';
-import { Button, Chip, SectionLabel } from '../../primitives';
+import { Button, SectionLabel } from '../../primitives';
 import { EVENT_COLOR, num, shiftDate, weekdayShort, type DayBarModel } from '../../utils';
 
 type DayBarProps = {
@@ -13,7 +13,9 @@ type DayBarProps = {
   /** The entry the editor is open on; '' when it is closed or on a new entry. */
   activeClientId: string;
   editLog: (clientId: string) => void;
-  /** Opens the editor on a new entry, pre-filled with the hours handed to it. */
+  /** Opens the editor on a new entry, pre-filled with the hours handed to it.
+   *  Only the unlogged slot uses it here — once the day is full that slot is
+   *  gone, and the card's footer is what keeps over-logging reachable. */
   logTime: (prefillHours?: number) => void;
   /** The day `copyDay` would copy, absent when there is nothing to copy. */
   copyFrom?: string;
@@ -130,14 +132,6 @@ export function DayBar({
           </span>
         ))}
       </div>
-
-      {/* The unlogged slot is how an entry is normally added; once the day is full
-          it is gone, and over-logging still has to be reachable. */}
-      {!unlogged && (
-        <Chip variant="add" onClick={() => logTime()} className="mt-3">
-          + Log more time
-        </Chip>
-      )}
     </>
   );
 }

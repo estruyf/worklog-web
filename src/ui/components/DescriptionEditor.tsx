@@ -1,8 +1,7 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { Card, LinkButton, SectionLabel, SegmentedControl, TextArea, cn } from '../primitives';
-import { useData } from '../context';
 import { useMarkdownImages } from '../hooks';
-import { makeImageResolver, renderMarkdown } from '../utils';
+import { MarkdownView } from './MarkdownView';
 
 /** `boxed` is the task form's editor: the tabs and the image action ride on the
  *  box the two modes swap inside, because that box *is* the field. `inline` is the
@@ -12,11 +11,13 @@ export type DescriptionEditorVariant = 'boxed' | 'inline';
 
 export type DescriptionMode = 'edit' | 'preview';
 
-/** The placeholder doubles as the Markdown cheatsheet, which is the reason it
- *  lives here: two copies of it drift, and the one that drifts is the one nobody
- *  is looking at. */
-const PLACEHOLDER =
-  'Add a description in Markdown…\n\n## Notes\n- supports **bold**, *italic*, `code`\n- [links](https://example.com) or plain https://example.com\n- lists, > quotes\n- paste, drop or add an image';
+/** The Markdown cheatsheet every placeholder ends with. It lives here for the
+ *  same reason it always did: two copies of it drift, and the one that drifts is
+ *  the one nobody is looking at. Callers vary only the opening line. */
+export const MARKDOWN_CHEATSHEET =
+  '## Notes\n- supports **bold**, *italic*, `code`\n- [links](https://example.com) or plain https://example.com\n- lists, > quotes\n- paste, drop or add an image';
+
+const PLACEHOLDER = `Add a description in Markdown…\n\n${MARKDOWN_CHEATSHEET}`;
 
 const MODES: { value: DescriptionMode; label: string }[] = [
   { value: 'edit', label: 'Write' },
@@ -43,6 +44,9 @@ export interface DescriptionEditorProps {
   hint?: string;
   /** Sits after the mode toggle — the detail panel's Save. */
   action?: React.ReactNode;
+  /** Empty-textarea prompt. Override it to name what is being written; compose
+   *  it with {@link MARKDOWN_CHEATSHEET} so the syntax reminder comes along. */
+  placeholder?: string;
 }
 
 /** Markdown description editor with a write/preview toggle, image paste / drop /
@@ -57,10 +61,9 @@ export function DescriptionEditor({
   title = 'Description',
   hint,
   action,
+  placeholder = PLACEHOLDER,
 }: DescriptionEditorProps) {
-  const { assetUrl } = useData();
   const img = useMarkdownImages(value, onChange);
-  const resolveImage = useMemo(() => makeImageResolver(assetUrl), [assetUrl]);
   const boxed = variant === 'boxed';
   // One height for all three bodies, so switching tabs doesn't resize the page
   // under the pointer. The inline editor sets it on the textarea only — its
@@ -69,7 +72,7 @@ export function DescriptionEditor({
 
   const toggle = (
     <SegmentedControl
-      aria-label="Description mode"
+      aria-label={`${title} mode`}
       variant={boxed ? 'raised' : 'joined'}
       size={boxed ? 'md' : 'sm'}
       options={MODES}
@@ -95,7 +98,7 @@ export function DescriptionEditor({
           onDrop={img.onDrop}
           onDragOver={img.onDragOver}
           aria-label={title}
-          placeholder={PLACEHOLDER}
+          placeholder={placeholder}
           className={cn(
             'block w-full px-[14px] py-[12px] text-touch md:text-control-lg leading-[1.6] outline-none focus:outline-brand-500 focus:shadow-[0_0_0_3px_var(--color-brand-225)] resize-y focus-visible:outline-brand-500!',
             tall,
@@ -111,16 +114,18 @@ export function DescriptionEditor({
           onDrop={img.onDrop}
           onDragOver={img.onDragOver}
           aria-label={title}
-          placeholder={PLACEHOLDER}
+          placeholder={placeholder}
           className={cn('w-full leading-[1.6]', tall)}
           style={MONO}
         />
       )
     ) : value.trim() ? (
       boxed ? (
-        <div className={cn('wl-md px-[8px] py-[4px]', tall)} dangerouslySetInnerHTML={{ __html: renderMarkdown(value, resolveImage) }} />
+        <MarkdownView text={value} className={cn('px-[8px] py-[4px]', tall)} />
       ) : (
-        <Card tone="muted" padding="md" radius="panel" className="wl-md" dangerouslySetInnerHTML={{ __html: renderMarkdown(value, resolveImage) }} />
+        <Card tone="muted" padding="md" radius="panel">
+          <MarkdownView text={value} />
+        </Card>
       )
     ) : (
       // A button, not a div: "click to add" was unreachable by keyboard in both

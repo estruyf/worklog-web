@@ -14,6 +14,7 @@ import { worklogStore, type ToastMessage } from "../../data/worklogStore";
 import type { AutoSyncConfig, AutoSyncEvent } from "../../model/types";
 import type { WorklogState } from "../state";
 import { useClientModel } from "./model/useClientModel";
+import { useDayNoteModel } from "./model/useDayNoteModel";
 import { useLogModel } from "./model/useLogModel";
 import { useStatusModel } from "./model/useStatusModel";
 import { useTagModel } from "./model/useTagModel";
@@ -45,6 +46,7 @@ export function useWorklogModel(
   const archivedClients = useMemo(() => allClients.filter((c) => c.archived), [allClients]);
   const tasks = useMemo(() => snap?.tasks ?? [], [snap]);
   const worklog = useMemo(() => snap?.worklog ?? [], [snap]);
+  const dayNotes = useMemo(() => snap?.dayNotes ?? [], [snap]);
   const statuses = useMemo(() => snap?.statuses ?? [], [snap]);
   const today = snap?.today ?? "";
   const hoursPerDay = snap?.hoursPerDay ?? 0;
@@ -77,6 +79,7 @@ export function useWorklogModel(
   });
   const taskForm = useTaskFormActions({ tasks, clients, worklog, today, selectedDate, selectedClient }, ui);
   const logModel = useLogModel(worklog, clients, hoursPerDay, selectedDate, ui);
+  const dayNoteModel = useDayNoteModel(dayNotes, selectedDate, ui);
 
   const triggerGitSync = () => worklogStore.sync();
 
@@ -94,6 +97,7 @@ export function useWorklogModel(
     today,
     tasks,
     worklog,
+    dayNotes,
     clients,
     allClients,
     archivedClients,
@@ -113,6 +117,7 @@ export function useWorklogModel(
     ...rows,
     ...taskForm,
     ...logModel,
+    ...dayNoteModel,
     triggerGitSync,
     saveSettings,
     gitPending,

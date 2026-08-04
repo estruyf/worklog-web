@@ -12,7 +12,7 @@ Read it before changing anything user-facing. This file covers how to work in th
 
 ```bash
 npm run dev      # http://localhost:4321 (needs .dev.vars — see README step 2)
-npm test         # vitest, 235 tests / 16 files — must stay green
+npm test         # vitest, 356 tests / 24 files — must stay green
 npm run lint     # eslint, 0 errors AND 0 warnings expected
 npx tsc --noEmit # must be clean
 npm run build    # astro build → dist/_worker.js (Cloudflare)
@@ -138,9 +138,12 @@ errors.** See the comment at the top of `eslint.config.js`.
 - `isWorklogPath()` in `src/server/github.ts` gates **both** read and write. The commit path
   must never accept an arbitrary client-supplied path — `.github/workflows/*` would be CI
   execution in every repo the user owns. `test/commitPaths.test.ts` guards this.
-- Four `dangerouslySetInnerHTML` sites are fed by the hand-rolled renderer in
+- Three `dangerouslySetInnerHTML` sites are fed by the hand-rolled renderer in
   `src/ui/utils/markdown.ts`. Escape before assembling attributes; the CSP is a backstop, not
-  a licence.
+  a licence. New Markdown surfaces go through `src/ui/components/MarkdownView.tsx` — the
+  shared one — rather than adding a fourth. (The other two are `NotesSection` and
+  `ClientInfoCard`; the latter renders with no image resolver, so `assets/` refs there fall
+  back to alt text.)
 - `src/ui/deeplink.ts` is the one place untrusted input enters the model: `/app/new?title=…`
   can be opened by any page. It sanitizes to what `serializeTask` can round-trip — one line per
   title/label, no control characters, http(s)/mailto only, length caps. A new field on

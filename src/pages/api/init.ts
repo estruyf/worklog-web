@@ -49,6 +49,7 @@ repository, and every change is committed straight back here.
 clients/<id>.md                # open tasks
 archive/<client>/<YYYY-MM>.md  # closed tasks
 worklog/<YYYY-MM>.md           # time entries: - <YYYY-MM-DD> <clientId|event:type> <hours>
+notes/<YYYY-MM>.md             # freeform notes per day, under a ## <YYYY-MM-DD> heading
 assets/                        # images pasted into task notes (optional)
 \`\`\`
 
@@ -85,6 +86,7 @@ function scaffoldFiles(): CommitFile[] {
     { path: '.worklog/config.json', content: JSON.stringify(config, null, 2) + '\n' },
     { path: 'clients/.gitkeep', content: '' },
     { path: 'worklog/.gitkeep', content: '' },
+    { path: 'notes/.gitkeep', content: '' },
     { path: 'archive/.gitkeep', content: '' },
   ];
 }

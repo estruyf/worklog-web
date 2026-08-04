@@ -35,6 +35,7 @@ import {
   type TaskFields,
 } from '../services/taskOps';
 import { removeWorklog, setEventWorklog, setWorklog } from '../services/worklog';
+import { setDayNote } from '../services/dayNotes';
 import { updateSettings, type SettingsFields } from '../services/settings';
 import type { WorklogState } from '../ui/state';
 import type { AutoSyncConfig, Client } from '../model/types';
@@ -454,6 +455,11 @@ class WorklogStore {
     return this.run(() => removeWorklog(this.store, date, clientId));
   }
 
+  /** Write (or clear, with an empty body) the freeform note for one day. */
+  setDayNote(date: string, body: string): Promise<void> {
+    return this.run(() => setDayNote(this.store, date, body));
+  }
+
   /** Save a pasted/dropped/picked image and return the markdown ref to insert. */
   async saveImage(dataBase64: string, ext: string): Promise<string> {
     const ref = await saveImageAsset(this.store, dataBase64, ext);
@@ -501,6 +507,7 @@ class WorklogStore {
       clients: this.store.db.getClients().filter((c) => !isGeneralTodoClientId(c.id)),
       tasks: this.store.db.getAllTasks(),
       worklog: this.store.db.getAllWorklog(),
+      dayNotes: this.store.db.getAllDayNotes(),
     };
   }
 

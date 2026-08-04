@@ -20,6 +20,7 @@
 // ever emitting conflict markers into markdown the parser would choke on.
 
 import { splitTaskBlocks } from '../parser/blocks';
+import { joinDayNotes, splitDayNoteBlocks } from '../parser/dayNotes';
 
 /** The three sides of a merge. `undefined` means the file is absent on that side. */
 export interface MergeSides {
@@ -77,6 +78,9 @@ export function mergeFile(path: string, sides: MergeSides): MergeResult {
   if (/^clients\/[^/]+\.md$/.test(path) || /^archive\/[^/]+\/[^/]+\.md$/.test(path)) {
     return mergeRecordFile(path, ancestor, local, remote, splitTasks);
   }
+  if (/^notes\/[^/]+\.md$/.test(path)) {
+    return mergeRecordFile(path, ancestor, local, remote, splitDayNotes);
+  }
   // Unknown text file: no structure to merge on, so the local edit wins and the
   // caller gets told the branch's version was dropped.
   return { text: local, conflicts: [`${path} changed here and on GitHub — kept your version`] };
@@ -116,6 +120,22 @@ function splitTasks(content: string): SplitFile {
       }
       return head ? `${head}\n\n${body}\n` : `${body}\n`;
     },
+  };
+}
+
+/** Day-note files: one record per `## <date>` block, keyed by the date.
+ *
+ *  The record text carries its own heading, as a task record does, so the
+ *  three-way comparison sees the whole block. The join goes through
+ *  `joinDayNotes` rather than assembling text here: two serializers for one
+ *  format drift, and the drift shows up as a no-op merge that still rewrites the
+ *  file — a phantom dirty commit on every sync. */
+function splitDayNotes(content: string): SplitFile {
+  const { header, blocks } = splitDayNoteBlocks(content);
+  return {
+    header,
+    records: blocks.map((b) => ({ key: `date:${b.date}`, text: `## ${b.date}\n\n${b.text}` })),
+    join: (h, recs) => joinDayNotes(h, recs.flatMap((r) => splitDayNoteBlocks(r.text).blocks)),
   };
 }
 
@@ -245,6 +265,9 @@ function mergeRecords(
 function describe(key: string): string {
   if (key.startsWith('id:')) {
     return `task ${key.slice(3)}`;
+  }
+  if (key.startsWith('date:')) {
+    return `the note for ${key.slice(5)}`;
   }
   if (key.startsWith('text:')) {
     return 'an entry';

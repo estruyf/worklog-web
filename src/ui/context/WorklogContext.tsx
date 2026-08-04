@@ -118,6 +118,21 @@ export function WorklogProvider({ children }: { children: React.ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ui.detailId]);
 
+  // Same shape and same reason as the description draft above, one day at a
+  // time: keyed on the date alone so a snapshot refresh — including the one the
+  // save itself triggers — can't overwrite what is being typed.
+  React.useEffect(() => {
+    if (!ui.selectedDate) {
+      return;
+    }
+    ui.setDayNoteDraft(snap?.dayNotes.find((n) => n.date === ui.selectedDate)?.body ?? '');
+    ui.setDayNoteMode('preview');
+    // The stamp confirms a save on *this* day; carrying it across would have it
+    // vouching for a note the new day doesn't have.
+    ui.setDayNoteSavedAt('');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ui.selectedDate]);
+
   const data = useWorklogModel(snap, ui, toast, gitPending, loading);
 
   const [taskFormBar, setTaskFormBar] = React.useState<TaskFormBar | null>(null);

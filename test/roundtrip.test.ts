@@ -13,6 +13,7 @@ import { fileURLToPath } from 'node:url';
 import { parseTaskFile, serializeTask } from '../src/parser/taskParser';
 import { parseWorklogFile, serializeWorklogEntry } from '../src/parser/worklogParser';
 import { replaceBlock, extractBlock } from '../src/parser/blocks';
+import { joinDayNotes, splitDayNoteBlocks } from '../src/parser/dayNotes';
 import type { Task } from '../src/model/types';
 
 const FIXTURES = fileURLToPath(new URL('./fixtures/timesheet', import.meta.url));
@@ -118,6 +119,28 @@ describe('worklog ledger round-trip', () => {
           note: e.note,
         });
       }
+    });
+  }
+});
+
+describe('day notes round-trip', () => {
+  const notesDir = join(DATA, 'notes');
+  const files = existsSync(notesDir) ? readdirSync(notesDir).filter((f) => f.endsWith('.md')) : [];
+
+  // Not asserted non-empty against a real repo: `notes/` is newer than every
+  // timesheet that already exists, so an absent directory is the normal state
+  // there and would fail a blanket "found files" check.
+  if (DATA === FIXTURES) {
+    it('finds notes files to test', () => {
+      expect(files.length).toBeGreaterThan(0);
+    });
+  }
+
+  for (const f of files) {
+    it(`join(split) reproduces ${f} byte for byte`, () => {
+      const content = readFileSync(join(notesDir, f), 'utf-8');
+      const { header, blocks } = splitDayNoteBlocks(content);
+      expect(joinDayNotes(header, blocks)).toBe(content);
     });
   }
 });

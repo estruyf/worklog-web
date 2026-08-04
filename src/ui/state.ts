@@ -3,7 +3,7 @@
 // is small, so the UI holds everything and derives Today / reporting / search /
 // insights client-side — no per-view round trips. Kept DOM- and dependency-free.
 
-import type { AutoSyncConfig, Client, StatusDef, Task, WorklogEntry } from "../model/types";
+import type { AutoSyncConfig, Client, DayNote, StatusDef, Task, WorklogEntry } from "../model/types";
 
 /**
  * The full app state, re-derived on every edit and read by the UI through the
@@ -20,4 +20,5 @@ export interface WorklogState {
   clients: Client[];
   tasks: Task[]; // all tasks (open + done)
   worklog: WorklogEntry[]; // all ledger entries
+  dayNotes: DayNote[]; // one freeform Markdown note per day that has one
 }

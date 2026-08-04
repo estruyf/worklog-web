@@ -78,6 +78,7 @@ describe('the event map', () => {
     expect(autoSyncEventFor('updateTask')).toBe('taskEdited');
     expect(autoSyncEventFor('setWorklog')).toBe('timeLogged');
     expect(autoSyncEventFor('updateSettings')).toBe('settings');
+    expect(autoSyncEventFor('setDayNote')).toBe('dayNote');
   });
 
   it('maps the sync machinery to nothing, so a pull can never trigger a sync', () => {
@@ -170,6 +171,26 @@ describe('syncing on an event', () => {
 
     expect(store.hasPending()).toBe(false);
     expect(files['clients/acme.md']).toContain('Offline task');
+  });
+
+  it('pushes a day note within seconds when that is the ticked event', async () => {
+    const store = await openStore({ enabled: false, delayMinutes: DELAY_MINUTES, events: ['dayNote'] });
+
+    await store.setDayNote('2026-08-03', 'Standup ran long.');
+    await vi.advanceTimersByTimeAsync(EVENT_MS);
+
+    expect(store.hasPending()).toBe(false);
+    expect(files['notes/2026-08.md']).toContain('Standup ran long.');
+  });
+
+  it('leaves a day note alone when the ticked event is a different kind', async () => {
+    const store = await openStore({ enabled: false, delayMinutes: DELAY_MINUTES, events: ['taskCreated'] });
+
+    await store.setDayNote('2026-08-03', 'Standup ran long.');
+    await vi.advanceTimersByTimeAsync(DELAY_MS * 2);
+
+    expect(commitAttempts).toBe(0);
+    expect(store.hasPending()).toBe(true);
   });
 
   it('does nothing on its own when no event is configured and the timed sync is off', async () => {

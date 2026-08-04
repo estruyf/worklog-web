@@ -133,11 +133,15 @@ export type SearchScope = "all" | "open" | "archived";
 
 /** A single search hit, with its title pre-split around the matched substring. */
 export interface SearchResult {
+  /** Which corpus the hit came from. A day note belongs to no client and has no
+   *  status, which is why the four fields below are optional. */
+  kind: "task" | "note";
+  /** The task's title, or the day's long-form date. */
   title: string;
-  clientName: string;
-  color: string;
-  statusLabel: string;
-  statusColor: string;
+  clientName?: string;
+  color?: string;
+  statusLabel?: string;
+  statusColor?: string;
   hasLink: boolean;
   link: string;
   tags: string[];

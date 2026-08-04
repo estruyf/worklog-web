@@ -323,6 +323,7 @@ Point the app at a repo that already uses the Worklog layout:
 clients/<id>.md                # open tasks
 archive/<client>/<YYYY-MM>.md  # closed tasks
 worklog/<YYYY-MM>.md           # time entries: - <YYYY-MM-DD> <clientId|event:type> <hours>
+notes/<YYYY-MM>.md             # freeform notes per day (optional)
 assets/                        # images pasted into task notes (optional)
 ```
 
@@ -348,6 +349,31 @@ A new task starts at a `## ` heading that has an `- id:` line directly under it.
 That means a description can use `## ` headings of its own — they stay part of the
 description. A hand-written `## ` heading with no `- id:` under it is read as prose,
 not as a task, so give new blocks an id (or create them in the app, which does).
+
+### Day notes
+
+The day view has a freeform Markdown field for the half of a day that isn't billed
+and isn't a task — what was said, what was decided, what you want to remember on
+Monday. It lands in `notes/<YYYY-MM>.md`, one block per day, and ⌘K searches it:
+
+```markdown
+# Notes 2026-07
+
+## 2026-07-01
+
+Kickoff with Globex. They want the uploader before the demo.
+
+- chase the SSO ticket
+
+## 2026-07-16
+
+Export queue prototype. Renders, doesn't paginate yet.
+```
+
+A day starts at a `## ` heading whose whole content is a date, so the note itself
+can use `##` and `###` headings freely — `## Scripts` and `## 2026-07-16 planning`
+are both prose. The one exception is a line that is *exactly* `## <YYYY-MM-DD>`
+inside a fenced code block: that still reads as the start of a new day.
 
 ### Recurring tasks
 
