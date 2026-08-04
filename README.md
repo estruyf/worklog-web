@@ -20,15 +20,16 @@ insights. Every edit is committed straight back to your repo.
 5. [Step 3 — Install and run](#step-3--install-and-run)
 6. [Step 4 — Sign in and pick a repo](#step-4--sign-in-and-pick-a-repo)
 7. [Using the app](#using-the-app)
-8. [Quick capture — task deeplinks](#quick-capture--task-deeplinks)
-9. [Testing](#testing)
-10. [Deploying to Cloudflare](#deploying-to-cloudflare)
-11. [Environment variables](#environment-variables)
-12. [Expected repository layout](#expected-repository-layout)
-13. [How it works](#how-it-works)
-14. [Project structure](#project-structure)
-15. [Troubleshooting](#troubleshooting)
-16. [Known limitations](#known-limitations)
+8. [Offline](#offline)
+9. [Quick capture — task deeplinks](#quick-capture--task-deeplinks)
+10. [Testing](#testing)
+11. [Deploying to Cloudflare](#deploying-to-cloudflare)
+12. [Environment variables](#environment-variables)
+13. [Expected repository layout](#expected-repository-layout)
+14. [How it works](#how-it-works)
+15. [Project structure](#project-structure)
+16. [Troubleshooting](#troubleshooting)
+17. [Known limitations](#known-limitations)
 
 ---
 
@@ -194,6 +195,38 @@ its own: pick one or more tags (a task must carry all of them) with or without a
 
 **Keyboard shortcuts:** `⌘/Ctrl+N` new task · `⌘/Ctrl+F` or `⌘/Ctrl+S` search · `⌘/Ctrl+L` log time
 (Day view) · `⌘/Ctrl+R` reload from GitHub · `Esc` close the top dialog.
+
+---
+
+## Offline
+
+Worklog installs as a PWA, and once a repo has been opened on a device it keeps working without a
+connection — including a cold start, with the tab closed and the app relaunched.
+
+- **Opening offline** shows the branch as this device last saw it, plus any edits that never made
+  it to GitHub.
+- **Editing offline** works normally. Changes are written to the device as you go, so closing the
+  tab — or the browser crashing — doesn't lose them.
+- **You're told, and kept told.** A bar across the top of the view says you're offline and how many
+  files are waiting; Git sync in the sidebar becomes an **Offline** indicator, with a chip in the
+  top bar on a phone. The bar stays after you reconnect if changes still haven't been sent, with a
+  **Sync now** button — it only goes away when there's genuinely nothing left to send. (It stays
+  quiet when automatic sync is on and about to handle it for you.)
+- **Reconnecting** pushes what was waiting, if automatic sync or a sync-on-change event is enabled
+  (Settings → Sync). With both off nothing leaves unprompted, exactly as when you're online: press
+  **Git sync**. What lands is merged record by record against whatever the branch holds by then, so
+  a day spent offline reconciles the same way a minute does.
+
+Two things need the network: **signing in**, and **opening a repo this device has never opened** —
+there is nothing cached to show, so you get the error screen rather than an empty timesheet.
+
+Inline images are the one thing that degrades. The cached copy holds your Markdown, not the bytes
+under `assets/`, so an image renders as its alt text until you're back online. That is a deliberate
+trade — the images are most of a repo's size and none of its meaning, and storage quota is what
+decides whether opening offline works at all.
+
+Signing out clears the cached repo contents from the device. Unsynced edits are kept: they are the
+only copy of work GitHub has never seen.
 
 ---
 

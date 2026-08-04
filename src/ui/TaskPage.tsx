@@ -9,7 +9,7 @@
 // route's own task as the open one (see useDetailId), so the panel follows the URL.
 
 import { useData, useUi } from './context';
-import { ClientFormModal, ConfirmDialog, Toast, TaskDetailPanel } from './components';
+import { ClientFormModal, ConfirmDialog, SyncStatusBar, Toast, TaskDetailPanel } from './components';
 import { navigateToDashboard } from './router';
 
 export function TaskPage({ taskId }: { taskId: string }) {
@@ -24,6 +24,7 @@ export function TaskPage({ taskId }: { taskId: string }) {
 
   return (
     <div className="min-h-screen bg-white text-neutral-825 antialiased" style={{ fontFamily: "'Inter', -apple-system, system-ui, sans-serif" }}>
+      <SyncStatusBar sticky={false} />
       {exists ? (
         <TaskDetailPanel routed />
       ) : (

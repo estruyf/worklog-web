@@ -1,5 +1,5 @@
 import React from 'react';
-import { CheckIcon, MenuIcon, PlusIcon, SearchIcon } from 'lucide-react';
+import { CheckIcon, CloudOffIcon, MenuIcon, PlusIcon, SearchIcon } from 'lucide-react';
 import { Button, IconButton } from '../../primitives';
 import { useData, useTaskFormBar, useUi } from '../../context';
 import { useRoute } from '../../router';
@@ -16,7 +16,7 @@ import { BrandMark } from './BrandMark';
  *  mounted (see `useTaskFormBar`); its fields stay its own, so typing a title no
  *  longer re-renders the nav. */
 export function MobileTopBar({ onOpenDrawer }: { onOpenDrawer: () => void }) {
-  const { openTaskForm, noClients } = useData();
+  const { openTaskForm, noClients, offline } = useData();
   const { setSearchOpen } = useUi();
   const route = useRoute();
   const onForm = route.name === 'taskForm';
@@ -35,6 +35,18 @@ export function MobileTopBar({ onOpenDrawer }: { onOpenDrawer: () => void }) {
         <MenuIcon size={18} />
       </IconButton>
       <BrandMark />
+      {/* The rail — where the offline state otherwise lives, on the Git sync
+          button — is behind the drawer on a phone, and this is the case where
+          you are most likely to be offline. */}
+      {offline && (
+        <span
+          className="flex items-center gap-1 rounded-control-md border border-brand-500 bg-brand-225 px-1.5 py-0.5 text-brand-800 text-control"
+          title="Offline — your changes are saved on this device and will sync when you reconnect"
+        >
+          <CloudOffIcon size={14} />
+          Offline
+        </span>
+      )}
       <div className="flex-1" />
       <IconButton variant="outline" onClick={openSearch} className="w-9 h-9" aria-label="Search">
         <SearchIcon size={18} />

@@ -3,7 +3,7 @@
 // random state we stash in a short-lived cookie to check on callback.
 
 import type { APIRoute } from 'astro';
-import { appOrigin, getEnv, OAUTH_STATE_COOKIE } from '../../../server/session';
+import { appOrigin, getEnv, isSecureRequest, OAUTH_STATE_COOKIE } from '../../../server/session';
 
 export const prerender = false;
 
@@ -16,7 +16,7 @@ export const GET: APIRoute = (context) => {
   const state = crypto.randomUUID();
   context.cookies.set(OAUTH_STATE_COOKIE, state, {
     httpOnly: true,
-    secure: true,
+    secure: isSecureRequest(context),
     sameSite: 'lax',
     path: '/',
     maxAge: 600,

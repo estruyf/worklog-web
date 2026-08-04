@@ -1,15 +1,20 @@
 import React from 'react';
 import type { AppView } from '../../model';
-import { FolderSyncIcon, KeyboardIcon, SearchIcon, SettingsIcon } from 'lucide-react';
+import { CloudOffIcon, FolderSyncIcon, KeyboardIcon, SearchIcon, SettingsIcon } from 'lucide-react';
 import { useData, useUi } from '../../context';
 import { actionClass } from './styles';
 
 /** The rail's bottom block: the things you reach for from any view. Search and
  *  Git sync do something; Shortcuts and Settings are views, so they light up
- *  when you are on them. */
+ *  when you are on them.
+ *
+ *  Offline, Git sync becomes the offline indicator rather than being disabled:
+ *  it is the one control in the app that means "reach GitHub", so it is where
+ *  someone looks to find out why nothing has. Still pressable — the store answers
+ *  with what it is doing instead of the sync it can't make. */
 export function SidebarActions({ onGo, onNavigate }: { onGo: (view: AppView) => void; onNavigate?: () => void }) {
   const { view, setSearchOpen } = useUi();
-  const { triggerGitSync, gitPending } = useData();
+  const { triggerGitSync, gitPending, offline } = useData();
 
   const openSearch = () => {
     setSearchOpen(true);
@@ -31,14 +36,22 @@ export function SidebarActions({ onGo, onNavigate }: { onGo: (view: AppView) => 
         }}
         className={
           actionClass +
-          (gitPending
+          (gitPending || offline
             ? ' border-brand-500 bg-brand-225 text-brand-800 hover:bg-brand-325'
             : ' border-transparent text-neutral-750 hover:bg-neutral-200')
         }
-        title={gitPending ? 'Uncommitted changes — commit all changes, pull, and push' : 'Commit all changes, pull, and push'}
+        title={
+          offline
+            ? gitPending
+              ? 'Offline — your changes are saved on this device and will sync when you reconnect'
+              : 'Offline — showing the last version synced to this device'
+            : gitPending
+              ? 'Uncommitted changes — commit all changes, pull, and push'
+              : 'Commit all changes, pull, and push'
+        }
       >
-        <FolderSyncIcon size={15} />
-        Git sync
+        {offline ? <CloudOffIcon size={15} /> : <FolderSyncIcon size={15} />}
+        {offline ? 'Offline' : 'Git sync'}
         {gitPending && <span className="ml-auto w-[9px] h-[9px] rounded-full bg-brand-500" />}
       </button>
 

@@ -5,6 +5,10 @@
 // reloaded before a sync reaches GitHub. This module mirrors the dirty files into
 // IndexedDB so they can be recovered on the next open.
 //
+// This is the *local edits* half of what the app keeps on the device; `repoCache`
+// holds the other half, the branch these edits are a change from. The database
+// plumbing both go through lives in `idb`.
+//
 // Design notes:
 //   - IndexedDB (not localStorage) because snapshots include binary image bytes
 //     and can exceed localStorage's synchronous ~5MB budget.
@@ -18,12 +22,8 @@
 //     lives in sessionStorage, so it is stable across a reload of one tab and
 //     distinct between tabs.
 
-const DB_NAME = 'worklog';
-/** v1 store: one record per repo, keyed by `repoKey`. Read once on open so a
- *  snapshot written by the previous build is still recoverable, never written. */
-const LEGACY_STORE = 'pending';
-const STORE_NAME = 'snapshots';
-const DB_VERSION = 2;
+import { LEGACY_PENDING_STORE, SNAPSHOT_STORE, openDb, withStore } from './idb';
+
 const INSTANCE_KEY = 'worklog:instance';
 
 /** A snapshot of the dirty files for one repo, plus the base it was edited on. */
@@ -97,60 +97,6 @@ function randomId(): string {
   }
 }
 
-function openDb(): Promise<IDBDatabase | null> {
-  return new Promise((resolve) => {
-    if (typeof indexedDB === 'undefined') {
-      resolve(null);
-      return;
-    }
-    let req: IDBOpenDBRequest;
-    try {
-      req = indexedDB.open(DB_NAME, DB_VERSION);
-    } catch {
-      resolve(null);
-      return;
-    }
-    req.onupgradeneeded = () => {
-      const db = req.result;
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        db.createObjectStore(STORE_NAME, { keyPath: 'key' });
-      }
-      // The v1 store is left in place; `loadPending` drains it on the next open.
-    };
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => resolve(null);
-    req.onblocked = () => resolve(null);
-  });
-}
-
-/** Run `body` inside a transaction, resolving to `fallback` on any failure. */
-function withStore<T>(
-  db: IDBDatabase,
-  storeName: string,
-  mode: IDBTransactionMode,
-  fallback: T,
-  body: (store: IDBObjectStore, done: (value: T) => void) => void,
-): Promise<T> {
-  return new Promise<T>((resolve) => {
-    if (!db.objectStoreNames.contains(storeName)) {
-      resolve(fallback);
-      return;
-    }
-    try {
-      let value = fallback;
-      const tx = db.transaction(storeName, mode);
-      body(tx.objectStore(storeName), (v) => {
-        value = v;
-      });
-      tx.oncomplete = () => resolve(value);
-      tx.onerror = () => resolve(fallback);
-      tx.onabort = () => resolve(fallback);
-    } catch {
-      resolve(fallback);
-    }
-  });
-}
-
 /** Persist (overwrite) this instance's snapshot for its repo. Resolves even on
  *  failure. Other instances' snapshots are untouched. */
 export async function savePending(snapshot: PendingSnapshot): Promise<void> {
@@ -158,7 +104,7 @@ export async function savePending(snapshot: PendingSnapshot): Promise<void> {
   if (!db) {
     return;
   }
-  await withStore(db, STORE_NAME, 'readwrite', undefined, (store) => {
+  await withStore(db, SNAPSHOT_STORE, 'readwrite', undefined, (store) => {
     store.put(snapshot);
   });
   db.close();
@@ -178,7 +124,7 @@ export async function loadPending(repoKey: string): Promise<PendingSnapshot | nu
   if (!db) {
     return null;
   }
-  const rows = await withStore<PendingSnapshot[]>(db, STORE_NAME, 'readonly', [], (store, done) => {
+  const rows = await withStore<PendingSnapshot[]>(db, SNAPSHOT_STORE, 'readonly', [], (store, done) => {
     const req = store.getAll();
     req.onsuccess = () => done((req.result as PendingSnapshot[]) ?? []);
   });
@@ -193,7 +139,7 @@ export async function loadPending(repoKey: string): Promise<PendingSnapshot | nu
 /** Read (and remove) a snapshot written by the pre-instance-id build, so work
  *  left unsynced across the upgrade is still offered exactly once. */
 async function drainLegacy(db: IDBDatabase, repoKey: string): Promise<PendingSnapshot[]> {
-  const old = await withStore<PendingSnapshot | null>(db, LEGACY_STORE, 'readwrite', null, (store, done) => {
+  const old = await withStore<PendingSnapshot | null>(db, LEGACY_PENDING_STORE, 'readwrite', null, (store, done) => {
     const req = store.get(repoKey);
     req.onsuccess = () => {
       const row = req.result as PendingSnapshot | undefined;
@@ -213,7 +159,7 @@ export async function clearPending(repoKey: string): Promise<void> {
   if (!db) {
     return;
   }
-  await withStore(db, STORE_NAME, 'readwrite', undefined, (store) => {
+  await withStore(db, SNAPSHOT_STORE, 'readwrite', undefined, (store) => {
     store.delete(snapshotKeyOf(repoKey, instanceId()));
   });
   db.close();
@@ -226,7 +172,7 @@ export async function clearSnapshot(key: string): Promise<void> {
   if (!db) {
     return;
   }
-  await withStore(db, STORE_NAME, 'readwrite', undefined, (store) => {
+  await withStore(db, SNAPSHOT_STORE, 'readwrite', undefined, (store) => {
     store.delete(key);
   });
   db.close();

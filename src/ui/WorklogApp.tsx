@@ -6,7 +6,7 @@
 import React from 'react';
 import { useData, useUi } from './context';
 import { useSearchData } from './hooks';
-import { ClientFormModal, ConfirmDialog, Toast, SearchOverlay, Sidebar, TaskDetailPanel, TaskFormPage } from './components';
+import { ClientFormModal, ConfirmDialog, Toast, SearchOverlay, Sidebar, SyncStatusBar, TaskDetailPanel, TaskFormPage } from './components';
 import type { SidebarRepoProps } from './components/Sidebar';
 import { EmptyClientsView } from './views/EmptyClientsView';
 import { ROUTES } from './views/routes';
@@ -156,6 +156,9 @@ export function WorklogApp({ repoProps }: { repoProps?: SidebarRepoProps } = {})
       <Sidebar {...repoProps} />
 
       <main className="flex flex-1 min-w-0 flex-col">
+        {/* Above the view rather than inside it: every view scrolls its own
+            content, and this has to stay put in all of them. */}
+        <SyncStatusBar />
         {noClients ? <EmptyClientsView /> : formOpen ? <TaskFormPage /> : <ActiveView />}
       </main>
 

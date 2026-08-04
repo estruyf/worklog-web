@@ -25,6 +25,17 @@ export function getEnv(context: APIContext): Env {
   };
 }
 
+/** Whether cookies for this request may carry `Secure`.
+ *
+ *  A `Secure` cookie sent over http is dropped by the browser, not downgraded —
+ *  and Safari applies that to `http://localhost` too, where Chrome and Firefox
+ *  make an exception. Setting it unconditionally makes the whole OAuth flow fail
+ *  in dev with "Invalid OAuth state", because the state cookie never gets stored.
+ *  In production the Worker sees the real https URL, so this stays on. */
+export function isSecureRequest(context: APIContext): boolean {
+  return new URL(context.request.url).protocol === 'https:';
+}
+
 export function getToken(context: APIContext): string | undefined {
   return context.cookies.get(TOKEN_COOKIE)?.value || undefined;
 }
@@ -32,7 +43,7 @@ export function getToken(context: APIContext): string | undefined {
 export function setToken(context: APIContext, token: string): void {
   context.cookies.set(TOKEN_COOKIE, token, {
     httpOnly: true,
-    secure: true,
+    secure: isSecureRequest(context),
     sameSite: 'lax',
     path: '/',
     maxAge: 60 * 60 * 24 * 30, // 30 days

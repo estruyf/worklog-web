@@ -14,7 +14,12 @@ function Spinner() {
   return <span className="w-[13px] h-[13px] shrink-0 rounded-full border-2 border-neutral-525 border-t-info animate-spin" />;
 }
 
-/** Transient notification pinned to the bottom of the shell: sync status + errors. */
+/** Transient notification pinned to the bottom of the shell: sync status + errors.
+ *
+ *  Sits above every overlay in the app — the task panel (z-40), the sidebar drawer
+ *  and dialogs (z-50/60). A sync finishing or failing while a task is open is
+ *  exactly when the state matters, and the layer below it covers the whole
+ *  viewport, so anything lower is simply never seen. */
 export function Toast({ toast }: { toast: ToastMessage | null }) {
   if (!toast) {
     return null;
@@ -24,7 +29,7 @@ export function Toast({ toast }: { toast: ToastMessage | null }) {
       role="status"
       aria-live="polite"
       className={
-        'fixed bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 rounded-control-md border text-control px-4 py-2 shadow-[0_8px_24px_rgba(0,0,0,0.12)] ' +
+        'fixed bottom-4 left-1/2 -translate-x-1/2 z-70 flex items-center gap-2 rounded-control-md border text-control px-4 py-2 shadow-[0_8px_24px_rgba(0,0,0,0.12)] ' +
         TONE_CLASS[toast.tone]
       }
     >

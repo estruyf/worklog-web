@@ -3,7 +3,7 @@
   "short_name": "Worklog",
   "description": "Web-based, GitHub-backed Worklog / timesheet manager. Markdown is the source of truth.",
   "id": "/",
-  "start_url": "/",
+  "start_url": "/app",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait-primary",

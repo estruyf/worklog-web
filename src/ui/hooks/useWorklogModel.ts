@@ -33,6 +33,8 @@ export function useWorklogModel(
   toast: ToastMessage | null,
   gitPending = false,
   loading = false,
+  offline = false,
+  pendingCount = 0,
 ) {
   // The snapshot's collections, memoized on the snapshot itself: `?? []` would
   // hand out a fresh array on every render and re-run every memo built on it.
@@ -121,5 +123,7 @@ export function useWorklogModel(
     triggerGitSync,
     saveSettings,
     gitPending,
+    pendingCount,
+    offline,
   };
 }

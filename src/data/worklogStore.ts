@@ -46,7 +46,19 @@ import { AssetUrlCache } from './assetUrls';
 import { commitFiles, fetchHead, fetchRepo, type LoadResponse, type RepoContext } from './repoApi';
 import { fileMapOf, markPushed, mergeRemoteInto, outgoingFiles } from './fileSync';
 import { applySnapshot, snapshotOf } from './recovery';
+import { loadResponseOf, loadTree, saveTree } from './repoCache';
 import { RemoteWatcher } from './remoteWatcher';
+
+/** True only when the browser positively reports having no connection.
+ *
+ *  `navigator.onLine` doesn't exist outside a browser (tests, SSR), and an absent
+ *  signal has to read as online: a false "offline" would park every sync behind a
+ *  reconnect event that is never coming. A true one is only ever a hint in the
+ *  other direction too — the machine can be on a network that reaches nothing —
+ *  which is why the sync failure path stays intact underneath this. */
+function isOffline(): boolean {
+  return typeof navigator !== 'undefined' && navigator.onLine === false;
+}
 
 /** Summary of recoverable unsynced changes found on open, for the UI prompt. */
 export interface RecoveryInfo {
@@ -62,6 +74,15 @@ export interface WorklogSnapshot {
   data: WorklogState | null;
   loading: boolean;
   gitPending: boolean;
+  /** How many files hold changes GitHub hasn't seen. `gitPending` is this being
+   *  non-zero; the count is what lets the UI say how much is waiting rather than
+   *  only that something is. */
+  pendingCount: number;
+  /** No connection: edits are being kept on the device, and what is on screen may
+   *  be the cached branch rather than the live one. Drives the UI's offline
+   *  indicator — the store emits no toast for it, because going offline is a
+   *  state to show, not an event to announce once and lose. */
+  offline: boolean;
 }
 
 export type ToastTone = 'loading' | 'success' | 'info' | 'error';
@@ -98,27 +119,66 @@ class WorklogStore {
   // A recovered snapshot loaded on open, held until the user restores or discards it.
   private recovered?: PendingSnapshot;
   private assetUrls = new AssetUrlCache();
+  /** A sync was wanted while there was no connection. It says the user (or a
+   *  trigger they configured) already asked for this work to reach GitHub, which
+   *  is what makes it right to push on reconnect without asking again — and what
+   *  keeps "auto-sync off" meaning nothing syncs unprompted. */
+  private deferredSync = false;
   private watcher = new RemoteWatcher(
     () => this.checkRemote(),
-    () => !!this.repo && this.loaded && !this.committing && this.fm.dirty.size === 0,
+    () => !!this.repo && this.loaded && !this.committing && this.fm.dirty.size === 0 && !isOffline(),
   );
 
   private subscribers = new Set<Subscriber>();
   private toastListeners = new Set<ToastListener>();
   // Cached immutable snapshot: `getSnapshot` must return a stable reference between
   // changes so `useSyncExternalStore` doesn't loop. Rebuilt only on transitions.
-  private snapshot: WorklogSnapshot = { data: null, loading: false, gitPending: false };
+  private snapshot: WorklogSnapshot = { data: null, loading: false, gitPending: false, pendingCount: 0, offline: isOffline() };
 
   constructor() {
     // Every persisted edit re-derives the state, flags the tree dirty, and arms
     // the debounced auto-commit. The reason decides which debounce: the change
     // kinds the user picked in Settings sync in seconds, everything else waits.
     this.store.onDidChange((reason) => {
-      this.updateSnapshot({ data: this.deriveState(), gitPending: this.fm.dirty.size > 0 });
+      this.updateSnapshot({ data: this.deriveState(), ...this.dirtyPatch() });
       this.scheduleCommit(reason);
       this.schedulePersist();
     });
+    if (typeof window !== 'undefined') {
+      window.addEventListener('offline', this.onConnectionLost);
+      window.addEventListener('online', this.onConnectionBack);
+    }
   }
+
+  /** Nothing to do but show it: the edits are already going to the file map and
+   *  the debounced persist, and a sync that fires meanwhile now declines itself. */
+  private onConnectionLost = (): void => {
+    this.updateSnapshot({ offline: true });
+  };
+
+  /** Reconnected. Push what was waiting, or — when nothing is — find out how far
+   *  the branch has moved, which after an open from cache is the whole point:
+   *  what's on screen is as old as the last time this device was online.
+   *
+   *  Same policy as `scheduleRetry`, and for the same reason: automatic sync (by
+   *  timer or by event) means work leaves on its own, so a reconnect is simply the
+   *  soonest that can happen. With both off, nothing leaves unprompted — unless
+   *  the user pressed Sync while offline, which is them having asked already. */
+  private onConnectionBack = (): void => {
+    this.updateSnapshot({ offline: false });
+    if (!this.repo || !this.loaded || this.committing) {
+      return;
+    }
+    if (this.fm.dirty.size === 0) {
+      void this.checkRemote();
+      return;
+    }
+    const autoSync = this.autoSyncConfig();
+    if (this.deferredSync || autoSync.enabled || autoSync.events.length > 0) {
+      this.deferredSync = false;
+      void this.sync({ silent: true });
+    }
+  };
 
   // ---- reactive subscription (consumed by ui/hooks/useWorklogState) ---------
 
@@ -150,13 +210,17 @@ class WorklogStore {
     return this.fm.dirty.size > 0;
   }
 
-  /** Load a repo from GitHub and render it. */
+  /** Load a repo from GitHub and render it, falling back to the copy this device
+   *  cached the last time it managed to (see `openFromCache`). */
   async open(owner: string, repo: string, branch?: string): Promise<void> {
     this.updateSnapshot({ loading: true });
     let data: LoadResponse;
     try {
       data = await fetchRepo(owner, repo, branch);
     } catch (err) {
+      if (await this.openFromCache(owner, repo, branch)) {
+        return;
+      }
       this.updateSnapshot({ loading: false });
       this.emitToast(`Could not load ${owner}/${repo}: ${err instanceof Error ? err.message : String(err)}`, 'error');
       throw new Error('load failed');
@@ -164,10 +228,55 @@ class WorklogStore {
     this.applyLoad(data);
     await this.store.rebuild('open');
     this.loaded = true;
-    this.updateSnapshot({ data: this.deriveState(), loading: false, gitPending: false });
+    this.updateSnapshot({ data: this.deriveState(), loading: false, ...this.dirtyPatch(), offline: false });
     this.scheduleDateRollover();
     this.watcher.start();
+    void this.saveTreeCache();
     await this.loadRecovery();
+  }
+
+  /** Open the branch from the device-side cache after the load failed. Returns
+   *  false when there is nothing cached — a repo this device has never opened —
+   *  and the caller falls back to the error screen.
+   *
+   *  Unsynced edits are re-applied here rather than offered through the recovery
+   *  prompt. That prompt asks a question ("restore or discard?") that only makes
+   *  sense after something went wrong; reopening the app on a train is not
+   *  something going wrong, and being asked to justify your own unsent work
+   *  before you can see it would be the wrong first screen. Everything else about
+   *  them is unchanged — they are still dirty, still snapshotted, and still merge
+   *  record by record on the way out. */
+  private async openFromCache(owner: string, repo: string, branch?: string): Promise<boolean> {
+    const tree = await loadTree(owner, repo, branch);
+    if (!tree) {
+      return false;
+    }
+    this.applyLoad(loadResponseOf(tree), tree.remote);
+    await this.store.rebuild('open');
+    this.loaded = true;
+    this.recovered = undefined;
+
+    const saved = await loadPending(this.repoKey());
+    const conflicts = saved && saved.dirty.length > 0 ? applySnapshot(this.fm, saved) : [];
+    if (saved && saved.dirty.length > 0) {
+      await this.store.rebuild('restore');
+    }
+
+    this.updateSnapshot({ data: this.deriveState(), loading: false, ...this.dirtyPatch(), offline: true });
+    this.scheduleDateRollover();
+    this.watcher.start();
+    this.reportConflicts(conflicts, 'local changes conflicted — kept your versions');
+    return true;
+  }
+
+  /** Mirror the branch content for the next offline open. Fire-and-forget: a
+   *  cache that fails to write costs nothing now and is retried on the next
+   *  load, pull or push. */
+  private async saveTreeCache(): Promise<void> {
+    if (!this.repo) {
+      return;
+    }
+    await saveTree(this.fm, this.repo, Date.now());
   }
 
   /** Reload the current repo from GitHub, discarding uncommitted in-memory edits. */
@@ -241,6 +350,26 @@ class WorklogStore {
     if (!this.repo || this.committing) {
       return;
     }
+    // Offline: don't spend a request to be told so. The edits are already in the
+    // file map and the debounced persist, so this is a deferral, not a failure —
+    // and reporting it as one (a "Sync failed" toast per debounce, all evening)
+    // is what made an offline session look like a broken app.
+    if (isOffline()) {
+      this.deferredSync = this.deferredSync || this.fm.dirty.size > 0;
+      this.updateSnapshot({ offline: true });
+      if (!silent) {
+        this.emitToast(
+          this.fm.dirty.size > 0
+            ? 'Offline — your changes are saved here and will sync when you reconnect'
+            : 'Offline — nothing to sync until you reconnect',
+          'info',
+        );
+      }
+      // Belt and braces for the reconnect: `online` is the fast path, but it does
+      // not fire behind every captive portal, and a timesheet must not need one.
+      this.scheduleRetry();
+      return;
+    }
     this.clearCommitTimer();
     this.committing = true;
     const hasLocalChanges = this.fm.dirty.size > 0;
@@ -252,6 +381,12 @@ class WorklogStore {
     }
     try {
       const head = await fetchHead(this.repo);
+      // Reaching GitHub is the only proof of connectivity worth trusting, and the
+      // only one that clears the indicator when `online` never fired.
+      this.deferredSync = false;
+      if (this.snapshot.offline) {
+        this.updateSnapshot({ offline: false });
+      }
       // This is a head check like the watcher's — don't let one follow the other.
       this.watcher.markChecked();
       const remoteMoved = head !== this.repo.baseCommitSha;
@@ -280,8 +415,16 @@ class WorklogStore {
       }
       this.emitToast('Changes synced', 'success');
     } catch (err) {
-      // Failures surface even for background syncs.
-      this.emitToast(`Sync failed: ${err instanceof Error ? err.message : String(err)}`, 'error');
+      // The connection can drop mid-sync as easily as before one. That reads as a
+      // failed request here, but it is the offline case, and it gets the offline
+      // treatment: keep the work, show the state, say nothing.
+      if (isOffline()) {
+        this.deferredSync = true;
+        this.updateSnapshot({ offline: true });
+      } else {
+        // Failures surface even for background syncs.
+        this.emitToast(`Sync failed: ${err instanceof Error ? err.message : String(err)}`, 'error');
+      }
     } finally {
       this.committing = false;
       this.updateSnapshot({ loading: false });
@@ -325,7 +468,11 @@ class WorklogStore {
         this.clearPersistTimer();
         void clearPending(this.repoKey());
       }
-      this.updateSnapshot({ gitPending: !settled });
+      // The push moved the baseline, so the cached copy is now a commit behind.
+      // Refreshed even when something stayed dirty: what this writes is the
+      // branch content, which the unpushed edit is a change *from*.
+      void this.saveTreeCache();
+      this.updateSnapshot(this.dirtyPatch());
       return rebased;
     }
     throw new Error('the branch kept moving on GitHub — try again');
@@ -355,7 +502,8 @@ class WorklogStore {
     }
     this.applyLoad(await fetchRepo(this.repo.owner, this.repo.repo, this.repo.branch));
     await this.store.rebuild('pull');
-    this.updateSnapshot({ data: this.deriveState(), gitPending: false });
+    this.updateSnapshot({ data: this.deriveState(), ...this.dirtyPatch() });
+    void this.saveTreeCache();
   }
 
   /** Ask where the branch head is and pull when it moved. Read-only as far as
@@ -511,13 +659,29 @@ class WorklogStore {
     };
   }
 
-  /** Swap in the tree a load returned and mount it for the services. */
-  private applyLoad(data: LoadResponse): void {
+  /** Swap in the tree a load returned and mount it for the services.
+   *
+   *  `remotePaths` is for the cached open, whose response carries no asset bytes:
+   *  without it the map would forget the branch holds those files at all, and
+   *  deleting one would commit as "drop a file that was never pushed" — a no-op
+   *  that leaves it on GitHub. Online, the response is the whole branch and the
+   *  paths it carries are the answer. */
+  private applyLoad(data: LoadResponse, remotePaths?: string[]): void {
     // The old file map's bytes are about to go away; drop the URLs pointing at them.
     this.assetUrls.revokeAll();
     this.fm = fileMapOf(data);
+    for (const path of remotePaths ?? []) {
+      this.fm.remote.add(path);
+    }
     mountFileMap(this.fm);
     this.repo = { owner: data.owner, repo: data.repo, branch: data.branch, baseCommitSha: data.baseCommitSha };
+  }
+
+  /** The pending-changes half of the snapshot, derived rather than passed in.
+   *  Every caller used to spell out `gitPending` for itself, and a second field
+   *  saying the same thing is how the two drift apart. */
+  private dirtyPatch(): Pick<WorklogSnapshot, 'gitPending' | 'pendingCount'> {
+    return { gitPending: this.fm.dirty.size > 0, pendingCount: this.fm.dirty.size };
   }
 
   /** Merge a partial into the cached snapshot (new reference) and notify. */

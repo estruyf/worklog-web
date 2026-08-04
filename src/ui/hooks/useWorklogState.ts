@@ -6,7 +6,7 @@ import { useEffect, useState, useSyncExternalStore } from 'react';
 import { worklogStore, type ToastMessage } from '../../data/worklogStore';
 
 export function useWorklogState() {
-  const { data, loading, gitPending } = useSyncExternalStore(
+  const { data, loading, gitPending, pendingCount, offline } = useSyncExternalStore(
     worklogStore.subscribe,
     worklogStore.getSnapshot,
     worklogStore.getSnapshot,
@@ -25,5 +25,5 @@ export function useWorklogState() {
     return () => clearTimeout(id);
   }, [toast]);
 
-  return { snap: data, loading, toast, gitPending };
+  return { snap: data, loading, toast, gitPending, pendingCount, offline };
 }

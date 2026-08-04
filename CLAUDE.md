@@ -39,7 +39,7 @@ knows about React.
 parser/ model/ util/     pure markdown ⇄ Task/WorklogEntry. No I/O, no React.
 workspace/ db/ store.ts  in-memory FileMap ("the filesystem"), MemoryDb, rebuild
 services/ commands/      mutations — write into the FileMap, never to disk or network
-data/                    worklogStore: sync, three-way merge, IndexedDB recovery
+data/                    worklogStore: sync, three-way merge, IndexedDB recovery + offline
 ui/                      React dashboard (primitives → components → views)
 server/ pages/api/        ─── the only ring that talks to GitHub ───
 ```
@@ -100,6 +100,22 @@ ordering is preserved so a merged file stays a small diff.
 Any new file kind under a synced path needs a merge strategy, or it will resolve
 last-writer-wins. `test/twoInstances.test.ts` is the pattern for proving a sync scenario —
 write one there for anything touching sync, recovery or merge.
+
+### 2a. What the device holds is two halves, and they must stay apart
+
+`data/repoCache.ts` keeps the branch as last seen; `data/pendingStore.ts` keeps the edits that
+haven't reached GitHub. An offline open layers the second over the first through the *same*
+`applySnapshot` merge an online open uses over a fresh `/api/load` — that is the only reason one
+merge serves both paths. Don't collapse them into one record: the cache is written from
+`FileMap.baseText` (the branch), never from what is on screen, which is what keeps it free of the
+dirty/clean ambiguity.
+
+Both go through `data/idb.ts` — one module owns the database, because one database can only be
+opened at one version. Adding a store means bumping `DB_VERSION` there and *adding* to
+`onupgradeneeded`, never replacing it: users arrive at the new version from every older one.
+
+`test/offline.test.ts` covers the cold start, and hand-rolls IndexedDB in `test/helpers/` rather
+than taking a dependency, so `npm test` still needs no network and nothing installed.
 
 ### 3. UI primitives are style-only
 
