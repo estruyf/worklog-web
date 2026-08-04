@@ -65,7 +65,10 @@ const iosSplash: [number, number, number, number, number][] = [
     <link rel="icon" type="image/svg+xml" href="/worklog-logo-outline.svg" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <meta name="theme-color" content="#F4CF4D" />
-    <link rel="apple-touch-icon" href="/worklog-192x192.png" />
+    {/* Must be opaque and full-bleed: iOS draws transparent pixels on black and
+        then applies its own squircle, so an icon with its own rounded card gets a
+        dark frame. Generated from /worklog-icon.svg — see the note in that file. */}
+    <link rel="apple-touch-icon" href="/apple-touch-icon-180x180.png" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Worklog" />

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Full-bleed app-icon source. Deliberately has NO rounded corners, no border and
+     no transparency: every platform that shows this applies its own mask (iOS
+     squircle, Android adaptive circle/squircle). Baking our own card in meant iOS
+     drew a black backdrop behind the transparent corners and then masked again —
+     a dark frame around a shrunken icon.
+
+     The mark is scaled to 66% of the canvas width. That keeps its bounding box
+     inside the maskable safe zone (a centred circle of 80% diameter): half-diagonal
+     is 0.66/2 * sqrt(1 + (17.29/28.35)^2) = 38.7% of the canvas, under the 40% limit.
+
+     Rasterised to public/apple-touch-icon-180x180.png and
+     public/worklog-maskable-512x512.png (both opaque, no alpha channel). -->
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#f4cf4d"/>
+  <!-- Glyph bbox in its own 44x44 space is x8.020 y12.640 w28.350 h17.290;
+       centre it on the canvas, then scale 337.92/28.350. -->
+  <g transform="translate(256 256) scale(11.9195) translate(-22.190 -21.280)" fill="#252627">
+    <path d="M28.77,12.65h4.16l-5.52,17.27h-3.91l-2.37-10.1-.69-3.34-.69,3.34-2.37,10.1h-3.8l-5.56-17.27h4.35l2.59,9.89.56,2.75.57-2.69,2.21-9.95h4.32l2.33,9.89.6,2.75.6-2.65,2.62-10Z"/>
+    <path d="M26.74,25.93h6.88c1.52,0,2.75.9,2.75,2h0c0,1.1-1.23,2-2.75,2h-6.88c-1.52,0-2.75-.9-2.75-2h0c0-1.1,1.23-2,2.75-2Z"/>
+  </g>
+</svg>

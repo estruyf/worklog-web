@@ -12,8 +12,18 @@ if (Astro.cookies.get(TOKEN_COOKIE)?.value) {
 const features = [
   {
     title: "Day view",
-    body: "Your day at a glance — logged time, tasks you worked on, what’s due and a quick log form to add hours without leaving the page.",
+    body: "Your day as one proportional bar — every entry sized against your working day, and whatever is left over is an Unlogged slot you click to fill.",
     icon: "day",
+  },
+  {
+    title: "Day notes",
+    body: "The half of a day that isn’t billed and isn’t a task: what was said, what was decided, what you want to remember on Monday.",
+    icon: "note",
+  },
+  {
+    title: "Overdue",
+    body: "Everything that has slipped, across every client, grouped with the longest-overdue first — plus a count badge so nothing quietly rots.",
+    icon: "alert",
   },
   {
     title: "Calendar",
@@ -22,17 +32,22 @@ const features = [
   },
   {
     title: "Clients & tasks",
-    body: "Group work by client, with tags, due dates, subtasks, links and full Markdown descriptions on every task.",
+    body: "Group work by client — with tags, due dates, subtasks, links and full Markdown descriptions — or drop it in the general to-do bucket that belongs to no client.",
     icon: "layers",
   },
   {
-    title: "General to-dos",
-    body: "A reserved bucket for work that belongs to no client — your personal to-do list, same powerful task model.",
-    icon: "check",
+    title: "Recurring tasks",
+    body: "“Monthly on last”, “weekly on mon,thu”, “every 3 days”. Tick one off and the next occurrence is computed on the spot — nothing runs in the background.",
+    icon: "repeat",
+  },
+  {
+    title: "Search everything",
+    body: "One shortcut over open tasks, the archive and your day notes. Filter by tag, and every tag chip in the app is a filter you can click.",
+    icon: "search",
   },
   {
     title: "Insights",
-    body: "Monthly hours and days per client, an hours-by-client chart and a trend line — turned into charts, never a spreadsheet.",
+    body: "Monthly hours and days per client, an events breakdown, an hours-by-client chart and a trend line — turned into charts, never a spreadsheet.",
     icon: "chart",
   },
   {
@@ -67,13 +82,15 @@ const tree = [
   { t: "├── .worklog/" },
   {
     t: "│   └── config.json",
-    c: "hours/day · week start · clients · statuses",
+    c: "hours/day · week start · clients · statuses · sync",
   },
   { t: "├── clients/" },
   { t: "│   ├── acme.md", c: "one file per client · its open tasks" },
   { t: "│   └── todos.md", c: "general, non-client to-dos" },
   { t: "├── worklog/" },
   { t: "│   └── 2026-06.md", c: "one file per month · logged hours" },
+  { t: "├── notes/" },
+  { t: "│   └── 2026-06.md", c: "one block per day · freeform notes" },
   { t: "├── archive/" },
   { t: "│   └── acme/2026-06.md", c: "closed tasks · per client, per month" },
   { t: "└── assets/", c: "images pasted into descriptions" },
@@ -98,7 +115,11 @@ const configJson = `{
     { "id": "open", "label": "Open" },
     { "id": "done", "label": "Closed", "terminal": true }
   ],
-  "autoSync": { "enabled": true, "delayMinutes": 5 }
+  "autoSync": {
+    "enabled": true,
+    "delayMinutes": 5,
+    "events": ["timeLogged", "dayNote"]
+  }
 }`;
 
 const worklogMd = `# Worklog 2026-06
@@ -117,7 +138,25 @@ const clientMd = `# Acme Corp
 - worked: 2026-06-21
 - tags: frontend, priority
 
-Freeform Markdown description — images and all.`;
+Freeform Markdown description — images and all.
+
+## Send the monthly invoice reminder
+- id: t_rc3ccc
+- status: open
+- due: 2026-06-30
+- repeat: monthly on last`;
+
+const notesMd = `# Notes 2026-06
+
+## 2026-06-25
+
+Kickoff with Globex. They want the uploader before the demo.
+
+- chase the SSO ticket
+
+## 2026-06-26
+
+Export queue prototype. Renders, doesn't paginate yet.`;
 ---
 
 <Layout
@@ -280,7 +319,7 @@ Freeform Markdown description — images and all.`;
                     <path d="m3 17 9 5 9-5" />
                   </svg>
                 )}
-                {f.icon === "check" && (
+                {f.icon === "note" && (
                   <svg
                     width="20"
                     height="20"
@@ -291,8 +330,57 @@ Freeform Markdown description — images and all.`;
                     stroke-linecap="round"
                     stroke-linejoin="round"
                   >
-                    <path d="M9 11l3 3L22 4" />
-                    <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+                    <path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9Z" />
+                    <path d="M14 3v6h6" />
+                    <path d="M8 13h6" />
+                    <path d="M8 17h4" />
+                  </svg>
+                )}
+                {f.icon === "alert" && (
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <circle cx="12" cy="12" r="9" />
+                    <path d="M12 7v5l3 2" />
+                  </svg>
+                )}
+                {f.icon === "repeat" && (
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="m17 2 4 4-4 4" />
+                    <path d="M3 11v-1a4 4 0 0 1 4-4h14" />
+                    <path d="m7 22-4-4 4-4" />
+                    <path d="M21 13v1a4 4 0 0 1-4 4H3" />
+                  </svg>
+                )}
+                {f.icon === "search" && (
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <circle cx="11" cy="11" r="7" />
+                    <path d="m20 20-3.5-3.5" />
                   </svg>
                 )}
                 {f.icon === "chart" && (
@@ -353,6 +441,31 @@ Freeform Markdown description — images and all.`;
             ))
           }
         </ol>
+
+        <div class="capture-note">
+          <span class="commit-icon" aria-hidden="true">
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"></path>
+              <path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"></path>
+            </svg>
+          </span>
+          <p>
+            <strong>Capture a task from anywhere.</strong> A bookmarklet, a browser
+            extension or any shortcut that can open a URL hands Worklog a task:
+            <code>/app/new?title=…&amp;url=…&amp;client=acme</code> opens the new-task
+            form pre-filled. It fills the form and nothing else — you review it and
+            press Save.
+          </p>
+        </div>
       </section>
 
       <section class="internals" id="internals">
@@ -379,6 +492,10 @@ Freeform Markdown description — images and all.`;
               <span class="fname">.worklog/config.json</span>
             </div>
             <pre class="code">{configJson}</pre>
+            <div class="code-foot">
+              <code>events</code> lists the change kinds worth pushing straight away
+              — the rest coalesce into one commit after <code>delayMinutes</code>.
+            </div>
           </div>
 
           <div class="code-card">
@@ -400,7 +517,20 @@ Freeform Markdown description — images and all.`;
             <pre class="code">{clientMd}</pre>
             <div class="code-foot">
               One <code>## heading</code> block per task; closing it moves the block
-              to <code>archive/</code>.
+              to <code>archive/</code> — or, with a <code>repeat:</code> line, rolls
+              it onto the next occurrence.
+            </div>
+          </div>
+
+          <div class="code-card notes-card">
+            <div class="code-head">
+              <span class="fname">notes/2026-06.md</span>
+            </div>
+            <pre class="code">{notesMd}</pre>
+            <div class="code-foot">
+              One <code>## &lt;date&gt;</code> block per day. A heading is only a day
+              when it is <em>nothing but</em> a date, so your own <code>##</code> headings
+              stay prose.
             </div>
           </div>
         </div>
@@ -428,10 +558,13 @@ Freeform Markdown description — images and all.`;
             Every change is written straight back to your branch through the
             GitHub Git Data API —
             <strong>blobs → tree → commit → ref</strong> — coalesced into a single
-            <code>chore: worklog sync &lt;date&gt;</code> commit. No pull requests,
-            and optimistic locking means concurrent edits never clobber each other.
-            Your token stays in a server-side httpOnly cookie; the browser never calls
-            GitHub directly.
+            <code>chore: worklog sync &lt;date&gt;</code> commit. No pull requests.
+            A sync goes both ways: it pulls whatever was committed elsewhere first,
+            and a file that moved on both sides is
+            <strong>merged record by record, never line by line</strong> — tasks by
+            their <code>id</code>, logged hours by date and client — so a conflict
+            marker can never land in Markdown. Your token stays in a server-side
+            httpOnly cookie; the browser never calls GitHub directly.
           </p>
         </div>
       </section>
@@ -469,9 +602,8 @@ Freeform Markdown description — images and all.`;
                 GitHub's OAuth <code>repo</code> scope is granted per token, but Worklog
                 only ever touches its own files — <code>.worklog/</code>, <code
                   >clients/</code
-                >, <code>worklog/</code>, <code>archive/</code> and <code
-                  >assets/</code
-                > — in the repository you choose.
+                >, <code>worklog/</code>, <code>notes/</code>, <code>archive/</code
+                > and <code>assets/</code> — in the repository you choose.
               </p>
             </div>
           </details>
@@ -531,7 +663,24 @@ Freeform Markdown description — images and all.`;
                   >archive/&lt;client&gt;/&lt;month&gt;.md</code
                 >, stamped with its completion date. Your active lists stay
                 tidy, and nothing is ever lost — reopening a task simply moves
-                it back.
+                it back. A recurring task instead rolls onto its next date and
+                files a snapshot of the occurrence you just finished.
+              </p>
+            </div>
+          </details>
+          <details class="faq-item">
+            <summary
+              >Can I use it on more than one device?<span
+                class="chev"
+                aria-hidden="true"></span></summary
+            >
+            <div class="faq-a">
+              <p>
+                Yes — the repo is the shared state. Every sync pulls before it
+                pushes, an open tab notices a push from elsewhere on its own, and
+                anything changed on both sides is merged per task, per logged day
+                and per client rather than per line. Edit on your laptop, your
+                phone, or on github.com; it all converges.
               </p>
             </div>
           </details>
@@ -984,7 +1133,8 @@ Freeform Markdown description — images and all.`;
     align-items: start;
   }
   .tree-card,
-  .config-card {
+  .config-card,
+  .notes-card {
     grid-column: 1 / -1;
   }
   .code-card {
@@ -1041,7 +1191,8 @@ Freeform Markdown description — images and all.`;
     color: #d7c98a;
     padding: 1px 5px;
   }
-  .commit-note {
+  .commit-note,
+  .capture-note {
     display: flex;
     gap: 14px;
     align-items: flex-start;
@@ -1062,15 +1213,21 @@ Freeform Markdown description — images and all.`;
     background: var(--brand-tint);
     color: #8a6d09;
   }
-  .commit-note p {
+  .commit-note p,
+  .capture-note p {
     margin: 0;
     font-size: 14.5px;
     line-height: 1.65;
     color: var(--muted);
   }
-  .commit-note strong {
+  .commit-note strong,
+  .capture-note strong {
     color: var(--ink);
     font-weight: 600;
+  }
+  /* The steps grid centres itself under 860px; keep this readable beside it. */
+  .capture-note {
+    margin-top: 28px;
   }
 
   /* ---- FAQ ---- */

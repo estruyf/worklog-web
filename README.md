@@ -354,7 +354,8 @@ not as a task, so give new blocks an id (or create them in the app, which does).
 
 The day view has a freeform Markdown field for the half of a day that isn't billed
 and isn't a task — what was said, what was decided, what you want to remember on
-Monday. It lands in `notes/<YYYY-MM>.md`, one block per day, and ⌘K searches it:
+Monday. It lands in `notes/<YYYY-MM>.md`, one block per day, and search (`⌘/Ctrl+F`)
+covers it:
 
 ```markdown
 # Notes 2026-07
