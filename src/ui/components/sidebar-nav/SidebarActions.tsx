@@ -1,7 +1,8 @@
 import React from 'react';
 import type { AppView } from '../../model';
-import { CloudOffIcon, FolderSyncIcon, KeyboardIcon, SearchIcon, SettingsIcon } from 'lucide-react';
+import { CloudOffIcon, ExternalLinkIcon, FolderSyncIcon, KeyboardIcon, PuzzleIcon, SearchIcon, SettingsIcon } from 'lucide-react';
 import { useData, useUi } from '../../context';
+import { CHROME_EXTENSION_URL } from '../../../model/links';
 import { actionClass } from './styles';
 
 /** The rail's bottom block: the things you reach for from any view. Search and
@@ -77,6 +78,21 @@ export function SidebarActions({ onGo, onNavigate }: { onGo: (view: AppView) => 
         <SettingsIcon size={15} strokeWidth={1.5} />
         Settings
       </button>
+
+      {/* Deliberately the quietest row in the block: it leaves the app, and it is
+          here to be found once rather than reached for daily. Muted until hover,
+          so it reads as a footnote to the actions above it. */}
+      <a
+        href={CHROME_EXTENSION_URL}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={actionClass + ' no-underline border-transparent text-neutral-650 hover:bg-neutral-200 hover:text-neutral-750'}
+        title="Worklog for Chrome — add tasks straight from GitHub and Productive"
+      >
+        <PuzzleIcon size={15} strokeWidth={1.5} />
+        Browser extension
+        <ExternalLinkIcon size={12} className="ml-auto shrink-0" />
+      </a>
     </div>
   );
 }

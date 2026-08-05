@@ -1,5 +1,6 @@
 ---
 import Layout from "../layouts/Layout.astro";
+import { CHROME_EXTENSION_URL } from "../model/links";
 import { TOKEN_COOKIE } from "../server/session";
 
 export const prerender = false;
@@ -653,6 +654,21 @@ Export queue prototype. Renders, doesn't paginate yet.`;
           </details>
           <details class="faq-item">
             <summary
+              >Is there a browser extension?<span class="chev" aria-hidden="true"
+              ></span></summary
+            >
+            <div class="faq-a">
+              <p>
+                Yes — <a href={CHROME_EXTENSION_URL}>Worklog for Chrome</a> adds
+                a task to your timesheet straight from a GitHub issue or pull
+                request, or from a Productive item, without leaving the page
+                you're on. It's optional; everything still lands in the same
+                repo.
+              </p>
+            </div>
+          </details>
+          <details class="faq-item">
+            <summary
               >What happens when I close a task?<span
                 class="chev"
                 aria-hidden="true"></span></summary
@@ -725,6 +741,7 @@ Export queue prototype. Renders, doesn't paginate yet.`;
         </span>
         <nav class="foot-links" aria-label="Footer">
           <a href="https://github.com/estruyf/worklog-web">Source on GitHub</a>
+          <a href={CHROME_EXTENSION_URL}>Browser extension</a>
           <a href="https://github.com/estruyf/worklog-web/issues"
             >Report an issue</a
           >
