@@ -24,4 +24,5 @@ export { ClientFormModal } from './ClientFormModal';
 export { SearchOverlay } from './SearchOverlay';
 export { ConfirmDialog } from './ConfirmDialog';
 export { Toast } from './Toast';
+export { UpdatePrompt } from './UpdatePrompt';
 export { SyncStatusBar } from './SyncStatusBar';

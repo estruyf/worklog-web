@@ -15,6 +15,7 @@ import { WorklogApp } from './WorklogApp';
 import { TaskPage } from './TaskPage';
 import { WorklogProvider } from './context';
 import { Button, Modal } from './primitives';
+import { UpdatePrompt } from './components';
 import { useUnsavedGuard } from './hooks';
 import { worklogStore, type RecoveryInfo } from '../data/worklogStore';
 import { clearTrees } from '../data/repoCache';
@@ -99,21 +100,28 @@ export default function WebApp() {
   }, []);
 
   // An unknown /app/* sub-path is a 404 regardless of repo/session state.
+  // Each of these is wrapped rather than returned bare so UpdatePrompt is mounted
+  // in every phase: the announcement fires once, and a prompt that only exists in
+  // the ready phase would miss one that arrived while the repo was still loading.
   if (route.name === 'notFound') {
-    return <NotFoundScreen onHome={navigateToDashboard} />;
+    return <Chrome><NotFoundScreen onHome={navigateToDashboard} /></Chrome>;
   }
   if (phase.kind === 'picker') {
-    return <RepoPicker onPick={open} lastRepo={readLastRepo()} />;
+    return <Chrome><RepoPicker onPick={open} lastRepo={readLastRepo()} /></Chrome>;
   }
   if (phase.kind === 'loading') {
-    return <Splash label={phase.label} />;
+    return <Chrome><Splash label={phase.label} /></Chrome>;
   }
   if (phase.kind === 'error') {
-    return <ErrorScreen message={phase.message} onRetry={() => repo && open(repo)} onSwitch={switchRepo} />;
+    return (
+      <Chrome>
+        <ErrorScreen message={phase.message} onRetry={() => repo && open(repo)} onSwitch={switchRepo} />
+      </Chrome>
+    );
   }
 
   return (
-    <>
+    <Chrome>
       <WorklogProvider>
         {route.name === 'task' ? (
           <TaskPage taskId={route.taskId} />
@@ -136,6 +144,17 @@ export default function WebApp() {
         loading="eager"
         className="absolute h-px w-px opacity-0 pointer-events-none -left-px -top-px"
       />
+    </Chrome>
+  );
+}
+
+/** Everything that outlives a phase change. Only the update prompt so far — it has
+ *  to be mounted before the announcement arrives, and that can be any time. */
+function Chrome({ children }: { children: React.ReactNode }) {
+  return (
+    <>
+      {children}
+      <UpdatePrompt />
     </>
   );
 }

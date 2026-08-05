@@ -29,8 +29,21 @@
  * reach GitHub with it is a /api/* call that is never served from cache. Signing
  * out clears the cached repo contents — see `signOut` in src/ui/WebApp.tsx.
  */
+
+/** Cache format. Bump by hand when the *shape* of what's stored changes, because
+ *  `activate` deletes every other `worklog-static-*` — including the /app shell,
+ *  which only comes back on the next successful online navigation. */
 const VERSION = "v2";
 const STATIC_CACHE = `worklog-static-${VERSION}`;
+
+/** Stamped per build by the `stamp-service-worker` integration in astro.config.mjs.
+ *  It has no readers: it exists only so this file differs byte-for-byte between
+ *  deploys, which is the whole of what the browser's update check compares. Without
+ *  it a deploy ships new app code and no new service worker, so nothing ever fires
+ *  `updatefound` and an installed PWA that never navigates never learns there is
+ *  one. Deliberately not part of STATIC_CACHE — see above. */
+const BUILD_ID = "__BUILD_ID__";
+void BUILD_ID;
 const OFFLINE_URL = "/offline.html";
 /** The one cache entry every /app route falls back to. Canonical on purpose:
  *  /app, /app/new and /app/task/<id> are all the same server-rendered shell, and
@@ -44,7 +57,18 @@ self.addEventListener("install", (event) => {
   event.waitUntil(
     caches.open(STATIC_CACHE).then((cache) => cache.add(OFFLINE_URL))
   );
-  self.skipWaiting();
+  // No skipWaiting() here on purpose. A new worker taking over mid-session would
+  // run `activate` — which deletes the previous cache — underneath pages that are
+  // still using it, and would leave no waiting worker to tell the user about. The
+  // page asks for the handover instead, once the person has agreed to reload.
+});
+
+/** The page's half of that handover: src/layouts/Layout.astro posts this when the
+ *  update prompt is accepted, then reloads on `controllerchange`. */
+self.addEventListener("message", (event) => {
+  if (event.data === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
 });
 
 self.addEventListener("activate", (event) => {
@@ -58,6 +82,9 @@ self.addEventListener("activate", (event) => {
             .map((key) => caches.delete(key))
         )
       )
+      // Load-bearing for the update flow, not just a nicety: claiming is what
+      // fires `controllerchange` in the open page, which is the signal it waits
+      // on before reloading. Without it an accepted update would sit silent.
       .then(() => self.clients.claim())
   );
 });

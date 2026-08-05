@@ -86,12 +86,76 @@ const iosSplash: [number, number, number, number, number][] = [
   </head>
   <body>
     <slot />
+    {/* Service worker registration and the update handshake. Inline because the
+        CSP in src/middleware.ts hashes the inline scripts of the actual response,
+        so this needs no policy edit — an external file would.
+
+        The two custom events are the seam to the React island: this script owns
+        the registration, src/ui/components/UpdatePrompt.tsx owns the asking. */}
     <script is:inline>
       if ("serviceWorker" in navigator) {
         window.addEventListener("load", () => {
-          navigator.serviceWorker.register("/sw.js").catch(() => {
-            /* registration failures shouldn't break the app */
-          });
+          navigator.serviceWorker
+            .register("/sw.js")
+            .then((reg) => {
+              // Only reload for a handover this page asked for. On a first-ever
+              // install `clients.claim()` also fires `controllerchange`, and
+              // reloading on that would refresh every first visit for no reason.
+              let expectReload = false;
+              navigator.serviceWorker.addEventListener("controllerchange", () => {
+                if (!expectReload) return;
+                expectReload = false;
+                location.reload();
+              });
+
+              window.addEventListener("worklog:apply-update", () => {
+                expectReload = true;
+                if (reg.waiting) {
+                  reg.waiting.postMessage("SKIP_WAITING");
+                } else {
+                  // Another tab already took the handover, so there is no worker
+                  // left to ask — this tab just needs the new code.
+                  location.reload();
+                }
+              });
+
+              const announce = () => {
+                // Nothing to update *from* on a first install: the page was
+                // uncontrolled when it loaded and is running current code already.
+                if (!navigator.serviceWorker.controller) return;
+                // Latched, not just dispatched: a worker can already be waiting
+                // the instant this registers, which is well before the React
+                // island hydrates. The event alone would fire into an empty room.
+                window.__worklogUpdateReady = true;
+                window.dispatchEvent(new CustomEvent("worklog:update-ready"));
+              };
+
+              if (reg.waiting) announce();
+              reg.addEventListener("updatefound", () => {
+                const installing = reg.installing;
+                if (!installing) return;
+                installing.addEventListener("statechange", () => {
+                  if (installing.state === "installed") announce();
+                });
+              });
+
+              // The browser only re-checks on a navigation or roughly daily. An
+              // installed PWA can go a week without either, so check whenever it
+              // comes back to the foreground — that is the moment someone is
+              // about to use it. Throttled because alt-tabbing is not a signal
+              // that anything was deployed, and each check is a request.
+              let checkedAt = 0;
+              document.addEventListener("visibilitychange", () => {
+                if (document.visibilityState !== "visible") return;
+                const now = Date.now();
+                if (now - checkedAt < 60000) return;
+                checkedAt = now;
+                reg.update().catch(() => {});
+              });
+            })
+            .catch(() => {
+              /* registration failures shouldn't break the app */
+            });
         });
       }
     </script>
