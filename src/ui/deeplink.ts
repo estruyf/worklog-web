@@ -12,11 +12,19 @@
 //
 // The same task can also arrive as a `web+worklog:` link — from a native app, a
 // terminal, a mail client, anything that opens a scheme rather than a browser tab.
-// That is not a second format: the browser hands the whole scheme URL back to a
-// fixed https URL of ours (`/app/new?handler=<escaped url>`), and its query *is*
-// the deeplink query, parsed by exactly the code below. Claiming the scheme is the
-// browser's business (see ./protocolHandler and `protocol_handlers` in the
-// manifest); making both entry points mean the same thing is this file's.
+// That is not a second format: the OS hands the whole scheme URL back to a fixed
+// https URL of ours (`/app/new?handler=<escaped url>`), and its query *is* the
+// deeplink query, parsed by exactly the code below. Claiming the scheme belongs to
+// `protocol_handlers` in the manifest; making both entry points mean the same thing
+// is this file's job.
+//
+// `navigator.registerProtocolHandler` used to be offered in Settings as well, and
+// is deliberately gone. It claims the scheme for the *browser*, which on macOS
+// outranks the installed app's own LaunchServices claim — so pressing it stopped
+// `web+worklog:` links from opening the PWA, and Chromium ships no
+// `unregisterProtocolHandler` to undo it from inside the app. It bought nothing
+// either: in a tab, `/app/new?title=…` is the same feature with no registration at
+// all. The scheme only earns its keep when there is an installed app to launch.
 //
 // Everything here is untrusted: the values come from whoever opened the link. They
 // end up in Markdown that has to keep round-tripping, so each field is flattened
@@ -27,17 +35,17 @@
 
 import type { TaskFormSeed } from './router';
 
-/** The custom scheme the app can claim (`web+worklog://new?title=…`). The `web+`
- *  prefix isn't decoration: `registerProtocolHandler` accepts a safelisted scheme
+/** The custom scheme the app claims (`web+worklog://new?title=…`). The `web+`
+ *  prefix isn't decoration: a manifest handler may name a safelisted scheme
  *  (`mailto`, `webcal`, …) or a `web+` one, and nothing else. */
 export const DEEPLINK_SCHEME = 'web+worklog';
 
-/** Where the browser sends a `web+worklog:` link it has handed us: the scheme URL
- *  arrives percent-escaped in the `%s` slot. Relative on purpose — it resolves
- *  against whatever origin the app is served from, which is what lets the same
- *  build register on localhost and in production. Kept in step with
- *  `protocol_handlers` in public/manifest.webmanifest, which says the same thing
- *  for an installed app; `test/taskDeeplink.test.ts` asserts they agree. */
+/** Where a `web+worklog:` link lands once handed over: the scheme URL arrives
+ *  percent-escaped in the `%s` slot. Relative on purpose — it resolves against
+ *  whatever origin the app is served from, which is what lets the same build work
+ *  on localhost and in production. This is the parse side of `protocol_handlers` in
+ *  public/manifest.webmanifest, which has to say the same thing for the link to
+ *  reach it; `test/taskDeeplink.test.ts` asserts they agree. */
 export const DEEPLINK_HANDLER_URL = '/app/new?handler=%s';
 
 /** The params a deeplink may carry. The router deletes exactly these once read,

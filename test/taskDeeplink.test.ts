@@ -120,15 +120,15 @@ describe('parseTaskDeeplink — handed-over web+worklog: links', () => {
     });
   });
 
-  it('is claimed the same way whether the app is installed or not', () => {
-    // Two registrations, one behaviour: `registerProtocolHandler` in the browser and
-    // `protocol_handlers` for an installed PWA. If they drift, an installed app
-    // opens a URL shape the parser above was never told about.
+  it('is claimed by the manifest at the URL the parser expects', () => {
+    // The manifest is the only thing that claims the scheme, and it points at the
+    // parser above. If they drift, an installed app opens a URL shape the parser
+    // was never told about.
     const manifest = JSON.parse(readFileSync(fileURLToPath(new URL('../public/manifest.webmanifest', import.meta.url)), 'utf-8'));
 
     expect(manifest.protocol_handlers).toEqual([{ protocol: DEEPLINK_SCHEME, url: DEEPLINK_HANDLER_URL }]);
-    // The two rules the browser applies to a handler registration, kept here so a
-    // change to either constant fails in the suite rather than at a user's click.
+    // The two rules a handler registration has to satisfy, kept here so a change to
+    // either constant fails in the suite rather than at install time.
     expect(DEEPLINK_SCHEME.startsWith('web+')).toBe(true);
     expect(DEEPLINK_HANDLER_URL).toContain('%s');
   });

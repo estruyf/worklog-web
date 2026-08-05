@@ -12,7 +12,7 @@ Read it before changing anything user-facing. This file covers how to work in th
 
 ```bash
 npm run dev      # http://localhost:4321 (needs .dev.vars — see README step 2)
-npm test         # vitest, 356 tests / 24 files — must stay green
+npm test         # vitest, 379 tests / 26 files — must stay green
 npm run lint     # eslint, 0 errors AND 0 warnings expected
 npx tsc --noEmit # must be clean
 npm run build    # astro build → dist/_worker.js (Cloudflare)
@@ -163,9 +163,11 @@ errors.** See the comment at the top of `eslint.config.js`.
 - `src/ui/deeplink.ts` is the one place untrusted input enters the model: `/app/new?title=…`
   can be opened by any page, and a `web+worklog:` link the browser hands over arrives at the same
   route as `?handler=<escaped url>` — one parser for both, because the scheme URL's query *is* the
-  deeplink query. `src/ui/protocolHandler.ts` (`registerProtocolHandler`) and `protocol_handlers`
-  in the manifest must keep naming the same scheme and URL; a test asserts they do. It sanitizes to
-  what `serializeTask` can round-trip — one line per
+  deeplink query. `DEEPLINK_SCHEME`/`DEEPLINK_HANDLER_URL` and `protocol_handlers` in the manifest
+  must keep naming the same scheme and URL; a test asserts they do. The manifest is the *only*
+  claim on the scheme — don't reintroduce `registerProtocolHandler`, which claims it for the
+  browser, outranks the installed app on macOS, and can't be released on Chromium (the header
+  comment in `deeplink.ts` records why). It sanitizes to what `serializeTask` can round-trip — one line per
   title/label, no control characters, http(s)/mailto only, length caps. A new field on
   `TaskFormSeed` that a deeplink can set gets the same treatment, or a link's `url` becomes an
   href nobody vetted. It fills the form and nothing else: there is no unauthenticated write path,

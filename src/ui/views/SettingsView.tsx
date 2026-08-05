@@ -2,8 +2,6 @@ import React, { useEffect, useId, useState } from 'react';
 import { Button, Card, Input, Select, Toggle } from '../primitives';
 import { useData } from '../context';
 import { AUTO_SYNC_EVENTS, type AutoSyncEvent } from '../../model/syncEvents';
-import { DEEPLINK_SCHEME } from '../deeplink';
-import { canUnregisterProtocol, registerProtocol, unregisterProtocol, type ProtocolHandlerResult } from '../protocolHandler';
 
 const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
@@ -271,88 +269,8 @@ export function SettingsView() {
           </Button>
           {saved && <span className="text-control text-success-500 font-medium">Saved</span>}
         </div>
-
-        <QuickCaptureSection />
       </div>
     </div>
   );
 }
 
-/** What the browser said when asked, in the app's words. Split out because the
- *  same three answers come back from both buttons, and the difference between them
- *  is one sentence. */
-function protocolMessage(action: 'register' | 'unregister', result: ProtocolHandlerResult): string {
-  if (result === 'refused') {
-    return 'Your browser turned the request down. Handling links needs a secure (https) connection to this site.';
-  }
-  if (result === 'unsupported') {
-    return action === 'register'
-      ? 'This browser can’t handle custom links. Deeplinks still work as ordinary /app/new URLs.'
-      : 'This browser has no way for a site to hand the scheme back. Remove Worklog from the handler list in your browser’s own settings.';
-  }
-  return action === 'register'
-    ? 'Asked your browser to open these links here — confirm it in the prompt or the address bar. If nothing appeared, this browser already has an answer on file; change it in the browser’s settings.'
-    : 'Asked your browser to stop opening these links here.';
-}
-
-/** Claiming `web+worklog:` for this browser. Its own section, after the save
- *  button, because nothing in it is a repository setting: it applies to this
- *  browser the moment it's asked for and is never written to config.json — which is
- *  also why it has no "unsaved changes" state and no part in `dirty`.
- *
- *  Two buttons rather than a toggle. A toggle claims to know which way things
- *  currently are, and nothing here can: the browser owns that state and offers no
- *  way to read it back. */
-function QuickCaptureSection() {
-  const [message, setMessage] = useState<{ text: string; failed: boolean } | null>(null);
-  // Read once on mount, not during render: it touches `navigator`, and this view is
-  // rendered on the server too.
-  const [canRelease, setCanRelease] = useState(false);
-  useEffect(() => setCanRelease(canUnregisterProtocol()), []);
-
-  const ask = (action: 'register' | 'unregister') => {
-    const result = action === 'register' ? registerProtocol() : unregisterProtocol();
-    setMessage({ text: protocolMessage(action, result), failed: result !== 'asked' });
-  };
-
-  return (
-    <div className="mt-10">
-      <h2 className="text-[18px] font-bold m-0">Quick capture</h2>
-      <p className="text-control text-neutral-675 mt-1 mb-4">
-        Applies to this browser, not to your repository.
-      </p>
-
-      <Card>
-        <div className="flex items-start justify-between gap-6 px-[18px] py-[18px]">
-          <div>
-            <div className="text-row font-semibold">Open worklog links in this app</div>
-            <div className="text-control text-neutral-675 mt-[3px]">
-              Lets anything that can open a link —{' '}
-              <code className="text-meta bg-neutral-250 rounded-chip px-[5px] py-[1px]">{DEEPLINK_SCHEME}://new?title=Call%20Bob</code>{' '}
-              — open the new-task form here, pre-filled. Your browser asks you to confirm, and nothing is saved until you press Save on
-              the form.
-            </div>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            {canRelease && (
-              <Button variant="secondary" size="md" onClick={() => ask('unregister')}>
-                Unregister
-              </Button>
-            )}
-            <Button variant="secondary" size="md" onClick={() => ask('register')}>
-              Register
-            </Button>
-          </div>
-        </div>
-      </Card>
-
-      {/* The browser owns the answer — it prompts, and never says what was chosen —
-          so this reports what was asked, not what happened. */}
-      {message && (
-        <div role="status" className={`text-control mt-3 ${message.failed ? 'text-danger-675' : 'text-neutral-675'}`}>
-          {message.text}
-        </div>
-      )}
-    </div>
-  );
-}

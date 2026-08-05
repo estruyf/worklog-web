@@ -290,24 +290,27 @@ chrome.contextMenus.onClicked.addListener((_info, tab) => {
 ```
 
 **A `web+worklog:` link** covers the callers that can't open an https URL into the right place — a
-native app, a shell script, a note in a mail client. In **Settings → Quick capture**, press
-**Register** once per browser and confirm your browser's prompt; from then on this is a task:
+native app, a shell script, a note in a mail client. **Install Worklog as an app** (Chrome or Edge,
+desktop or Android) and the install claims the scheme; from then on this is a task:
 
 ```
 web+worklog://new?title=Call%20Bob&client=acme
 ```
 
-It takes exactly the params in the table above and goes through the same sanitizing — the browser
-hands the whole link back to `/app/new`, which unpacks its query. Installing Worklog as an app
-claims the scheme too, so on a desktop install the link opens the app window instead of a tab.
+It takes exactly the params in the table above and goes through the same sanitizing — the whole
+link is handed to `/app/new`, which unpacks its query. The link opens the app window, not a tab.
 
-To stop handling them, press **Unregister** — the button only appears in browsers that let a site
-give a scheme back (Firefox does; Chrome and Edge don't, and keep the list under
-*Settings → Privacy and security → Site settings → Protocol handlers*). Neither button can show
-which way things currently stand: browsers offer no way to ask whether a site is the handler, so
-Settings reports what it asked for, not what is in force.
+There is no in-app button for this, on purpose. A site can also ask to handle a scheme with
+`registerProtocolHandler`, but that claims it for the *browser*, and on macOS the browser's claim
+outranks the installed app's — so asking for it is what stops the link opening the app, and
+Chrome and Edge have no matching call to take it back. In a browser tab you don't need the scheme
+anyway: `/app/new?title=…` is the same feature with nothing to register.
 
-Only `web+worklog` is claimed — browsers don't let a site register a bare scheme like `worklog:`.
+If a `web+worklog:` link opens a browser window that then does nothing, a stale claim of that kind
+is the usual cause. Clear it under *Settings → Privacy and security → Site settings → Protocol
+handlers*, in the profile you pressed it in, and reinstall the app.
+
+Only `web+worklog` is claimed — a site can't register a bare scheme like `worklog:`.
 
 Notes worth knowing:
 
