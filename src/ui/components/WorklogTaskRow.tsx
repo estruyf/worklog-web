@@ -4,6 +4,26 @@ import { BriefcaseIcon, CalendarIcon, GlobeIcon, RefreshCwIcon, SquareArrowOutUp
 import { formatDaysLate } from '../../model/overdue';
 import { Button, Chip } from '../primitives';
 import { fmtShort } from '../utils';
+import { DisclosureIcon } from './icons';
+
+/** The fold toggle, or the space it would take. Rows without subtasks render the
+ *  spacer rather than nothing, so every title in a list starts at the same x —
+ *  a chevron that shifted its neighbours would be worse than no chevron. */
+function FoldToggle({ collapsed, onToggle }: { collapsed?: boolean; onToggle?: () => void }) {
+  if (!onToggle) {
+    return <span className="w-4 shrink-0" aria-hidden="true" />;
+  }
+  return (
+    <button
+      onClick={onToggle}
+      aria-expanded={!collapsed}
+      title={collapsed ? 'Show subtasks' : 'Hide subtasks'}
+      className="w-4 h-4 shrink-0 flex items-center justify-center bg-transparent border-none p-0 cursor-pointer text-neutral-625 hover:text-neutral-825"
+    >
+      <DisclosureIcon open={!collapsed} size={11} />
+    </button>
+  );
+}
 
 /** Subtask completion rollup, shown inline on desktop and below the title on
  * mobile. `barWidth` shrinks the meter to match the narrower mobile row. */
@@ -112,6 +132,7 @@ export const WorklogTaskRow = React.memo(function WorklogTaskRow({ row }: { row:
       style={{ paddingLeft: row.pad }}
     >
       <div className="flex items-center gap-[11px]">
+        <FoldToggle collapsed={row.collapsed} onToggle={row.onToggleCollapse} />
         <button onClick={row.onDone} title="Mark done" className="w-[17px] h-[17px] shrink-0 border-[1.5px] border-neutral-575 rounded-full bg-white cursor-pointer p-0 hover:border-success-500" />
         {/* Worked toggle — absent for rows with no worked-on state (to-dos). */}
         {row.onWorked && (
@@ -182,10 +203,11 @@ export const WorklogTaskRow = React.memo(function WorklogTaskRow({ row }: { row:
       </div>
 
       {/* Narrow-row meta — status + progress + due + tags + link, indented under
-          the title (done + worked buttons ≈ 45px, 28px without the worked one).
+          the title (fold slot + done + worked buttons ≈ 72px, 55px without the
+          worked one).
           Hidden from `@lg` up, and skipped entirely when there is nothing to show. */}
       {hasNarrowMeta && (
-        <div className={'flex @lg:hidden flex-wrap items-center gap-x-[10px] gap-y-[6px] mt-[6px] ' + (row.onWorked ? 'pl-[45px]' : 'pl-[28px]')}>
+        <div className={'flex @lg:hidden flex-wrap items-center gap-x-[10px] gap-y-[6px] mt-[6px] ' + (row.onWorked ? 'pl-[72px]' : 'pl-[55px]')}>
           {row.statusLabel && (
             <button onClick={row.onCycle} title="Change status" className="text-status font-bold tracking-status bg-transparent border-none cursor-pointer p-0" style={{ color: row.statusColor }}>
               {row.statusLabel}

@@ -10,6 +10,8 @@ export type { NoteSearchDeps, SearchDeps, SearchDerived, SearchFilters, SplitMat
 export { deriveArchive, pageWindow, periodStart, ARCHIVE_PAGE_SIZES } from "./archive";
 export type { ArchiveDeps, ArchiveDerived, ArchiveFilters, ArchivePeriod } from "./archive";
 export { deriveTaskList, matchesTaskQuery, DEFAULT_TASK_LIST_FILTERS, TASK_SORTS } from "./taskFilter";
+export { parseCollapsedStore, planTaskRows, pruneCollapsed, toggleCollapsed } from "./taskTree";
+export type { CollapsedStore, TaskRowPlan } from "./taskTree";
 export type {
   TaskListDeps,
   TaskListDerived,

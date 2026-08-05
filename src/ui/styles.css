@@ -299,16 +299,51 @@ body {
   align-items: flex-start;
   gap: 8px;
 }
+/* The box is drawn rather than left native: the platform one is a blue square in
+   every browser, and it was the only control on the page that did not read as
+   part of the app. Border, radius and focus ring are the same ones
+   `controlStyles` gives a field, so it sits beside them without matching by eye. */
 .wl-md .wl-md-check {
-  width: 14px;
-  height: 14px;
+  appearance: none;
+  width: 16px;
+  height: 16px;
   flex: none;
-  /* Aligns the box with the cap height of the first line, not the line box. */
-  margin-top: 0.3em;
-  accent-color: #2d6cdf;
+  /* Centres the box on the first line's box, not on the whole item. */
+  margin-top: 0.25em;
+  border: 1px solid var(--color-neutral-525);
+  border-radius: var(--radius-chip);
+  background: #ffffff;
+  transition:
+    background-color 0.12s ease,
+    border-color 0.12s ease;
+}
+.wl-md .wl-md-check:checked {
+  border-color: var(--color-brand-500);
+  background-color: var(--color-brand-450);
+  /* The tick is a background image and not a `::before`, because Firefox does
+     not render pseudo-elements on form controls. Its stroke is
+     `--color-brand-800` inlined — a data URI cannot read `currentColor`. */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='none' stroke='%233A2E05' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m3.5 8.5 3 3 6-6.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 12px 12px;
 }
 .wl-md .wl-md-check:not(:disabled) {
   cursor: pointer;
+}
+.wl-md .wl-md-check:not(:disabled):hover {
+  border-color: var(--color-brand-500);
+  background-color: var(--color-brand-100);
+}
+.wl-md .wl-md-check:checked:not(:disabled):hover {
+  background-color: var(--color-brand-475);
+}
+/* The global focus ring is a 1px inset outline, which on a box this small paints
+   over the border it is meant to sit outside. */
+.wl-md .wl-md-check:focus-visible {
+  outline: none;
+  border-color: var(--color-brand-500);
+  box-shadow: 0 0 0 3px var(--color-brand-225);
 }
 /* A box in a note or on a client page has nothing to write back to; it still
    shows its state, so it is dimmed rather than greyed into illegibility. */

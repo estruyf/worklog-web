@@ -9,7 +9,7 @@ import { describeRecurrence } from "../../../model/recurrence";
 import { daysSinceEpoch } from "../../../util/date";
 import { navigateToTask } from "../../router";
 import type { StatusMetaFn, WorklogRow } from "../../model";
-import { clientIdOf, dueOn, isDone, linksOf, workedOnDate } from "../../utils";
+import { clientIdOf, dueOn, isDone, linksOf, planTaskRows, workedOnDate } from "../../utils";
 
 /** Everything a row needs that isn't the task itself: the day it is shown on, and
  *  the actions its buttons fire. */
@@ -17,6 +17,9 @@ export interface TaskRowDeps {
   tasks: Task[];
   today: string;
   selectedDate: string;
+  /** Parents whose subtasks are folded away — see `useCollapsedTasks`. */
+  collapsed: ReadonlySet<string>;
+  toggleCollapsed: (id: string) => void;
   statusMeta: StatusMetaFn;
   cycleStatus: (t: Task) => void;
   openTagSearch: (tag: string) => void;
@@ -32,6 +35,8 @@ export function useTaskRows(deps: TaskRowDeps) {
     tasks,
     today,
     selectedDate,
+    collapsed,
+    toggleCollapsed,
     statusMeta,
     cycleStatus,
     openTagSearch,
@@ -90,25 +95,19 @@ export function useTaskRows(deps: TaskRowDeps) {
   );
 
   /** A flat list of rows with subtasks indented under their parent, and orphaned
-   *  subtasks (whose parent isn't in `list`) shown at top level. */
+   *  subtasks (whose parent isn't in `list`) shown at top level. Parents the user
+   *  has folded shut carry the toggle and drop their children — the nesting rules
+   *  themselves are `planTaskRows`. */
   const openRowsFor = useCallback(
-    (list: Task[]): WorklogRow[] => {
-      const rows: WorklogRow[] = [];
-      const tops = list.filter((t) => !t.parentId);
-      tops.forEach((t) => {
-        rows.push(makeRow(t, false));
-        list.filter((c) => c.parentId === t.id).forEach((c) => rows.push(makeRow(c, true)));
-      });
-      list
-        .filter((t) => t.parentId && !tops.find((p) => p.id === t.parentId))
-        .forEach((c) => {
-          if (!rows.find((r) => r.id === c.id)) {
-            rows.push(makeRow(c, false));
-          }
-        });
-      return rows;
-    },
-    [makeRow],
+    (list: Task[]): WorklogRow[] =>
+      planTaskRows(list, collapsed).map((plan) => {
+        const row = makeRow(plan.task, plan.child);
+        if (!plan.foldable) {
+          return row;
+        }
+        return { ...row, collapsed: plan.collapsed, onToggleCollapse: () => toggleCollapsed(plan.task.id) };
+      }),
+    [makeRow, collapsed, toggleCollapsed],
   );
 
   return { makeRow, openRowsFor };

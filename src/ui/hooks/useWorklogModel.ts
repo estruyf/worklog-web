@@ -10,9 +10,11 @@
 // takes exactly the slices it reads.
 
 import { useCallback, useMemo } from "react";
+import { repoKeyOf } from "../../data/pendingStore";
 import { worklogStore, type ToastMessage } from "../../data/worklogStore";
 import type { AutoSyncConfig, AutoSyncEvent } from "../../model/types";
 import type { WorklogState } from "../state";
+import { useCollapsedTasks } from "./useCollapsedTasks";
 import { useClientModel } from "./model/useClientModel";
 import { useDayNoteModel } from "./model/useDayNoteModel";
 import { useLogModel } from "./model/useLogModel";
@@ -62,6 +64,17 @@ export function useWorklogModel(
   // at call time, and the renderer resolves every ref on each render.
   const assetUrl = useCallback((ref: string) => worklogStore.assetUrl(ref), []);
 
+  // Which repo the device-local list preferences belong to. Recomputed off the
+  // snapshot because that is what changes when a repo finishes opening — the
+  // store's repo is set before the first snapshot exists, so `snap` is the signal.
+  // Same key the pending-edit snapshots use: one notion of "which repo is this".
+  const repoKey = useMemo(() => {
+    const open = snap ? worklogStore.currentRepo() : undefined;
+    return open ? repoKeyOf(open.owner, open.repo, open.branch) : "";
+  }, [snap]);
+  const taskIds = useMemo(() => new Set(tasks.map((t) => t.id)), [tasks]);
+  const { collapsed, toggleCollapsed } = useCollapsedTasks(repoKey, taskIds);
+
   const clientModel = useClientModel(allClients, clients, tasks, worklog, ui);
   const statusModel = useStatusModel(statuses);
   const tagModel = useTagModel(tasks, ui);
@@ -70,6 +83,8 @@ export function useWorklogModel(
     tasks,
     today,
     selectedDate,
+    collapsed,
+    toggleCollapsed,
     statusMeta: statusModel.statusMeta,
     cycleStatus: statusModel.cycleStatus,
     openTagSearch: tagModel.openTagSearch,
