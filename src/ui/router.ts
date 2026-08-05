@@ -256,6 +256,54 @@ export function navigateToTaskForm(taskId?: string | null, seed: TaskFormSeed = 
   refresh();
 }
 
+/** Enter a URL an installed-app launch handed over: a manifest shortcut, a
+ *  `web+worklog:` link, the app icon itself. See ./launchHandler for who calls this.
+ *
+ *  A launch into an app that is *already open* is an instruction to show something,
+ *  not a page load. Re-entering it through the ordinary navigation helpers is what
+ *  keeps the mounted repo, the in-memory FileMap and any armed commit alive —
+ *  assigning to `location` would tear the island down and rebuild all of it.
+ *
+ *  The target's own query is dropped once its deeplink params are read, because
+ *  `navigate` carries the *current* one forward and that is what selects the mounted
+ *  repo. A shortcut clicked from the dock knows nothing about which repo is open. */
+export function navigateToLaunchTarget(target: string): void {
+  let url: URL;
+  try {
+    url = new URL(target, window.location.href);
+  } catch {
+    return;
+  }
+  // Not ours to act on. The launch target is browser-supplied rather than
+  // user-supplied, but this is a navigation taken without a click either way.
+  if (url.origin !== window.location.origin) {
+    return;
+  }
+  // The manifest scope is the whole origin, so a launch can legitimately point
+  // outside the island (the marketing page, the sign-in landing). Only a real
+  // navigation serves those — the client router has no route for them.
+  if (url.pathname !== APP_BASE && !url.pathname.startsWith(`${APP_BASE}/`)) {
+    window.location.assign(url.href);
+    return;
+  }
+  const route = parseRoute(url.pathname);
+  // The new-task form goes through its own opener even with nothing to seed: it is
+  // the one route that must *start over* when re-entered, which is precisely what
+  // the "New task" shortcut asks for on a window already sitting on a half-typed
+  // form. The pushed entry is also what lets closing the form walk back to the view
+  // the launch interrupted.
+  if (route.name === 'taskForm' && route.taskId === null) {
+    navigateToTaskForm(null, parseTaskDeeplink(url.searchParams) ?? {});
+    return;
+  }
+  // Already here, with nothing overlaid to dismiss: focusing the window *was* the
+  // whole request, and a duplicate entry would only give Back nothing to do.
+  if (url.pathname === window.location.pathname && !overlayDetailId) {
+    return;
+  }
+  navigate(url.pathname);
+}
+
 /** Leave the task form. Walks back off the entry the form pushed, so closing it
  *  in-app and closing it with Back leave the same history behind; a form opened
  *  by a pasted URL has no such entry, so that one falls back to the dashboard. */

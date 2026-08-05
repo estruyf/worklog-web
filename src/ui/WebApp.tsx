@@ -20,6 +20,7 @@ import { useUnsavedGuard } from './hooks';
 import { worklogStore, type RecoveryInfo } from '../data/worklogStore';
 import { clearTrees } from '../data/repoCache';
 import { navigateToDashboard, useRoute } from './router';
+import { consumeLaunches } from './launchHandler';
 import { RepoPicker } from './RepoPicker';
 import './styles.css';
 
@@ -48,6 +49,10 @@ export default function WebApp() {
   // Here rather than in the dashboard so it covers every route — the task form and
   // the single-task page can just as easily be where you close the tab.
   useUnsavedGuard();
+  // Route shortcut and protocol launches into this window instead of letting each
+  // one open another. Once per window, not per phase: the repo may still be loading
+  // when a launch arrives, and the queue replays it into whoever consumes first.
+  React.useEffect(consumeLaunches, []);
   const initialRepo = React.useMemo(readLastRepo, []);
   const [phase, setPhase] = React.useState<Phase>(initialRepo ? { kind: 'loading', label: `Loading ${initialRepo.owner}/${initialRepo.repo}…` } : { kind: 'picker' });
   const [repo, setRepo] = React.useState<RepoRef | undefined>(initialRepo);
