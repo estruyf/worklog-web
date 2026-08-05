@@ -4,7 +4,7 @@
 // every pasted image rendered broken) and block anything else.
 
 import { describe, it, expect } from 'vitest';
-import { makeImageResolver, renderMarkdown } from '../src/ui/utils/markdown';
+import { makeImageResolver, renderMarkdown, toggleTaskLine } from '../src/ui/utils/markdown';
 
 describe('makeImageResolver', () => {
   it('passes the full assets ref to the lookup', () => {
@@ -100,5 +100,68 @@ describe('renderMarkdown bare URLs', () => {
 
   it('ignores a scheme with nothing after it', () => {
     expect(renderMarkdown('https:// is a scheme')).toBe('<p>https:// is a scheme</p>');
+  });
+});
+
+// A checkbox is the one piece of rendered markup that writes back, so the line
+// index it carries and the toggle that consumes it have to agree — including
+// after blank lines, fences and headings have shifted the numbering.
+describe('renderMarkdown task lists', () => {
+  const box = (attrs: string, label: string) => `<input type="checkbox" class="wl-md-check"${attrs} aria-label="${label}" />`;
+
+  it('renders read-only boxes by default', () => {
+    expect(renderMarkdown('- [ ] ship it\n- [x] write it')).toBe(
+      [
+        '<ul class="wl-md-list">',
+        `<li class="wl-md-task">${box(' disabled', 'ship it')}<span>ship it</span></li>`,
+        `<li class="wl-md-task">${box(' checked disabled', 'write it')}<span>write it</span></li>`,
+        '</ul>',
+      ].join('\n'),
+    );
+  });
+
+  it('carries the source line index when interactive', () => {
+    const html = renderMarkdown('# Plan\n\n- [ ] first\n- [x] second', undefined, { interactiveTasks: true });
+    expect(html).toContain(box(' data-md-line="2"', 'first'));
+    expect(html).toContain(box(' checked data-md-line="3"', 'second'));
+    expect(html).not.toContain('disabled');
+  });
+
+  it('reads the `[]` people type by hand as unchecked', () => {
+    expect(renderMarkdown('- [] partials')).toContain(box(' disabled', 'partials'));
+  });
+
+  it('still formats and escapes the item text, and labels the box in plain text', () => {
+    const html = renderMarkdown('- [ ] `--output json` on <status>');
+    expect(html).toContain('<code class="wl-md-code">--output json</code> on &lt;status&gt;</span>');
+    expect(html).toContain('aria-label="--output json on &lt;status&gt;"');
+  });
+
+  it('leaves ordinary list items and bracketed prose alone', () => {
+    expect(renderMarkdown('- [docs](https://example.com)')).not.toContain('wl-md-task');
+    expect(renderMarkdown('1. [ ] not a task list')).not.toContain('wl-md-task');
+  });
+});
+
+describe('toggleTaskLine', () => {
+  const DOC = '# Plan\n\n- [ ] first\n- [x] second\n\nSome prose.';
+
+  it('ticks and unticks the addressed line only', () => {
+    expect(toggleTaskLine(DOC, 2)).toBe('# Plan\n\n- [x] first\n- [x] second\n\nSome prose.');
+    expect(toggleTaskLine(DOC, 3)).toBe('# Plan\n\n- [ ] first\n- [ ] second\n\nSome prose.');
+  });
+
+  it('normalizes a hand-typed `[]` on the way through', () => {
+    expect(toggleTaskLine('- [] partials', 0)).toBe('- [x] partials');
+  });
+
+  it('keeps CRLF line endings and the item text byte for byte', () => {
+    expect(toggleTaskLine('- [ ] a\r\n- [ ] b\r\n', 1)).toBe('- [ ] a\r\n- [x] b\r\n');
+  });
+
+  it('refuses a stale index rather than rewriting whatever is there now', () => {
+    expect(toggleTaskLine(DOC, 0)).toBeNull();
+    expect(toggleTaskLine(DOC, 5)).toBeNull();
+    expect(toggleTaskLine(DOC, 99)).toBeNull();
   });
 });

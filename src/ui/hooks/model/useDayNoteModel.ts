@@ -19,14 +19,26 @@ export function useDayNoteModel(dayNotes: DayNote[], selectedDate: string, ui: W
   const hasDayNote = dayNote.trim() !== "";
   const dayNoteDirty = dayNoteDraft !== dayNote;
 
-  const saveDayNote = useCallback(() => {
-    if (!selectedDate) {
-      return;
-    }
-    void worklogStore.setDayNote(selectedDate, dayNoteDraft);
-    setDayNoteSavedAt(nowStamp().slice(11));
-    setDayNoteMode("preview");
-  }, [selectedDate, dayNoteDraft, setDayNoteMode, setDayNoteSavedAt]);
+  /** Store `text` as the day's note. Takes the text rather than reading the
+   *  draft, so a checkbox ticked in the read-only preview saves the line it just
+   *  flipped instead of the draft state it also sets. */
+  const saveDayNoteText = useCallback(
+    (text: string) => {
+      if (!selectedDate) {
+        return;
+      }
+      setDayNoteDraft(text);
+      void worklogStore.setDayNote(selectedDate, text);
+      setDayNoteSavedAt(nowStamp().slice(11));
+      setDayNoteMode("preview");
+    },
+    [selectedDate, setDayNoteDraft, setDayNoteMode, setDayNoteSavedAt],
+  );
+
+  const saveDayNote = useCallback(
+    () => saveDayNoteText(dayNoteDraft),
+    [saveDayNoteText, dayNoteDraft],
+  );
 
   const editDayNote = useCallback(() => setDayNoteMode("edit"), [setDayNoteMode]);
 
@@ -40,5 +52,5 @@ export function useDayNoteModel(dayNotes: DayNote[], selectedDate: string, ui: W
 
   // `dayNote` itself stays local: the view renders the draft, and the stored
   // body is only interesting here, as the thing the draft is compared against.
-  return { hasDayNote, dayNoteDirty, saveDayNote, editDayNote, cancelDayNote, datesWithNotes };
+  return { hasDayNote, dayNoteDirty, saveDayNote, saveDayNoteText, editDayNote, cancelDayNote, datesWithNotes };
 }

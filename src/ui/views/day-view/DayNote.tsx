@@ -20,11 +20,14 @@ export interface DayNoteProps {
   onSave: () => void;
   /** Puts the draft back and closes the editor — the only way out that discards. */
   onCancel: () => void;
+  /** Ticking a `- [ ]` box in the read-only preview: a save on its own, since
+   *  there is no editor open to press Save in. */
+  onToggleTask?: (next: string) => void;
 }
 
 const PLACEHOLDER = `Anything worth remembering about this day…\n\n${MARKDOWN_CHEATSHEET}`;
 
-export function DayNote({ value, onChange, mode, onModeChange, dirty, onSave, onCancel }: DayNoteProps) {
+export function DayNote({ value, onChange, mode, onModeChange, dirty, onSave, onCancel, onToggleTask }: DayNoteProps) {
   if (mode === 'preview') {
     // Read-only, and deliberately without the editor's header: in the card the
     // note is content, and a mode toggle over two lines of prose is furniture.
@@ -32,7 +35,7 @@ export function DayNote({ value, onChange, mode, onModeChange, dirty, onSave, on
       <div className="mt-4">
         <SectionLabel className="mb-[10px]">Notes</SectionLabel>
         <Card tone="muted" padding="md" radius="panel">
-          <MarkdownView text={value} />
+          <MarkdownView text={value} onTextChange={onToggleTask} />
         </Card>
       </div>
     ) : null;
@@ -47,6 +50,8 @@ export function DayNote({ value, onChange, mode, onModeChange, dirty, onSave, on
         onModeChange={onModeChange}
         title="Notes"
         placeholder={PLACEHOLDER}
+        // Mid-edit, a tick is an edit like any other: Save still decides.
+        onTaskToggle={onChange}
         action={
           <>
             <Button variant="neutral" size="xs" onClick={onCancel}>

@@ -1,9 +1,14 @@
 // A tiny, dependency-free Markdown -> HTML renderer for task descriptions.
 // Deliberately minimal (headings, emphasis, code, links and bare URLs, lists,
-// quotes, rules).
+// task lists, quotes, rules).
 // Block structure is detected on the raw lines; all user text is escaped inside
 // inline() before any formatting, so the output is safe to inject into the
 // app. The source of truth stays the markdown body in the client file.
+//
+// Task list items are the one thing here that writes back: a rendered checkbox
+// carries the index of the line it came from, and {@link toggleTaskLine} flips
+// that one line in the *source* markdown. The DOM is never the source of truth —
+// see MarkdownView.
 
 function escapeHtml(s: string): string {
   return s
@@ -134,9 +139,85 @@ function inline(text: string, resolveImage?: ImageResolver): string {
   return autolink(out);
 }
 
+/**
+ * The checkbox part of a task list item, matched against a `ul` item's text.
+ * `[]` is not GitHub-flavoured Markdown, but it is what people type when they
+ * write the list by hand, so it reads as unchecked rather than as literal text.
+ */
+const TASK_ITEM = /^\[([ xX]?)\]\s+(.*)$/;
+
+/** The same marker on a whole source line — what {@link toggleTaskLine} edits. */
+const TASK_LINE = /^([-*]\s+\[)([ xX]?)\]/;
+
+/**
+ * Flip the `[ ]`/`[x]` on one line of `md`, identified by its zero-based line
+ * index (the `data-md-line` a rendered checkbox carries). Returns `null` when
+ * that line is not a task item any more — the text can have been edited since it
+ * was rendered, and a stale index must not rewrite an unrelated line.
+ *
+ * Only the marker is touched, so line endings, indentation and the item's text
+ * survive byte for byte: this text goes straight back into the user's Markdown.
+ */
+export function toggleTaskLine(md: string, lineIndex: number): string | null {
+  // Split on "\n" alone, so a CRLF document keeps its "\r" at each line's end
+  // and the indices still line up with the renderer's.
+  const lines = md.split("\n");
+  const line = lines[lineIndex];
+  if (line === undefined) {
+    return null;
+  }
+  const m = TASK_LINE.exec(line);
+  if (!m) {
+    return null;
+  }
+  const checked = m[2].toLowerCase() === "x";
+  lines[lineIndex] =
+    m[1] + (checked ? " " : "x") + line.slice(m[1].length + m[2].length);
+  return lines.join("\n");
+}
+
+/**
+ * The item's text with the inline syntax dropped — the checkbox's accessible
+ * name, since the label sits beside it as rendered markup rather than in an
+ * attribute.
+ */
+function plainText(md: string): string {
+  return md
+    .replace(/!\[([^\]]*)\]\([^\s)]*\)/g, "$1")
+    .replace(/\[([^\]]+)\]\([^\s)]*\)/g, "$1")
+    .replace(/[`*_]/g, "")
+    .trim();
+}
+
+/**
+ * A task item's box. Interactive ones carry the source line for the click
+ * handler to find; read-only ones are `disabled`, which is what a checkbox that
+ * cannot be ticked has to say to a keyboard or a screen reader.
+ */
+function checkbox(
+  mark: string,
+  line: number,
+  interactive: boolean | undefined,
+  text: string,
+): string {
+  const checked = mark.toLowerCase() === "x" ? " checked" : "";
+  const state = interactive ? ` data-md-line="${line}"` : " disabled";
+  return `<input type="checkbox" class="wl-md-check"${checked}${state} aria-label="${escapeHtml(plainText(text))}" />`;
+}
+
+export interface MarkdownOptions {
+  /**
+   * Render task list items as live checkboxes carrying their source line index,
+   * for a caller that can write the toggled text back. Off by default: a
+   * checkbox nothing listens to would silently drop the click.
+   */
+  interactiveTasks?: boolean;
+}
+
 export function renderMarkdown(
   md: string,
   resolveImage?: ImageResolver,
+  options?: MarkdownOptions,
 ): string {
   const lines = md.replace(/\r\n/g, "\n").split("\n");
   const html: string[] = [];
@@ -165,7 +246,8 @@ export function renderMarkdown(
     }
   };
 
-  for (const raw of lines) {
+  for (let i = 0; i < lines.length; i++) {
+    const raw = lines[i];
     const line = raw.replace(/\s+$/, "");
 
     if (codeFence) {
@@ -228,7 +310,15 @@ export function renderMarkdown(
         listType = want;
         html.push(`<${want} class="wl-md-list">`);
       }
-      html.push(`<li>${inline(ul ? ul[1] : ol![1], resolveImage)}</li>`);
+      const item = ul ? ul[1] : ol![1];
+      const task = ul ? TASK_ITEM.exec(item) : null;
+      if (task) {
+        html.push(
+          `<li class="wl-md-task">${checkbox(task[1], i, options?.interactiveTasks, task[2])}<span>${inline(task[2], resolveImage)}</span></li>`,
+        );
+      } else {
+        html.push(`<li>${inline(item, resolveImage)}</li>`);
+      }
       continue;
     }
 

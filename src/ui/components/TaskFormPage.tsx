@@ -232,6 +232,9 @@ function TaskForm({ editingId, task, seed }: { editingId: string | null; task: T
                 onChange={setDescription}
                 mode={descMode}
                 onModeChange={setDescMode}
+                // Nothing is written until the form is saved, so a ticked box is
+                // just another edit to the draft.
+                onTaskToggle={setDescription}
               />
             </div>
           </div>

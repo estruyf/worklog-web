@@ -103,7 +103,7 @@ function useDayData() {
 }
 
 export function DayView() {
-  const { today, worklog, clients, allClients, colorOf, clientName, statusMeta, reopen, openDetail, typeLabel, hoursPerDay, todosPerPage, logState, setLogState, saveLog, removeLog, closeLogForm, editLog, openLogForm, copyDayLogs, openTaskFormForDue, dayNoteDirty, saveDayNote, editDayNote, cancelDayNote, hasDayNote } = useData();
+  const { today, worklog, clients, allClients, colorOf, clientName, statusMeta, reopen, openDetail, typeLabel, hoursPerDay, todosPerPage, logState, setLogState, saveLog, removeLog, closeLogForm, editLog, openLogForm, copyDayLogs, openTaskFormForDue, dayNoteDirty, saveDayNote, saveDayNoteText, editDayNote, cancelDayNote, hasDayNote } = useData();
   const { selectedDate, setSelectedDate, editDayOpen, setEditDayOpen, dayNoteDraft, setDayNoteDraft, dayNoteMode, setDayNoteMode, dayNoteSavedAt } = useUi();
   const {
     openTasks,
@@ -210,6 +210,7 @@ export function DayView() {
                 dirty={dayNoteDirty}
                 onSave={saveDayNote}
                 onCancel={cancelDayNote}
+                onToggleTask={saveDayNoteText}
               />
 
               <DayCardFooter

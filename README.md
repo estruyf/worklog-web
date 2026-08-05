@@ -154,6 +154,13 @@ The dashboard has these views:
 - **Insights** — per-client hours and derived days for a month, an events breakdown, and a monthly
   trend chart.
 
+**Markdown, and checkboxes that stick:** descriptions, task notes and day notes all take Markdown —
+headings, emphasis, code, quotes, links, pasted images and `- [ ]` task lists. In **Preview**, a
+description's or a day note's checkbox can be ticked and unticked: the tick rewrites that one line
+in your Markdown (`- [ ]` ⇄ `- [x]`) and saves, leaving everything else on the line untouched. A
+task's own notes and a client's description render their boxes read-only — there is nothing to
+write back through.
+
 **Saving:** edits are written to an in-memory copy of your Markdown immediately, then committed to
 GitHub automatically about a minute after your last change. Click the **sync** button in the top
 bar to commit right away. Commit messages use the format `chore: worklog sync <date>`.

@@ -35,7 +35,7 @@ function useDetailData() {
  * hidden — the breadcrumb handles that — and parent/subtask navigation pushes the
  * matching task route. */
 export function TaskDetailPanel({ routed = false }: { routed?: boolean } = {}) {
-  const { saveDescription } = useData();
+  const { saveDescription, saveDescriptionText } = useData();
   const { selectedDate, descDraft, setDescDraft, descMode, setDescMode, setDetailId } = useUi();
   const { task, parent, subtasks, occurrences, descDirty } = useDetailData();
   if (!task) {
@@ -83,6 +83,9 @@ export function TaskDetailPanel({ routed = false }: { routed?: boolean } = {}) {
           onChange={setDescDraft}
           mode={descMode}
           onModeChange={setDescMode}
+          // Ticking a box on a saved task saves: there is no Save to press in
+          // preview, and a checkbox that needs one is a checkbox that lies.
+          onTaskToggle={saveDescriptionText}
           action={
             descDirty && (
               <Button variant="primary" size="xs" onClick={saveDescription} className="font-semibold">

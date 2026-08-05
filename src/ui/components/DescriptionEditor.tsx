@@ -15,7 +15,7 @@ export type DescriptionMode = 'edit' | 'preview';
  *  same reason it always did: two copies of it drift, and the one that drifts is
  *  the one nobody is looking at. Callers vary only the opening line. */
 export const MARKDOWN_CHEATSHEET =
-  '## Notes\n- supports **bold**, *italic*, `code`\n- [links](https://example.com) or plain https://example.com\n- lists, > quotes\n- paste, drop or add an image';
+  '## Notes\n- supports **bold**, *italic*, `code`\n- [links](https://example.com) or plain https://example.com\n- lists, > quotes\n- [ ] task lists — tick them in Preview\n- paste, drop or add an image';
 
 const PLACEHOLDER = `Add a description in Markdown…\n\n${MARKDOWN_CHEATSHEET}`;
 
@@ -47,6 +47,11 @@ export interface DescriptionEditorProps {
   /** Empty-textarea prompt. Override it to name what is being written; compose
    *  it with {@link MARKDOWN_CHEATSHEET} so the syntax reminder comes along. */
   placeholder?: string;
+  /** Ticking a `- [ ]` box in the preview. Separate from {@link onChange}
+   *  because the two are not the same act: a form's toggle edits the draft it is
+   *  already holding, while the detail panel's is a save on its own. Omit it and
+   *  the boxes render read-only. */
+  onTaskToggle?: (next: string) => void;
 }
 
 /** Markdown description editor with a write/preview toggle, image paste / drop /
@@ -62,6 +67,7 @@ export function DescriptionEditor({
   hint,
   action,
   placeholder = PLACEHOLDER,
+  onTaskToggle,
 }: DescriptionEditorProps) {
   const img = useMarkdownImages(value, onChange);
   const boxed = variant === 'boxed';
@@ -121,10 +127,10 @@ export function DescriptionEditor({
       )
     ) : value.trim() ? (
       boxed ? (
-        <MarkdownView text={value} className={cn('px-[8px] py-[4px]', tall)} />
+        <MarkdownView text={value} className={cn('px-[8px] py-[4px]', tall)} onTextChange={onTaskToggle} />
       ) : (
         <Card tone="muted" padding="md" radius="panel">
-          <MarkdownView text={value} />
+          <MarkdownView text={value} onTextChange={onTaskToggle} />
         </Card>
       )
     ) : (

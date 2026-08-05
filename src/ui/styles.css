@@ -290,6 +290,31 @@ body {
   margin: 3px 0;
   list-style: inherit;
 }
+/* Task list items. The box replaces the bullet rather than sitting beside it, so
+   the item is pulled back over the list's own indent. */
+.wl-md .wl-md-list li.wl-md-task {
+  list-style: none;
+  margin-left: -22px;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.wl-md .wl-md-check {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  /* Aligns the box with the cap height of the first line, not the line box. */
+  margin-top: 0.3em;
+  accent-color: #2d6cdf;
+}
+.wl-md .wl-md-check:not(:disabled) {
+  cursor: pointer;
+}
+/* A box in a note or on a client page has nothing to write back to; it still
+   shows its state, so it is dimmed rather than greyed into illegibility. */
+.wl-md .wl-md-check:disabled {
+  opacity: 0.65;
+}
 .wl-md .wl-md-quote {
   margin: 0 0 12px;
   padding: 6px 14px;

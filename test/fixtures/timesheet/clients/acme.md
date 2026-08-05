@@ -60,3 +60,7 @@ $ npm run export -- --range 2026-01-01..2026-12-31
 - tags: onboarding
 
 Runs across both accounts, so it carries an explicit client list.
+
+- [x] Repo access
+- [ ] Billing contact
+- [ ] Kickoff call

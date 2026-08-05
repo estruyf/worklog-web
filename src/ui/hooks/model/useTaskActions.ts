@@ -83,14 +83,23 @@ export function useTaskActions(tasks: Task[], selectedDate: string, ui: WorklogU
     worklogStore.deleteNote(taskId, index);
   }, []);
 
-  /** Commit the detail panel's markdown draft and drop back to preview. */
-  const saveDescription = () => {
+  /**
+   * Write `text` to the open task's description and leave the panel in preview.
+   * Takes the text rather than reading the draft because a checkbox ticked in
+   * the preview has to save the text it just produced — the draft state it also
+   * sets is a render away.
+   */
+  const saveDescriptionText = (text: string) => {
     if (!detailId) {
       return;
     }
-    worklogStore.updateTask(detailId, { description: ui.descDraft });
+    ui.setDescDraft(text);
+    worklogStore.updateTask(detailId, { description: text });
     setDescMode("preview");
   };
 
-  return { markDone, toggleWorked, openDetail, openEdit, deleteTask, addNote, deleteNote, saveDescription };
+  /** Commit the detail panel's markdown draft and drop back to preview. */
+  const saveDescription = () => saveDescriptionText(ui.descDraft);
+
+  return { markDone, toggleWorked, openDetail, openEdit, deleteTask, addNote, deleteNote, saveDescription, saveDescriptionText };
 }
