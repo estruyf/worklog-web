@@ -196,6 +196,11 @@ its own: pick one or more tags (a task must carry all of them) with or without a
 **Keyboard shortcuts:** `⌘/Ctrl+N` new task · `⌘/Ctrl+F` or `⌘/Ctrl+S` search · `⌘/Ctrl+L` log time
 (Day view) · `⌘/Ctrl+R` reload from GitHub · `Esc` close the top dialog.
 
+**App shortcuts:** with Worklog installed, long-pressing its icon on a phone — or right-clicking it
+in the dock, taskbar or launcher — jumps straight to **New task**, **Day**, **Calendar** or
+**To-dos**, in the app window rather than a browser tab. The repo that opens is the last one you
+had open on that device, so a shortcut is one press from a standing start.
+
 ---
 
 ## Offline

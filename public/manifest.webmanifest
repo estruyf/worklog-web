@@ -44,5 +44,35 @@
       "form_factor": "narrow",
       "label": "Worklog"
     }
+  ],
+  "shortcuts": [
+    {
+      "name": "New task",
+      "short_name": "New task",
+      "description": "Open the new-task form",
+      "url": "/app/new",
+      "icons": [{ "src": "/shortcuts/new-96x96.png", "sizes": "96x96", "type": "image/png" }]
+    },
+    {
+      "name": "Day",
+      "short_name": "Day",
+      "description": "Today's tasks and logged time",
+      "url": "/app",
+      "icons": [{ "src": "/shortcuts/day-96x96.png", "sizes": "96x96", "type": "image/png" }]
+    },
+    {
+      "name": "Calendar",
+      "short_name": "Calendar",
+      "description": "The month, with what was logged on each day",
+      "url": "/app/calendar",
+      "icons": [{ "src": "/shortcuts/calendar-96x96.png", "sizes": "96x96", "type": "image/png" }]
+    },
+    {
+      "name": "To-dos",
+      "short_name": "To-dos",
+      "description": "The general to-do list",
+      "url": "/app/todos",
+      "icons": [{ "src": "/shortcuts/todos-96x96.png", "sizes": "96x96", "type": "image/png" }]
+    }
   ]
 }

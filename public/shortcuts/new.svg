@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Launcher shortcut icon source — see the `shortcuts` array in
+     public/manifest.webmanifest.
+
+     Full-bleed and opaque for the same reason as worklog-icon.svg: the platform
+     applies its own mask (and Android badges these with the app icon), so a card
+     baked in here gets masked twice.
+
+     The glyph is drawn in the 16-unit space src/ui/components/icons.tsx uses, then
+     scaled to 50 of the 96px canvas — half-diagonal 36.8%, inside the maskable safe
+     zone's 40%. Stroke widths come along with it, so these read like the nav rail.
+
+     Rasterised to new-96x96.png (`sips -s format png`). -->
+<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96">
+  <rect width="96" height="96" fill="#f4cf4d"/>
+  <!-- A plus, not one of the rail's glyphs: the rail draws New task with a lucide
+       PlusIcon. Sized to the same 11-of-16 span the other three fill, so the four
+       read as one set in the launcher menu. -->
+  <g transform="translate(23 23) scale(3.125)" fill="none" stroke="#252627" stroke-width="1.9" stroke-linecap="round">
+    <path d="M8 2.5v11M2.5 8h11"/>
+  </g>
+</svg>
