@@ -161,7 +161,11 @@ errors.** See the comment at the top of `eslint.config.js`.
   `ClientInfoCard`; the latter renders with no image resolver, so `assets/` refs there fall
   back to alt text.)
 - `src/ui/deeplink.ts` is the one place untrusted input enters the model: `/app/new?title=…`
-  can be opened by any page. It sanitizes to what `serializeTask` can round-trip — one line per
+  can be opened by any page, and a `web+worklog:` link the browser hands over arrives at the same
+  route as `?handler=<escaped url>` — one parser for both, because the scheme URL's query *is* the
+  deeplink query. `src/ui/protocolHandler.ts` (`registerProtocolHandler`) and `protocol_handlers`
+  in the manifest must keep naming the same scheme and URL; a test asserts they do. It sanitizes to
+  what `serializeTask` can round-trip — one line per
   title/label, no control characters, http(s)/mailto only, length caps. A new field on
   `TaskFormSeed` that a deeplink can set gets the same treatment, or a link's `url` becomes an
   href nobody vetted. It fills the form and nothing else: there is no unauthenticated write path,

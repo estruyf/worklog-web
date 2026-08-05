@@ -4,8 +4,10 @@
 // on arrival, so a deeplink becomes an ordinary form seed and stops being part of
 // the URL the router carries into every later route.
 
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { describe, it, expect, vi } from 'vitest';
-import { parseTaskDeeplink } from '../src/ui/deeplink';
+import { DEEPLINK_HANDLER_URL, DEEPLINK_SCHEME, parseTaskDeeplink } from '../src/ui/deeplink';
 
 function seedFrom(query: string) {
   return parseTaskDeeplink(new URLSearchParams(query));
@@ -72,6 +74,63 @@ describe('parseTaskDeeplink', () => {
     const long = 'x'.repeat(1000);
     expect(seedFrom(`title=${long}`)?.title).toHaveLength(300);
     expect(seedFrom(`description=${'y'.repeat(9000)}`)?.description).toHaveLength(5000);
+  });
+});
+
+/** What the browser navigates to for a handed-over `web+worklog:` link: our handler
+ *  URL, with the whole scheme URL escaped into it. */
+function handled(schemeUrl: string) {
+  return seedFrom(`handler=${encodeURIComponent(schemeUrl)}`);
+}
+
+describe('parseTaskDeeplink — handed-over web+worklog: links', () => {
+  it('reads the scheme URL’s query as the deeplink', () => {
+    expect(handled('web+worklog://new?title=Call+Bob&client=acme')).toEqual({
+      title: 'Call Bob',
+      clientId: 'acme',
+    });
+  });
+
+  it('does not care what the scheme URL puts before the query', () => {
+    // Nothing routes on the host or the path, so both spellings a caller might
+    // reach for have to land on the same task.
+    expect(handled('web+worklog:?title=Call+Bob')).toEqual({ title: 'Call Bob' });
+    expect(handled('web+worklog:new?title=Call+Bob')).toEqual({ title: 'Call Bob' });
+  });
+
+  it('sanitizes exactly as the query form does — it is the same parser', () => {
+    expect(handled('web+worklog://new?title=Ship+it%0A-+id%3A+forged')?.title).toBe('Ship it - id: forged');
+    expect(handled('web+worklog://new?url=javascript%3Aalert(1)')?.links).toBeUndefined();
+    expect(handled(`web+worklog://new?title=${'x'.repeat(1000)}`)?.title).toHaveLength(300);
+  });
+
+  it('drops a handler that is not ours, without dropping the strip', () => {
+    // Empty rather than null: `handler=` was there, so the router still has to
+    // clear it out of the URL.
+    expect(handled('https://evil.test/?title=Not+this')).toEqual({});
+    expect(handled('javascript:alert(1)')).toEqual({});
+    expect(handled('not a url')).toEqual({});
+  });
+
+  it('lets the scheme URL replace params sitting next to it', () => {
+    // The URL the browser navigates to is our own fixed template, so a `title=`
+    // alongside `handler=` was appended by someone else and has no claim.
+    expect(seedFrom(`title=Appended&handler=${encodeURIComponent('web+worklog://new?title=From+the+link')}`)).toEqual({
+      title: 'From the link',
+    });
+  });
+
+  it('is claimed the same way whether the app is installed or not', () => {
+    // Two registrations, one behaviour: `registerProtocolHandler` in the browser and
+    // `protocol_handlers` for an installed PWA. If they drift, an installed app
+    // opens a URL shape the parser above was never told about.
+    const manifest = JSON.parse(readFileSync(fileURLToPath(new URL('../public/manifest.webmanifest', import.meta.url)), 'utf-8'));
+
+    expect(manifest.protocol_handlers).toEqual([{ protocol: DEEPLINK_SCHEME, url: DEEPLINK_HANDLER_URL }]);
+    // The two rules the browser applies to a handler registration, kept here so a
+    // change to either constant fails in the suite rather than at a user's click.
+    expect(DEEPLINK_SCHEME.startsWith('web+')).toBe(true);
+    expect(DEEPLINK_HANDLER_URL).toContain('%s');
   });
 });
 
@@ -165,6 +224,13 @@ describe('deeplink arrival', () => {
     // '0' is the no-seed key a bare /app/new gets; a deeplink has to differ from it
     // or a form already open would not remount onto what arrived.
     expect(r.taskFormInstance().key).not.toBe('0');
+  });
+
+  it('takes a handed-over web+worklog: link the same way, handler param and all', async () => {
+    const r = await open(`/app/new?handler=${encodeURIComponent('web+worklog://new?title=Review+the+PR')}&owner=elio`);
+
+    expect(r.taskFormInstance().seed).toEqual({ title: 'Review the PR' });
+    expect(r.url()).toBe('/app/new?owner=elio');
   });
 
   it('ignores deeplink params on the edit form, which starts from the task', async () => {

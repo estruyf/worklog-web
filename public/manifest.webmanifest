@@ -9,6 +9,12 @@
   "orientation": "portrait-primary",
   "background_color": "#ffffff",
   "theme_color": "#F4CF4D",
+  "protocol_handlers": [
+    {
+      "protocol": "web+worklog",
+      "url": "/app/new?handler=%s"
+    }
+  ],
   "icons": [
     {
       "src": "/worklog-192x192.png",

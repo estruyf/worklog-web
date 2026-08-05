@@ -10,6 +10,14 @@
 // mechanism, and the params can't ride along on the query string `navigate`
 // preserves into every later route.
 //
+// The same task can also arrive as a `web+worklog:` link — from a native app, a
+// terminal, a mail client, anything that opens a scheme rather than a browser tab.
+// That is not a second format: the browser hands the whole scheme URL back to a
+// fixed https URL of ours (`/app/new?handler=<escaped url>`), and its query *is*
+// the deeplink query, parsed by exactly the code below. Claiming the scheme is the
+// browser's business (see ./protocolHandler and `protocol_handlers` in the
+// manifest); making both entry points mean the same thing is this file's.
+//
 // Everything here is untrusted: the values come from whoever opened the link. They
 // end up in Markdown that has to keep round-tripping, so each field is flattened
 // and capped to what its serialized form allows — a title is one `## ` line, a
@@ -19,10 +27,23 @@
 
 import type { TaskFormSeed } from './router';
 
+/** The custom scheme the app can claim (`web+worklog://new?title=…`). The `web+`
+ *  prefix isn't decoration: `registerProtocolHandler` accepts a safelisted scheme
+ *  (`mailto`, `webcal`, …) or a `web+` one, and nothing else. */
+export const DEEPLINK_SCHEME = 'web+worklog';
+
+/** Where the browser sends a `web+worklog:` link it has handed us: the scheme URL
+ *  arrives percent-escaped in the `%s` slot. Relative on purpose — it resolves
+ *  against whatever origin the app is served from, which is what lets the same
+ *  build register on localhost and in production. Kept in step with
+ *  `protocol_handlers` in public/manifest.webmanifest, which says the same thing
+ *  for an installed app; `test/taskDeeplink.test.ts` asserts they agree. */
+export const DEEPLINK_HANDLER_URL = '/app/new?handler=%s';
+
 /** The params a deeplink may carry. The router deletes exactly these once read,
  *  so unrelated query (owner/repo/branch, which selects the mounted repo) rides
  *  on untouched. */
-export const DEEPLINK_PARAMS = ['title', 'url', 'label', 'client', 'parent', 'due', 'tags', 'description'] as const;
+export const DEEPLINK_PARAMS = ['title', 'url', 'label', 'client', 'parent', 'due', 'tags', 'description', 'handler'] as const;
 
 // Bounds, not validation: a hostile or sloppy caller shouldn't be able to paste a
 // megabyte into a file that gets committed. Everything is editable in the form.
@@ -76,16 +97,38 @@ function safeUrl(raw: string): string | null {
   }
 }
 
+/** The query of a `web+worklog:` link the browser handed back to us, or an empty
+ *  set if what arrived isn't one.
+ *
+ *  Only the query is read. The scheme URL never becomes an href, and its host and
+ *  path carry no meaning today — `web+worklog://new?…` and `web+worklog:?…` are the
+ *  same task. The scheme is still checked: this value comes from whoever wrote the
+ *  link, and "it parsed as a URL" is not "it's ours". */
+function handlerParams(raw: string): URLSearchParams {
+  try {
+    const url = new URL(raw);
+    return url.protocol === `${DEEPLINK_SCHEME}:` ? url.searchParams : new URLSearchParams();
+  } catch {
+    return new URLSearchParams();
+  }
+}
+
 /** Read a deeplink's params into a form seed.
  *
  *  Returns null when the URL carries no deeplink params at all — that's a plain
  *  visit to /app/new and nothing should be touched. An *empty* seed is a different
  *  answer: params were there but nothing survived sanitizing, and the router still
  *  has to strip them. */
-export function parseTaskDeeplink(params: URLSearchParams): TaskFormSeed | null {
-  if (!DEEPLINK_PARAMS.some((key) => params.has(key))) {
+export function parseTaskDeeplink(query: URLSearchParams): TaskFormSeed | null {
+  if (!DEEPLINK_PARAMS.some((key) => query.has(key))) {
     return null;
   }
+
+  // A handed-over `web+worklog:` link replaces the query it arrived in rather than
+  // merging with it: the URL the browser navigates to is our own fixed template, so
+  // anything sitting next to `handler=` was appended by someone else.
+  const handler = query.get('handler');
+  const params = handler === null ? query : handlerParams(handler);
 
   const seed: TaskFormSeed = {};
 

@@ -289,6 +289,26 @@ chrome.contextMenus.onClicked.addListener((_info, tab) => {
 });
 ```
 
+**A `web+worklog:` link** covers the callers that can't open an https URL into the right place — a
+native app, a shell script, a note in a mail client. In **Settings → Quick capture**, press
+**Register** once per browser and confirm your browser's prompt; from then on this is a task:
+
+```
+web+worklog://new?title=Call%20Bob&client=acme
+```
+
+It takes exactly the params in the table above and goes through the same sanitizing — the browser
+hands the whole link back to `/app/new`, which unpacks its query. Installing Worklog as an app
+claims the scheme too, so on a desktop install the link opens the app window instead of a tab.
+
+To stop handling them, press **Unregister** — the button only appears in browsers that let a site
+give a scheme back (Firefox does; Chrome and Edge don't, and keep the list under
+*Settings → Privacy and security → Site settings → Protocol handlers*). Neither button can show
+which way things currently stand: browsers offer no way to ask whether a site is the handler, so
+Settings reports what it asked for, not what is in force.
+
+Only `web+worklog` is claimed — browsers don't let a site register a bare scheme like `worklog:`.
+
 Notes worth knowing:
 
 - **The params disappear from the URL** as soon as the form opens. They are read once and moved into
