@@ -1,7 +1,10 @@
 {
+  "lang": "en",
+  "dir": "ltr",
   "name": "Worklog",
   "short_name": "Worklog",
   "description": "Web-based, GitHub-backed Worklog / timesheet manager. Markdown is the source of truth.",
+  "categories": ["productivity", "business", "utilities"],
   "id": "/",
   "start_url": "/app",
   "scope": "/",
