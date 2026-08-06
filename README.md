@@ -223,6 +223,12 @@ in the dock, taskbar or launcher — jumps straight to **New task**, **Day**, **
 **To-dos**, in the app window rather than a browser tab. The repo that opens is the last one you
 had open on that device, so a shortcut is one press from a standing start.
 
+**App badge:** the installed icon carries a count — everything overdue plus what's due today, the
+same number the **Overdue** view opens onto. It's set while the app is open and cleared when there's
+nothing left; nothing recounts in the background, so the badge reads as of the last time you had
+Worklog open. Switching repo or signing out takes it down. Chromium and Safari show it on an
+installed app; a browser tab and Firefox simply don't, and nothing else changes.
+
 ---
 
 ## Offline
@@ -564,9 +570,10 @@ that fell on a Saturday still reads as due the 1st on Monday morning. By then no
 day matches its rule any more, so "due this day" can't show it — the overdue
 block is what keeps it in front of you until it's actually done.
 
-Overdue tasks surface in three places: an **Overdue** block at the top of the day
+Overdue tasks surface in four places: an **Overdue** block at the top of the day
 overview (judged against the day you're viewing), the **Overdue** view in the nav
-(judged against today, grouped by client), and a red count badge on that nav item.
+(judged against today, grouped by client), a red count badge on that nav item, and
+— on an installed app — a badge on the icon itself, counting overdue plus due today.
 A task that is both overdue and lands on the day you're viewing is shown once, as
 overdue. Due-date chips on task rows turn red and gain the lag — `1 Aug · 3d`.
 

@@ -8,7 +8,7 @@
 // own hook on top of these, so only the mounted view recomputes it.
 
 import React, { createContext, useContext } from 'react';
-import { useWorklogState, useWorklogUiState, useWorklogModel } from '../hooks';
+import { useAppBadge, useWorklogState, useWorklogUiState, useWorklogModel } from '../hooks';
 import { useRoute } from '../router';
 
 type UiState = ReturnType<typeof useWorklogUiState>;
@@ -134,6 +134,11 @@ export function WorklogProvider({ children }: { children: React.ReactNode }) {
   }, [ui.selectedDate]);
 
   const data = useWorklogModel(snap, ui, toast, gitPending, loading, offline, pendingCount);
+
+  // The installed app's icon badge. Here rather than in the dashboard because it
+  // outlives the route: the single-task page is just as much "the app is open",
+  // and the provider is what unmounts when the repo does.
+  useAppBadge(data.tasks, data.today);
 
   const [taskFormBar, setTaskFormBar] = React.useState<TaskFormBar | null>(null);
 
