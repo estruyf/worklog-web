@@ -19,8 +19,15 @@ const ogImage = new URL(image ?? '/worklog-512x512.png', Astro.url).href;
 
 // iOS/Safari doesn't auto-generate PWA splash screens (unlike Android), so we
 // point `apple-touch-startup-image` at a pre-rendered image per device. Each
-// entry is [cssWidth, cssHeight, devicePixelRatio, pixelWidth, pixelHeight];
-// portrait only, matching the manifest's `portrait-primary` orientation.
+// entry is [cssWidth, cssHeight, devicePixelRatio, pixelWidth, pixelHeight].
+//
+// Portrait only, and deliberately not tied to the manifest's `orientation`:
+// Safari ignores that member entirely, so a landscape launch has always fallen
+// through to `background_color` here — relaxing the manifest to "any" (for the
+// Chromium/Android installs that do honour it, and for tablets, where locking
+// portrait is a constraint rather than a feature) changed nothing on iOS.
+// Doubling this table with landscape renders is the fix if that fallback ever
+// looks wrong; it is 18 more images for the first second of a cold start.
 const iosSplash: [number, number, number, number, number][] = [
   [375, 667, 2, 750, 1334],
   [414, 896, 2, 828, 1792],
