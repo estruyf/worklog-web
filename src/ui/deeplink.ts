@@ -18,6 +18,12 @@
 // `protocol_handlers` in the manifest; making both entry points mean the same thing
 // is this file's job.
 //
+// The third caller is the OS itself: an installed app appears in the share sheet,
+// and a share arrives as a GET to the same `/app/new` with the fields renamed by
+// `share_target` in the manifest (see `SHARE_TARGET_PARAMS`). That is a third way in
+// and still not a third format — the OS assembles a query this parser already reads,
+// which is the only reason the share sheet costs nothing but a manifest entry.
+//
 // `navigator.registerProtocolHandler` used to be offered in Settings as well, and
 // is deliberately gone. It claims the scheme for the *browser*, which on macOS
 // outranks the installed app's own LaunchServices claim — so pressing it stopped
@@ -40,13 +46,30 @@ import type { TaskFormSeed } from './router';
  *  (`mailto`, `webcal`, …) or a `web+` one, and nothing else. */
 export const DEEPLINK_SCHEME = 'web+worklog';
 
+/** The route every inbound task lands on. Relative on purpose — it resolves
+ *  against whatever origin the app is served from, which is what lets the same
+ *  build work on localhost and in production. */
+export const DEEPLINK_ROUTE = '/app/new';
+
 /** Where a `web+worklog:` link lands once handed over: the scheme URL arrives
- *  percent-escaped in the `%s` slot. Relative on purpose — it resolves against
- *  whatever origin the app is served from, which is what lets the same build work
- *  on localhost and in production. This is the parse side of `protocol_handlers` in
- *  public/manifest.webmanifest, which has to say the same thing for the link to
+ *  percent-escaped in the `%s` slot. This is the parse side of `protocol_handlers`
+ *  in public/manifest.webmanifest, which has to say the same thing for the link to
  *  reach it; `test/taskDeeplink.test.ts` asserts they agree. */
-export const DEEPLINK_HANDLER_URL = '/app/new?handler=%s';
+export const DEEPLINK_HANDLER_URL = `${DEEPLINK_ROUTE}?handler=%s`;
+
+/** The share sheet's fields, renamed onto the params below — the parse side of
+ *  `share_target` in the manifest, same as the two constants above.
+ *
+ *  A share is a plain GET to `DEEPLINK_ROUTE`, so the OS builds the deeplink for
+ *  us and nothing here has to know a share happened. The mapping is the whole
+ *  integration, which is why it may only name params `parseTaskDeeplink` already
+ *  reads: a key that isn't one would be silently dropped by the router's strip.
+ *
+ *  `text` is the loose one — it is whatever the sharing app decided to put in the
+ *  body, and plenty of them put the shared URL there rather than in `url`. It goes
+ *  to the description, where a bare URL is still legible Markdown, rather than to
+ *  `url`, where non-URL text would be rejected outright and lost. */
+export const SHARE_TARGET_PARAMS = { title: 'title', text: 'description', url: 'url' } as const;
 
 /** The params a deeplink may carry. The router deletes exactly these once read,
  *  so unrelated query (owner/repo/branch, which selects the mounted repo) rides

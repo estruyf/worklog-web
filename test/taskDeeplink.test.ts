@@ -7,7 +7,9 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, it, expect, vi } from 'vitest';
-import { DEEPLINK_HANDLER_URL, DEEPLINK_SCHEME, parseTaskDeeplink } from '../src/ui/deeplink';
+import { DEEPLINK_HANDLER_URL, DEEPLINK_PARAMS, DEEPLINK_ROUTE, DEEPLINK_SCHEME, SHARE_TARGET_PARAMS, parseTaskDeeplink } from '../src/ui/deeplink';
+
+const manifest = JSON.parse(readFileSync(fileURLToPath(new URL('../public/manifest.webmanifest', import.meta.url)), 'utf-8'));
 
 function seedFrom(query: string) {
   return parseTaskDeeplink(new URLSearchParams(query));
@@ -124,13 +126,43 @@ describe('parseTaskDeeplink — handed-over web+worklog: links', () => {
     // The manifest is the only thing that claims the scheme, and it points at the
     // parser above. If they drift, an installed app opens a URL shape the parser
     // was never told about.
-    const manifest = JSON.parse(readFileSync(fileURLToPath(new URL('../public/manifest.webmanifest', import.meta.url)), 'utf-8'));
-
     expect(manifest.protocol_handlers).toEqual([{ protocol: DEEPLINK_SCHEME, url: DEEPLINK_HANDLER_URL }]);
     // The two rules a handler registration has to satisfy, kept here so a change to
     // either constant fails in the suite rather than at install time.
     expect(DEEPLINK_SCHEME.startsWith('web+')).toBe(true);
     expect(DEEPLINK_HANDLER_URL).toContain('%s');
+  });
+});
+
+describe('parseTaskDeeplink — a share from the OS share sheet', () => {
+  it('is the manifest renaming share fields onto params this parser reads', () => {
+    // The whole integration is the mapping, so it is the only thing that can rot:
+    // a share field pointed at a param `parseTaskDeeplink` doesn't read arrives,
+    // gets stripped by the router, and the shared page is gone with no error.
+    expect(manifest.share_target).toEqual({
+      action: DEEPLINK_ROUTE,
+      method: 'GET',
+      params: SHARE_TARGET_PARAMS,
+    });
+
+    for (const param of Object.values(SHARE_TARGET_PARAMS)) {
+      expect(DEEPLINK_PARAMS).toContain(param);
+    }
+  });
+
+  it('parses what a share sheet sends, sanitized like any other deeplink', () => {
+    // A GET share is a query the OS assembled — the same shape a bookmarklet sends.
+    expect(seedFrom('title=Acme+pricing&description=Notes+from+the+page&url=https%3A%2F%2Facme.test%2Fpricing')).toEqual({
+      title: 'Acme pricing',
+      description: 'Notes from the page',
+      links: [{ url: 'https://acme.test/pricing' }],
+    });
+  });
+
+  it('keeps a URL a sharing app put in the body, since plenty of them do', () => {
+    // Shared as `text`, so it lands in the description rather than as a link.
+    // Mapping `text` to `url` instead would drop every share that isn't a bare URL.
+    expect(seedFrom('description=https%3A%2F%2Facme.test%2Fpricing')?.description).toBe('https://acme.test/pricing');
   });
 });
 

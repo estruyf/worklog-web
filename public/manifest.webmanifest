@@ -16,6 +16,15 @@
       "url": "/app/new?handler=%s"
     }
   ],
+  "share_target": {
+    "action": "/app/new",
+    "method": "GET",
+    "params": {
+      "title": "title",
+      "text": "description",
+      "url": "url"
+    }
+  },
   "icons": [
     {
       "src": "/worklog-192x192.png",

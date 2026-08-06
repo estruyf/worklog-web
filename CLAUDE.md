@@ -179,7 +179,10 @@ errors.** See the comment at the top of `eslint.config.js`.
   can be opened by any page, and a `web+worklog:` link the browser hands over arrives at the same
   route as `?handler=<escaped url>` — one parser for both, because the scheme URL's query *is* the
   deeplink query. `DEEPLINK_SCHEME`/`DEEPLINK_HANDLER_URL` and `protocol_handlers` in the manifest
-  must keep naming the same scheme and URL; a test asserts they do. The manifest is the *only*
+  must keep naming the same scheme and URL; a test asserts they do. A share from the OS share sheet
+  is the third entry and still the same parser — `share_target` renames the share's fields onto
+  params `parseTaskDeeplink` already reads (`SHARE_TARGET_PARAMS`), so a mapping pointed at anything
+  else is silently dropped by the router's strip; the same test pins it. The manifest is the *only*
   claim on the scheme — don't reintroduce `registerProtocolHandler`, which claims it for the
   browser, outranks the installed app on macOS, and can't be released on Chromium (the header
   comment in `deeplink.ts` records why). It sanitizes to what `serializeTask` can round-trip — one line per

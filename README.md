@@ -334,6 +334,16 @@ handlers*, in the profile you pressed it in, and reinstall the app.
 
 Only `web+worklog` is claimed — a site can't register a bare scheme like `worklog:`.
 
+**The share sheet** is the same thing without a link to write. Install Worklog as an app (Chrome or
+Edge, desktop or Android) and it shows up wherever the OS offers *Share* — a browser tab, a mail
+message, a selection on a phone. Sharing to it opens the new-task form pre-filled, exactly as a
+deeplink does; the shared page title becomes the title, its URL becomes a link, and any shared text
+becomes the description.
+
+Apps decide for themselves what they put in each field, and a fair number send the URL as text
+rather than as a URL. When that happens it lands in the description instead of as a link — still
+there, just in the body. Move it, or don't; the form is editable either way.
+
 Notes worth knowing:
 
 - **The params disappear from the URL** as soon as the form opens. They are read once and moved into
