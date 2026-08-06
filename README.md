@@ -135,7 +135,7 @@ The dashboard has these views:
   (vacation, out-of-office, …). Logging past your working day is allowed: the bar grows past the
   target and the day reads as over. On a day with nothing logged yet, **Same as yesterday** copies
   the last day you logged. See overdue, due, open, worked, and done tasks for that day; mark a task
-  worked, cycle its status, or close it. Anything past its due date sits in an **Overdue** block at
+  worked, change its status, or close it. Anything past its due date sits in an **Overdue** block at
   the very top.
 - **Overdue** — everything that has slipped, across every client and the to-do list, grouped by
   client with the longest-overdue client first, plus what is due today. The nav badge counts it.
@@ -154,6 +154,21 @@ The dashboard has these views:
 - **Insights** — per-client hours and derived days for a month, an events breakdown, and a monthly
   trend chart.
 
+**Statuses:** a task's status is the coloured word at the start of its row. Click it — on a task
+row, in the detail panel, or on a subtask — and pick where the task has got to. The list is yours:
+**Settings → Task statuses** adds, renames, recolours, reorders and removes them, so "Waiting for"
+or "In review" sits alongside the shipped Open / In progress / Closed. Each one is stored under its
+own id (`Waiting for` → `- status: waiting-for`), which is what your Markdown carries, so renaming a
+status re-labels every task in it at once without touching a file.
+
+The last status is the **closing** one. Picking it completes the task, stamps `- completed:` and
+moves the block to `archive/`, cascading to any still-open subtasks — so it can be renamed and
+recoloured but never removed or reordered. Picking a working status on a closed task pulls it back
+out of the archive. Removing a status only takes it out of the pickers: tasks still sitting in it
+keep the status they have and go on showing it, because the id is in your Markdown and reassigning
+them would be a bulk edit you didn't ask for. Those tasks stay listed under **Still in use** in
+Settings, where the status can be put back or the remaining tasks moved on.
+
 **Markdown, and checkboxes that stick:** descriptions, task notes and day notes all take Markdown —
 headings, emphasis, code, quotes, links, pasted images and `- [ ]` task lists. In **Preview**, a
 description's or a day note's checkbox can be ticked and unticked: the tick rewrites that one line
@@ -167,7 +182,7 @@ bar to commit right away. Commit messages use the format `chore: worklog sync <d
 
 Settings has a second lever for this: **Sync right away after** — tick the kinds of change worth
 pushing without delay (a task or to-do created, a task changing state, a task edited, time logged,
-clients or settings changed) and those are committed within seconds rather than waiting out the sync
+clients, statuses or settings changed) and those are committed within seconds rather than waiting out the sync
 delay. It stands on its own, so you can leave the background timer off entirely and still have the
 changes you care about land on the branch as you make them. Everything else then waits for the sync
 button — except a failed automatic sync, which is retried on the delay either way rather than left
@@ -394,6 +409,29 @@ worklog/<YYYY-MM>.md           # time entries: - <YYYY-MM-DD> <clientId|event:ty
 notes/<YYYY-MM>.md             # freeform notes per day (optional)
 assets/                        # images pasted into task notes (optional)
 ```
+
+`.worklog/config.json` holds the app's own settings. `statuses` is the list a task moves through,
+in the order the picker offers them — the app writes it, and it is safe to hand-edit:
+
+```json
+{
+  "hoursPerDay": 8,
+  "weekStart": "monday",
+  "clients": [{ "id": "acme", "name": "Acme Corp", "color": "#2D6CDF" }],
+  "statuses": [
+    { "id": "open", "label": "Open" },
+    { "id": "waiting-for", "label": "Waiting for", "color": "#C8860D" },
+    { "id": "in-progress", "label": "In progress" },
+    { "id": "done", "label": "Closed", "terminal": true }
+  ]
+}
+```
+
+`id` is what a task's `- status:` line carries; `label` is what you see; `color` is an optional
+`#rrggbb` accent. Exactly one status is `terminal` — the closing one, which archives a task — and
+it always sits last. A list that flags none is read with its last entry as the closing one, a list
+that flags several keeps the first, and duplicate or nameless entries are dropped; the file is
+rewritten in that normalized form the next time the app saves it.
 
 A task block looks like:
 

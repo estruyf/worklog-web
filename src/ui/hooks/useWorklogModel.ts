@@ -76,7 +76,7 @@ export function useWorklogModel(
   const { collapsed, toggleCollapsed } = useCollapsedTasks(repoKey, taskIds);
 
   const clientModel = useClientModel(allClients, clients, tasks, worklog, ui);
-  const statusModel = useStatusModel(statuses);
+  const statusModel = useStatusModel(statuses, tasks, ui);
   const tagModel = useTagModel(tasks, ui);
   const taskActions = useTaskActions(tasks, selectedDate, ui);
   const rows = useTaskRows({
@@ -86,7 +86,8 @@ export function useWorklogModel(
     collapsed,
     toggleCollapsed,
     statusMeta: statusModel.statusMeta,
-    cycleStatus: statusModel.cycleStatus,
+    statusChoices: statusModel.statusChoices,
+    setTaskStatus: statusModel.setTaskStatus,
     openTagSearch: tagModel.openTagSearch,
     openDetail: taskActions.openDetail,
     markDone: taskActions.markDone,

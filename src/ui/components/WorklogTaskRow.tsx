@@ -5,6 +5,7 @@ import { formatDaysLate } from '../../model/overdue';
 import { Button, Chip } from '../primitives';
 import { fmtShort } from '../utils';
 import { DisclosureIcon } from './icons';
+import { StatusPicker } from './StatusPicker';
 
 /** The fold toggle, or the space it would take. Rows without subtasks render the
  *  spacer rather than nothing, so every title in a list starts at the same x —
@@ -124,7 +125,7 @@ function LinkChip({ link, size }: { link: string; size: number }) {
 // squeeze the title down to a couple of characters.
 export const WorklogTaskRow = React.memo(function WorklogTaskRow({ row }: { row: WorklogRow }) {
   const hasNarrowMeta =
-    !!row.statusLabel || !!row.progress || !!row.due || !!row.repeat || row.tags.length > 0 || row.hasLink;
+    !!row.status || !!row.progress || !!row.due || !!row.repeat || row.tags.length > 0 || row.hasLink;
   return (
     <div
       key={row.id}
@@ -148,11 +149,23 @@ export const WorklogTaskRow = React.memo(function WorklogTaskRow({ row }: { row:
           </button>
         )}
         {/* Status column — wide rows only; when narrow it moves to the meta row
-            below. Absent for rows without a meaningful status (to-dos). */}
-        {row.statusLabel && (
-          <button onClick={row.onCycle} title="Change status" className="hidden @lg:block w-16 shrink-0 text-left text-status font-bold tracking-status bg-transparent border-none cursor-pointer p-0" style={{ color: row.statusColor }}>
-            {row.statusLabel}
-          </button>
+            below. Absent for rows without a meaningful status (to-dos).
+            `min-w-16` rather than `w-16`: the width lines the titles up across a
+            list, but a custom status can be named anything, and clipping the one
+            word the column exists to show would be worse than the ragged edge a
+            long one leaves. */}
+        {row.status && (
+          <span className="hidden @lg:block min-w-16 shrink-0">
+            <StatusPicker
+              statusId={row.status.id}
+              label={row.status.label}
+              name={row.status.name}
+              color={row.status.color}
+              done={row.status.done}
+              choices={row.status.choices}
+              onSelect={row.status.onSelect}
+            />
+          </span>
         )}
         <button
           onClick={row.onView}
@@ -208,10 +221,16 @@ export const WorklogTaskRow = React.memo(function WorklogTaskRow({ row }: { row:
           Hidden from `@lg` up, and skipped entirely when there is nothing to show. */}
       {hasNarrowMeta && (
         <div className={'flex @lg:hidden flex-wrap items-center gap-x-[10px] gap-y-[6px] mt-[6px] ' + (row.onWorked ? 'pl-[72px]' : 'pl-[55px]')}>
-          {row.statusLabel && (
-            <button onClick={row.onCycle} title="Change status" className="text-status font-bold tracking-status bg-transparent border-none cursor-pointer p-0" style={{ color: row.statusColor }}>
-              {row.statusLabel}
-            </button>
+          {row.status && (
+            <StatusPicker
+              statusId={row.status.id}
+              label={row.status.label}
+              name={row.status.name}
+              color={row.status.color}
+              done={row.status.done}
+              choices={row.status.choices}
+              onSelect={row.status.onSelect}
+            />
           )}
           {row.progress && <ProgressChip progress={row.progress} barWidth={38} />}
           {row.due && <DueChip due={row.due} overdue={row.overdue} days={row.overdueDays} />}

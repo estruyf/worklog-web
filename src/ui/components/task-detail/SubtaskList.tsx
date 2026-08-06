@@ -4,6 +4,7 @@ import { CheckIcon, PlusIcon } from 'lucide-react';
 import { Card, SectionLabel } from '../../primitives';
 import { useData } from '../../context';
 import { isDone } from '../../utils';
+import { StatusPicker } from '../StatusPicker';
 
 /** The task's children, each with a tick that closes it in place, and a row that
  *  adds another without going back up to the header. Renders nothing when there
@@ -18,7 +19,7 @@ export function SubtaskList({
   subtasks: Task[];
   onOpenTask: (id: string) => void;
 }) {
-  const { statusMeta, markDone, openSubtaskForm } = useData();
+  const { statusMeta, statusChoices, setTaskStatus, markDone, openSubtaskForm } = useData();
   if (subtasks.length === 0) {
     return null;
   }
@@ -46,8 +47,16 @@ export function SubtaskList({
                   className="w-[16px] h-[16px] shrink-0 border-[1.5px] border-neutral-575 rounded-full bg-white cursor-pointer p-0 hover:border-success-500"
                 />
               )}
-              <span className="w-16 shrink-0 text-status font-bold tracking-status" style={{ color: status.color }}>
-                {status.label}
+              <span className="min-w-16 shrink-0">
+                <StatusPicker
+                  statusId={c.status}
+                  label={status.label}
+                  name={status.name}
+                  color={status.color}
+                  done={done}
+                  choices={statusChoices}
+                  onSelect={(statusId) => setTaskStatus(c.id, statusId)}
+                />
               </span>
               {/* A button rather than a clickable span, for the same reason the
                   completed-task rows are: nothing else here can be tabbed to. */}

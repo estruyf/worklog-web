@@ -8,7 +8,7 @@ and what is left.
 The ordering is deliberate. Each step is independently shippable and leaves the
 app working, so none of this has to land in one go.
 
-**Status:** steps 1–6 done.
+**Status:** steps 1–8 done.
 
 ---
 
@@ -651,6 +651,37 @@ dependency list.
 **Deliberately left alone:** [`taskOps.ts`](../src/services/taskOps.ts) (605) is
 now the largest file in the repo. It is the domain's write path and was never
 part of this plan.
+
+---
+
+## Step 8 — Menu ✅ done
+
+**Added:** [`Menu`](../src/ui/primitives/Menu.tsx), and its one app-aware
+composer, [`StatusPicker`](../src/ui/components/StatusPicker.tsx).
+
+**Why:** configurable task statuses made the old status control — a button that
+cycled to the next one — unusable. Cycling is fine at three statuses and absurd
+at six, and it can never reach the closing status at all. What was needed was a
+list you pick from, and the project had no floating-panel primitive.
+
+**Two decisions worth keeping:**
+
+- The panel is **portalled to `<body>` and positioned `fixed`**, not absolutely
+  inside the trigger. Every task list sits in a scrolling container, and an
+  in-flow panel is clipped by it — the menu on the last visible row is exactly
+  the one you cannot read. The cost is that the panel does not travel with its
+  trigger, so a scroll or a resize closes it. `z-70` puts it above both `Modal`
+  layers: a menu opened from inside a dialog is the topmost thing on screen.
+- `StatusPicker` is **prop-driven, not context-reading**. It renders inside
+  `WorklogTaskRow`, the one `React.memo` in the UI, and a `useData()` call there
+  would re-render every row on every edit. The choices come down through
+  `WorklogRow.status`, memoized once in `useStatusModel`.
+
+`Menu` follows the ARIA menu pattern — `aria-haspopup="menu"` on the trigger,
+`role="menu"` on the panel, `role="menuitemradio"` + `aria-checked` on the
+options — with roving `tabIndex` so real focus moves with the arrow keys, rather
+than `aria-activedescendant` bookkeeping. It owns Escape and stops it, so a menu
+inside the task detail panel closes itself rather than the panel behind it.
 
 ---
 

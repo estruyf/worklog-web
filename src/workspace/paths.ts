@@ -4,8 +4,8 @@
 // go through the `readText / writeText / ensureDir` free functions and the
 // `Workspace` path helpers; a path is always a plain repo-relative string.
 
-import type { AutoSyncConfig, Client, DaylogConfig, StatusDef, TaskLink } from '../model/types';
-import { DEFAULT_STATUSES } from '../model/status';
+import type { AutoSyncConfig, Client, DaylogConfig, TaskLink } from '../model/types';
+import { DEFAULT_STATUSES, normalizeStatuses } from '../model/status';
 import { parseAutoSyncEvents } from '../model/syncEvents';
 
 export const DEFAULT_HOURS_PER_DAY = 8;
@@ -187,7 +187,9 @@ function defaultConfig(): DaylogConfig {
     weekStart: DEFAULT_WEEK_START,
     todosPerPage: DEFAULT_TODOS_PER_PAGE,
     clients: [],
-    statuses: DEFAULT_STATUSES,
+    // Copied, not shared: the caller may edit the result, and the status editor
+    // splices this very array when config.json is missing.
+    statuses: DEFAULT_STATUSES.map((s) => ({ ...s })),
     autoSync: parseAutoSync(undefined),
   };
 }
@@ -238,9 +240,6 @@ export class Workspace {
     }
     try {
       const parsed = JSON.parse(raw) as Partial<DaylogConfig>;
-      const statuses = Array.isArray(parsed.statuses)
-        ? parsed.statuses.filter((s): s is StatusDef => !!s && !!s.id && !!s.label)
-        : [];
       return {
         hoursPerDay: parsed.hoursPerDay && parsed.hoursPerDay > 0 ? parsed.hoursPerDay : DEFAULT_HOURS_PER_DAY,
         weekStart: parseWeekStart(parsed.weekStart),
@@ -258,7 +257,10 @@ export class Workspace {
                 archived: c.archived === true ? true : undefined,
               }))
           : [],
-        statuses: statuses.length ? statuses : DEFAULT_STATUSES,
+        // Normalized rather than trusted: a hand-edited list with no closing
+        // status, two of them, or duplicate ids has to read as *something*, and
+        // every caller assumes exactly one terminal status sitting last.
+        statuses: normalizeStatuses(parsed.statuses),
         autoSync: parseAutoSync(parsed.autoSync),
       };
     } catch {

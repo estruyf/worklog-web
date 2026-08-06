@@ -9,9 +9,11 @@ export interface CompletedTaskRowProps {
   /** Renders the filled check that puts the task back in play. Omitted where the
    *  list carries a Restore button of its own. */
   onReopen?: () => void;
-  /** The resolved status label. Always the done colour — a closed task has one
-   *  status, and the column is there to line up with the open lists above it. */
+  /** The resolved status label. A closed task has one status, but its colour is
+   *  the user's to configure, so it comes in with the label rather than being
+   *  assumed here. The column is there to line up with the open lists above it. */
   status?: string;
+  statusColor?: string;
   /** The one fact the surrounding list doesn't already state: the completion date
    *  in a client's own list, the client in a day's. */
   meta?: React.ReactNode;
@@ -24,7 +26,7 @@ export interface CompletedTaskRowProps {
 /** One closed task in a list of them — struck-through title, optional status,
  *  meta and link. Four lists render this row: a client's recently completed, the
  *  archive, the day view's "done today" and the general to-dos. */
-export function CompletedTaskRow({ task, onOpen, onReopen, status, meta, showLink, actions }: CompletedTaskRowProps) {
+export function CompletedTaskRow({ task, onOpen, onReopen, status, statusColor, meta, showLink, actions }: CompletedTaskRowProps) {
   const link = showLink ? linksOf(task)[0] : undefined;
   return (
     <div className="flex items-center gap-[11px] py-2 px-2.5 rounded-lg hover:bg-neutral-225">
@@ -39,7 +41,14 @@ export function CompletedTaskRow({ task, onOpen, onReopen, status, meta, showLin
           <CheckIcon size={11} strokeWidth={2.5} />
         </button>
       )}
-      {status && <span className="w-16 shrink-0 text-status font-bold tracking-status text-success-500">{status}</span>}
+      {status && (
+        <span
+          className="min-w-16 shrink-0 text-status font-bold tracking-status whitespace-nowrap"
+          style={{ color: statusColor ?? 'var(--color-success-500)' }}
+        >
+          {status}
+        </span>
+      )}
       {/* A button rather than a clickable span: three of the four lists rendered
           this as a `<span onClick>`, which no keyboard could reach. */}
       <button

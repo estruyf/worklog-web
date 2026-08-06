@@ -1,5 +1,5 @@
 // Barrel for UI utilities.
-export { PALETTE, MONTHS, WEEKDAYS, STATUS_COLORS } from "./constants";
+export { PALETTE, MONTHS, WEEKDAYS, STATUS_COLORS, STATUS_PALETTE } from "./constants";
 export { fmtLong, fmtShort, monthLabel, shiftDate, shiftMonth, weekdayShort, num } from "./date";
 export { clientIdOf, isDone, workedOnDate, dueOn, linksOf } from "./task";
 export { resolveStatusMeta } from "./status";

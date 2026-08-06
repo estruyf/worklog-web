@@ -30,6 +30,7 @@ export function DoneTasksSection({ doneTasks, isTodaySel, reopen, openDetail, st
             onOpen={() => openDetail(t)}
             onReopen={() => reopen(t)}
             status={statusMeta(t.status, true).label}
+            statusColor={statusMeta(t.status, true).color}
             meta={clientName(clientIdOf(t))}
             showLink
           />

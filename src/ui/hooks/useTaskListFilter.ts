@@ -71,13 +71,29 @@ export function useTaskListFilter(tasks: Task[], options: TaskListFilterOptions 
 
   // Only statuses actually present in the list are offered — plus whichever one
   // is picked, so a filter that has narrowed itself to nothing can be undone.
+  //
+  // A status the config no longer lists is offered too, at the end: removing one
+  // leaves its tasks where they are, and a list you can see them in but not
+  // filter by is the worst of both. `statusMeta` renders those as their raw id.
   const statusOptions = useMemo<TaskStatusOption[] | null>(() => {
     if (!withStatus) {
       return null;
     }
-    return statuses
-      .filter((s) => !s.terminal && ((derived.statusCounts[s.id] ?? 0) > 0 || s.id === filters.status))
-      .map((s) => ({ id: s.id, label: statusMeta(s.id, false).label, count: derived.statusCounts[s.id] ?? 0 }));
+    const configured = new Set(statuses.map((s) => s.id));
+    const toOption = (id: string): TaskStatusOption => ({
+      id,
+      label: statusMeta(id, false).name,
+      count: derived.statusCounts[id] ?? 0,
+    });
+    return [
+      ...statuses
+        .filter((s) => !s.terminal && ((derived.statusCounts[s.id] ?? 0) > 0 || s.id === filters.status))
+        .map((s) => toOption(s.id)),
+      ...Object.keys(derived.statusCounts)
+        .filter((id) => !configured.has(id))
+        .sort()
+        .map(toOption),
+    ];
   }, [withStatus, statuses, derived.statusCounts, filters.status, statusMeta]);
 
   const toolbar = useMemo<TaskListToolbarProps | null>(() => {

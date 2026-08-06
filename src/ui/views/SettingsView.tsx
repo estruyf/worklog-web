@@ -1,5 +1,6 @@
 import React, { useEffect, useId, useState } from 'react';
 import { Button, Card, Input, Select, Toggle } from '../primitives';
+import { StatusSettings } from '../components';
 import { useData } from '../context';
 import { AUTO_SYNC_EVENTS, type AutoSyncEvent } from '../../model/syncEvents';
 
@@ -34,7 +35,8 @@ function SettingRow({
 }
 
 /** App configuration, persisted to .worklog/config.json. Covers the scalar
- *  settings not managed elsewhere (clients live in the Clients view). */
+ *  settings not managed elsewhere (clients live in the Clients view), plus the
+ *  task-status list, which manages itself — see `StatusSettings`. */
 export function SettingsView() {
   const { hoursPerDay, weekStart, todosPerPage, autoSync, saveSettings } = useData();
 
@@ -269,6 +271,10 @@ export function SettingsView() {
           </Button>
           {saved && <span className="text-control text-success-500 font-medium">Saved</span>}
         </div>
+
+        {/* Below the Save button, not inside the card above it: the status editor
+            writes as you go and has no part in that draft. */}
+        <StatusSettings />
       </div>
     </div>
   );

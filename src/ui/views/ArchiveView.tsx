@@ -236,6 +236,7 @@ export function ArchiveView() {
                   task={t}
                   onOpen={() => openDetail(t)}
                   status={statusMeta(t.status, true).label}
+                  statusColor={statusMeta(t.status, true).color}
                   meta={t.completed ? fmtShort(t.completed) : ''}
                   actions={
                     <>

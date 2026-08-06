@@ -3,6 +3,7 @@ import type { Task } from '../../../model/types';
 import { Chip, LinkButton } from '../../primitives';
 import { useData } from '../../context';
 import { clientIdOf, isDone } from '../../utils';
+import { StatusPicker } from '../StatusPicker';
 
 export interface TaskMetaRowProps {
   task: Task;
@@ -13,16 +14,24 @@ export interface TaskMetaRowProps {
 }
 
 /** Status, client, the parent it hangs off, and its tags — the one line that says
- *  where this task sits. */
+ *  where this task sits. The status is the picker, not a label: this row is where
+ *  you are already looking when you decide the task has moved on. */
 export function TaskMetaRow({ task, parent, routed, isTodo, onOpenTask }: TaskMetaRowProps) {
-  const { statusMeta, colorOf, clientName, openTagSearch } = useData();
-  const status = statusMeta(task.status, isDone(task));
+  const { statusMeta, statusChoices, setTaskStatus, colorOf, clientName, openTagSearch } = useData();
+  const done = isDone(task);
+  const status = statusMeta(task.status, done);
   return (
     <div className="flex items-center gap-[10px] mb-3">
       {!isTodo && (
-        <span className="text-status font-bold tracking-status" style={{ color: status.color }}>
-          {status.label}
-        </span>
+        <StatusPicker
+          statusId={task.status}
+          label={status.label}
+          name={status.name}
+          color={status.color}
+          done={done}
+          choices={statusChoices}
+          onSelect={(statusId) => setTaskStatus(task.id, statusId)}
+        />
       )}
       <span className="flex items-center gap-[6px] text-control text-neutral-750">
         <span className="w-[8px] h-[8px] rounded-full" style={{ background: colorOf(clientIdOf(task)) }} />

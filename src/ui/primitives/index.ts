@@ -17,6 +17,8 @@ export { Select } from './Select';
 export type { SelectProps } from './Select';
 export { DateInput } from './DateInput';
 export type { DateInputProps } from './DateInput';
+export { Menu } from './Menu';
+export type { MenuOption, MenuProps } from './Menu';
 export { Modal } from './Modal';
 export type { ModalLayer, ModalOffset, ModalProps, ModalSize, ModalTitleSize } from './Modal';
 export { Card } from './Card';

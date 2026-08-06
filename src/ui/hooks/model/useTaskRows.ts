@@ -8,7 +8,7 @@ import { isGeneralTodoClientId } from "../../../model/todos";
 import { describeRecurrence } from "../../../model/recurrence";
 import { daysSinceEpoch } from "../../../util/date";
 import { navigateToTask } from "../../router";
-import type { StatusMetaFn, WorklogRow } from "../../model";
+import type { StatusChoice, StatusMetaFn, WorklogRow } from "../../model";
 import { clientIdOf, dueOn, isDone, linksOf, planTaskRows, workedOnDate } from "../../utils";
 
 /** Everything a row needs that isn't the task itself: the day it is shown on, and
@@ -21,7 +21,9 @@ export interface TaskRowDeps {
   collapsed: ReadonlySet<string>;
   toggleCollapsed: (id: string) => void;
   statusMeta: StatusMetaFn;
-  cycleStatus: (t: Task) => void;
+  /** Every configured status, in order — what a row's picker offers. */
+  statusChoices: StatusChoice[];
+  setTaskStatus: (taskId: string, statusId: string) => void;
   openTagSearch: (tag: string) => void;
   openDetail: (t: Task) => void;
   markDone: (t: Task) => void;
@@ -38,7 +40,8 @@ export function useTaskRows(deps: TaskRowDeps) {
     collapsed,
     toggleCollapsed,
     statusMeta,
-    cycleStatus,
+    statusChoices,
+    setTaskStatus,
     openTagSearch,
     openDetail,
     markDone,
@@ -51,9 +54,10 @@ export function useTaskRows(deps: TaskRowDeps) {
     (t: Task, child: boolean): WorklogRow => {
       const ls = linksOf(t);
       // General to-dos are open or closed only: no worked-on marking and no
-      // status to show or cycle through.
+      // status to show or move between.
       const todo = isGeneralTodoClientId(clientIdOf(t));
-      const m = todo ? undefined : statusMeta(t.status, isDone(t));
+      const done = isDone(t);
+      const m = todo ? undefined : statusMeta(t.status, done);
       const worked = !todo && workedOnDate(t, selectedDate);
       const children = tasks.filter((c) => c.parentId === t.id);
       const progress = children.length ? { done: children.filter(isDone).length, total: children.length } : undefined;
@@ -69,8 +73,15 @@ export function useTaskRows(deps: TaskRowDeps) {
         id: t.id,
         title: t.title,
         pad: child ? "40px" : "10px",
-        statusLabel: m?.label,
-        statusColor: m?.color,
+        status: m && {
+          id: t.status,
+          label: m.label,
+          name: m.name,
+          color: m.color,
+          done,
+          choices: statusChoices,
+          onSelect: (statusId: string) => setTaskStatus(t.id, statusId),
+        },
         worked,
         workedTitle: worked ? "Unmark worked on this day" : "Mark worked on this day",
         hasLink: ls.length > 0,
@@ -85,13 +96,25 @@ export function useTaskRows(deps: TaskRowDeps) {
         onOpenTab: () => navigateToTask(t.id),
         onDone: () => markDone(t),
         onWorked: todo ? undefined : () => toggleWorked(t),
-        onCycle: todo ? undefined : () => cycleStatus(t),
         onEdit: () => openEdit(t),
         onDelete: () => deleteTask(t.id),
         onTagClick: openTagSearch,
       };
     },
-    [statusMeta, selectedDate, tasks, today, openDetail, markDone, toggleWorked, cycleStatus, openEdit, deleteTask, openTagSearch],
+    [
+      statusMeta,
+      statusChoices,
+      setTaskStatus,
+      selectedDate,
+      tasks,
+      today,
+      openDetail,
+      markDone,
+      toggleWorked,
+      openEdit,
+      deleteTask,
+      openTagSearch,
+    ],
   );
 
   /** A flat list of rows with subtasks indented under their parent, and orphaned

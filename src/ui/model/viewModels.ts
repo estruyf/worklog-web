@@ -43,24 +43,49 @@ export interface TaskFormFields {
   description: string;
 }
 
-/** Resolved status display, computed from a StatusDef + completion state. */
+/** Resolved status display, computed from a StatusDef + completion state.
+ *  `label` is the uppercase form the status column renders; `name` is the status
+ *  as configured, for prose and accessible names. */
 export interface StatusMeta {
   label: string;
+  name: string;
   color: string;
 }
 
 /** Resolve a status id (+ completion) to its display label and color. */
 export type StatusMetaFn = (statusId: string, done: boolean) => StatusMeta;
 
+/** One configured status as the quick picker offers it, pre-resolved so the
+ *  presentational components need no access to the config. */
+export interface StatusChoice {
+  id: string;
+  /** As configured, not the uppercase column form: this is a list you read. */
+  name: string;
+  color: string;
+  /** The closing status: picking it completes and archives the task. */
+  terminal: boolean;
+}
+
+/** A task's status as a row renders it: how it looks, and what it can become.
+ *  Absent on rows whose status carries no information (general to-dos). */
+export interface RowStatus {
+  id: string;
+  label: string;
+  name: string;
+  color: string;
+  done: boolean;
+  choices: StatusChoice[];
+  onSelect: (statusId: string) => void;
+}
+
 /** A single task rendered by WorklogTaskRow, with its actions pre-bound. */
 export interface WorklogRow {
   id: string;
   title: string;
   pad: string;
-  /** Status display, omitted for rows whose status carries no information
-   *  (general to-dos, which are open or closed only). */
-  statusLabel?: string;
-  statusColor?: string;
+  /** Status display + the quick picker's data, omitted for rows whose status
+   *  carries no information (general to-dos, which are open or closed only). */
+  status?: RowStatus;
   /** Worked-on state for the selected day. Always false for rows that don't
    *  track it (general to-dos), where `onWorked` is omitted too. */
   worked: boolean;
@@ -91,9 +116,6 @@ export interface WorklogRow {
   /** Omitted for tasks without a worked-on state (general to-dos); the row then
    *  hides the worked toggle. */
   onWorked?: () => void;
-  /** Omitted for tasks with no intermediate statuses to cycle through (general
-   *  to-dos), which don't render a status at all. */
-  onCycle?: () => void;
   onEdit: () => void;
   onDelete: () => void;
   /** Follows a tag chip into the tag-filtered search. Omitted where tags are

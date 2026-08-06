@@ -4,6 +4,7 @@
 import { Store } from '../store';
 import type { Client, Recurrence, Task, TaskLink } from '../model/types';
 import { newTaskId } from '../parser/ids';
+import { openStatusId } from '../model/status';
 import { serializeTask } from '../parser/taskParser';
 import { today } from '../util/date';
 import { appendTaskBlock } from '../commands/shared';
@@ -71,7 +72,10 @@ export async function createTask(store: Store, input: NewTaskInput): Promise<Tas
     id: newTaskId(),
     title,
     description: input.description?.trim() || undefined,
-    status: 'open',
+    // The configured first working status, not the literal 'open': the list is
+    // the user's, and a renamed or removed first status would otherwise mint
+    // tasks in a status nothing knows about.
+    status: openStatusId(store.getConfig().statuses),
     parentId: input.parentId || undefined,
     clientIds: [client.id],
     links: parseLinks(input.links),

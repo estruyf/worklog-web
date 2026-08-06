@@ -29,7 +29,7 @@ export const AUTO_SYNC_EVENTS: AutoSyncEventDef[] = [
   {
     id: 'taskStatus',
     label: 'A task changes state',
-    description: 'Status cycled, marked done or worked on, reopened, completion date changed.',
+    description: 'Status changed, marked done or worked on, reopened, completion date changed.',
   },
   {
     id: 'taskEdited',
@@ -43,8 +43,9 @@ export const AUTO_SYNC_EVENTS: AutoSyncEventDef[] = [
   },
   {
     id: 'settings',
-    label: 'Clients or settings change',
-    description: 'A client is added, edited, archived or deleted, or these settings are saved.',
+    label: 'Clients, statuses or settings change',
+    description:
+      'A client or task status is added, edited, reordered or removed, or these settings are saved.',
   },
   // Appended, not slotted in beside the other edit events: `parseAutoSyncEvents`
   // orders a saved array by this list, so an insertion in the middle rewrites
@@ -87,6 +88,10 @@ const REASON_EVENT: Record<string, AutoSyncEvent> = {
   restoreClient: 'settings',
   deleteClient: 'settings',
   updateSettings: 'settings',
+  addStatus: 'settings',
+  updateStatus: 'settings',
+  moveStatus: 'settings',
+  deleteStatus: 'settings',
 };
 
 /** The event a rebuild reason counts as, or undefined when it counts as none. */

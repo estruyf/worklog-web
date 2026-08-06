@@ -37,6 +37,7 @@ import {
 import { removeWorklog, setEventWorklog, setWorklog } from '../services/worklog';
 import { setDayNote } from '../services/dayNotes';
 import { updateSettings, type SettingsFields } from '../services/settings';
+import { createStatus, deleteStatus, moveStatus, updateStatus, type NewStatusInput, type StatusFields } from '../services/statuses';
 import type { WorklogState } from '../ui/state';
 import type { AutoSyncConfig, Client } from '../model/types';
 import { syncsOnChange } from '../model/syncEvents';
@@ -556,6 +557,22 @@ class WorklogStore {
 
   updateSettings(fields: SettingsFields): Promise<void> {
     return this.run(() => updateSettings(this.store, fields));
+  }
+
+  createStatus(input: NewStatusInput): Promise<void> {
+    return this.run(() => createStatus(this.store, input));
+  }
+
+  updateStatus(id: string, fields: StatusFields): Promise<void> {
+    return this.run(() => updateStatus(this.store, id, fields));
+  }
+
+  moveStatus(id: string, delta: -1 | 1): Promise<void> {
+    return this.run(() => moveStatus(this.store, id, delta));
+  }
+
+  deleteStatus(id: string): Promise<void> {
+    return this.run(() => deleteStatus(this.store, id));
   }
 
   closeTask(taskId: string, date?: string): Promise<void> {

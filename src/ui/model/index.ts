@@ -3,6 +3,8 @@ export type {
   AppView,
   StatusMeta,
   StatusMetaFn,
+  StatusChoice,
+  RowStatus,
   WorklogRow,
   ClientTaskGroup,
   ArchiveGroup,

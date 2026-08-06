@@ -12,7 +12,7 @@ Read it before changing anything user-facing. This file covers how to work in th
 
 ```bash
 npm run dev      # http://localhost:4321 (needs .dev.vars — see README step 2)
-npm test         # vitest, 400 tests / 27 files — must stay green
+npm test         # vitest, 431 tests / 28 files — must stay green
 npm run lint     # eslint, 0 errors AND 0 warnings expected
 npx tsc --noEmit # must be clean
 npm run build    # astro build → dist/_worker.js (Cloudflare)
@@ -116,6 +116,21 @@ opened at one version. Adding a store means bumping `DB_VERSION` there and *addi
 
 `test/offline.test.ts` covers the cold start, and hand-rolls IndexedDB in `test/helpers/` rather
 than taking a dependency, so `npm test` still needs no network and nothing installed.
+
+### 2b. Statuses are the user's list, and exactly one of them closes a task
+
+`config.statuses` is editable in Settings, so nothing may assume the shipped ids.
+`normalizeStatuses()` in `src/model/status.ts` is what every reader relies on: valid entries
+only, unique ids, and **exactly one `terminal` status, always last**. `terminalStatusId()` is
+the archive trigger and `openStatusId()` is where a new task starts — a config with two
+terminal entries or none would make both a guess, so `loadConfig` normalizes on the way in and
+every mutation in `src/services/statuses.ts` normalizes on the way out.
+
+A status id lives in the user's Markdown (`- status: waiting-for`). That is why the label is
+editable and the id is not, and why `deleteStatus` leaves the tasks using it alone rather than
+reassigning them — a removal is a config change, never a bulk edit of task blocks. Those tasks
+resolve through `resolveStatusMeta`'s fallback and are listed back under "Still in use" in
+Settings. `test/statuses.test.ts` guards all of this.
 
 ### 3. UI primitives are style-only
 
