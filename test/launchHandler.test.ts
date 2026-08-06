@@ -153,5 +153,8 @@ describe('launch targets', () => {
     const manifest = JSON.parse(readFileSync(fileURLToPath(new URL('../public/manifest.webmanifest', import.meta.url)), 'utf-8'));
 
     expect(manifest.launch_handler).toEqual({ client_mode: 'focus-existing' });
+    // The other half: `preferred` is what makes an ordinary https link from Slack or
+    // a mail client arrive as a launch instead of opening a tab beside the app.
+    expect(manifest.handle_links).toBe('preferred');
   });
 });

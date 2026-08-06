@@ -8,6 +8,7 @@
   "display": "standalone",
   "orientation": "portrait-primary",
   "launch_handler": { "client_mode": "focus-existing" },
+  "handle_links": "preferred",
   "background_color": "#ffffff",
   "theme_color": "#F4CF4D",
   "protocol_handlers": [

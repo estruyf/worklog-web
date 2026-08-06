@@ -11,6 +11,14 @@
 // `focus-existing` is inert without a consumer: with no `setConsumer` call, clicking
 // "Calendar" would focus the window and do nothing at all.
 //
+// `handle_links: "preferred"` widens what counts as a launch: a plain https link to
+// an in-scope URL — one clicked in Slack, a mail client, anywhere outside the browser
+// — opens in the installed app rather than a browser tab next to it, and lands here
+// through the same `focus-existing` path. Scope is `/`, so that includes the
+// marketing page; `navigateToLaunchTarget` sends targets outside the /app island
+// through a real navigation. It is a preference and not a claim: the user can flip it
+// back per-app in browser settings, and a browser that ignores it just opens the tab.
+//
 // Where the target goes is `./router`'s business (`navigateToLaunchTarget`); this
 // module only takes delivery. Cold starts don't come through here at all — there is
 // no window to focus, so the browser navigates to the target and the app boots on it
