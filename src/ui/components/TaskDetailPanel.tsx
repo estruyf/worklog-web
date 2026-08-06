@@ -76,7 +76,7 @@ export function TaskDetailPanel({ routed = false }: { routed?: boolean } = {}) {
           </div>
         )}
 
-        <SubtaskList subtasks={subtasks} onOpenTask={onOpenTask} />
+        <SubtaskList task={task} subtasks={subtasks} onOpenTask={onOpenTask} />
 
         <DescriptionEditor
           value={descDraft}

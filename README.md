@@ -418,6 +418,38 @@ That means a description can use `## ` headings of its own — they stay part of
 description. A hand-written `## ` heading with no `- id:` under it is read as prose,
 not as a task, so give new blocks an id (or create them in the app, which does).
 
+### Subtasks
+
+A task becomes a subtask of another by naming its parent's `id`. The line goes
+directly under `- status:`, which is where the app writes it:
+
+```markdown
+## Ship the mobile release
+- id: t_9kf2ap
+- status: in-progress
+
+## Fix the mobile picker
+- id: t_awxnyh
+- status: open
+- parent: t_9kf2ap
+```
+
+Parent and child are two ordinary task blocks — nothing nests in the Markdown, so
+both stay editable on their own and a subtask keeps its own due date, tags, notes
+and description. They don't have to sit in the same file, though the app only ever
+offers parents from the client you're already on.
+
+| Behaviour | What happens |
+| --- | --- |
+| Completing a parent | Closes every open descendant with it, all the way down. |
+| Deleting a parent | Deletes its descendants too — git is the trace. |
+| A `parent:` pointing at a missing id | The task reads as top-level; nothing is dropped. |
+| A `parent:` that would form a cycle | Refused when set in the app. Hand-written cycles aren't validated — don't write one. |
+
+Nesting is recursive in the format, but the app's parent picker only lists open
+top-level tasks, so what it creates is one level deep. In the app, open a task and
+use **Add subtask** in the header or at the bottom of its subtask list.
+
 ### Day notes
 
 The day view has a freeform Markdown field for the half of a day that isn't billed
