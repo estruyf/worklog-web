@@ -19,10 +19,10 @@ export interface TaskSidebarProps {
   onOpenTask: (id: string) => void;
 }
 
-/** Everything that classifies the task — status, client, parent, dates, repeat,
- *  tags — as the panel's right-hand rail, mirroring the task form's. The panel's
- *  main column is then only what the task *says*: its title, links, subtasks,
- *  description and notes.
+/** Everything that classifies the task — client, status, dates, repeat, tags and
+ *  the parent it hangs off — as the panel's right-hand rail, mirroring the task
+ *  form's. The panel's main column is then only what the task *says*: its title,
+ *  links, subtasks, description and notes.
  *
  *  The status is the picker, not a label: the rail is where you are already
  *  looking when you decide the task has moved on. */
@@ -34,8 +34,15 @@ export function TaskSidebar({ task, parent, routed, isTodo, occurrences, onOpenT
   const tags = task.tags ?? [];
   return (
     <>
+      <SidebarSection title="Client" divider={false}>
+        <span className="flex items-center gap-[6px] text-control text-neutral-750">
+          <span className="w-[8px] h-[8px] shrink-0 rounded-full" style={{ background: colorOf(clientIdOf(task)) }} />
+          {clientName(clientIdOf(task))}
+        </span>
+      </SidebarSection>
+
       {!isTodo && (
-        <SidebarSection title="Status" divider={false}>
+        <SidebarSection title="Status">
           <StatusPicker
             statusId={task.status}
             label={status.label}
@@ -48,21 +55,8 @@ export function TaskSidebar({ task, parent, routed, isTodo, occurrences, onOpenT
         </SidebarSection>
       )}
 
-      <SidebarSection title="Client" divider={!isTodo}>
-        <span className="flex items-center gap-[6px] text-control text-neutral-750">
-          <span className="w-[8px] h-[8px] shrink-0 rounded-full" style={{ background: colorOf(clientIdOf(task)) }} />
-          {clientName(clientIdOf(task))}
-        </span>
-      </SidebarSection>
-
-      {parent && (
-        <SidebarSection title="Parent">
-          <LinkButton size="md" onClick={() => onOpenTask(parent.id)} className="text-left">
-            {parent.title}
-          </LinkButton>
-        </SidebarSection>
-      )}
-
+      {/* Two names for one slot: a repeating task's date belongs to the rule, so
+          `DueEditor` renders nothing and the repeat block states it instead. */}
       <DueEditor task={task} />
       {!done && <RepeatSummary task={task} occurrences={occurrences} overdue={isOverdue(task, selectedDate)} />}
 
@@ -83,6 +77,17 @@ export function TaskSidebar({ task, parent, routed, isTodo, occurrences, onOpenT
               ),
             )}
           </div>
+        </SidebarSection>
+      )}
+
+      {/* Last because it is the one block that is usually absent, and a rail that
+          shifts its first four names by whether the task happens to have a parent
+          is a rail you have to re-read every time. */}
+      {parent && (
+        <SidebarSection title="Parent">
+          <LinkButton size="md" onClick={() => onOpenTask(parent.id)} className="text-left">
+            {parent.title}
+          </LinkButton>
         </SidebarSection>
       )}
     </>

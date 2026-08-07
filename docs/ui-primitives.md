@@ -140,7 +140,7 @@ of wrapping to whatever width their longest option asks for.
        labelSize="xs|sm|md" />               // error also marks its control invalid
 <Input size="xs|sm|md|lg" variant="default|accent" invalid
        leading={…} trailing={…} clearable onClear={…} />
-<TextArea size="…" variant="…" resizable />
+<TextArea size="…" variant="…" resizable autoGrow /> // autoGrow drops the resize grip
 <Select size="…" variant="…" />
 <DateInput size="…" variant="…" />
 ```

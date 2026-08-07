@@ -32,6 +32,7 @@ import {
   setTaskStatus,
   toggleTaskWorkedOn,
   updateTask,
+  updateTaskNote,
   type TaskFields,
 } from '../services/taskOps';
 import { removeWorklog, setEventWorklog, setWorklog } from '../services/worklog';
@@ -602,6 +603,10 @@ class WorklogStore {
 
   addNote(taskId: string, text: string): Promise<void> {
     return this.run(() => addTaskNote(this.store, taskId, text));
+  }
+
+  updateNote(taskId: string, index: number, text: string): Promise<void> {
+    return this.run(() => updateTaskNote(this.store, taskId, index, text));
   }
 
   deleteNote(taskId: string, index: number): Promise<void> {

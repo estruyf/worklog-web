@@ -140,6 +140,35 @@ export async function addTaskNote(
   return store.db.getTask(taskId) ?? task;
 }
 
+/** Rewrite the body of a note by its 0-based index, keeping its timestamp: the
+ *  stamp records when that entry was written, not when it was last corrected. */
+export async function updateTaskNote(
+  store: Store,
+  taskId: string,
+  index: number,
+  text: string,
+): Promise<Task> {
+  const task = store.db.getTask(taskId);
+  if (!task) {
+    throw new Error(`Task ${taskId} not found.`);
+  }
+  const trimmed = text.trim();
+  if (!trimmed) {
+    throw new Error("Cannot save an empty note.");
+  }
+  const notes = task.notes ?? [];
+  if (index < 0 || index >= notes.length) {
+    throw new Error(`Task ${taskId} has no note at index ${index}.`);
+  }
+  await updateInPlace(store, task, (t) => {
+    const next = [...(t.notes ?? [])];
+    next[index] = { ...next[index], text: trimmed };
+    return { ...t, notes: next };
+  });
+  await store.rebuild("updateNote");
+  return store.db.getTask(taskId) ?? task;
+}
+
 /** Remove a note by its 0-based index in the task's chronological notes list. */
 export async function deleteTaskNote(
   store: Store,

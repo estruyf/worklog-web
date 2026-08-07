@@ -79,6 +79,14 @@ export function useTaskActions(tasks: Task[], selectedDate: string, ui: WorklogU
     worklogStore.addNote(taskId, trimmed);
   }, []);
 
+  const updateNote = useCallback((taskId: string, index: number, text: string) => {
+    const trimmed = text.trim();
+    if (!trimmed) {
+      return;
+    }
+    worklogStore.updateNote(taskId, index, trimmed);
+  }, []);
+
   const deleteNote = useCallback((taskId: string, index: number) => {
     worklogStore.deleteNote(taskId, index);
   }, []);
@@ -101,5 +109,5 @@ export function useTaskActions(tasks: Task[], selectedDate: string, ui: WorklogU
   /** Commit the detail panel's markdown draft and drop back to preview. */
   const saveDescription = () => saveDescriptionText(ui.descDraft);
 
-  return { markDone, toggleWorked, openDetail, openEdit, deleteTask, addNote, deleteNote, saveDescription, saveDescriptionText };
+  return { markDone, toggleWorked, openDetail, openEdit, deleteTask, addNote, updateNote, deleteNote, saveDescription, saveDescriptionText };
 }

@@ -73,6 +73,7 @@ const REASON_EVENT: Record<string, AutoSyncEvent> = {
   updateTask: 'taskEdited',
   deleteTask: 'taskEdited',
   addNote: 'taskEdited',
+  updateNote: 'taskEdited',
   deleteNote: 'taskEdited',
   setRecurrence: 'taskEdited',
   setParent: 'taskEdited',
