@@ -98,6 +98,9 @@ const FORM_SEQ_KEY = 'worklogFormSeq';
  *  actual task to hand over rather than a place to start from. */
 export interface TaskFormSeed {
   clientId?: string;
+  /** A canonical priority id. A deeplink's value is checked against the scale
+   *  before it gets here — see `parseTaskDeeplink`. */
+  priority?: string;
   parentId?: string;
   due?: string;
   title?: string;

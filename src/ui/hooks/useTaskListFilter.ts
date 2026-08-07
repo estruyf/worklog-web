@@ -5,6 +5,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Task } from '../../model/types';
+import { NORMAL_PRIORITY_ID, PRIORITIES } from '../../model/priority';
 import type { TaskListToolbarProps, TaskStatusOption } from '../components/TaskListToolbar';
 import { useData } from '../context';
 import { DEFAULT_TASK_LIST_FILTERS, deriveTaskList, type TaskListFilters, type TaskSortKey } from '../utils';
@@ -61,6 +62,7 @@ export function useTaskListFilter(tasks: Task[], options: TaskListFilterOptions 
 
   const setQuery = useCallback((query: string) => setFilters((f) => ({ ...f, query })), []);
   const setStatus = useCallback((status: string) => setFilters((f) => ({ ...f, status })), []);
+  const setPriority = useCallback((priority: string) => setFilters((f) => ({ ...f, priority })), []);
   const setSort = useCallback((sort: TaskSortKey) => setFilters((f) => ({ ...f, sort })), []);
   const toggleDir = useCallback(() => setFilters((f) => ({ ...f, dir: f.dir === 'asc' ? 'desc' : 'asc' })), []);
   const toggleTag = useCallback(
@@ -96,6 +98,21 @@ export function useTaskListFilter(tasks: Task[], options: TaskListFilterOptions 
     ];
   }, [withStatus, statuses, derived.statusCounts, filters.status, statusMeta]);
 
+  // Offered on every list, to-dos included — unlike status, priority says
+  // something about a to-do too — but only once something in the list carries
+  // one. A list where everything is normal would get a picker whose single option
+  // is the list you are already looking at, and the field is opt-in, so that is
+  // the common case until it starts being used.
+  const priorityOptions = useMemo<TaskStatusOption[] | null>(() => {
+    const present = PRIORITIES.filter(
+      (p) => (derived.priorityCounts[p.id] ?? 0) > 0 || p.id === filters.priority,
+    );
+    if (present.every((p) => p.id === NORMAL_PRIORITY_ID)) {
+      return null;
+    }
+    return present.map((p) => ({ id: p.id, label: p.label, count: derived.priorityCounts[p.id] ?? 0 }));
+  }, [derived.priorityCounts, filters.priority]);
+
   const toolbar = useMemo<TaskListToolbarProps | null>(() => {
     if (tasks.length < minItems && !derived.dirty) {
       return null;
@@ -107,6 +124,9 @@ export function useTaskListFilter(tasks: Task[], options: TaskListFilterOptions 
       status: effective.status,
       onStatus: setStatus,
       statusOptions,
+      priority: filters.priority,
+      onPriority: setPriority,
+      priorityOptions,
       tags: derived.tagCounts,
       onToggleTag: toggleTag,
       sort: filters.sort,
@@ -126,9 +146,11 @@ export function useTaskListFilter(tasks: Task[], options: TaskListFilterOptions 
     filters,
     effective.status,
     statusOptions,
+    priorityOptions,
     derived,
     setQuery,
     setStatus,
+    setPriority,
     setSort,
     toggleDir,
     toggleTag,

@@ -9,6 +9,7 @@
 ## Rebuild the reporting export
 - id: t_ip2dii
 - status: in-progress
+- priority: high
 - link: https://example.com/issues/263 Tracking issue
 - link: https://example.com/design/export
 - created: 2026-07-14

@@ -10,6 +10,7 @@ import {
   openStatusId,
   terminalStatusId,
 } from "../model/status";
+import { writablePriority } from "../model/priority";
 import { isGeneralTodoClientId } from "../model/todos";
 import { nextDueAfterCompletion } from "../model/recurrence";
 import { withSeededDue } from "../model/recurringTask";
@@ -536,6 +537,8 @@ export async function deleteTaskCascade(
 export interface TaskFields {
   title?: string;
   clientId?: string;
+  /** A priority id; '' (or 'normal') drops back to normal, which clears the line. */
+  priority?: string;
   parentId?: string; // '' clears the parent
   /** Pass [] to clear the links; a bare url string is accepted too. */
   links?: (TaskLink | string)[];
@@ -565,6 +568,10 @@ export async function updateTask(
     ...t,
     title:
       fields.title !== undefined ? fields.title.trim() || t.title : t.title,
+    // Passing the field at all is a decision about priority, so an unrecognised
+    // value clears it rather than leaving the old one standing.
+    priority:
+      fields.priority !== undefined ? writablePriority(fields.priority) : t.priority,
     parentId:
       fields.parentId !== undefined ? fields.parentId || undefined : t.parentId,
     links: fields.links !== undefined ? parseLinks(fields.links) : t.links,

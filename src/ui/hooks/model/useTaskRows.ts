@@ -6,6 +6,7 @@ import { useCallback } from "react";
 import type { Task } from "../../../model/types";
 import { isGeneralTodoClientId } from "../../../model/todos";
 import { describeRecurrence } from "../../../model/recurrence";
+import { isMarkedPriority, priorityDef } from "../../../model/priority";
 import { daysSinceEpoch } from "../../../util/date";
 import { navigateToTask } from "../../router";
 import type { StatusChoice, StatusMetaFn, WorklogRow } from "../../model";
@@ -82,6 +83,8 @@ export function useTaskRows(deps: TaskRowDeps) {
           choices: statusChoices,
           onSelect: (statusId: string) => setTaskStatus(t.id, statusId),
         },
+        // Shown on done rows too: a completed task that was urgent still was.
+        priority: isMarkedPriority(t.priority) ? priorityDef(t.priority) : undefined,
         worked,
         workedTitle: worked ? "Unmark worked on this day" : "Mark worked on this day",
         hasLink: ls.length > 0,

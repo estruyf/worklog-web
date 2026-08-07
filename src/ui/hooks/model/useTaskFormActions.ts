@@ -86,6 +86,7 @@ export function useTaskFormActions(deps: TaskFormDeps, ui: WorklogUiState) {
       worklogStore.updateTask(editingId, {
         title,
         clientId: fields.clientId,
+        priority: fields.priority,
         parentId: fields.parentId,
         links,
         description,
@@ -97,6 +98,7 @@ export function useTaskFormActions(deps: TaskFormDeps, ui: WorklogUiState) {
       worklogStore.createTask({
         title,
         clientId: fields.clientId,
+        priority: fields.priority,
         parentId: fields.parentId || undefined,
         links,
         description: description || undefined,

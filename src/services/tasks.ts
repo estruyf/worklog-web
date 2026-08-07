@@ -5,6 +5,7 @@ import { Store } from '../store';
 import type { Client, Recurrence, Task, TaskLink } from '../model/types';
 import { newTaskId } from '../parser/ids';
 import { openStatusId } from '../model/status';
+import { writablePriority } from '../model/priority';
 import { serializeTask } from '../parser/taskParser';
 import { today } from '../util/date';
 import { appendTaskBlock } from '../commands/shared';
@@ -15,6 +16,9 @@ import { GENERAL_TODO_CLIENT_ID, generalTodoClient, isGeneralTodoClientId } from
 export interface NewTaskInput {
   title: string;
   clientId: string;
+  /** One of the ids in `model/priority`; anything else (including 'normal')
+   *  leaves the task at normal priority, which writes no line. */
+  priority?: string;
   parentId?: string;
   /** Reference links (a bare url string is accepted too). */
   links?: (TaskLink | string)[];
@@ -76,6 +80,7 @@ export async function createTask(store: Store, input: NewTaskInput): Promise<Tas
     // the user's, and a renamed or removed first status would otherwise mint
     // tasks in a status nothing knows about.
     status: openStatusId(store.getConfig().statuses),
+    priority: writablePriority(input.priority),
     parentId: input.parentId || undefined,
     clientIds: [client.id],
     links: parseLinks(input.links),

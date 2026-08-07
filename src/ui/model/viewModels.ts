@@ -33,6 +33,8 @@ export interface LinkDraft {
 export interface TaskFormFields {
   title: string;
   clientId: string;
+  /** A priority id; 'normal' is the default and writes no line. */
+  priority: string;
   parentId: string;
   links: LinkDraft[];
   due: string;
@@ -92,6 +94,10 @@ export interface WorklogRow {
   workedTitle: string;
   hasLink: boolean;
   link: string;
+  /** The priority chip's id and label, present only when the task carries a
+   *  priority worth showing — normal is the absence of a marker, not a grey one
+   *  on every row. */
+  priority?: { id: string; label: string };
   /** Optional due date (YYYY-MM-DD). */
   due?: string;
   /** True when the task has an unmet due date in the past. */

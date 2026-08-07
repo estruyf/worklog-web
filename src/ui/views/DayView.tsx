@@ -6,8 +6,18 @@ import type { ClientTaskGroup } from '../model';
 import { useData, useUi } from '../context';
 import { useTaskListFilter } from '../hooks';
 import { Card } from '../primitives';
-import { clientIdOf, deriveDayBar, dueOn, isDone, previousLoggedDay, workedOnDate } from '../utils';
 import {
+  clientIdOf,
+  deriveClientLinks,
+  deriveDayBar,
+  dueOn,
+  isDone,
+  previousLoggedDay,
+  relevantDayClientIds,
+  workedOnDate,
+} from '../utils';
+import {
+  ClientLinksSection,
   DayBar,
   DayCardFooter,
   DayHeader,
@@ -23,7 +33,7 @@ import {
 
 /** Derives the selected day's logs, open/worked task groups and done list. */
 function useDayData() {
-  const { tasks, clients, colorOf, openRowsFor, logsFor, today } = useData();
+  const { tasks, clients, allClients, colorOf, openRowsFor, logsFor, today } = useData();
   const { selectedDate } = useUi();
 
   const openTasks = useMemo(() => tasks.filter((t) => !isDone(t)), [tasks]);
@@ -57,10 +67,11 @@ function useDayData() {
   // on every day their rule lands on, not just the next one they store. Overdue
   // ones are left out: a daily task whose rule also lands today is one task, and
   // the overdue block above is the more urgent place to meet it.
-  const dueRows = useMemo(() => {
+  const dueTasks = useMemo(() => {
     const late = new Set(overdueTasks.map((t) => t.id));
-    return openRowsFor(tasks.filter((t) => !isDone(t) && !late.has(t.id) && dueOn(t, selectedDate)));
-  }, [tasks, selectedDate, openRowsFor, overdueTasks]);
+    return tasks.filter((t) => !isDone(t) && !late.has(t.id) && dueOn(t, selectedDate));
+  }, [tasks, selectedDate, overdueTasks]);
+  const dueRows = useMemo(() => openRowsFor(dueTasks), [dueTasks, openRowsFor]);
   // General to-dos (not linked to any client): a persistent personal list, shown
   // regardless of logged time or the selected date.
   const todoRows = useMemo(
@@ -87,12 +98,27 @@ function useDayData() {
     [workedFilter.tasks, clients, colorOf, openRowsFor],
   );
 
+  // The clients the day is about, and where their things live. Derived from what
+  // the day's sections actually put on screen rather than from the whole client
+  // list, so the panel answers "the work in front of me" instead of turning into
+  // a second bookmarks bar that reads the same on every date.
+  const linkGroups = useMemo(
+    () =>
+      deriveClientLinks(
+        allClients,
+        relevantDayClientIds(dayLogs, [...overdueTasks, ...dueTasks, ...workedTasks, ...doneTasks]),
+        colorOf,
+      ),
+    [allClients, dayLogs, overdueTasks, dueTasks, workedTasks, doneTasks, colorOf],
+  );
+
   return {
     openTasks,
     dayLogs,
     overdueRows,
     dueRows,
     todoRows,
+    linkGroups,
     openGroups,
     openFilter,
     doneTasks,
@@ -111,6 +137,7 @@ export function DayView() {
     overdueRows,
     dueRows,
     todoRows,
+    linkGroups,
     openGroups,
     openFilter,
     doneTasks,
@@ -169,6 +196,7 @@ export function DayView() {
           </div>
 
           <aside className="min-w-0 xl:col-start-2 xl:row-start-1 xl:row-end-3 xl:self-start xl:sticky xl:top-0">
+            <ClientLinksSection groups={linkGroups} />
             <TodoTasksSection todoRows={todoRows} pageSize={todosPerPage} />
           </aside>
 

@@ -35,5 +35,7 @@ export {
 export type { CalendarMode, CalendarWorkDeps, ClientWorkGroup, WorkedItem } from "./calendar";
 export { deriveDayBar, previousLoggedDay, roundHours } from "./dayBar";
 export type { DayBarModel, DaySegment } from "./dayBar";
+export { deriveClientLinks, relevantDayClientIds } from "./clientLinks";
+export type { ClientLinkGroup } from "./clientLinks";
 export { defaultTaskClientId } from "./newTaskDefaultClient";
 export { addTag, isNewTag, matchExistingTag, normalizeTag, removeTag, suggestTags } from "./tags";

@@ -13,7 +13,8 @@ import { TASK_SORTS, type TaskSortDirection, type TaskSortKey, type TaskTagCount
  *  tags are never hidden — a filter has to be switchable off where it went on. */
 const TAG_CHIP_LIMIT = 8;
 
-/** One status the list can be narrowed to, with what picking it would leave. */
+/** One status the list can be narrowed to, with what picking it would leave.
+ *  The priority picker offers the same shape — both are "one id, with a count". */
 export interface TaskStatusOption {
   id: string;
   label: string;
@@ -30,6 +31,11 @@ export interface TaskListToolbarProps {
   /** `null` for a list whose status carries no information (general to-dos),
    *  which hides the control rather than offering a filter that says nothing. */
   statusOptions: TaskStatusOption[] | null;
+  priority: string;
+  onPriority: (v: string) => void;
+  /** `null` when nothing in the list has a priority set — the picker would then
+   *  offer one option ("Normal") that changes nothing. */
+  priorityOptions: TaskStatusOption[] | null;
   tags: TaskTagCount[];
   onToggleTag: (tag: string) => void;
   sort: TaskSortKey;
@@ -52,6 +58,9 @@ export function TaskListToolbar({
   status,
   onStatus,
   statusOptions,
+  priority,
+  onPriority,
+  priorityOptions,
   tags,
   onToggleTag,
   sort,
@@ -68,6 +77,7 @@ export function TaskListToolbar({
   const visibleTags = allTagsShown ? tags : tags.filter((t, i) => i < TAG_CHIP_LIMIT || t.selected);
   const hiddenTagCount = tags.length - visibleTags.length;
   const statusCount = statusOptions?.reduce((n, o) => n + o.count, 0) ?? 0;
+  const priorityCount = priorityOptions?.reduce((n, o) => n + o.count, 0) ?? 0;
 
   return (
     <div className="mb-3">
@@ -99,6 +109,23 @@ export function TaskListToolbar({
           >
             <option value="">All statuses ({statusCount})</option>
             {statusOptions.map((o) => (
+              <option key={o.id} value={o.id}>
+                {o.label} ({o.count})
+              </option>
+            ))}
+          </Select>
+        )}
+
+        {priorityOptions && (
+          <Select
+            size="sm"
+            value={priority}
+            onChange={(e) => onPriority(e.target.value)}
+            aria-label={`Filter ${label} by priority`}
+            className="flex-1 min-w-0 sm:flex-none"
+          >
+            <option value="">All priorities ({priorityCount})</option>
+            {priorityOptions.map((o) => (
               <option key={o.id} value={o.id}>
                 {o.label} ({o.count})
               </option>

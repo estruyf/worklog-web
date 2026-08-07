@@ -131,6 +131,25 @@ describe('two instances syncing the same repo', () => {
     expect(titles(two)).toEqual(['Existing task', 'From instance one', 'From instance two']);
   });
 
+  it('carries a priority set on one side through the other side\'s push', async () => {
+    // Priority needs no merge strategy of its own — the record key is still the
+    // task's `- id:`, so a one-sided change wins. This is what proves it, and
+    // what would fail if the field were ever moved out of the task block.
+    const one = await openInstance();
+    const two = await openInstance();
+
+    const existing = one.getSnapshot().data!.tasks.find((t) => t.title === 'Existing task')!;
+    await one.updateTask(existing.id, { priority: 'urgent' });
+
+    await two.createTask({ title: 'From instance two', clientId: 'acme' });
+    await two.sync();
+    await one.sync();
+
+    expect(github.files['clients/acme.md']).toContain('- priority: urgent');
+    expect(github.files['clients/acme.md']).toContain('From instance two');
+    expect(one.getSnapshot().data!.tasks.find((t) => t.id === existing.id)?.priority).toBe('urgent');
+  });
+
   it('merges edits to different files without touching each other', async () => {
     const one = await openInstance();
     const two = await openInstance();

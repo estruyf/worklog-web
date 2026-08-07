@@ -34,13 +34,22 @@ const filters = (over: Partial<TaskListFilters> = {}): TaskListFilters => ({
 // Deliberately in no order any sort key would produce, so every sort has to
 // visibly disagree with the order they are written in.
 const tasks: Task[] = [
-  task({ id: 'charlie', title: 'Charlie', created: '2026-07-02', due: '2026-08-10', status: 'blocked', tags: ['bug'] }),
+  task({
+    id: 'charlie',
+    title: 'Charlie',
+    created: '2026-07-02',
+    due: '2026-08-10',
+    status: 'blocked',
+    priority: 'low',
+    tags: ['bug'],
+  }),
   task({
     id: 'alpha',
     title: 'Alpha',
     created: '2026-07-20',
     due: '2026-08-01',
     status: 'progress',
+    priority: 'urgent',
     tags: ['bug', 'billing'],
   }),
   task({ id: 'bravo', title: 'Bravo', created: '2026-06-11', status: 'open', description: 'invoice follow-up' }),
@@ -121,6 +130,46 @@ describe('deriveTaskList', () => {
       'alpha',
       'charlie',
     ]);
+  });
+
+  it('sorts by priority, most important first, with the unset ones in the middle', () => {
+    // alpha (urgent) → bravo and delta (unset = normal, tie broken by title) → charlie (low).
+    expect(ids(deriveTaskList(tasks, filters({ sort: 'priority' }), deps))).toEqual([
+      'alpha',
+      'bravo',
+      'delta',
+      'charlie',
+    ]);
+  });
+
+  it('keeps an unset priority in the middle when the priority sort is reversed', () => {
+    // Reversing walks the scale the other way rather than herding the unset ones
+    // to one end, which is what the date sorts do with a missing date.
+    expect(ids(deriveTaskList(tasks, filters({ sort: 'priority', dir: 'desc' }), deps))).toEqual([
+      'charlie',
+      'bravo',
+      'delta',
+      'alpha',
+    ]);
+  });
+
+  it('filters by priority, and counts the unset tasks as normal', () => {
+    expect(ids(deriveTaskList(tasks, filters({ priority: 'urgent' }), deps))).toEqual(['alpha']);
+    expect(ids(deriveTaskList(tasks, filters({ priority: 'normal' }), deps))).toEqual(['bravo', 'delta']);
+    expect(deriveTaskList(tasks, filters(), deps).priorityCounts).toEqual({ urgent: 1, normal: 2, low: 1 });
+  });
+
+  it('counts each picker facet with its own selection lifted and the other applied', () => {
+    const d = deriveTaskList(tasks, filters({ status: 'open', priority: 'normal' }), deps);
+    // Statuses counted over the normal-priority tasks; priorities over the open ones.
+    expect(d.statusCounts).toEqual({ open: 2 });
+    expect(d.priorityCounts).toEqual({ normal: 2 });
+    expect(ids(d)).toEqual(['bravo', 'delta']);
+  });
+
+  it('treats a priority filter as filtering, not just as re-ordering', () => {
+    const d = deriveTaskList(tasks, filters({ priority: 'low' }), deps);
+    expect([d.filtered, d.dirty, d.count]).toEqual([true, true, 1]);
   });
 
   it('breaks ties on an ascending title whichever way the sort points', () => {

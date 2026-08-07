@@ -15,7 +15,7 @@ export interface FormActionBarProps {
 export function FormActionBar({ editingId, canSave, onSave, onDelete }: FormActionBarProps) {
   return (
     <div className="sticky bottom-0 bg-white border-t border-neutral-375">
-      <div className="max-w-[1240px] mx-auto w-full flex items-center justify-between px-5 py-3 md:px-8">
+      <div className="max-w-[920px] xl:max-w-[1280px] mx-auto w-full flex items-center justify-between px-5 py-3 md:px-8">
         <div>
           {editingId && (
             <Button variant="danger" size="lg" onClick={() => onDelete(editingId)}>

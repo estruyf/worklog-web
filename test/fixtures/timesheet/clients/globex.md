@@ -8,6 +8,7 @@
 ## Support document uploads
 - id: t_6tjez5
 - status: blocked
+- priority: Critical
 - created: 2026-07-02
 - worked: 2026-07-03 2026-07-02
 

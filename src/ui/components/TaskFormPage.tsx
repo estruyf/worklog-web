@@ -4,11 +4,12 @@ import { TagPicker } from './TagPicker';
 import { RecurrencePicker } from './RecurrencePicker';
 import { DescriptionEditor } from './DescriptionEditor';
 import { LinksField } from './LinksField';
-import { ClientChipPicker, DueField, FormActionBar, TitleField } from './task-form';
+import { ClientChipPicker, DueField, FormActionBar, PriorityField, TitleField } from './task-form';
 import { Field, LinkButton, Select, SidebarSection } from '../primitives';
 import { clientIdOf, isDone } from '../utils';
 import { formatRecurrence, type RecurrenceAnchor } from '../../model/recurrence';
 import { generalTodoClient } from '../../model/todos';
+import { NORMAL_PRIORITY_ID, priorityBucket } from '../../model/priority';
 import type { Client, Task } from '../../model/types';
 import type { TaskFormFields } from '../model';
 import { closeTaskForm, navigateToDashboard, useRoute, useTaskFormInstance, type TaskFormSeed } from '../router';
@@ -22,6 +23,7 @@ function initialFields(task: Task | undefined, seed: TaskFormSeed): TaskFormFiel
     return {
       title: seed.title ?? '',
       clientId: seed.clientId ?? '',
+      priority: seed.priority ?? NORMAL_PRIORITY_ID,
       parentId: seed.parentId ?? '',
       links: seeded.length ? seeded : [{ url: '', label: '' }],
       due: seed.due ?? '',
@@ -36,6 +38,9 @@ function initialFields(task: Task | undefined, seed: TaskFormSeed): TaskFormFiel
   return {
     title: task.title,
     clientId: clientIdOf(task),
+    // Through the bucket, so a task carrying a value off the scale opens on the
+    // option it actually sorts as rather than on a blank select.
+    priority: priorityBucket(task.priority),
     parentId: task.parentId || '',
     links: ls.length ? ls : [{ url: '', label: '' }],
     due: task.due || '',
@@ -136,6 +141,7 @@ function TaskForm({ editingId, task, seed }: { editingId: string | null; task: T
   const [initial] = useState(() => initialFields(task, seed));
   const [title, setTitle] = useState(initial.title);
   const [clientId, setClientId] = useState(initial.clientId);
+  const [priority, setPriority] = useState(initial.priority);
   const [parentId, setParentId] = useState(initial.parentId);
   const [links, setLinks] = useState(initial.links);
   const [due, setDue] = useState(initial.due);
@@ -157,7 +163,19 @@ function TaskForm({ editingId, task, seed }: { editingId: string | null; task: T
   const canAdd = title.trim().length > 0 && !!clientId;
 
   const onSave = () =>
-    submitTask(editingId, { title, clientId, parentId, links, due, repeat, repeatFrom, repeatUntil, tags, description });
+    submitTask(editingId, {
+      title,
+      clientId,
+      priority,
+      parentId,
+      links,
+      due,
+      repeat,
+      repeatFrom,
+      repeatUntil,
+      tags,
+      description,
+    });
 
   // Changing client invalidates the parent, whose options are that client's tasks.
   const onPickClient = (id: string) => {
@@ -208,7 +226,7 @@ function TaskForm({ editingId, task, seed }: { editingId: string | null; task: T
     // clears the sidebar's own top bar (h-13); at md+ the sidebar is a column and
     // this column starts at the top.
     <div className="flex flex-1 flex-col bg-white">
-      <div className="flex-1 max-w-[1240px] mx-auto w-full px-5 py-6 md:px-8">
+      <div className="flex-1 max-w-[920px] xl:max-w-[1280px] mx-auto w-full px-5 py-6 md:px-8">
         <h1 className="text-[22px] font-bold m-0 mb-6">{editingId ? 'Edit task' : 'New task'}</h1>
 
         {/* Below lg this is one ordered column rather than two: `contents`
@@ -276,6 +294,8 @@ function TaskForm({ editingId, task, seed }: { editingId: string | null; task: T
                   </Select>
                 </Field>
               </SidebarSection>
+
+              <PriorityField value={priority} onChange={setPriority} />
 
               {!repeat.trim() && <DueField value={due} onChange={setDue} />}
 

@@ -6,6 +6,7 @@ import { clientIdOf, isDone } from '../../utils';
 import { isOverdue } from '../../../model/overdue';
 import { StatusPicker } from '../StatusPicker';
 import { DueEditor } from './DueEditor';
+import { PriorityEditor } from './PriorityEditor';
 import { RepeatSummary } from './RepeatSummary';
 
 export interface TaskSidebarProps {
@@ -54,6 +55,10 @@ export function TaskSidebar({ task, parent, routed, isTodo, occurrences, onOpenT
           />
         </SidebarSection>
       )}
+
+      {/* Under the status, and offered on to-dos too: a to-do has no workflow to
+          move through, but it can still be the urgent one. */}
+      <PriorityEditor task={task} />
 
       {/* Two names for one slot: a repeating task's date belongs to the rule, so
           `DueEditor` renders nothing and the repeat block states it instead. */}

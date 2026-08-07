@@ -3,9 +3,11 @@
 
 import type { Recurrence } from './recurrence';
 import type { AutoSyncEvent } from './syncEvents';
+import type { TaskPriority } from './priority';
 
 export type { Recurrence } from './recurrence';
 export type { AutoSyncEvent } from './syncEvents';
+export type { TaskPriority } from './priority';
 
 // Statuses are configurable (see StatusDef / config.json). The type is a plain
 // string id; the configured StatusDef list supplies labels, colors and which id
@@ -26,6 +28,10 @@ export interface Task {
   title: string;
   description?: string;
   status: TaskStatus;
+  /** How much this one matters, on the fixed scale in `model/priority.ts`.
+   *  Absent *is* the value "normal" — the app writes no line for it — so readers
+   *  go through `priorityRank`/`priorityBucket` rather than testing for it. */
+  priority?: TaskPriority;
   parentId?: string;
   /** Client ids this task is tagged to. Usually exactly one. */
   clientIds: string[];

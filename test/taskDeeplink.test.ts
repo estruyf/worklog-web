@@ -68,6 +68,16 @@ describe('parseTaskDeeplink', () => {
     expect(seedFrom('due=01%2F08%2F2026')?.due).toBeUndefined();
   });
 
+  it('takes a priority only when the scale names it', () => {
+    // The parser keeps whatever a file says; a link doesn't get the same trust,
+    // because "critical" would then be a word nobody typed sitting in the repo.
+    expect(seedFrom('priority=urgent')?.priority).toBe('urgent');
+    expect(seedFrom('priority=HIGH')?.priority).toBe('high');
+    expect(seedFrom('priority=critical')?.priority).toBeUndefined();
+    // Normal is the absence of one, so asking for it asks for nothing.
+    expect(seedFrom('priority=normal')?.priority).toBeUndefined();
+  });
+
   it('keeps line breaks in the description but not the rest of the control range', () => {
     expect(seedFrom('description=first%0A%0Asecond%00third')?.description).toBe('first\n\nsecond third');
   });

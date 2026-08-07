@@ -42,5 +42,6 @@ The big fern by the window needs a lot more than the rest.
 ## Book the dentist
 - id: t_rc5eee
 - status: open
+- priority: urgent
 - created: 2026-07-20
 - due: 2026-07-30

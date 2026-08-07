@@ -1,6 +1,15 @@
 import React from 'react';
 import type { WorklogRow } from '../model';
-import { BriefcaseIcon, CalendarIcon, GlobeIcon, RefreshCwIcon, SquareArrowOutUpRight } from 'lucide-react';
+import {
+  BriefcaseIcon,
+  CalendarIcon,
+  ChevronDownIcon,
+  ChevronsUpIcon,
+  ChevronUpIcon,
+  GlobeIcon,
+  RefreshCwIcon,
+  SquareArrowOutUpRight,
+} from 'lucide-react';
 import { formatDaysLate } from '../../model/overdue';
 import { Button, Chip } from '../primitives';
 import { fmtShort } from '../utils';
@@ -57,6 +66,38 @@ function DueChip({ due, overdue, days }: { due: string; overdue: boolean; days?:
       <CalendarIcon size={10} strokeWidth={1.6} />
       {fmtShort(due)}
       {overdue && !!days && <span className="opacity-80">· {days}d</span>}
+    </span>
+  );
+}
+
+/** How each priority paints, and what it points at. Static class strings, not
+ *  assembled ones: Tailwind emits what its source scan can see written out.
+ *
+ *  Rank is carried by the chevrons as well as the colour — two up for urgent, one
+ *  for high, one down for low — so the three don't rely on hue alone. Low is
+ *  deliberately the quietest thing on the row: it is there to be skipped. */
+const PRIORITY_CHIPS: Record<string, { className: string; icon: typeof ChevronUpIcon }> = {
+  urgent: { className: 'text-danger-675 bg-danger-75 border-danger-200', icon: ChevronsUpIcon },
+  high: { className: 'text-brand-650 bg-brand-150 border-brand-375', icon: ChevronUpIcon },
+  low: { className: 'text-neutral-675 bg-neutral-250 border-neutral-400', icon: ChevronDownIcon },
+};
+
+/** The priority marker. Only the three that mean something render one — a task at
+ *  normal priority carries no chip, which is what keeps the marker meaningful in a
+ *  list where most rows are ordinary. */
+function PriorityChip({ priority }: { priority: NonNullable<WorklogRow['priority']> }) {
+  const chip = PRIORITY_CHIPS[priority.id];
+  if (!chip) {
+    return null;
+  }
+  const Icon = chip.icon;
+  return (
+    <span
+      title={`${priority.label} priority`}
+      className={'shrink-0 flex items-center gap-[3px] text-eyebrow font-semibold px-[7px] py-[2px] rounded-full border ' + chip.className}
+    >
+      <Icon size={11} strokeWidth={2.4} />
+      {priority.label}
     </span>
   );
 }
@@ -125,7 +166,7 @@ function LinkChip({ link, size }: { link: string; size: number }) {
 // squeeze the title down to a couple of characters.
 export const WorklogTaskRow = React.memo(function WorklogTaskRow({ row }: { row: WorklogRow }) {
   const hasNarrowMeta =
-    !!row.status || !!row.progress || !!row.due || !!row.repeat || row.tags.length > 0 || row.hasLink;
+    !!row.status || !!row.priority || !!row.progress || !!row.due || !!row.repeat || row.tags.length > 0 || row.hasLink;
   return (
     <div
       key={row.id}
@@ -188,6 +229,9 @@ export const WorklogTaskRow = React.memo(function WorklogTaskRow({ row }: { row:
         </button>
         {/* Inline meta — wide rows only. When narrow these reflow to the row below. */}
         <div className="hidden @lg:contents">
+          {/* First of the chips: it is the one that says whether the rest of the
+              row is worth reading now. */}
+          {row.priority && <PriorityChip priority={row.priority} />}
           {row.progress && <ProgressChip progress={row.progress} barWidth={46} />}
           {row.due && <DueChip due={row.due} overdue={row.overdue} days={row.overdueDays} />}
           {row.repeat && <RepeatChip label={row.repeat} />}
@@ -232,6 +276,7 @@ export const WorklogTaskRow = React.memo(function WorklogTaskRow({ row }: { row:
               onSelect={row.status.onSelect}
             />
           )}
+          {row.priority && <PriorityChip priority={row.priority} />}
           {row.progress && <ProgressChip progress={row.progress} barWidth={38} />}
           {row.due && <DueChip due={row.due} overdue={row.overdue} days={row.overdueDays} />}
           {row.repeat && <RepeatChip label={row.repeat} />}

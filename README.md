@@ -136,7 +136,10 @@ The dashboard has these views:
   target and the day reads as over. On a day with nothing logged yet, **Same as yesterday** copies
   the last day you logged. See overdue, due, open, worked, and done tasks for that day; mark a task
   worked, change its status, or close it. Anything past its due date sits in an **Overdue** block at
-  the very top.
+  the very top. Alongside the to-do list, a **Links** panel gathers the reference links of the
+  clients the day is about — whoever you logged time to, plus whoever owns a task the day shows —
+  so their board or repo is one click away. It follows the day, and stays hidden when those
+  clients have no links.
 - **Overdue** — everything that has slipped, across every client and the to-do list, grouped by
   client with the longest-overdue client first, plus what is due today. The nav badge counts it.
 - **To-dos** — the general to-do list: tasks that belong to no client.
@@ -206,6 +209,13 @@ another device pulls the changes in on its own. The check is skipped while the t
 background and whenever you have unsynced edits — those are the sync button's business, since only a
 sync knows how to commit on top of a branch that moved. There's no GitHub notification behind this:
 nothing tells the app a push happened, so it asks (one cheap ref lookup per check).
+
+**Priority:** four levels — Urgent, High, Normal, Low — set on the task form or in the detail
+panel's rail, next to the status. Normal is the default and the quiet one: it puts no marker on the
+row and writes nothing into your Markdown, so the chip on a task means someone decided something.
+Every open list can sort by priority and filter to one level, and the filter only appears once
+something in that list has a priority — a picker whose one option is "Normal" would say nothing.
+See [Priority](#priority) for what it looks like in the files.
 
 **Tags:** the task form picks from the tags already in use — type to filter them, `↑/↓` and `↵` to
 choose, and **Create "…"** appears only when nothing existing matches, so the vocabulary doesn't
@@ -284,6 +294,7 @@ https://<your-worklog>/app/new?title=Fix%20the%20login%20redirect
 | `label` | That link's label | Optional. Pairs with `url` by position: first `label` goes with first `url`. |
 | `client` | Client | The client's **id or name**, case-insensitive (`acme` and `Acme Corp` both work). `todos` is the general to-do list. Unknown values fall back to the usual default client. |
 | `parent` | Parent task | The parent task's `id`, making the new task a subtask. |
+| `priority` | Priority | `urgent`, `high` or `low`, case-insensitive. Anything else is ignored. |
 | `due` | Due date | `YYYY-MM-DD`. Anything else is ignored. |
 | `tags` | Tags | Comma-separated (`?tags=api,billing`) or repeated (`?tags=api&tags=billing`). |
 | `description` | Description | Markdown. Line breaks survive. |
@@ -455,6 +466,7 @@ A task block looks like:
 ## Fix the mobile picker
 - id: t_awxnyh
 - status: in-progress
+- priority: high
 - link: https://example.com/task/123
 - created: 2026-06-30
 - due: 2026-07-05
@@ -472,10 +484,29 @@ That means a description can use `## ` headings of its own — they stay part of
 description. A hand-written `## ` heading with no `- id:` under it is read as prose,
 not as a task, so give new blocks an id (or create them in the app, which does).
 
+### Priority
+
+`- priority:` is one of `urgent`, `high` or `low`. There is no fourth value to write: a task with
+no priority line is **normal**, which is the middle of the scale, and choosing Normal in the app
+removes the line rather than writing `- priority: normal`. That is deliberate — it keeps the field
+out of every task you never prioritized, and out of the diffs.
+
+Unlike statuses, the scale is fixed and not configurable. A status list is a workflow, which is
+yours to design; a priority is an ordering, and orderings are the same everywhere.
+
+The value is read case-insensitively (`High` works). A value the scale doesn't name — say
+`- priority: critical` — is **left in the file** and sorts as normal, so nothing you hand-type is
+silently deleted. The app only ever writes the three ids above, so editing that task in the app and
+saving it will normalize it away.
+
+Sorting by priority puts the most important first, with unprioritized tasks in the middle where
+they belong — not shunted to the end the way a task with no due date is. Priority is not folded
+into the other sorts as a tiebreak, so turning it on doesn't quietly re-order lists.
+
 ### Subtasks
 
 A task becomes a subtask of another by naming its parent's `id`. The line goes
-directly under `- status:`, which is where the app writes it:
+in the block's metadata, which is where the app writes it:
 
 ```markdown
 ## Ship the mobile release

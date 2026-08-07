@@ -71,6 +71,7 @@ export function parseTaskFile(
       title: (t.title ?? "").trim(),
       description,
       status: t.status ?? "open",
+      priority: t.priority,
       parentId: t.parentId,
       clientIds: t.clientIds && t.clientIds.length ? t.clientIds : [clientId],
       links: t.links,
@@ -182,6 +183,12 @@ function applyMeta(task: TaskDraft, key: string, value: string): void {
     case "status":
       // Statuses are configurable; accept any non-empty id, default to 'open'.
       task.status = value || "open";
+      break;
+    case "priority":
+      // Stored exactly as written, including a value off the scale: the app ranks
+      // anything it doesn't recognise as normal (see model/priority) rather than
+      // dropping a line the user typed. Absent means normal, so a blank clears it.
+      task.priority = value || undefined;
       break;
     case "parent":
       task.parentId = value || undefined;
@@ -334,6 +341,12 @@ export function serializeTask(task: Task, clientId?: string): string {
   out.push(`## ${task.title}`);
   out.push(`- id: ${task.id}`);
   out.push(`- status: ${task.status}`);
+  // Directly under the status, and only when there is one: normal priority is the
+  // absent line, so a repo whose owner never sets a priority never grows the field
+  // — and never sees every task block rewritten to say so.
+  if (task.priority) {
+    out.push(`- priority: ${task.priority}`);
+  }
   if (task.parentId) {
     out.push(`- parent: ${task.parentId}`);
   }

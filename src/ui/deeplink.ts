@@ -39,6 +39,7 @@
 // (`parser/taskParser.ts`). A url additionally has to survive being an href, so
 // only http(s)/mailto get through.
 
+import { writablePriority } from '../model/priority';
 import type { TaskFormSeed } from './router';
 
 /** The custom scheme the app claims (`web+worklog://new?title=…`). The `web+`
@@ -74,7 +75,18 @@ export const SHARE_TARGET_PARAMS = { title: 'title', text: 'description', url: '
 /** The params a deeplink may carry. The router deletes exactly these once read,
  *  so unrelated query (owner/repo/branch, which selects the mounted repo) rides
  *  on untouched. */
-export const DEEPLINK_PARAMS = ['title', 'url', 'label', 'client', 'parent', 'due', 'tags', 'description', 'handler'] as const;
+export const DEEPLINK_PARAMS = [
+  'title',
+  'url',
+  'label',
+  'client',
+  'parent',
+  'priority',
+  'due',
+  'tags',
+  'description',
+  'handler',
+] as const;
 
 // Bounds, not validation: a hostile or sloppy caller shouldn't be able to paste a
 // megabyte into a file that gets committed. Everything is editable in the form.
@@ -190,6 +202,14 @@ export function parseTaskDeeplink(query: URLSearchParams): TaskFormSeed | null {
   const parent = line(params.get('parent'), MAX_LABEL);
   if (parent) {
     seed.parentId = parent;
+  }
+
+  // Only an id the scale names gets through. The parser keeps whatever a *file*
+  // says, because a file is the user's; a link is whoever sent it, and it doesn't
+  // get to put a word nobody typed into a task's Markdown.
+  const priority = writablePriority(line(params.get('priority'), MAX_LABEL));
+  if (priority) {
+    seed.priority = priority;
   }
 
   // A due date that isn't a date is dropped rather than typed into the field: dates

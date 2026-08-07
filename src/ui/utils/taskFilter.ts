@@ -4,11 +4,14 @@
 // unit-testable, like the search and archive derivations next to it.
 
 import type { Task } from '../../model/types';
+import { priorityBucket, priorityRank } from '../../model/priority';
 import { clientIdOf } from './task';
 
 /** How a list is ordered. `created` is the default: oldest first, which is the
- *  order the work actually arrived in. */
-export type TaskSortKey = 'created' | 'due' | 'title' | 'status';
+ *  order the work actually arrived in. Priority stays an explicit choice rather
+ *  than a tiebreak folded into the others — it would silently re-order every
+ *  list in the app for someone who has never set a priority. */
+export type TaskSortKey = 'created' | 'due' | 'title' | 'status' | 'priority';
 
 export type TaskSortDirection = 'asc' | 'desc';
 
@@ -16,6 +19,7 @@ export type TaskSortDirection = 'asc' | 'desc';
 export const TASK_SORTS: { key: TaskSortKey; label: string }[] = [
   { key: 'created', label: 'Created' },
   { key: 'due', label: 'Due date' },
+  { key: 'priority', label: 'Priority' },
   { key: 'title', label: 'Title' },
   { key: 'status', label: 'Status' },
 ];
@@ -27,6 +31,9 @@ export interface TaskListFilters {
   tags: string[];
   /** A single status id, or '' for every status. */
   status: string;
+  /** A single priority bucket id, or '' for every priority. `normal` selects the
+   *  tasks that carry no priority at all, which is what absence means. */
+  priority: string;
   sort: TaskSortKey;
   dir: TaskSortDirection;
 }
@@ -35,6 +42,7 @@ export const DEFAULT_TASK_LIST_FILTERS: TaskListFilters = {
   query: '',
   tags: [],
   status: '',
+  priority: '',
   sort: 'created',
   dir: 'asc',
 };
@@ -71,6 +79,9 @@ export interface TaskListDerived {
   /** Per-status match counts with every filter *except* the status one applied,
    *  so the picker can show what each option would yield. */
   statusCounts: Record<string, number>;
+  /** The same, per priority bucket — counted with the priority filter itself
+   *  lifted. Unset tasks count under `normal`. */
+  priorityCounts: Record<string, number>;
 }
 
 /** Whether `q` (already trimmed + lower-cased) occurs anywhere a human would
@@ -128,6 +139,12 @@ function compare(
       }
       return sign * a.due.localeCompare(b.due) || a.title.localeCompare(b.title);
     }
+    // Ascending is most-important-first, so the arrow points the same way it does
+    // on the date sorts: what needs attention soonest sits at the top. Nothing is
+    // pushed to the end the way an undated task is — an unset priority is the
+    // middle of the scale, and belongs between high and low.
+    case 'priority':
+      return sign * (priorityRank(a.priority) - priorityRank(b.priority)) || a.title.localeCompare(b.title);
     case 'title':
       return sign * a.title.localeCompare(b.title);
     case 'status':
@@ -143,22 +160,31 @@ export function deriveTaskList(tasks: Task[], filters: TaskListFilters, deps: Ta
   const { clientName, statusOrder } = deps;
   const q = filters.query.trim().toLowerCase();
   const tags = filters.tags.map((t) => t.toLowerCase());
-  const filtered = q !== '' || tags.length > 0 || filters.status !== '';
+  const filtered = q !== '' || tags.length > 0 || filters.status !== '' || filters.priority !== '';
   const dirty =
     filtered ||
     filters.sort !== DEFAULT_TASK_LIST_FILTERS.sort ||
     filters.dir !== DEFAULT_TASK_LIST_FILTERS.dir;
 
-  // Query + tags only: these counts drive the status picker, so they must not be
-  // narrowed by the status selection itself.
+  // Query + tags only: the two picker facets are counted from here, each with its
+  // own selection lifted but the other one applied — so a number is exactly the
+  // list that picking it would leave.
   const facetMatched = tasks.filter((t) => matchesTaskQuery(t, q, clientName(clientIdOf(t))) && hasEveryTag(t, tags));
+  const matchesStatus = (t: Task) => !filters.status || t.status === filters.status;
+  const matchesPriority = (t: Task) => !filters.priority || priorityBucket(t.priority) === filters.priority;
 
   const statusCounts: Record<string, number> = {};
-  for (const t of facetMatched) {
+  for (const t of facetMatched.filter(matchesPriority)) {
     statusCounts[t.status] = (statusCounts[t.status] ?? 0) + 1;
   }
 
-  const matched = facetMatched.filter((t) => !filters.status || t.status === filters.status);
+  const priorityCounts: Record<string, number> = {};
+  for (const t of facetMatched.filter(matchesStatus)) {
+    const bucket = priorityBucket(t.priority);
+    priorityCounts[bucket] = (priorityCounts[bucket] ?? 0) + 1;
+  }
+
+  const matched = facetMatched.filter((t) => matchesStatus(t) && matchesPriority(t));
 
   // Counted over what survived every filter, so an unselected chip's number is
   // exactly the list it would leave behind.
@@ -190,5 +216,6 @@ export function deriveTaskList(tasks: Task[], filters: TaskListFilters, deps: Ta
     dirty,
     tagCounts,
     statusCounts,
+    priorityCounts,
   };
 }
