@@ -4,8 +4,8 @@ import { TagPicker } from './TagPicker';
 import { RecurrencePicker } from './RecurrencePicker';
 import { DescriptionEditor } from './DescriptionEditor';
 import { LinksField } from './LinksField';
-import { ClientChipPicker, DueField, FormActionBar, SidebarSection, TitleField } from './task-form';
-import { Field, LinkButton, Select } from '../primitives';
+import { ClientChipPicker, DueField, FormActionBar, TitleField } from './task-form';
+import { Field, LinkButton, Select, SidebarSection } from '../primitives';
 import { clientIdOf, isDone } from '../utils';
 import { formatRecurrence, type RecurrenceAnchor } from '../../model/recurrence';
 import { generalTodoClient } from '../../model/todos';
@@ -122,12 +122,14 @@ export function TaskFormPage() {
  * Both problems come from the same place, and both go away when the fields sit in
  * the component that edits them.
  *
- * Laid out the way an issue tracker lays out an issue: title and description take
- * the full width of the main column, and everything that classifies the task —
- * client, parent, dates, tags, repeat, links — sits in a rail on the right. The
- * description is the field that actually benefits from space, and stacking every
- * property above it used to push it below the fold. Below lg the rail unstacks
- * and follows the description, since two columns don't fit. */
+ * Laid out the way an issue tracker lays out an issue: title, description and
+ * links take the full width of the main column, and everything that classifies
+ * the task — client, parent, dates, tags, repeat — sits in a rail on the right.
+ * The description is the field that actually benefits from space, and stacking
+ * every property above it used to push it below the fold. Links are in the main
+ * column for the same reason: a url is long, and in the 320px rail it was a
+ * scrolling input you couldn't read what you'd typed into. Below lg the rail
+ * unstacks and follows the description, since two columns don't fit. */
 function TaskForm({ editingId, task, seed }: { editingId: string | null; task: Task | undefined; seed: TaskFormSeed }) {
   // Read once, at mount — later renders of the parent must not reach back in and
   // overwrite what has been typed since.
@@ -213,8 +215,9 @@ function TaskForm({ editingId, task, seed }: { editingId: string | null; task: T
             dissolves the column wrappers so their blocks become siblings, and the
             client picker can sit right under the title — picking who the task is
             for belongs with naming it — while the rest of the properties follow
-            the description. At lg the wrappers become real columns again and the
-            order utilities go inert, since the blocks are no longer flex items. */}
+            the description and its links. At lg the wrappers become real columns
+            again and the order utilities go inert, since the blocks are no longer
+            flex items. */}
         <div className="flex flex-col lg:flex-row lg:gap-8">
           <div className="contents lg:block lg:flex-1 lg:min-w-0">
             <div className="order-1">
@@ -237,6 +240,19 @@ function TaskForm({ editingId, task, seed }: { editingId: string | null; task: T
                 onTaskToggle={setDescription}
               />
             </div>
+
+            {/* Under the description, at the main column's width: the url and its
+                label sit side by side and a full github.com/…/pull/34 is readable
+                without scrolling the input. */}
+            <div className="order-4 mt-[22px]">
+              {/* A plain label rather than a `Field`: this block is a repeater of
+                  controls, and a `Field` would hand its one generated id to every
+                  url and label input in the list. */}
+              <span className="block font-semibold text-body mb-[10px]">
+                Links <span className="text-neutral-625 font-normal">(optional)</span>
+              </span>
+              <LinksField value={links} onChange={setLinks} keepOne urlPlaceholder="https://github.com/.../pull/34" />
+            </div>
           </div>
 
           <aside className="contents lg:block lg:w-[320px] lg:shrink-0 lg:border-l lg:border-neutral-375 lg:pl-8">
@@ -244,7 +260,7 @@ function TaskForm({ editingId, task, seed }: { editingId: string | null; task: T
               <ClientChipPicker value={clientId} onChange={onPickClient} />
             </div>
 
-            <div className="order-4 mt-[22px] lg:mt-0">
+            <div className="order-5 mt-[22px] lg:mt-0">
               {/* The label lives in a `Field` rather than on the section, so it
                   points at the select — a section titles a group, and this group
                   is one control. */}
@@ -278,10 +294,6 @@ function TaskForm({ editingId, task, seed }: { editingId: string | null; task: T
 
               <SidebarSection title="Tags" hint="pick existing or create">
                 <TagPicker value={tags} onChange={setTags} known={knownTags} />
-              </SidebarSection>
-
-              <SidebarSection title="Links" hint="optional">
-                <LinksField value={links} onChange={setLinks} keepOne urlPlaceholder="https://github.com/.../pull/34" />
               </SidebarSection>
             </div>
           </aside>

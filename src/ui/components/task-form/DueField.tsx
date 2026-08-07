@@ -1,8 +1,7 @@
 import React from 'react';
-import { Chip, DateInput, Field, LinkButton } from '../../primitives';
+import { Chip, DateInput, Field, LinkButton, SidebarSection } from '../../primitives';
 import { useData } from '../../context';
 import { today } from '../../../util/date';
-import { SidebarSection } from './SidebarSection';
 
 /** The task's deadline, with a one-click Today.
  *

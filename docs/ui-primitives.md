@@ -519,6 +519,14 @@ did it. A barrel per folder, and nothing outside the owning file imports from it
 the top, named pieces under it, and a body that reads as a list of what the view
 is made of.
 
+**Since:** the detail panel grew the same two-column layout as the form, so
+`TaskMetaRow` — a one-line row of status / client / tags — became
+[`TaskSidebar`](../src/ui/components/task-detail/TaskSidebar.tsx), the panel's
+right-hand rail, and `DueEditor` / `RepeatSummary` became blocks in it. That gave
+the two files a rail block in common, so `SidebarSection` left `task-form/` for
+[`primitives/`](../src/ui/primitives/SidebarSection.tsx) — it knows nothing about
+tasks, which is the test for belonging there.
+
 **Props stop at the boundary the file already has.** A piece that needs the
 snapshot reaches for `useData` / `useUi` itself rather than being handed ten
 props — `ArchiveFilterBar` already did this for its client list. What stays a

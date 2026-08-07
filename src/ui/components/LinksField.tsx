@@ -18,8 +18,9 @@ export interface LinksFieldProps {
 /** The repeater for a list of reference links — url, optional label, remove.
  *
  *  Tasks and clients both carry `TaskLink[]`, so they get the same editor. Rows
- *  wrap rather than squeeze: in the task form's 320px rail the label drops under
- *  its url, and in the client dialog the two sit side by side. */
+ *  wrap rather than squeeze: url and label sit side by side wherever there's room
+ *  — the task form's main column, the client dialog — and the label drops under
+ *  its url when there isn't. */
 export function LinksField({ value, onChange, urlPlaceholder = 'https://example.com', keepOne = false }: LinksFieldProps) {
   const setAt = (index: number, patch: Partial<LinkDraft>) =>
     onChange(value.map((l, i) => (i === index ? { ...l, ...patch } : l)));

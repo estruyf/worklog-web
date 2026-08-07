@@ -1,8 +1,7 @@
 import React, { useMemo, useState } from 'react';
-import { Button, Chip, Input, LinkButton } from '../../primitives';
+import { Button, Chip, Input, LinkButton, SidebarSection } from '../../primitives';
 import { useData } from '../../context';
 import { GENERAL_TODO_CLIENT_ID, GENERAL_TODO_COLOR, GENERAL_TODO_LABEL } from '../../../model/todos';
-import { SidebarSection } from './SidebarSection';
 
 /** Who the task is for, as a row of chips rather than a select: the list is short,
  *  and picking is the single most common thing done in this rail. Includes the

@@ -1,13 +1,13 @@
 import React from 'react';
 import type { Task } from '../../../model/types';
-import { DateInput, LinkButton } from '../../primitives';
+import { DateInput, LinkButton, SidebarSection } from '../../primitives';
 import { useUi } from '../../context';
 import { isDone } from '../../utils';
 import { daysOverdue, formatDaysLate, isOverdue } from '../../../model/overdue';
 import { worklogStore } from '../../../data/worklogStore';
 
 /** The task's one editable date — its due date while open, the day it was closed
- *  once done.
+ *  once done — as a block in the detail panel's rail.
  *
  *  A recurring task has neither: its due date is the series' next occurrence and
  *  is managed by the rule, so editing it by hand would fight the roll forward.
@@ -18,8 +18,7 @@ export function DueEditor({ task }: { task: Task }) {
 
   if (isDone(task)) {
     return (
-      <div className="flex items-center gap-[10px] mb-4 text-control text-neutral-700">
-        <span className="font-semibold">Completed on</span>
+      <SidebarSection title="Completed on">
         <DateInput
           size="sm"
           value={task.completed ?? ''}
@@ -30,8 +29,9 @@ export function DueEditor({ task }: { task: Task }) {
             }
           }}
           aria-label="Completion date"
+          className="w-full"
         />
-      </div>
+      </SidebarSection>
     );
   }
 
@@ -41,17 +41,31 @@ export function DueEditor({ task }: { task: Task }) {
 
   const overdue = isOverdue(task, selectedDate);
   return (
-    <div className="flex items-center gap-[10px] mb-4 text-control text-neutral-700">
-      <span className={'font-semibold ' + (overdue ? 'text-danger-675' : '')}>{overdue ? 'Overdue · due' : 'Due'}</span>
+    <SidebarSection title="Due">
       {/* Overdue is a validation state, not a colour choice — `invalid`
           is what paints the border and the text red. */}
-      <DateInput size="sm" invalid={overdue} value={task.due ?? ''} onChange={(e) => setDue(e.target.value)} aria-label="Due date" />
-      {overdue && <span className="text-chip text-danger-675">{formatDaysLate(daysOverdue(task, selectedDate))}</span>}
-      {task.due && (
-        <LinkButton size="xs" onClick={() => setDue('')}>
-          Clear
-        </LinkButton>
+      <DateInput
+        size="sm"
+        invalid={overdue}
+        value={task.due ?? ''}
+        onChange={(e) => setDue(e.target.value)}
+        aria-label="Due date"
+        className="w-full"
+      />
+      {/* Under the input rather than beside it: the rail is 320px, and a date
+          field plus "4 days late" plus Clear on one line wraps at every width. */}
+      {(overdue || task.due) && (
+        <div className="flex items-center justify-between gap-2 mt-[6px]">
+          <span className="text-chip font-semibold text-danger-675">
+            {overdue ? `Overdue · ${formatDaysLate(daysOverdue(task, selectedDate))}` : ''}
+          </span>
+          {task.due && (
+            <LinkButton size="xs" onClick={() => setDue('')}>
+              Clear
+            </LinkButton>
+          )}
+        </div>
       )}
-    </div>
+    </SidebarSection>
   );
 }

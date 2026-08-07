@@ -23,6 +23,7 @@ export { Modal } from './Modal';
 export type { ModalLayer, ModalOffset, ModalProps, ModalSize, ModalTitleSize } from './Modal';
 export { Card } from './Card';
 export type { CardPadding, CardProps, CardRadius, CardTone } from './Card';
+export { SidebarSection } from './SidebarSection';
 export { SectionLabel } from './SectionLabel';
 export type { SectionLabelProps, SectionLabelSize, SectionLabelTone } from './SectionLabel';
 export { EmptyState } from './EmptyState';
