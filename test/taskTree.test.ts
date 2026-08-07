@@ -3,6 +3,8 @@
 
 import { describe, it, expect } from 'vitest';
 import {
+  canHaveParent,
+  parentCandidates,
   parseCollapsedStore,
   planTaskRows,
   pruneCollapsed,
@@ -61,6 +63,46 @@ describe('planTaskRows', () => {
     expect(shape([kidA, lone])).toEqual(['p2', 'k1']);
     // ...and folding a parent that isn't in the list can't smuggle it back out.
     expect(shape([kidA], new Set(['p1']))).toEqual(['k1']);
+  });
+});
+
+describe('parentCandidates', () => {
+  const other = task({ id: 'p3', clientIds: ['globex'] });
+  const closed = task({ id: 'p4', completed: '2026-08-01' });
+  const all = [parent, kidA, kidB, lone, other, closed];
+  const ids = (list: Task[]) => list.map((t) => t.id);
+
+  it('offers the client\'s open top-level tasks, and only those', () => {
+    // No subtask (it would nest two deep), no other client (the two blocks live
+    // in different files), no archived task, and never the task itself.
+    expect(ids(parentCandidates(all, { id: 'p2', clientId: 'acme' }))).toEqual(['p1']);
+  });
+
+  it('offers everything to a task being created', () => {
+    expect(ids(parentCandidates(all, { clientId: 'acme' }))).toEqual(['p1', 'p2']);
+  });
+
+  it('cannot offer a task its own subtask, so the tree cannot cycle', () => {
+    expect(ids(parentCandidates(all, { id: 'p1', clientId: 'acme' }))).toEqual(['p2']);
+  });
+
+  it('keeps the parent the task already has, whatever it looks like now', () => {
+    // A parent completed since — the picker still has to be able to name the
+    // value it is standing for.
+    expect(ids(parentCandidates(all, { id: 'k1', clientId: 'acme', parentId: 'p4' }))).toEqual(['p1', 'p2', 'p4']);
+  });
+});
+
+describe('canHaveParent', () => {
+  const all = [parent, kidA, lone];
+
+  it('says no to a task that is already a parent', () => {
+    expect(canHaveParent(all, 'p1')).toBe(false);
+  });
+
+  it('says yes to a childless task, and to one that does not exist yet', () => {
+    expect(canHaveParent(all, 'p2')).toBe(true);
+    expect(canHaveParent(all, null)).toBe(true);
   });
 });
 

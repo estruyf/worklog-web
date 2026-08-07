@@ -1,11 +1,12 @@
 import React from 'react';
 import type { Task } from '../../../model/types';
-import { Chip, LinkButton, SidebarSection } from '../../primitives';
+import { Chip, SidebarSection } from '../../primitives';
 import { useData, useUi } from '../../context';
 import { clientIdOf, isDone } from '../../utils';
 import { isOverdue } from '../../../model/overdue';
 import { StatusPicker } from '../StatusPicker';
 import { DueEditor } from './DueEditor';
+import { ParentEditor } from './ParentEditor';
 import { PriorityEditor } from './PriorityEditor';
 import { RepeatSummary } from './RepeatSummary';
 
@@ -85,16 +86,10 @@ export function TaskSidebar({ task, parent, routed, isTodo, occurrences, onOpenT
         </SidebarSection>
       )}
 
-      {/* Last because it is the one block that is usually absent, and a rail that
+      {/* Last because it is the one block that is often absent, and a rail that
           shifts its first four names by whether the task happens to have a parent
           is a rail you have to re-read every time. */}
-      {parent && (
-        <SidebarSection title="Parent">
-          <LinkButton size="md" onClick={() => onOpenTask(parent.id)} className="text-left">
-            {parent.title}
-          </LinkButton>
-        </SidebarSection>
-      )}
+      <ParentEditor task={task} parent={parent} onOpenTask={onOpenTask} />
     </>
   );
 }

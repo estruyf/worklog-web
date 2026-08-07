@@ -693,6 +693,41 @@ inside the task detail panel closes itself rather than the panel behind it.
 
 ---
 
+## Step 9 — Menu grows a filter, and priority / parent stop being `<select>`s ✅ done
+
+**Added:** [`PriorityPicker`](../src/ui/components/PriorityPicker.tsx),
+[`ParentPicker`](../src/ui/components/ParentPicker.tsx) and the shared
+[`PriorityChip`](../src/ui/components/PriorityChip.tsx) the task rows now render
+from. **Changed:** `Menu` gained per-option `icon`s and an optional filter box.
+
+**Why:** priority and parent were the last two native `<select>`s in the task
+form, and in the detail panel priority was a `<select>` sitting directly under a
+status you change by clicking it. Two idioms for the same act, one of which
+cannot show a colour, an icon, or be typed into.
+
+**Three decisions worth keeping:**
+
+- **The chip is the control.** `PriorityPicker`'s trigger is the same pill the
+  task lists draw, so a priority is read and set as one thing in both places.
+  `PriorityChip.tsx` owns the palette that used to live inside `WorklogTaskRow`;
+  `normal` is in that table but drawn only by the picker, since a grey "Normal"
+  on every row would drown the three that mean something.
+- **`Menu` has two keyboard models now.** A plain menu moves DOM focus onto the
+  active option; a `searchable` one keeps focus in the input — you have to be
+  able to keep typing — and points at the option with `aria-activedescendant`.
+  The panel is a combobox in that mode, not a menu: `role="menu"` around a
+  textbox is not a thing. `ParentPicker` turns it on past seven options.
+- **The list scrolls, not the panel**, so the filter box stays put — which meant
+  the outer `scroll` capture listener had to stop closing on events raised
+  inside the panel, or a long list could not be scrolled at all.
+
+Who may be a parent is now one rule in
+[`taskTree.ts`](../src/ui/utils/taskTree.ts) — `parentCandidates` /
+`canHaveParent` — rather than a filter inlined in the form, because the detail
+rail asks the same question. `test/taskTree.test.ts` covers it.
+
+---
+
 ## Checks to run after each step
 
 ```bash

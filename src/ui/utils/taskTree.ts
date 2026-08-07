@@ -4,6 +4,47 @@
 // `useCollapsedTasks` owns where the folded set is actually kept.
 
 import type { Task } from "../../model/types";
+import { clientIdOf, isDone } from "./task";
+
+/** The task a parent picker is picking for: the id it must not offer itself as,
+ *  the client that bounds the choice, and the parent it already has. */
+export interface ParentSubject {
+  /** Absent for a task being created, which nothing can be the parent of yet. */
+  id?: string | null;
+  clientId: string;
+  parentId?: string;
+}
+
+/** The tasks that may become `subject`'s parent: open, top-level tasks of the
+ *  same client, minus the task itself.
+ *
+ *  Every clause is load-bearing. A parent in another client would put the two
+ *  blocks in different files, and the nesting the lists render reads one list at
+ *  a time. `!parentId` is what keeps the tree one level deep — and, since a
+ *  task's subtasks all carry its id, it is also what stops a task being made a
+ *  child of its own child. Closed tasks are in the archive, where nothing nests.
+ *
+ *  The parent the task already has is kept whatever it looks like now, so a
+ *  picker can always show the value it is standing for — a parent that has since
+ *  been completed would otherwise leave the control claiming there is none.
+ *
+ *  Source order, not alphabetical: it is the order these same tasks are already
+ *  in on screen. */
+export function parentCandidates(tasks: Task[], subject: ParentSubject): Task[] {
+  return tasks.filter(
+    (t) =>
+      t.id !== subject.id &&
+      (t.id === subject.parentId ||
+        (clientIdOf(t) === subject.clientId && !t.parentId && !isDone(t))),
+  );
+}
+
+/** Whether the task may be given a parent at all. A task with subtasks of its own
+ *  may not: the tree is one level deep, so a grandchild would be rendered at top
+ *  level and read as unrelated to the task it hangs off. */
+export function canHaveParent(tasks: Task[], taskId?: string | null): boolean {
+  return !taskId || !tasks.some((t) => t.parentId === taskId);
+}
 
 /** One line the list will render, before it becomes a row. */
 export interface TaskRowPlan {

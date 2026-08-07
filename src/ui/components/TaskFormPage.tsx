@@ -5,8 +5,9 @@ import { RecurrencePicker } from './RecurrencePicker';
 import { DescriptionEditor } from './DescriptionEditor';
 import { LinksField } from './LinksField';
 import { ClientChipPicker, DueField, FormActionBar, PriorityField, TitleField } from './task-form';
-import { Field, LinkButton, Select, SidebarSection } from '../primitives';
-import { clientIdOf, isDone } from '../utils';
+import { ParentPicker } from './ParentPicker';
+import { LinkButton, SidebarSection } from '../primitives';
+import { canHaveParent, clientIdOf, parentCandidates } from '../utils';
 import { formatRecurrence, type RecurrenceAnchor } from '../../model/recurrence';
 import { generalTodoClient } from '../../model/todos';
 import { NORMAL_PRIORITY_ID, priorityBucket } from '../../model/priority';
@@ -157,9 +158,10 @@ function TaskForm({ editingId, task, seed }: { editingId: string | null; task: T
   // Usage-ranked, so the picker offers the tags actually in circulation first.
   const knownTags = useMemo(() => allTags.map((t) => t.tag), [allTags]);
   const parentOptions = useMemo(
-    () => tasks.filter((t) => clientIdOf(t) === clientId && !t.parentId && !isDone(t) && t.id !== editingId),
-    [tasks, clientId, editingId],
+    () => parentCandidates(tasks, { id: editingId, clientId, parentId }),
+    [tasks, clientId, editingId, parentId],
   );
+  const canParent = canHaveParent(tasks, editingId);
   const canAdd = title.trim().length > 0 && !!clientId;
 
   const onSave = () =>
@@ -279,21 +281,15 @@ function TaskForm({ editingId, task, seed }: { editingId: string | null; task: T
             </div>
 
             <div className="order-5 mt-[22px] lg:mt-0">
-              {/* The label lives in a `Field` rather than on the section, so it
-                  points at the select — a section titles a group, and this group
-                  is one control. */}
-              <SidebarSection>
-                <Field label="Parent" hint="optional">
-                  <Select value={parentId} onChange={(e) => setParentId(e.target.value)} className="w-full">
-                    <option value="">— none —</option>
-                    {parentOptions.map((o) => (
-                      <option key={o.id} value={o.id}>
-                        {o.title}
-                      </option>
-                    ))}
-                  </Select>
-                </Field>
-              </SidebarSection>
+              {/* Titled by the section rather than a `Field`: the picker is a
+                  button, and a `<label>` has nothing in here to point at. Hidden
+                  outright when the task is already a parent — see
+                  `canHaveParent` — rather than shown empty. */}
+              {canParent && (
+                <SidebarSection title="Parent" hint="optional">
+                  <ParentPicker value={parentId} options={parentOptions} onSelect={setParentId} />
+                </SidebarSection>
+              )}
 
               <PriorityField value={priority} onChange={setPriority} />
 
