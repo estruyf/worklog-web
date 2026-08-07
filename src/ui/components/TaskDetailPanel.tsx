@@ -46,7 +46,7 @@ export function TaskDetailPanel({ routed = false }: { routed?: boolean } = {}) {
   const isTodo = isGeneralTodoClientId(clientIdOf(task));
   return (
     <div className={'fixed inset-0 z-40 bg-white overflow-auto' + (routed ? '' : ' top-13 md:top-0 md:left-57')}> {/* clears the mobile top bar (h-13) and the 228px (w-57) desktop sidebar rail */}
-      <div className="max-w-[920px] xl:max-w-[1280px] mx-auto px-5 py-8 md:px-8">
+      <div className="max-w-[920px] xl:max-w-[1280px] mx-auto px-6 py-8">
         <TaskDetailHeader
           task={task}
           parent={parent}
