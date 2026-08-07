@@ -20,6 +20,8 @@ export type { ClientListItemProps } from './ClientListItem';
 export { DescriptionEditor, MARKDOWN_CHEATSHEET } from './DescriptionEditor';
 export { MarkdownView } from './MarkdownView';
 export type { MarkdownViewProps } from './MarkdownView';
+export { useTaskMention } from './task-mention';
+export type { TaskMention, TaskMentionOptions } from './task-mention';
 export type { DescriptionEditorProps, DescriptionEditorVariant, DescriptionMode } from './DescriptionEditor';
 export { LinksField } from './LinksField';
 export type { LinksFieldProps } from './LinksField';

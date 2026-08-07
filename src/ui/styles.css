@@ -391,6 +391,27 @@ body {
 .wl-md .wl-md-link:hover {
   text-decoration: underline;
 }
+/* A reference to another task (`#t_a1b2c3`), rendered as that task's title. It
+   wears a chip rather than the plain link colour because it reads as a title in
+   the middle of a sentence, and the border is what says where it ends. */
+.wl-md .wl-md-taskref {
+  color: #2d6cdf;
+  text-decoration: none;
+  background: #eef3fd;
+  border: 1px solid #dbe6fb;
+  border-radius: 5px;
+  padding: 0 5px;
+}
+.wl-md .wl-md-taskref:hover {
+  background: #dfe9fb;
+}
+/* A closed task is still worth linking; it just isn't work in front of you. */
+.wl-md .wl-md-taskref-done {
+  color: #57606a;
+  background: #f4f5f7;
+  border-color: #eceef1;
+  text-decoration: line-through;
+}
 .wl-md .wl-md-img {
   max-width: 100%;
   height: auto;

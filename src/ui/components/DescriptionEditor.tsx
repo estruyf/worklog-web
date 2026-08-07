@@ -2,6 +2,7 @@ import React from 'react';
 import { Card, LinkButton, SectionLabel, SegmentedControl, TextArea, cn } from '../primitives';
 import { useMarkdownImages } from '../hooks';
 import { MarkdownView } from './MarkdownView';
+import { useTaskMention } from './task-mention';
 
 /** `boxed` is the task form's editor: the tabs and the image action ride on the
  *  box the two modes swap inside, because that box *is* the field. `inline` is the
@@ -15,7 +16,7 @@ export type DescriptionMode = 'edit' | 'preview';
  *  same reason it always did: two copies of it drift, and the one that drifts is
  *  the one nobody is looking at. Callers vary only the opening line. */
 export const MARKDOWN_CHEATSHEET =
-  '## Notes\n- supports **bold**, *italic*, `code`\n- [links](https://example.com) or plain https://example.com\n- lists, > quotes\n- [ ] task lists — tick them in Preview\n- paste, drop or add an image';
+  '## Notes\n- supports **bold**, *italic*, `code`\n- [links](https://example.com) or plain https://example.com\n- # to link another task\n- lists, > quotes\n- [ ] task lists — tick them in Preview\n- paste, drop or add an image';
 
 const PLACEHOLDER = `Add a description in Markdown…\n\n${MARKDOWN_CHEATSHEET}`;
 
@@ -52,6 +53,9 @@ export interface DescriptionEditorProps {
    *  already holding, while the detail panel's is a save on its own. Omit it and
    *  the boxes render read-only. */
   onTaskToggle?: (next: string) => void;
+  /** The task this description belongs to, kept out of its own `#` picker. Absent
+   *  on a task that does not exist yet. */
+  taskId?: string;
 }
 
 /** Markdown description editor with a write/preview toggle, image paste / drop /
@@ -68,8 +72,12 @@ export function DescriptionEditor({
   action,
   placeholder = PLACEHOLDER,
   onTaskToggle,
+  taskId,
 }: DescriptionEditorProps) {
   const img = useMarkdownImages(value, onChange);
+  const textareaRef = React.useRef<HTMLTextAreaElement>(null);
+  // One ref for both variants: only one of the two textareas is ever mounted.
+  const mention = useTaskMention({ value, onChange, textareaRef, selfId: taskId });
   const boxed = variant === 'boxed';
   // One height for all three bodies, so switching tabs doesn't resize the page
   // under the pointer. The inline editor sets it on the textarea only — its
@@ -98,11 +106,13 @@ export function DescriptionEditor({
         // Borderless: the box around it already draws the field, and a second
         // border inside one reads as a frame in a frame.
         <textarea
+          ref={textareaRef}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           onPaste={img.onPaste}
           onDrop={img.onDrop}
           onDragOver={img.onDragOver}
+          {...mention.props}
           aria-label={title}
           placeholder={placeholder}
           className={cn(
@@ -113,12 +123,14 @@ export function DescriptionEditor({
         />
       ) : (
         <TextArea
+          ref={textareaRef}
           size="lg"
           value={value}
           onChange={(e) => onChange(e.target.value)}
           onPaste={img.onPaste}
           onDrop={img.onDrop}
           onDragOver={img.onDragOver}
+          {...mention.props}
           aria-label={title}
           placeholder={placeholder}
           className={cn('w-full leading-[1.6]', tall)}
@@ -171,6 +183,7 @@ export function DescriptionEditor({
           <div>{body}</div>
         </div>
         {error}
+        {mention.panel}
       </div>
     );
   }
@@ -188,6 +201,7 @@ export function DescriptionEditor({
       {fileInput}
       {body}
       {error}
+      {mention.panel}
     </div>
   );
 }

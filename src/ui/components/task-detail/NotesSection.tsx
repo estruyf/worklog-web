@@ -1,23 +1,33 @@
-import React, { useMemo, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import type { Task } from '../../../model/types';
 import { Button, Card, EmptyState, LinkButton, SectionLabel, TextArea } from '../../primitives';
 import { useData, useUi } from '../../context';
-import { makeImageResolver, renderMarkdown } from '../../utils';
+import { MarkdownView } from '../MarkdownView';
+import { useTaskMention } from '../task-mention';
 
 /** The task's progress log: timestamped Markdown notes, newest at the bottom, and
  *  the box that adds one. Separate from the description — that says what the task
  *  is, these say what has happened to it. */
 export function NotesSection({ task }: { task: Task }) {
-  const { assetUrl, addNote, updateNote, deleteNote } = useData();
+  const { addNote, updateNote, deleteNote } = useData();
   const { noteDraft, setNoteDraft, confirm } = useUi();
-  // Notes render Markdown too; the description's own resolver lives inside
-  // `DescriptionEditor`.
-  const resolveImage = useMemo(() => makeImageResolver(assetUrl), [assetUrl]);
   const notes = task.notes ?? [];
   // The note being corrected, by its index in `notes`, and the text so far. Local
   // rather than in `useUi`: unlike the composer draft above it, an open correction
   // has nothing to say once the panel is gone.
   const [editing, setEditing] = useState<{ index: number; text: string } | null>(null);
+
+  // One `#` picker per box: the composer and the correction are two fields that
+  // can't be open at once, but they are two textareas either way.
+  const composerRef = useRef<HTMLTextAreaElement>(null);
+  const editRef = useRef<HTMLTextAreaElement>(null);
+  const composerMention = useTaskMention({ value: noteDraft, onChange: setNoteDraft, textareaRef: composerRef, selfId: task.id });
+  const editMention = useTaskMention({
+    value: editing?.text ?? '',
+    onChange: (text) => setEditing((e) => (e ? { ...e, text } : e)),
+    textareaRef: editRef,
+    selfId: task.id,
+  });
 
   const onAddNote = () => {
     const text = noteDraft.trim();
@@ -86,11 +96,19 @@ export function NotesSection({ task }: { task: Task }) {
                 {edit ? (
                   <div className="flex flex-col gap-2">
                     <TextArea
+                      ref={editRef}
                       autoFocus
                       autoGrow
                       value={edit.text}
                       onChange={(e) => setEditing({ index: i, text: e.target.value })}
+                      {...editMention.props}
                       onKeyDown={(e) => {
+                        // The open task list owns Escape, Enter and the arrows;
+                        // what it took is marked handled.
+                        editMention.props.onKeyDown(e);
+                        if (e.defaultPrevented) {
+                          return;
+                        }
                         if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
                           e.preventDefault();
                           onSaveEdit();
@@ -114,7 +132,7 @@ export function NotesSection({ task }: { task: Task }) {
                     </div>
                   </div>
                 ) : (
-                  <div className="wl-md text-control-lg leading-[1.6]" dangerouslySetInnerHTML={{ __html: renderMarkdown(n.text, resolveImage) }} />
+                  <MarkdownView text={n.text} className="text-control-lg leading-[1.6]" />
                 )}
               </Card>
             );
@@ -125,19 +143,27 @@ export function NotesSection({ task }: { task: Task }) {
       )}
       <div className="flex flex-col gap-2">
         <TextArea
+          ref={composerRef}
           autoGrow
           value={noteDraft}
           onChange={(e) => setNoteDraft(e.target.value)}
+          {...composerMention.props}
           onKeyDown={(e) => {
+            composerMention.props.onKeyDown(e);
+            if (e.defaultPrevented) {
+              return;
+            }
             if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
               e.preventDefault();
               onAddNote();
             }
           }}
           aria-label="New note"
-          placeholder="Add a note… (⌘/Ctrl+Enter to save). Supports Markdown."
+          placeholder="Add a note… (⌘/Ctrl+Enter to save). Supports Markdown, and # to link a task."
           className="w-full min-h-[68px] max-h-[60vh] leading-[1.55]"
         />
+        {composerMention.panel}
+        {editMention.panel}
         <div className="flex justify-end">
           <Button variant="primary" size="xs" onClick={onAddNote} disabled={!noteDraft.trim()} className="font-semibold">
             Add note

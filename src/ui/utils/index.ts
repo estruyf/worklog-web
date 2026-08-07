@@ -4,7 +4,9 @@ export { fmtLong, fmtShort, monthLabel, shiftDate, shiftMonth, weekdayShort, num
 export { clientIdOf, isDone, workedOnDate, dueOn, linksOf } from "./task";
 export { resolveStatusMeta } from "./status";
 export { renderMarkdown, makeImageResolver, toggleTaskLine } from "./markdown";
-export type { ImageResolver, MarkdownOptions } from "./markdown";
+export type { ImageResolver, MarkdownOptions, TaskRefResolver } from "./markdown";
+export { TASK_REF, applyMention, matchTaskRefs, mentionAt } from "./taskRefs";
+export type { TaskMentionQuery } from "./taskRefs";
 export { splitMatch, deriveSearch, deriveNoteGroup, appendGroup, snippetAround, NOTE_COLOR, NOTE_GROUP_NAME } from "./search";
 export type { NoteSearchDeps, SearchDeps, SearchDerived, SearchFilters, SplitMatch } from "./search";
 export { deriveArchive, pageWindow, periodStart, ARCHIVE_PAGE_SIZES } from "./archive";

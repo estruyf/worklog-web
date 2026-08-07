@@ -89,6 +89,7 @@ export function TaskDetailPanel({ routed = false }: { routed?: boolean } = {}) {
                 onChange={setDescDraft}
                 mode={descMode}
                 onModeChange={setDescMode}
+                taskId={task.id}
                 // Ticking a box on a saved task saves: there is no Save to press in
                 // preview, and a checkbox that needs one is a checkbox that lies.
                 onTaskToggle={saveDescriptionText}

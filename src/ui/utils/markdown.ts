@@ -9,6 +9,12 @@
 // carries the index of the line it came from, and {@link toggleTaskLine} flips
 // that one line in the *source* markdown. The DOM is never the source of truth —
 // see MarkdownView.
+//
+// `#t_a1b2c3` task references are resolved rather than parsed: the id is all the
+// Markdown stores, and the title comes from whoever passes `resolveTaskRef`. The
+// syntax itself lives in ./taskRefs, shared with the picker that writes them.
+
+import { TASK_REF } from "./taskRefs";
 
 function escapeHtml(s: string): string {
   return s
@@ -89,28 +95,76 @@ function linkifyText(text: string): string {
 }
 
 // An `<a>`/`<code>` element and its contents, or any other single tag. Anything
-// this matches is markup the autolinker must not touch.
+// this matches is markup the text passes below must not touch.
 const MARKUP = /<(a|code)\b[^>]*>[\s\S]*?<\/\1>|<[^>]*>/gi;
 
 /**
- * A pasted `https://…` with no `[label](…)` around it is the common case in a
- * description or a note, so it links too. This runs over the assembled inline
- * HTML rather than the raw text, skipping markup: a URL that already became an
- * `href` or `src`, or that sits inside a code span, must survive untouched.
+ * Rewrite the text runs of assembled inline HTML, leaving markup alone: a URL
+ * that already became an `href` or `src`, or anything sitting inside a code
+ * span, must survive untouched. Both passes below run over the *output* of the
+ * inline formatting rather than the raw text, for exactly that reason.
  */
-function autolink(html: string): string {
+function mapText(html: string, fn: (text: string) => string): string {
   let out = "";
   let last = 0;
   MARKUP.lastIndex = 0;
   for (let m = MARKUP.exec(html); m; m = MARKUP.exec(html)) {
-    out += linkifyText(html.slice(last, m.index)) + m[0];
+    out += fn(html.slice(last, m.index)) + m[0];
     last = m.index + m[0].length;
   }
-  return out + linkifyText(html.slice(last));
+  return out + fn(html.slice(last));
 }
 
-/** Escape, then apply inline spans: code, images, bold, italic, links. */
-function inline(text: string, resolveImage?: ImageResolver): string {
+/**
+ * A pasted `https://…` with no `[label](…)` around it is the common case in a
+ * description or a note, so it links too.
+ */
+function autolink(html: string): string {
+  return mapText(html, linkifyText);
+}
+
+/**
+ * Resolves a `#t_a1b2c3` task reference to what it should read as, or `null`
+ * when nothing has that id. Callers build one over the loaded tasks.
+ */
+export type TaskRefResolver = (
+  id: string,
+) => { title: string; done: boolean } | null;
+
+/**
+ * `#t_a1b2c3` — a reference to another task, rendered as that task's *current*
+ * title, which is the whole reason the Markdown stores only the id.
+ *
+ * A ref nothing resolves stays literal text: a deleted task, or a `#` that only
+ * looks like one, is the user's own writing, and inventing a dead link for it
+ * would be worse than showing what they typed. The `href` is the task's real
+ * route so a modified click and "open in new tab" work; the app intercepts the
+ * plain one (see MarkdownView).
+ *
+ * Runs after {@link autolink}, so a `#t_…` fragment inside a URL is already
+ * inside an `<a>` by the time this pass looks at the text.
+ */
+function linkifyTaskRefs(html: string, resolve: TaskRefResolver): string {
+  return mapText(html, (text) =>
+    text.replace(TASK_REF, (match, id: string) => {
+      const task = resolve(id);
+      if (!task) {
+        return match;
+      }
+      const cls = task.done
+        ? "wl-md-taskref wl-md-taskref-done"
+        : "wl-md-taskref";
+      return `<a href="/app/task/${id}" data-task-ref="${id}" class="${cls}" title="${match}">${escapeHtml(task.title)}</a>`;
+    }),
+  );
+}
+
+/** Escape, then apply inline spans: code, images, bold, italic, links, refs. */
+function inline(
+  text: string,
+  resolveImage?: ImageResolver,
+  resolveTaskRef?: TaskRefResolver,
+): string {
   // `code` first so its contents are not further formatted.
   let out = escapeHtml(text).replace(
     /`([^`]+)`/g,
@@ -136,7 +190,8 @@ function inline(text: string, resolveImage?: ImageResolver): string {
       return `<a href="${url}" target="_blank" rel="noreferrer noopener" class="wl-md-link">${label}</a>`;
     },
   );
-  return autolink(out);
+  out = autolink(out);
+  return resolveTaskRef ? linkifyTaskRefs(out, resolveTaskRef) : out;
 }
 
 /**
@@ -181,10 +236,13 @@ export function toggleTaskLine(md: string, lineIndex: number): string | null {
  * name, since the label sits beside it as rendered markup rather than in an
  * attribute.
  */
-function plainText(md: string): string {
+function plainText(md: string, resolveTaskRef?: TaskRefResolver): string {
   return md
     .replace(/!\[([^\]]*)\]\([^\s)]*\)/g, "$1")
     .replace(/\[([^\]]+)\]\([^\s)]*\)/g, "$1")
+    // Read out as the task's title, the same as on screen: an id spelled letter
+    // by letter is the least useful thing a screen reader could say here.
+    .replace(TASK_REF, (match, id: string) => resolveTaskRef?.(id)?.title ?? match)
     .replace(/[`*_]/g, "")
     .trim();
 }
@@ -199,10 +257,11 @@ function checkbox(
   line: number,
   interactive: boolean | undefined,
   text: string,
+  resolveTaskRef?: TaskRefResolver,
 ): string {
   const checked = mark.toLowerCase() === "x" ? " checked" : "";
   const state = interactive ? ` data-md-line="${line}"` : " disabled";
-  return `<input type="checkbox" class="wl-md-check"${checked}${state} aria-label="${escapeHtml(plainText(text))}" />`;
+  return `<input type="checkbox" class="wl-md-check"${checked}${state} aria-label="${escapeHtml(plainText(text, resolveTaskRef))}" />`;
 }
 
 export interface MarkdownOptions {
@@ -212,6 +271,12 @@ export interface MarkdownOptions {
    * checkbox nothing listens to would silently drop the click.
    */
   interactiveTasks?: boolean;
+  /**
+   * Turns `#t_a1b2c3` into a link to that task. Off by default: without a way to
+   * look the id up there is no title to show, and the raw id is not text anyone
+   * asked for.
+   */
+  resolveTaskRef?: TaskRefResolver;
 }
 
 export function renderMarkdown(
@@ -220,6 +285,7 @@ export function renderMarkdown(
   options?: MarkdownOptions,
 ): string {
   const lines = md.replace(/\r\n/g, "\n").split("\n");
+  const refs = options?.resolveTaskRef;
   const html: string[] = [];
   let listType: "ul" | "ol" | null = null;
   let paragraph: string[] = [];
@@ -233,7 +299,7 @@ export function renderMarkdown(
   };
   const flushParagraph = () => {
     if (paragraph.length) {
-      html.push(`<p>${inline(paragraph.join(" "), resolveImage)}</p>`);
+      html.push(`<p>${inline(paragraph.join(" "), resolveImage, refs)}</p>`);
       paragraph = [];
     }
   };
@@ -278,7 +344,7 @@ export function renderMarkdown(
       closeList();
       const level = heading[1].length;
       html.push(
-        `<h${level} class="wl-md-h${level}">${inline(heading[2], resolveImage)}</h${level}>`,
+        `<h${level} class="wl-md-h${level}">${inline(heading[2], resolveImage, refs)}</h${level}>`,
       );
       continue;
     }
@@ -295,7 +361,7 @@ export function renderMarkdown(
       flushParagraph();
       closeList();
       html.push(
-        `<blockquote class="wl-md-quote">${inline(quote[1], resolveImage)}</blockquote>`,
+        `<blockquote class="wl-md-quote">${inline(quote[1], resolveImage, refs)}</blockquote>`,
       );
       continue;
     }
@@ -314,10 +380,10 @@ export function renderMarkdown(
       const task = ul ? TASK_ITEM.exec(item) : null;
       if (task) {
         html.push(
-          `<li class="wl-md-task">${checkbox(task[1], i, options?.interactiveTasks, task[2])}<span>${inline(task[2], resolveImage)}</span></li>`,
+          `<li class="wl-md-task">${checkbox(task[1], i, options?.interactiveTasks, task[2], refs)}<span>${inline(task[2], resolveImage, refs)}</span></li>`,
         );
       } else {
-        html.push(`<li>${inline(item, resolveImage)}</li>`);
+        html.push(`<li>${inline(item, resolveImage, refs)}</li>`);
       }
       continue;
     }
