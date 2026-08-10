@@ -14,9 +14,15 @@ import { worklogStore } from '../../../data/worklogStore';
  *  impulses — "this belongs under that" and "take me to that" — and a single
  *  control would have to pick which click means which.
  *
- *  Renders nothing when the task has subtasks of its own (it is already a parent,
- *  and the tree is one level deep) or when the client has nothing to hang it off,
- *  which is the common case for a first task. */
+ *  The block stands whether or not the task has a parent: "hangs off nothing" is
+ *  a state you want to see and act on, and a rail that hides the field until the
+ *  task already has a parent is a rail you cannot link a task from. It renders
+ *  nothing only when the task has subtasks of its own — it is already a parent,
+ *  and the tree is one level deep, so there is no choice to offer.
+ *
+ *  The picker stands even with nothing to hang the task off — a client's first
+ *  task, or one whose other top-level tasks are all done. A field you can't open
+ *  reads as broken, so it opens and says why it is empty instead. */
 export function ParentEditor({ task, parent, onOpenTask }: { task: Task; parent?: Task; onOpenTask: (id: string) => void }) {
   const { tasks } = useData();
   const clientId = clientIdOf(task);
@@ -24,7 +30,7 @@ export function ParentEditor({ task, parent, onOpenTask }: { task: Task; parent?
     () => parentCandidates(tasks, { id: task.id, clientId, parentId: task.parentId }),
     [tasks, task.id, task.parentId, clientId],
   );
-  if (!canHaveParent(tasks, task.id) || (options.length === 0 && !parent)) {
+  if (!canHaveParent(tasks, task.id)) {
     return null;
   }
   return (

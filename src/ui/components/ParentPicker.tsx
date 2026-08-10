@@ -16,6 +16,11 @@ export interface ParentPickerProps {
  *  than an empty one — it is how a subtask is promoted back to top level. */
 const NONE_LABEL = 'No parent';
 
+/** Why the menu holds nothing else, said where the user is looking when they
+ *  find out — a client's first task has nothing to hang off, and a closed one is
+ *  in the archive, where nothing nests. */
+const NOTHING_TO_PICK = 'This client has no other open top-level task';
+
 /** The task a task hangs off, as the thing you change it with.
  *
  *  A filtered menu rather than the `<select>` this replaced: the options are
@@ -29,7 +34,10 @@ const NONE_LABEL = 'No parent';
  *  it is in. */
 export function ParentPicker({ value, options, onSelect, className }: ParentPickerProps) {
   const menuOptions = React.useMemo(
-    () => [{ id: '', label: NONE_LABEL }, ...options.map((t) => ({ id: t.id, label: t.title }))],
+    () => [
+      { id: '', label: NONE_LABEL, hint: options.length === 0 ? NOTHING_TO_PICK : undefined },
+      ...options.map((t) => ({ id: t.id, label: t.title })),
+    ],
     [options],
   );
   const current = options.find((t) => t.id === value);

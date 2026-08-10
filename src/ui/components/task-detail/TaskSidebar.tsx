@@ -43,6 +43,11 @@ export function TaskSidebar({ task, parent, routed, isTodo, occurrences, onOpenT
         </span>
       </SidebarSection>
 
+      {/* Under the client, because it is the other half of "where does this sit":
+          the client is the file it lives in, the parent is the task it hangs off.
+          Both are always stated, so the rail's first names don't move around. */}
+      <ParentEditor task={task} parent={parent} onOpenTask={onOpenTask} />
+
       {!isTodo && (
         <SidebarSection title="Status">
           <StatusPicker
@@ -85,11 +90,6 @@ export function TaskSidebar({ task, parent, routed, isTodo, occurrences, onOpenT
           </div>
         </SidebarSection>
       )}
-
-      {/* Last because it is the one block that is often absent, and a rail that
-          shifts its first four names by whether the task happens to have a parent
-          is a rail you have to re-read every time. */}
-      <ParentEditor task={task} parent={parent} onOpenTask={onOpenTask} />
     </>
   );
 }
