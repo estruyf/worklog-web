@@ -1,6 +1,6 @@
 import React from 'react';
 import type { WorklogRow } from '../model';
-import { BriefcaseIcon, CalendarIcon, GlobeIcon, RefreshCwIcon, SquareArrowOutUpRight } from 'lucide-react';
+import { BriefcaseIcon, CalendarIcon, GlobeIcon, RefreshCwIcon } from 'lucide-react';
 import { formatDaysLate } from '../../model/overdue';
 import { Button, Chip } from '../primitives';
 import { fmtShort } from '../utils';
@@ -170,19 +170,7 @@ export const WorklogTaskRow = React.memo(function WorklogTaskRow({ row }: { row:
         )}
         <button
           onClick={row.onView}
-          onAuxClick={(e) => {
-            if (e.button === 1) {
-              e.preventDefault();
-              row.onOpenTab();
-            }
-          }}
-          onMouseDown={(e) => {
-            // Suppress the middle-click autoscroll cursor so onAuxClick can open a tab.
-            if (e.button === 1) {
-              e.preventDefault();
-            }
-          }}
-          title="View task · middle-click to open in a new tab"
+          title="View task"
           className="text-row text-neutral-825 flex-1 min-w-0 text-left bg-transparent border-none cursor-pointer p-0 hover:underline whitespace-normal leading-[1.35] @lg:whitespace-nowrap @lg:overflow-hidden @lg:text-ellipsis @lg:leading-normal"
         >
           {row.title}
@@ -201,9 +189,6 @@ export const WorklogTaskRow = React.memo(function WorklogTaskRow({ row }: { row:
         <div className="hidden @lg:flex items-center gap-[6px] shrink-0 opacity-0 pointer-events-none transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 group-hover:pointer-events-auto group-focus-within:pointer-events-auto">
           <Button size="xs" onClick={row.onView}>
             View
-          </Button>
-          <Button size="xs" onClick={row.onOpenTab} title="Open in a separate tab" className="leading-[0]">
-            <SquareArrowOutUpRight className="w-[14px] h-[14px]" />
           </Button>
           <Button size="xs" onClick={row.onEdit}>
             Edit

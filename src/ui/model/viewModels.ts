@@ -117,7 +117,6 @@ export interface WorklogRow {
   /** Folds/unfolds the subtasks. Present exactly when `collapsed` is. */
   onToggleCollapse?: () => void;
   onView: () => void;
-  onOpenTab: () => void;
   onDone: () => void;
   /** Omitted for tasks without a worked-on state (general to-dos); the row then
    *  hides the worked toggle. */
