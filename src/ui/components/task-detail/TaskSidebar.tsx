@@ -7,6 +7,7 @@ import { isOverdue } from '../../../model/overdue';
 import { StatusPicker } from '../StatusPicker';
 import { DueEditor } from './DueEditor';
 import { ParentEditor } from './ParentEditor';
+import { TaskActions } from './TaskActions';
 import { PriorityEditor } from './PriorityEditor';
 import { RepeatSummary } from './RepeatSummary';
 
@@ -90,6 +91,11 @@ export function TaskSidebar({ task, parent, routed, isTodo, occurrences, onOpenT
           </div>
         </SidebarSection>
       )}
+
+      {/* Last, under the dates and whatever else the task carries: the rail
+          describes the task from the top down and then says what you can do
+          about it. */}
+      <TaskActions task={task} />
     </>
   );
 }

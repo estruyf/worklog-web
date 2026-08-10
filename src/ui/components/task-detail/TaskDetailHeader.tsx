@@ -17,9 +17,12 @@ export interface TaskDetailHeaderProps {
   onOpenTask: (id: string) => void;
 }
 
-/** Where you came from on the left, what you can do to the task on the right. */
+/** Where you came from on the left; on the right, the two actions that are the
+ *  point of opening a task at all — did I work on this today, and is it done.
+ *  Everything else you can do to it is a row in the rail's actions list, so this
+ *  row stays two buttons wide however many actions the task grows. */
 export function TaskDetailHeader({ task, parent, routed, isTodo, onBack, onOpenTask }: TaskDetailHeaderProps) {
-  const { reopen, toggleWorked, markDone, openEdit, deleteTask, openSubtaskForm } = useData();
+  const { reopen, toggleWorked, markDone } = useData();
   const { selectedDate } = useUi();
   const done = isDone(task);
   const worked = !isTodo && workedOnDate(task, selectedDate);
@@ -70,11 +73,6 @@ export function TaskDetailHeader({ task, parent, routed, isTodo, onBack, onOpenT
             Mark done
           </Button>
         )}
-        <Button onClick={() => openEdit(task)}>Edit details</Button>
-        {!done && <Button onClick={() => openSubtaskForm(task)}>Add subtask</Button>}
-        <Button variant="danger" onClick={() => deleteTask(task.id, { permanent: done })}>
-          {done ? 'Delete forever' : 'Delete'}
-        </Button>
       </div>
     </div>
   );
