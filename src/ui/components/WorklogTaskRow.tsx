@@ -1,6 +1,6 @@
 import React from 'react';
 import type { WorklogRow } from '../model';
-import { BriefcaseIcon, CalendarIcon, GlobeIcon, RefreshCwIcon } from 'lucide-react';
+import { BriefcaseIcon, CalendarIcon, EyeIcon, GlobeIcon, Pencil, RefreshCwIcon, Trash } from 'lucide-react';
 import { formatDaysLate } from '../../model/overdue';
 import { Button, Chip } from '../primitives';
 import { fmtShort } from '../utils';
@@ -187,14 +187,17 @@ export const WorklogTaskRow = React.memo(function WorklogTaskRow({ row }: { row:
         </div>
         {/* Hover actions — wide rows only; they would crowd out the title otherwise. */}
         <div className="hidden @lg:flex items-center gap-[6px] shrink-0 opacity-0 pointer-events-none transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 group-hover:pointer-events-auto group-focus-within:pointer-events-auto">
-          <Button size="xs" onClick={row.onView}>
-            View
+          <Button size="xs" onClick={row.onView} title="View task">
+            <EyeIcon size={12} />
+            <span className="sr-only">View task</span>
           </Button>
-          <Button size="xs" onClick={row.onEdit}>
-            Edit
+          <Button size="xs" onClick={row.onEdit} title="Edit task">
+            <Pencil size={12} />
+            <span className="sr-only">Edit task</span>
           </Button>
-          <Button size="xs" variant="danger" onClick={row.onDelete}>
-            Delete
+          <Button size="xs" variant="danger" onClick={row.onDelete} title="Delete task">
+            <Trash size={12} />
+            <span className="sr-only">Delete task</span>
           </Button>
         </div>
         {row.hasLink && (
