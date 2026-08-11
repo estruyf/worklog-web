@@ -95,6 +95,40 @@ export function planTaskRows(list: Task[], collapsed: ReadonlySet<string> = new 
   return plans;
 }
 
+/** What the detail panel's subtask section renders, given the user's choice of
+ *  whether the done ones are on screen. */
+export interface SubtaskListModel {
+  /** Render order: the open ones, then the done ones when they're shown. */
+  visible: Task[];
+  doneCount: number;
+  /** Done subtasks are on screen — which is not the same as the user asking for
+   *  them, see below. */
+  showingDone: boolean;
+  /** Whether the toggle is worth drawing. */
+  canToggle: boolean;
+}
+
+/** Splits a task's subtasks into what to show and what the toggle says.
+ *
+ *  Done last, and hidden until asked for: a subtask list is a list of what is
+ *  left to do, and the closed ones are the record. Source order is kept within
+ *  each half — it is the order they sit in the Markdown.
+ *
+ *  A list whose subtasks are *all* done shows them whatever `showDone` says.
+ *  Hiding them there would leave a section with a count, a card and no rows,
+ *  which reads as broken rather than as tidy. */
+export function deriveSubtaskList(subtasks: Task[], showDone: boolean): SubtaskListModel {
+  const open = subtasks.filter((t) => !isDone(t));
+  const done = subtasks.filter(isDone);
+  const showingDone = showDone || open.length === 0;
+  return {
+    visible: showingDone ? [...open, ...done] : open,
+    doneCount: done.length,
+    showingDone,
+    canToggle: done.length > 0 && open.length > 0,
+  };
+}
+
 /** Folded parent ids, per repo. Keyed by repo so one repo's folds are never
  *  applied to another's ids, and so pruning ids that no longer exist can only
  *  ever touch the repo that is open. */

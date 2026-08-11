@@ -4,6 +4,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   canHaveParent,
+  deriveSubtaskList,
   parentCandidates,
   parseCollapsedStore,
   planTaskRows,
@@ -63,6 +64,37 @@ describe('planTaskRows', () => {
     expect(shape([kidA, lone])).toEqual(['p2', 'k1']);
     // ...and folding a parent that isn't in the list can't smuggle it back out.
     expect(shape([kidA], new Set(['p1']))).toEqual(['k1']);
+  });
+});
+
+describe('deriveSubtaskList', () => {
+  const openA = task({ id: 'a' });
+  const openB = task({ id: 'b' });
+  const doneA = task({ id: 'x', completed: '2026-08-01' });
+  const doneB = task({ id: 'y', completed: '2026-08-02' });
+  const mixed = [openA, doneA, openB, doneB];
+  const ids = (list: Task[]) => list.map((t) => t.id);
+
+  it('hides the done ones until they are asked for', () => {
+    const hidden = deriveSubtaskList(mixed, false);
+    expect(ids(hidden.visible)).toEqual(['a', 'b']);
+    expect(hidden).toMatchObject({ doneCount: 2, showingDone: false, canToggle: true });
+  });
+
+  it('puts the done ones last, in source order, when they are shown', () => {
+    expect(ids(deriveSubtaskList(mixed, true).visible)).toEqual(['a', 'b', 'x', 'y']);
+  });
+
+  it('shows an all-done list whatever the toggle says, so the card is never empty', () => {
+    const allDone = deriveSubtaskList([doneA, doneB], false);
+    expect(ids(allDone.visible)).toEqual(['x', 'y']);
+    // ...and offers no toggle, since there is nothing left to hide it in favour of.
+    expect(allDone).toMatchObject({ doneCount: 2, showingDone: true, canToggle: false });
+  });
+
+  it('offers no toggle when nothing is done', () => {
+    expect(deriveSubtaskList([openA, openB], false)).toMatchObject({ doneCount: 0, canToggle: false });
+    expect(deriveSubtaskList([], false)).toMatchObject({ visible: [], doneCount: 0, canToggle: false });
   });
 });
 

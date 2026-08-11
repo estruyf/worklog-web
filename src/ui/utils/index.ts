@@ -21,13 +21,14 @@ export {
 } from "./taskFilter";
 export {
   canHaveParent,
+  deriveSubtaskList,
   parentCandidates,
   parseCollapsedStore,
   planTaskRows,
   pruneCollapsed,
   toggleCollapsed,
 } from "./taskTree";
-export type { CollapsedStore, ParentSubject, TaskRowPlan } from "./taskTree";
+export type { CollapsedStore, ParentSubject, SubtaskListModel, TaskRowPlan } from "./taskTree";
 export type {
   TaskListDeps,
   TaskListDerived,

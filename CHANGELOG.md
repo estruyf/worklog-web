@@ -6,6 +6,11 @@ plumbing) gets a line too when it changes how the codebase is worked in.
 
 ## 2026-08-11
 
+- Task details now put the description above the subtasks, so what the task is comes before
+  what it breaks down into.
+- A task's subtask list now shows only what is still open, with a "Show N done" toggle in the
+  section header for the rest; when shown, the done ones sit at the bottom. A task whose
+  subtasks are all done still lists them all.
 - Every listed link — a task's issue links, a client's reference links in the day view and on
   the client page — now has a copy button next to it, so the URL no longer needs the browser's
   right-click menu; the button answers with a green check. Long links show truncated on one

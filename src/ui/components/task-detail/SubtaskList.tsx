@@ -1,9 +1,9 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import type { Task } from '../../../model/types';
 import { CheckIcon, PlusIcon } from 'lucide-react';
-import { Button, Card, EmptyState, SectionLabel } from '../../primitives';
+import { Button, Card, EmptyState, LinkButton, SectionLabel } from '../../primitives';
 import { useData } from '../../context';
-import { isDone } from '../../utils';
+import { deriveSubtaskList, isDone } from '../../utils';
 import { StatusPicker } from '../StatusPicker';
 
 /** The task's children, each with a tick that closes it in place, under a header
@@ -13,7 +13,12 @@ import { StatusPicker } from '../StatusPicker';
  *  it adds to is on screen when you press it. That is also why the section still
  *  renders with no children: it is the entry point, so it cannot be conditional
  *  on there already being something to enter. A done task keeps its list as a
- *  record but loses the button, for the same reason its header loses "Mark done". */
+ *  record but loses the button, for the same reason its header loses "Mark done".
+ *
+ *  The done subtasks are folded away behind the header's toggle — see
+ *  `deriveSubtaskList` for why, and for the one case that overrides it. The
+ *  choice is per open panel, not persisted: it is a way to check the record,
+ *  not a display preference. */
 export function SubtaskList({
   task,
   subtasks,
@@ -24,29 +29,46 @@ export function SubtaskList({
   onOpenTask: (id: string) => void;
 }) {
   const { statusMeta, statusChoices, setTaskStatus, markDone, openSubtaskForm } = useData();
+  const [showDone, setShowDone] = useState(false);
+  const { visible, doneCount, showingDone, canToggle } = useMemo(
+    () => deriveSubtaskList(subtasks, showDone),
+    [subtasks, showDone],
+  );
   const parentDone = isDone(task);
   // Nothing to list and nothing to add: an empty section on a closed task is a
   // heading over a heading.
   if (parentDone && subtasks.length === 0) {
     return null;
   }
-  const doneCount = subtasks.filter(isDone).length;
   return (
-    <div className="mb-7">
+    // The section owns the gap above it now that it follows the description
+    // editor, which ends flush with its border — the same way Notes does below.
+    <div className="mt-9 mb-7">
       <div className="flex items-center justify-between gap-3 mb-[10px]">
         <SectionLabel>Subtasks{subtasks.length > 0 && ` · ${doneCount}/${subtasks.length} done`}</SectionLabel>
-        {!parentDone && (
-          <Button size="xs" onClick={() => openSubtaskForm(task)} title="Create a task under this one">
-            <PlusIcon size={13} strokeWidth={2.2} />
-            Add subtask
-          </Button>
-        )}
+        <div className="flex items-center gap-3 shrink-0">
+          {canToggle && (
+            <LinkButton
+              tone="neutral"
+              onClick={() => setShowDone(!showingDone)}
+              title={showingDone ? 'Hide the subtasks that are done' : 'Show the subtasks that are done'}
+            >
+              {showingDone ? 'Hide done' : `Show ${doneCount} done`}
+            </LinkButton>
+          )}
+          {!parentDone && (
+            <Button size="xs" onClick={() => openSubtaskForm(task)} title="Create a task under this one">
+              <PlusIcon size={13} strokeWidth={2.2} />
+              Add subtask
+            </Button>
+          )}
+        </div>
       </div>
       {subtasks.length === 0 ? (
         <EmptyState size="sm">No subtasks yet.</EmptyState>
       ) : (
         <Card padding="list" radius="panel">
-          {subtasks.map((c) => {
+          {visible.map((c) => {
             const done = isDone(c);
             const status = statusMeta(c.status, done);
             return (

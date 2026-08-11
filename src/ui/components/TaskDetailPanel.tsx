@@ -29,7 +29,7 @@ function useDetailData() {
 }
 
 /** Full-screen task detail overlay: header actions, then the task's own content —
- * title, links, subtasks, description, notes — with everything that classifies it
+ * title, links, description, subtasks, notes — with everything that classifies it
  * in a rail on the right, the same way the task form is laid out. Renders nothing
  * when no task is open. In `routed` mode (the /app/task/<id> page) the in-panel
  * Back / Open buttons are hidden — the breadcrumb handles that — and parent /
@@ -73,8 +73,6 @@ export function TaskDetailPanel({ routed = false }: { routed?: boolean } = {}) {
             </div>
 
             <div className="order-3">
-              <SubtaskList task={task} subtasks={subtasks} onOpenTask={onOpenTask} />
-
               <DescriptionEditor
                 value={descDraft}
                 onChange={setDescDraft}
@@ -92,6 +90,8 @@ export function TaskDetailPanel({ routed = false }: { routed?: boolean } = {}) {
                   )
                 }
               />
+
+              <SubtaskList task={task} subtasks={subtasks} onOpenTask={onOpenTask} />
 
               <NotesSection task={task} />
             </div>
