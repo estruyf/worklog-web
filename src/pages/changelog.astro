@@ -162,16 +162,20 @@ const latest = days[0]?.text;
 
   .log > :global(h2) {
     grid-column: 1;
-    /* Sticks while its own day's entries scroll past, then hands over to the next
-       — the gutter is empty either side of it, so nothing scrolls underneath. */
-    position: sticky;
-    top: 20px;
     align-self: start;
     margin: 0;
-    /* Matches the entries' padding-top so the date lines up with its first entry.
-       The row's rule lives on the `ul` alone: a border here would travel with the
-       heading as it sticks and end up a line floating in the middle of the page. */
-    padding: 28px 0 0;
+    /* Same padding as the entries beside it, so the date lines up with the day's
+       first line rather than with the rule above it.
+       Deliberately not `position: sticky`: a sticky grid item is clamped to its
+       grid area, which is what would push each date out as the next day arrives —
+       and Blink doesn't apply that clamp, so every date stayed pinned and the
+       incoming one rendered on top of it. Bounding it needs an element per day,
+       which the Markdown doesn't have. */
+    padding: 28px 32px 0 0;
+    /* Widened across the column gap so this rule meets the entries' and the two
+       read as one line per day, rather than a divider with a notch in it. */
+    margin-right: -32px;
+    border-top: 1px solid var(--border);
     font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
     font-size: 14px;
     font-weight: 500;
@@ -277,11 +281,9 @@ const latest = days[0]?.text;
     }
     .log > :global(h2) {
       grid-column: 1;
-      position: static;
-      /* The rule moves up here with it — in one column the entries no longer start
-         a new row of their own. */
-      border-top: 1px solid var(--border);
-      padding-bottom: 14px;
+      /* No gap to bridge in one column. */
+      margin-right: 0;
+      padding: 28px 0 14px;
     }
     .log > :global(h2:first-of-type)::after {
       display: inline-block;
