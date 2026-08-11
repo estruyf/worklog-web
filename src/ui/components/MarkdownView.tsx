@@ -8,9 +8,9 @@
 // remember when the renderer changes.
 
 import React, { useCallback, useMemo } from 'react';
-import { useData, useUi } from '../context';
+import { useData } from '../context';
 import { cn } from '../primitives';
-import { navigateToTask, useRoute } from '../router';
+import { navigateToTask } from '../router';
 import { isDone, makeImageResolver, renderMarkdown, toggleTaskLine } from '../utils';
 
 export interface MarkdownViewProps {
@@ -25,8 +25,6 @@ export interface MarkdownViewProps {
 
 export function MarkdownView({ text, className, onTextChange }: MarkdownViewProps) {
   const { assetUrl, tasks } = useData();
-  const { setDetailId } = useUi();
-  const route = useRoute();
   const resolveImage = useMemo(() => makeImageResolver(assetUrl), [assetUrl]);
 
   const byId = useMemo(() => new Map(tasks.map((t) => [t.id, t])), [tasks]);
@@ -52,13 +50,9 @@ export function MarkdownView({ text, className, onTextChange }: MarkdownViewProp
         return;
       }
       e.preventDefault();
-      // The dashboard shows a task as an overlay over whatever view you were on;
-      // the task page and the task form are routes, and pushing one there is what
-      // leaves Back somewhere to go.
-      if (route.name === 'view') {
-        setDetailId(ref.dataset.taskRef ?? null);
-      } else {
-        navigateToTask(ref.dataset.taskRef ?? '');
+      const id = ref.dataset.taskRef;
+      if (id) {
+        navigateToTask(id);
       }
       return;
     }

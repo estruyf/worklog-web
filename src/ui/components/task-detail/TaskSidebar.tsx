@@ -14,7 +14,6 @@ import { RepeatSummary } from './RepeatSummary';
 export interface TaskSidebarProps {
   task: Task;
   parent?: Task;
-  routed: boolean;
   /** General to-dos are open or closed only — no status to pick. */
   isTodo: boolean;
   /** Archived completions of a recurring task, for the repeat block's history. */
@@ -29,7 +28,7 @@ export interface TaskSidebarProps {
  *
  *  The status is the picker, not a label: the rail is where you are already
  *  looking when you decide the task has moved on. */
-export function TaskSidebar({ task, parent, routed, isTodo, occurrences, onOpenTask }: TaskSidebarProps) {
+export function TaskSidebar({ task, parent, isTodo, occurrences, onOpenTask }: TaskSidebarProps) {
   const { statusMeta, statusChoices, setTaskStatus, colorOf, clientName, openTagSearch } = useData();
   const { selectedDate } = useUi();
   const done = isDone(task);
@@ -74,20 +73,15 @@ export function TaskSidebar({ task, parent, routed, isTodo, occurrences, onOpenT
 
       {tags.length > 0 && (
         <SidebarSection title="Tags">
-          {/* Tags jump to the tag-filtered search, which the routed task page
-              doesn't mount — there they stay plain labels. */}
+          {/* Tags jump to the tag-filtered search. They stayed inert while the task
+              had a page of its own, which didn't mount the overlay; the task route
+              lives in the dashboard now, so they lead somewhere again. */}
           <div className="flex flex-wrap items-center gap-[6px]">
-            {tags.map((tag) =>
-              routed ? (
-                <Chip key={tag} variant="tag" as="span">
-                  {tag}
-                </Chip>
-              ) : (
-                <Chip key={tag} variant="tag" onClick={() => openTagSearch(tag)} title={`Show everything tagged "${tag}"`}>
-                  {tag}
-                </Chip>
-              ),
-            )}
+            {tags.map((tag) => (
+              <Chip key={tag} variant="tag" onClick={() => openTagSearch(tag)} title={`Show everything tagged "${tag}"`}>
+                {tag}
+              </Chip>
+            ))}
           </div>
         </SidebarSection>
       )}

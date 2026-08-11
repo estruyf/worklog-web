@@ -73,7 +73,7 @@ export function CalendarView() {
 
   return (
     <div className="flex-1 overflow-auto px-6 pt-8 pb-20">
-      <div className="max-w-[920px] mx-auto">
+      <div className="max-w-[920px] xl:max-w-[1280px] mx-auto">
         <div className="flex flex-col md:flex-row md:items-center gap-3 mb-7">
           <h1 className="text-[24px] font-bold m-0 tracking-[-0.01em]">Calendar</h1>
           <div className="hidden md:block flex-1" />

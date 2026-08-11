@@ -1,18 +1,16 @@
 // The client island for /app. Resolves the GitHub session, lets the user pick a
 // repository, opens it through the store (which loads + parses the Worklog files),
-// and mounts the dashboard. The current route picks between the single-task page
-// (/app/task/<id>) and the dashboard, which hosts the views and the task form
-// (/app/new, /app/task/<id>/edit) inside its own chrome. A floating control
-// switches repo or signs out. One repo is mounted at a time. The selected repo is
-// remembered in localStorage (not the URL) so a return visit reopens it
-// automatically.
+// and mounts the dashboard, which hosts every route inside its own chrome — the
+// views, the open task (/app/task/<id>) and the task form (/app/new,
+// /app/task/<id>/edit). A floating control switches repo or signs out. One repo is
+// mounted at a time. The selected repo is remembered in localStorage (not the URL)
+// so a return visit reopens it automatically.
 //
-// WorklogProvider wraps both: they share one set of UI state, so navigating to the
-// form and back doesn't throw away the fields it was seeded with.
+// Only the 404 is handled here: an unknown /app/* path is one whatever the session
+// and repo turn out to be.
 
 import React from 'react';
 import { WorklogApp } from './WorklogApp';
-import { TaskPage } from './TaskPage';
 import { WorklogProvider } from './context';
 import { Button, Modal } from './primitives';
 import { UpdatePrompt } from './components';
@@ -128,11 +126,7 @@ export default function WebApp() {
   return (
     <Chrome>
       <WorklogProvider>
-        {route.name === 'task' ? (
-          <TaskPage taskId={route.taskId} />
-        ) : (
-          <WorklogApp repoProps={{ repo, onSwitchRepo: switchRepo, onSignOut: signOut }} />
-        )}
+        <WorklogApp repoProps={{ repo, onSwitchRepo: switchRepo, onSignOut: signOut }} />
       </WorklogProvider>
       {recovery && <RecoveryPrompt info={recovery} onRestore={restore} onDiscard={discard} />}
 

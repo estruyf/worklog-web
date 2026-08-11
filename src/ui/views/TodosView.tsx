@@ -75,7 +75,7 @@ export function TodosView() {
 
   return (
     <div className="flex-1 overflow-auto px-6 py-10">
-      <div className="max-w-[920px] mx-auto">
+      <div className="max-w-[920px] xl:max-w-[1280px] mx-auto">
         <div className="flex items-center justify-between gap-3 mb-6">
           <div className="flex items-center gap-[10px]">
             <span className="w-[10px] h-[10px] rounded-full shrink-0" style={{ background: GENERAL_TODO_COLOR }} />

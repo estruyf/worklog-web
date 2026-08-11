@@ -58,7 +58,7 @@ export function OverdueView() {
 
   return (
     <div className="flex-1 overflow-auto px-6 py-10">
-      <div className="max-w-[920px] mx-auto">
+      <div className="max-w-[920px] xl:max-w-[1280px] mx-auto">
         <div className="flex flex-wrap items-center gap-[10px] mb-6">
           <TriangleAlertIcon size={20} className={overdueCount > 0 ? 'text-danger-675' : 'text-neutral-650'} />
           <h1 className="text-[24px] font-bold m-0">Overdue</h1>

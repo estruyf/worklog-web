@@ -5,69 +5,13 @@
 // silently gets wrong.
 
 import { describe, it, expect, vi } from 'vitest';
-
-interface Entry {
-  url: string;
-  state: unknown;
-}
-
-/** The slice of `window` the router touches, backed by a real entry stack so
- *  back() behaves the way the app relies on. */
-function installWindow(initial = '/app') {
-  const entries: Entry[] = [{ url: initial, state: null }];
-  let index = 0;
-  const popListeners: Array<() => void> = [];
-
-  const win = {
-    get location() {
-      // Resolved rather than split, because the router pushes `location.href`
-      // (an absolute URL) for the detail overlay's same-URL entry.
-      const url = new URL(entries[index].url, 'https://x');
-      return { pathname: url.pathname, search: url.search, href: url.href };
-    },
-    history: {
-      get state() {
-        return entries[index].state;
-      },
-      pushState(state: unknown, _title: string, url: string) {
-        entries.length = index + 1;
-        entries.push({ url, state });
-        index++;
-      },
-      replaceState(state: unknown, _title: string, url: string) {
-        entries[index] = { url, state };
-      },
-      back() {
-        if (index > 0) {
-          index--;
-          // Real popstate is async; firing it inline keeps the test readable and
-          // the router does not depend on the delay.
-          popListeners.forEach((l) => l());
-        }
-      },
-    },
-    addEventListener(type: string, listener: () => void) {
-      if (type === 'popstate') {
-        popListeners.push(listener);
-      }
-    },
-    removeEventListener() {},
-  };
-
-  (globalThis as { window?: unknown }).window = win;
-  return { depth: () => entries.length, at: () => index };
-}
+import { installWindow } from './helpers/fakeHistory';
 
 async function setup(initial?: string) {
   vi.resetModules();
   const win = installWindow(initial);
   const router = await import('../src/ui/router');
   return { ...win, ...router };
-}
-
-/** The task the detail overlay is open on, read the way the router stores it. */
-function overlayTaskId(): unknown {
-  return (window.history.state as Record<string, unknown> | null)?.worklogDetail;
 }
 
 describe('task form route', () => {
@@ -122,15 +66,14 @@ describe('task form route', () => {
     expect(r.taskFormInstance().seed).toEqual({});
   });
 
-  it('closes onto the task it just created, over the view the form was opened from', async () => {
+  it('closes onto the task it just created', async () => {
     const r = await setup();
     r.navigateToView('todos');
     r.navigateToTaskForm(null, { clientId: 'acme' });
 
     r.closeTaskFormOnto('t-new');
 
-    expect(window.location.pathname).toBe('/app/todos');
-    expect(overlayTaskId()).toBe('t-new');
+    expect(r.parseRoute(window.location.pathname)).toEqual({ name: 'task', taskId: 't-new' });
   });
 
   it('leaves no form entry behind, so Back off the new task returns to that view', async () => {
@@ -142,14 +85,13 @@ describe('task form route', () => {
     window.history.back();
 
     expect(window.location.pathname).toBe('/app/todos');
-    expect(overlayTaskId()).toBeUndefined();
     expect(r.taskFormInstance().seed).toEqual({});
   });
 
   it('routes to the new task when it closes back onto a task page', async () => {
     const r = await setup();
-    // A subtask added from /app/task/<parent>: the panel there follows the URL's
-    // own task, so an overlay entry would leave the new one invisible.
+    // A subtask added from /app/task/<parent>: closing the form lands back on the
+    // parent, and the new task has to take it from there rather than stay hidden.
     r.navigateToTask('t-parent');
     r.navigateToTaskForm(null, { parentId: 't-parent' });
 

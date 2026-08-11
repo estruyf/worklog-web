@@ -107,7 +107,7 @@ export function InsightsView() {
   };
   return (
     <div className="flex-1 overflow-auto px-6 py-[34px]">
-      <div className="max-w-[920px] mx-auto">
+      <div className="max-w-[920px] xl:max-w-[1280px] mx-auto">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-6">
           <h1 className="text-[24px] font-bold m-0">Insights</h1>
           <MonthPicker

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import type { AppView, LinkDraft, SearchScope } from "../model";
-import { closeTaskDetail, openTaskDetail, useDetailId } from "../router";
+import { closeTask, navigateToTask, useDetailId } from "../router";
 import { useConfirmDialog } from "./useConfirmDialog";
 
 /** Everything the transient UI state holds — the shape `useUi()` returns, and
@@ -60,16 +60,16 @@ export function useWorklogUiState() {
   const [logHours, setLogHours] = useState<number | string>(2);
   const [logNote, setLogNote] = useState("");
 
-  // The open task lives in history rather than in component state (see ../router):
-  // opening one pushes an entry so the browser's Back button closes the panel
-  // instead of navigating the app behind it and leaving it stranded on top. On
-  // the routed /app/task/<id> page the id comes from the route itself.
+  // The open task is the URL (see ../router): /app/task/<id> is a route like any
+  // other, which is what makes the task in front of you a link you can hand to
+  // someone. Nothing here holds it, so nothing here can disagree with the address
+  // bar; opening and closing are navigations.
   const detailId = useDetailId();
   const setDetailId = useCallback((id: string | null) => {
     if (id) {
-      openTaskDetail(id);
+      navigateToTask(id);
     } else {
-      closeTaskDetail();
+      closeTask();
     }
   }, []);
   const [descDraft, setDescDraft] = useState("");

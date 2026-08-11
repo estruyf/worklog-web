@@ -1,12 +1,12 @@
 import React, { useMemo } from 'react';
 import { clientIdOf, isDone } from '../utils';
 import { isGeneralTodoClientId } from '../../model/todos';
-import { Button } from '../primitives';
+import { Button, LinkButton } from '../primitives';
 import { LinkList } from './LinkList';
 import { DescriptionEditor } from './DescriptionEditor';
 import { NotesSection, SubtaskList, TaskDetailHeader, TaskSidebar } from './task-detail';
 import { useData, useUi } from '../context';
-import { navigateToTask } from '../router';
+import { navigateToDashboard, navigateToTask } from '../router';
 
 /** Resolves the task pointed at by detailId plus its parent, subtasks and dirty flag. */
 function useDetailData() {
@@ -28,33 +28,29 @@ function useDetailData() {
   return { task, parent, subtasks, occurrences, descDirty: !!task && descDraft !== (task.description ?? '') };
 }
 
-/** Full-screen task detail overlay: header actions, then the task's own content —
- * title, links, description, subtasks, notes — with everything that classifies it
- * in a rail on the right, the same way the task form is laid out. Renders nothing
- * when no task is open. In `routed` mode (the /app/task/<id> page) the in-panel
- * Back / Open buttons are hidden — the breadcrumb handles that — and parent /
- * subtask navigation pushes the matching task route. */
-export function TaskDetailPanel({ routed = false }: { routed?: boolean } = {}) {
+/** The task at /app/task/<id>: breadcrumb and the two actions you came to press,
+ * then the task's own content — title, links, description, subtasks, notes — with
+ * everything that classifies it in a rail on the right, the same way the task form
+ * is laid out.
+ *
+ * Fills the dashboard's main column rather than covering it, for the reason the
+ * task form does (see TaskFormPage): the nav stays put and this reads as a view.
+ * Mounted only on a task route, so the id is always set — an id that resolves to
+ * nothing is a link to a task that has since been deleted, which is worth saying
+ * rather than rendering blank. */
+export function TaskDetailPanel() {
   const { saveDescription, saveDescriptionText } = useData();
-  const { descDraft, setDescDraft, descMode, setDescMode, setDetailId } = useUi();
+  const { descDraft, setDescDraft, descMode, setDescMode } = useUi();
   const { task, parent, subtasks, occurrences, descDirty } = useDetailData();
   if (!task) {
-    return null;
+    return <MissingTask />;
   }
-  const onOpenTask = (id: string) => (routed ? navigateToTask(id) : setDetailId(id));
   // General to-dos are open or closed only — no worked-on marking.
   const isTodo = isGeneralTodoClientId(clientIdOf(task));
   return (
-    <div className={'fixed inset-0 z-40 bg-white overflow-auto' + (routed ? '' : ' top-13 md:top-0 md:left-57')}> {/* clears the mobile top bar (h-13) and the 228px (w-57) desktop sidebar rail */}
-      <div className="max-w-[920px] xl:max-w-[1280px] mx-auto px-6 py-8">
-        <TaskDetailHeader
-          task={task}
-          parent={parent}
-          routed={routed}
-          isTodo={isTodo}
-          onBack={() => setDetailId(null)}
-          onOpenTask={onOpenTask}
-        />
+    <div className="flex flex-1 flex-col bg-white">
+      <div className="flex-1 max-w-[920px] xl:max-w-[1280px] mx-auto w-full px-6 py-8">
+        <TaskDetailHeader task={task} isTodo={isTodo} />
 
         {/* Below lg this is one ordered column rather than two, by the same trick
             the task form uses: `contents` dissolves the column wrappers so their
@@ -91,7 +87,7 @@ export function TaskDetailPanel({ routed = false }: { routed?: boolean } = {}) {
                 }
               />
 
-              <SubtaskList task={task} subtasks={subtasks} onOpenTask={onOpenTask} />
+              <SubtaskList task={task} subtasks={subtasks} onOpenTask={navigateToTask} />
 
               <NotesSection task={task} />
             </div>
@@ -99,18 +95,23 @@ export function TaskDetailPanel({ routed = false }: { routed?: boolean } = {}) {
 
           <aside className="contents lg:block lg:w-[320px] lg:shrink-0 lg:border-l lg:border-neutral-375 lg:pl-8">
             <div className="order-2 mb-4 lg:mb-0">
-              <TaskSidebar
-                task={task}
-                parent={parent}
-                routed={routed}
-                isTodo={isTodo}
-                occurrences={occurrences}
-                onOpenTask={onOpenTask}
-              />
+              <TaskSidebar task={task} parent={parent} isTodo={isTodo} occurrences={occurrences} onOpenTask={navigateToTask} />
             </div>
           </aside>
         </div>
       </div>
+    </div>
+  );
+}
+
+/** What a link to a task that no longer exists lands on. Reachable by URL alone —
+ *  the app steps off the route itself when you delete the task you are looking at
+ *  — so it says what happened rather than redirecting somewhere unexplained. */
+function MissingTask() {
+  return (
+    <div className="flex flex-1 flex-col items-center justify-center gap-4 bg-white text-body text-neutral-675">
+      This task no longer exists.
+      <LinkButton onClick={navigateToDashboard}>‹ Back to Worklog</LinkButton>
     </div>
   );
 }

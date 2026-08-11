@@ -122,7 +122,7 @@ function Combos({ combos }: { combos: string[][] }) {
 export function ShortcutsView() {
   return (
     <div className="flex-1 overflow-auto px-6 py-10">
-      <div className="max-w-[920px] mx-auto">
+      <div className="max-w-[920px] xl:max-w-[1280px] mx-auto">
         <div className="mb-8">
           <div className="flex flex-wrap items-center gap-[10px]">
             <KeyboardIcon size={20} className="text-neutral-650" />

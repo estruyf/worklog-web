@@ -6,6 +6,13 @@ plumbing) gets a line too when it changes how the codebase is worked in.
 
 ## 2026-08-11
 
+- Opening a task now goes to its own address (`/app/task/<id>`), so the task in front of you
+  is a link you can copy out of the address bar and hand to someone — it used to open as a
+  panel over the app with the URL never changing. Leaving it — the button top left, which now
+  names where it goes ("‹ Back to Day", "‹ Back to Calendar"), Escape, or the browser's Back —
+  returns you to the view you opened it from, and a task's tag chips now lead to the tag search
+  from the task itself. A task link truncated at the last slash (`/app/task`) lands on the
+  dashboard instead of a "page not found".
 - Task details now put the description above the subtasks, so what the task is comes before
   what it breaks down into.
 - A task's subtask list now shows only what is still open, with a "Show N done" toggle in the

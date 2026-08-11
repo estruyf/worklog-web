@@ -1,9 +1,9 @@
 // Minimal client-side router for the /app island. Each top-level view is a route
-// (day at /app, the rest at /app/<view>), and a single task opens as a shareable
-// sub-route /app/task/<id> with a breadcrumb. The task form is a route too —
-// /app/new and /app/task/<id>/edit — because a dialog tall enough to hold it
-// gets cut off on short screens with nothing to scroll. Built on the History API
-// so the browser's back/forward buttons just work.
+// (day at /app, the rest at /app/<view>), and a single task is a route of its own
+// at /app/task/<id>. The task form is a route too — /app/new and
+// /app/task/<id>/edit — because a dialog tall enough to hold it gets cut off on
+// short screens with nothing to scroll. Built on the History API so the browser's
+// back/forward buttons just work.
 //
 // `navigate` wraps `history.pushState` and notifies subscribers; a `popstate`
 // listener covers back/forward. Route helpers preserve the current query string
@@ -13,10 +13,12 @@
 // open it with the task's fields in the query string, and `consumeTaskDeeplink`
 // normalizes those into the same seed an in-app open uses. See ./deeplink.
 //
-// The dashboard's task detail panel is an overlay rather than a route — it covers
-// the app without changing the URL — so it gets a history entry of its own here
-// too (a same-URL entry tagged with the task id). Without one, Back would move
-// the app underneath the panel while the panel itself stayed put on top.
+// Opening a task used to be an overlay on a same-URL history entry: it covered the
+// app without changing the address, so the task you were looking at had no link to
+// give anyone. Every open is a real navigation now, and the address bar is the
+// share affordance. What the overlay got right is kept — Back closes the task, and
+// a subtask opened from within one stacks, so Back walks back up the chain — but it
+// falls out of ordinary history rather than out of a parallel mechanism.
 
 import { useSyncExternalStore } from 'react';
 import { DEEPLINK_PARAMS, parseTaskDeeplink } from './deeplink';
@@ -72,8 +74,11 @@ function subscribe(listener: () => void): () => void {
   return () => listeners.delete(listener);
 }
 
-// The history-state key holding the task the detail overlay is open on.
-const DETAIL_KEY = 'worklogDetail';
+// Marks a history entry this app pushed for a task, so closing the task can walk
+// back off it onto whatever it was opened from — the calendar you were browsing,
+// the parent task — instead of guessing a destination. A task reached by a pasted
+// or shared link has no such entry, which is exactly the difference that matters.
+const TASK_KEY = 'worklogTask';
 // Marks a history entry this app pushed for the task form, so closing the form
 // can walk back off it instead of stranding the user on an unrelated page.
 const FORM_KEY = 'worklogForm';
@@ -114,12 +119,6 @@ export interface TaskFormSeed {
 export interface TaskFormInstance {
   seed: TaskFormSeed;
   key: string;
-}
-
-function readDetailState(): string | null {
-  const state = window.history.state as Record<string, unknown> | null;
-  const id = state?.[DETAIL_KEY];
-  return typeof id === 'string' ? id : null;
 }
 
 function readFormInstance(): TaskFormInstance {
@@ -171,24 +170,45 @@ function consumeTaskDeeplink(): void {
   );
 }
 
-// Before the snapshots below are taken: they read what the deeplink has just
-// written into history state.
+/** Send `/app/task` with no id to the dashboard.
+ *
+ *  It addresses no task — a shared link truncated at the last slash, or one typed
+ *  by hand — and the dashboard is the only thing it can reasonably mean. Now that
+ *  every task is a URL people copy and paste, that truncation is a normal way to
+ *  arrive, and a 404 is a poor answer to a link that is only missing its last
+ *  segment.
+ *
+ *  Replaces rather than pushes, and keeps the query string that selects the mounted
+ *  repo: a pushed entry would leave Back pointing at a URL that immediately
+ *  redirects again, which reads as Back being broken. */
+function redirectBareTaskPath(): void {
+  const rest = window.location.pathname.startsWith(APP_BASE)
+    ? window.location.pathname.slice(APP_BASE.length)
+    : window.location.pathname;
+  if (rest !== '/task' && rest !== '/task/') {
+    return;
+  }
+  window.history.replaceState({}, '', APP_BASE + window.location.search);
+}
+
+// Before the snapshots below are taken: they read the path the redirect leaves
+// behind and what the deeplink has written into history state.
 if (typeof window !== 'undefined') {
+  redirectBareTaskPath();
   consumeTaskDeeplink();
 }
 
 // Cache the current route object so useSyncExternalStore gets a stable reference
 // until the location actually changes.
 let current: Route = typeof window === 'undefined' ? { name: 'view', view: 'day' } : parseRoute(window.location.pathname);
-let overlayDetailId: string | null = typeof window === 'undefined' ? null : readDetailState();
 const EMPTY_FORM_INSTANCE: TaskFormInstance = { seed: {}, key: '0' };
 // Cached for the same reason as `current`: useSyncExternalStore compares by
 // identity, so this must not be rebuilt per read.
 let formInstance: TaskFormInstance = typeof window === 'undefined' ? EMPTY_FORM_INSTANCE : readFormInstance();
-// `history.back()` only lands on the next popstate, so the overlay still reads as
-// open until then. This keeps a second close request in that window (a delete
-// closes the panel from two places) from popping one entry too many.
-let closingDetail = false;
+// `history.back()` only lands on the next popstate, so the task still reads as
+// open until then. This keeps a second close request in that window (deleting a
+// task closes it from two places) from popping one entry too many.
+let closingTask = false;
 // Same for the task form: `history.back()` only lands on the next popstate, so a
 // second close request in that window must not pop an extra entry (saving and
 // deleting both close the form on their way out).
@@ -199,16 +219,18 @@ let closingForm = false;
 let showAfterFormClose: string | null = null;
 
 function refresh(): void {
+  // Here as well as on arrival, so no route is ever read from a bare task path —
+  // a launch target or a protocol link can hand one over mid-session.
+  redirectBareTaskPath();
   current = parseRoute(window.location.pathname);
-  overlayDetailId = readDetailState();
   formInstance = readFormInstance();
-  closingDetail = false;
+  closingTask = false;
   closingForm = false;
   const pending = showAfterFormClose;
   showAfterFormClose = null;
   notify();
   if (pending) {
-    showTask(pending);
+    navigateToTask(pending);
   }
 }
 
@@ -216,17 +238,9 @@ if (typeof window !== 'undefined') {
   window.addEventListener('popstate', refresh);
 }
 
-/** Push a new path (keeping the current query string) and re-render routed views.
- *  Navigating while the detail overlay is open replaces its entry instead of
- *  stacking on top of it, so Back from the new view can't resurrect a panel the
- *  user has already left. */
+/** Push a new path (keeping the current query string) and re-render routed views. */
 function navigate(path: string): void {
-  const url = path + window.location.search;
-  if (overlayDetailId) {
-    window.history.replaceState({}, '', url);
-  } else {
-    window.history.pushState({}, '', url);
-  }
+  window.history.pushState({}, '', path + window.location.search);
   refresh();
 }
 
@@ -239,8 +253,42 @@ export function navigateToView(view: AppView): void {
   navigate(viewPath(view));
 }
 
+/** Open a task at its own URL. The entry is tagged as ours so `closeTask` can walk
+ *  back off it; re-opening the task you are already on replaces that entry rather
+ *  than stacking a second one Back would have to step over twice. */
 export function navigateToTask(taskId: string): void {
-  navigate(`${APP_BASE}/task/${encodeURIComponent(taskId)}`);
+  const path = `${APP_BASE}/task/${encodeURIComponent(taskId)}`;
+  const url = path + window.location.search;
+  const state = { [TASK_KEY]: true };
+  if (window.location.pathname === path) {
+    window.history.replaceState(state, '', url);
+  } else {
+    window.history.pushState(state, '', url);
+  }
+  refresh();
+}
+
+/** Leave the open task. Walks back off the entry opening it pushed, so closing it
+ *  in-app and closing it with Back leave the same history behind — and land on the
+ *  same place, whichever view or parent task it was opened from. A task reached by
+ *  a shared link has no entry of ours to walk off, so that one falls back to the
+ *  dashboard rather than leaving the app entirely.
+ *
+ *  A no-op when no task is open. Callers reach for this to mean "close whatever
+ *  task is showing" from places where none need be — a tag chip on a task row does
+ *  it from the middle of a view — and navigating them off that view would be a
+ *  strange way to answer "there was nothing to close". */
+export function closeTask(): void {
+  if (closingTask || current.name !== 'task') {
+    return;
+  }
+  const state = window.history.state as Record<string, unknown> | null;
+  if (state?.[TASK_KEY]) {
+    closingTask = true;
+    window.history.back();
+  } else {
+    navigate(APP_BASE);
+  }
 }
 
 export function navigateToDashboard(): void {
@@ -248,10 +296,8 @@ export function navigateToDashboard(): void {
 }
 
 /** Open the task form: /app/new for a new task, /app/task/<id>/edit for an
- *  existing one. Always pushes (never replaces the detail overlay's entry the
- *  way `navigate` does) so Back off the form lands on the panel you opened it
- *  from, panel included. `seed` is what a new form starts from — the form reads
- *  it once on mount and owns its fields from there. */
+ *  existing one. `seed` is what a new form starts from — the form reads it once on
+ *  mount and owns its fields from there. */
 export function navigateToTaskForm(taskId?: string | null, seed: TaskFormSeed = {}): void {
   const path = taskId ? `${APP_BASE}/task/${encodeURIComponent(taskId)}/edit` : `${APP_BASE}/new`;
   const url = path + window.location.search;
@@ -308,9 +354,9 @@ export function navigateToLaunchTarget(target: string): void {
     navigateToTaskForm(null, parseTaskDeeplink(url.searchParams) ?? {});
     return;
   }
-  // Already here, with nothing overlaid to dismiss: focusing the window *was* the
-  // whole request, and a duplicate entry would only give Back nothing to do.
-  if (url.pathname === window.location.pathname && !overlayDetailId) {
+  // Already here: focusing the window *was* the whole request, and a duplicate
+  // entry would only give Back nothing to do.
+  if (url.pathname === window.location.pathname) {
     return;
   }
   navigate(url.pathname);
@@ -359,38 +405,6 @@ export function closeTaskFormOnto(taskId: string): void {
   window.history.back();
 }
 
-/** Show a task on whatever the app is currently displaying: the overlay on the
- *  dashboard, the routed page when we're already on one — there the panel follows
- *  the URL's own task (see `useDetailId`), so an overlay entry would be invisible. */
-function showTask(taskId: string): void {
-  if (current.name === 'task') {
-    navigateToTask(taskId);
-  } else {
-    openTaskDetail(taskId);
-  }
-}
-
-/** Open the dashboard's task detail overlay. Adds a same-URL history entry so the
- *  browser's Back button (and the phone's swipe / system back) closes the panel;
- *  opening a subtask from within it stacks, so Back walks back up the chain. */
-export function openTaskDetail(taskId: string): void {
-  if (overlayDetailId === taskId) {
-    return;
-  }
-  window.history.pushState({ [DETAIL_KEY]: taskId }, '', window.location.href);
-  refresh();
-}
-
-/** Close the detail overlay by walking back off the entry it pushed, so closing
- *  it in-app and closing it with Back leave the same history behind. No-op when
- *  no overlay entry is on the stack (e.g. on the routed /app/task/<id> page). */
-export function closeTaskDetail(): void {
-  if (overlayDetailId && !closingDetail) {
-    closingDetail = true;
-    window.history.back();
-  }
-}
-
 /** Subscribe to the active route. */
 export function useRoute(): Route {
   return useSyncExternalStore(
@@ -412,14 +426,9 @@ export function useTaskFormInstance(): TaskFormInstance {
   return useSyncExternalStore(subscribe, taskFormInstance, () => EMPTY_FORM_INSTANCE);
 }
 
-/** The task the detail view is pinned to: on /app/task/<id> the route's own task,
- *  everywhere else whatever the overlay was opened with. */
+/** The task being shown, or null when the route isn't a task. The URL is the only
+ *  place this lives — which is what makes the open task addressable. */
 export function useDetailId(): string | null {
   const route = useRoute();
-  const overlay = useSyncExternalStore(
-    subscribe,
-    () => overlayDetailId,
-    () => null,
-  );
-  return route.name === 'task' ? route.taskId : overlay;
+  return route.name === 'task' ? route.taskId : null;
 }

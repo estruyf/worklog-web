@@ -41,9 +41,13 @@ export function WorklogApp({ repoProps }: { repoProps?: SidebarRepoProps } = {})
   const { snap, toast, loading, noClients, today, openTaskFormFromShortcut, openLogForm } = useData();
   const { view, searchOpen, detailId, clientModalOpen, setSearchOpen, setDetailId, searchSel, setSearchSel, setSelectedDate } = useUi();
   const searchData = useSearchData();
-  // The task form is a route, but it lives in the dashboard's main column rather
-  // than a page of its own: leaving the nav behind made it read as a different app.
-  const formOpen = useRoute().name === 'taskForm';
+  // The task form and the open task are routes, but both live in the dashboard's
+  // main column rather than pages of their own: leaving the nav behind made them
+  // read as a different app. It also means a shared /app/task/<id> link opens the
+  // app someone can actually move around in, with search and the dialogs mounted.
+  const routeName = useRoute().name;
+  const formOpen = routeName === 'taskForm';
+  const taskOpen = routeName === 'task';
 
   // Latest state/actions for the global key handler, so it can stay subscribed
   // once instead of re-binding on every keystroke. Everything the handler reads
@@ -106,10 +110,10 @@ export function WorklogApp({ repoProps }: { repoProps?: SidebarRepoProps } = {})
         s.openLogForm();
         return;
       }
-      // Only the task detail panel is handled here. The dialogs (search, client
-      // form, confirm) are `Modal`s, which own Escape themselves and stop it
-      // before it reaches this listener — so a dialog layered over the panel
-      // closes the dialog, not the panel underneath.
+      // Only the open task is handled here — Escape leaves its route the same way
+      // Back does. The dialogs (search, client form, confirm) are `Modal`s, which
+      // own Escape themselves and stop it before it reaches this listener, so a
+      // dialog layered over the task closes the dialog, not the task underneath.
       if (e.key === 'Escape') {
         if (s.detailId) {
           setDetailId(null);
@@ -159,11 +163,10 @@ export function WorklogApp({ repoProps }: { repoProps?: SidebarRepoProps } = {})
         {/* Above the view rather than inside it: every view scrolls its own
             content, and this has to stay put in all of them. */}
         <SyncStatusBar />
-        {noClients ? <EmptyClientsView /> : formOpen ? <TaskFormPage /> : <ActiveView />}
+        {noClients ? <EmptyClientsView /> : formOpen ? <TaskFormPage /> : taskOpen ? <TaskDetailPanel /> : <ActiveView />}
       </main>
 
       {searchOpen && <SearchOverlay />}
-      {detailId && <TaskDetailPanel />}
       {clientModalOpen && <ClientFormModal />}
 
       {/* Layers over everything, including the task form, and swallows the keys

@@ -14,17 +14,20 @@ import {
   NavOverdueIcon,
   NavTodosIcon,
 } from '../icons';
+import { VIEW_LABELS } from '../../views/routes';
 import { navItemClass } from './styles';
 
-/** Nav tabs, in display order. Each keeps the app's tuned glyph — see `icons.tsx`. */
-const NAV_ITEMS: { view: AppView; label: string; icon: React.ReactNode }[] = [
-  { view: 'day', label: 'Day', icon: <NavDayIcon /> },
-  { view: 'overdue', label: 'Overdue', icon: <NavOverdueIcon /> },
-  { view: 'todos', label: 'To-dos', icon: <NavTodosIcon /> },
-  { view: 'calendar', label: 'Calendar', icon: <NavCalendarIcon /> },
-  { view: 'clients', label: 'Clients', icon: <NavClientsIcon /> },
-  { view: 'insights', label: 'Insights', icon: <NavInsightsIcon /> },
-  { view: 'archive', label: 'Archive', icon: <NavArchiveIcon /> },
+/** Nav tabs, in display order. Each keeps the app's tuned glyph — see `icons.tsx`.
+ *  The names come from `VIEW_LABELS`, which the way back from an open task reads
+ *  too, so a tab and the button returning to it always agree. */
+const NAV_ITEMS: { view: AppView; icon: React.ReactNode }[] = [
+  { view: 'day', icon: <NavDayIcon /> },
+  { view: 'overdue', icon: <NavOverdueIcon /> },
+  { view: 'todos', icon: <NavTodosIcon /> },
+  { view: 'calendar', icon: <NavCalendarIcon /> },
+  { view: 'clients', icon: <NavClientsIcon /> },
+  { view: 'insights', icon: <NavInsightsIcon /> },
+  { view: 'archive', icon: <NavArchiveIcon /> },
 ];
 
 /** The seven view tabs, with counts on the two that would otherwise go unnoticed. */
@@ -47,7 +50,7 @@ export function NavList({ onGo }: { onGo: (view: AppView) => void }) {
       {NAV_ITEMS.map((item) => (
         <button key={item.view} onClick={() => onGo(item.view)} className={navItemClass(view === item.view)}>
           <span className="shrink-0">{item.icon}</span>
-          {item.label}
+          {VIEW_LABELS[item.view]}
           {item.view === 'todos' && todoCount > 0 && (
             <Badge size="sm" className="ml-auto">
               {todoCount}

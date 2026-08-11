@@ -97,13 +97,10 @@ export function WorklogProvider({ children }: { children: React.ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ui.selectedDate, snap]);
 
-  // Close the detail view if the task it points at was deleted out from under us.
-  React.useEffect(() => {
-    if (snap && ui.detailId && !snap.tasks.some((t) => t.id === ui.detailId)) {
-      ui.setDetailId(null);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [snap, ui.detailId]);
+  // No effect closes a task whose id stops resolving. The task is a route now, so
+  // that case is a link to something deleted — worth saying (TaskDetailPanel says
+  // it) rather than redirecting. Deleting the task you are looking at steps off the
+  // route from the action itself, in useTaskActions.
 
   // Load the markdown draft whenever a different task is opened. Intentionally keyed
   // on detailId only: a snapshot refresh after saving must not clobber an in-progress edit.

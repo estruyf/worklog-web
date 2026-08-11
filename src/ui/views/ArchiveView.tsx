@@ -186,7 +186,7 @@ export function ArchiveView() {
   const deleteForever = (id: string) => deleteTask(id, { permanent: true });
   return (
     <div className="flex-1 overflow-auto px-6 py-10">
-      <div className="max-w-[920px] mx-auto">
+      <div className="max-w-[920px] xl:max-w-[1280px] mx-auto">
         <div className="flex items-center justify-between gap-3 mb-6">
           <h1 className="text-[24px] font-bold m-0">Archive</h1>
           <span className="text-control text-neutral-675">
