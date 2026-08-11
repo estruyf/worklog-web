@@ -17,6 +17,12 @@ Every change to Worklog, by day, newest first.
 
 ## 2026-08-11
 
+- Open a subtask *from its parent* and the way out now leads back to the parent, so you can work
+  down its list one subtask at a time instead of landing on the day and finding your way in again.
+  Open the same subtask from the day, the search or a shared link and the button reads "Back to
+  Day" as before — it names where you came from, not where the task sits.
+- Task lists with no subtasks in them no longer leave a gap on the left for the fold arrow — the titles
+  start where the list starts, and the arrow's column appears only once something in that list has subtasks
 - This changelog is now a page anyone can read, at `/changelog` — linked from the site footer
   and from "What's new" at the bottom of the app's sidebar. It is this file, rendered: the
   dates run down one side and the day's changes beside them, so what shipped and when is

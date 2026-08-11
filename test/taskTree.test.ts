@@ -8,6 +8,7 @@ import {
   parentCandidates,
   parseCollapsedStore,
   planTaskRows,
+  plansFold,
   pruneCollapsed,
   toggleCollapsed,
   type CollapsedStore,
@@ -64,6 +65,24 @@ describe('planTaskRows', () => {
     expect(shape([kidA, lone])).toEqual(['p2', 'k1']);
     // ...and folding a parent that isn't in the list can't smuggle it back out.
     expect(shape([kidA], new Set(['p1']))).toEqual(['k1']);
+  });
+});
+
+describe('plansFold', () => {
+  it('reserves the fold column only for a list that actually nests', () => {
+    expect(plansFold(planTaskRows([parent, kidA, lone]))).toBe(true);
+    // Flat list: no row would ever draw a chevron, so none leaves room for one.
+    expect(plansFold(planTaskRows([parent, lone]))).toBe(false);
+    // A filter that removed every subtask makes the list flat again.
+    expect(plansFold(planTaskRows([parent]))).toBe(false);
+    // Orphans nest under nothing, so a list of them is flat too.
+    expect(plansFold(planTaskRows([kidA, lone]))).toBe(false);
+  });
+
+  it('keeps the column while a parent is folded shut', () => {
+    // The children are out of the plan, but the toggle that brings them back is
+    // still on screen and still needs its slot.
+    expect(plansFold(planTaskRows([parent, kidA], new Set(['p1'])))).toBe(true);
   });
 });
 

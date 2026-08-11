@@ -95,6 +95,16 @@ export function planTaskRows(list: Task[], collapsed: ReadonlySet<string> = new 
   return plans;
 }
 
+/** Whether anything in the plan nests, which is what decides if the rows reserve
+ *  the fold column at all. Within one list the answer has to be the same for
+ *  every row — titles that started at different x depending on their own
+ *  subtasks would read as a ragged list — but a list with no parent among it has
+ *  nothing to line up with, and indenting every title past a chevron that will
+ *  never be drawn is space spent on nothing. */
+export function plansFold(plans: TaskRowPlan[]): boolean {
+  return plans.some((p) => p.foldable);
+}
+
 /** What the detail panel's subtask section renders, given the user's choice of
  *  whether the done ones are on screen. */
 export interface SubtaskListModel {

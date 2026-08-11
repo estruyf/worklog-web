@@ -87,6 +87,77 @@ describe('task route', () => {
     expect(r.depth()).toBe(depthAfterOpen);
   });
 
+  it('walks back onto the parent a subtask was opened from', async () => {
+    const r = await setup();
+    r.navigateToView('todos');
+    r.navigateToTask('t-parent');
+    const atParent = r.at();
+    r.navigateToTask('t-child');
+
+    r.navigateBackToTask('t-parent');
+
+    // The entry the subtask was opened from, not a second copy of the parent on
+    // top of it: stepping through a parent's subtasks must not pile up a chain.
+    expect(r.parseRoute(window.location.pathname)).toEqual({ name: 'task', taskId: 't-parent' });
+    expect(r.at()).toBe(atParent);
+  });
+
+  it('leaves the parent’s own way out pointing at the view', async () => {
+    const r = await setup();
+    r.navigateToView('todos');
+    r.navigateToTask('t-parent');
+    r.navigateToTask('t-child');
+    r.navigateBackToTask('t-parent');
+
+    r.closeTask();
+
+    expect(window.location.pathname).toBe('/app/todos');
+  });
+
+  it('goes to a task that is not behind us by pushing, not by walking back', async () => {
+    const r = await setup();
+    r.navigateToView('todos');
+    // The header doesn't offer this — it only names the parent you arrived from —
+    // but the helper is "go to this task", and going somewhere must not be a
+    // back() onto whatever happens to be behind.
+    r.navigateToTask('t-child');
+
+    r.navigateBackToTask('t-parent');
+
+    expect(r.parseRoute(window.location.pathname)).toEqual({ name: 'task', taskId: 't-parent' });
+    r.closeTask();
+    expect(r.parseRoute(window.location.pathname)).toEqual({ name: 'task', taskId: 't-child' });
+  });
+
+  it('keeps what an entry was opened from when the task is re-opened in place', async () => {
+    const r = await setup();
+    r.navigateToTask('t-parent');
+    const atParent = r.at();
+    r.navigateToTask('t-child');
+    // A save, a status change — anything that re-opens the task you are already
+    // on. It replaces the entry, and the replacement must not read as the subtask
+    // having been opened from itself.
+    r.navigateToTask('t-child');
+
+    r.navigateBackToTask('t-parent');
+
+    expect(r.at()).toBe(atParent);
+    expect(r.parseRoute(window.location.pathname)).toEqual({ name: 'task', taskId: 't-parent' });
+  });
+
+  it('ignores a second back-to-parent while the first has not landed yet', async () => {
+    const r = await setup(undefined, { asyncPop: true });
+    r.navigateToView('todos');
+    r.navigateToTask('t-parent');
+    r.navigateToTask('t-child');
+
+    r.navigateBackToTask('t-parent');
+    r.navigateBackToTask('t-parent');
+    await Promise.resolve();
+
+    expect(r.parseRoute(window.location.pathname)).toEqual({ name: 'task', taskId: 't-parent' });
+  });
+
   it('sends a task URL with no id to the dashboard', async () => {
     const r = await setup('/app/task');
 
@@ -158,5 +229,74 @@ describe('task route', () => {
     await Promise.resolve();
 
     expect(r.parseRoute(window.location.pathname)).toEqual({ name: 'task', taskId: 't-parent' });
+  });
+});
+
+// What the detail header offers as the way out. Having a parent is not the test:
+// the same subtask is opened from its parent, from the day it is due on and from
+// a pasted link, and only the first has a list behind it worth going back to.
+describe('the task an entry was opened from', () => {
+  it('is the task a subtask was opened from', async () => {
+    const r = await setup();
+    r.navigateToView('todos');
+    r.navigateToTask('t-parent');
+    r.navigateToTask('t-child');
+
+    expect(r.openedFromTaskId()).toBe('t-parent');
+  });
+
+  it('is nothing for a subtask opened straight from a view', async () => {
+    const r = await setup();
+    r.navigateToView('day');
+    r.navigateToTask('t-child');
+
+    expect(r.openedFromTaskId()).toBeNull();
+  });
+
+  it('is nothing for a subtask reached by a shared link', async () => {
+    const r = await setup('/app/task/t-child');
+
+    expect(r.openedFromTaskId()).toBeNull();
+  });
+
+  it('is nothing once the parent itself is the task on screen', async () => {
+    const r = await setup();
+    r.navigateToView('todos');
+    r.navigateToTask('t-parent');
+
+    expect(r.openedFromTaskId()).toBeNull();
+  });
+
+  it('survives a re-open of the task in place', async () => {
+    const r = await setup();
+    r.navigateToTask('t-parent');
+    r.navigateToTask('t-child');
+    r.navigateToTask('t-child');
+
+    expect(r.openedFromTaskId()).toBe('t-parent');
+  });
+
+  it('comes back with the entry when the chain is walked', async () => {
+    const r = await setup();
+    r.navigateToView('todos');
+    r.navigateToTask('t-parent');
+    r.navigateToTask('t-child');
+    // Off the subtask, then onto another one from the same parent.
+    r.closeTask();
+    r.navigateToTask('t-other-child');
+
+    expect(r.openedFromTaskId()).toBe('t-parent');
+  });
+
+  it('is dropped on the way back out to a view', async () => {
+    const r = await setup();
+    r.navigateToView('todos');
+    r.navigateToTask('t-parent');
+    r.navigateToTask('t-child');
+    r.closeTask();
+
+    r.navigateToView('day');
+
+    expect(r.openedFromTaskId()).toBeNull();
   });
 });

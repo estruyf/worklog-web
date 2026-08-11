@@ -79,6 +79,10 @@ function subscribe(listener: () => void): () => void {
 // the parent task — instead of guessing a destination. A task reached by a pasted
 // or shared link has no such entry, which is exactly the difference that matters.
 const TASK_KEY = 'worklogTask';
+// The task an entry was opened *from*, when that was another task. It is what lets
+// the way back out of a subtask land on its parent without pushing a second copy
+// of the parent on top of the chain — see `navigateBackToTask`.
+const FROM_KEY = 'worklogTaskFrom';
 // Marks a history entry this app pushed for the task form, so closing the form
 // can walk back off it instead of stranding the user on an unrelated page.
 const FORM_KEY = 'worklogForm';
@@ -129,6 +133,11 @@ function readFormInstance(): TaskFormInstance {
     seed: seed && typeof seed === 'object' ? (seed as TaskFormSeed) : {},
     key: typeof seq === 'number' ? String(seq) : '0',
   };
+}
+
+function readOpenedFrom(): string | null {
+  const from = (window.history.state as Record<string, unknown> | null)?.[FROM_KEY];
+  return typeof from === 'string' ? from : null;
 }
 
 // Counts the form openings this session, so each gets its own instance key.
@@ -205,6 +214,9 @@ const EMPTY_FORM_INSTANCE: TaskFormInstance = { seed: {}, key: '0' };
 // Cached for the same reason as `current`: useSyncExternalStore compares by
 // identity, so this must not be rebuilt per read.
 let formInstance: TaskFormInstance = typeof window === 'undefined' ? EMPTY_FORM_INSTANCE : readFormInstance();
+// The task the entry we are on was opened from, read out of history state so it
+// survives a reload and a walk back through the chain.
+let openedFrom: string | null = typeof window === 'undefined' ? null : readOpenedFrom();
 // `history.back()` only lands on the next popstate, so the task still reads as
 // open until then. This keeps a second close request in that window (deleting a
 // task closes it from two places) from popping one entry too many.
@@ -224,6 +236,7 @@ function refresh(): void {
   redirectBareTaskPath();
   current = parseRoute(window.location.pathname);
   formInstance = readFormInstance();
+  openedFrom = readOpenedFrom();
   closingTask = false;
   closingForm = false;
   const pending = showAfterFormClose;
@@ -259,13 +272,40 @@ export function navigateToView(view: AppView): void {
 export function navigateToTask(taskId: string): void {
   const path = `${APP_BASE}/task/${encodeURIComponent(taskId)}`;
   const url = path + window.location.search;
-  const state = { [TASK_KEY]: true };
+  const previous = window.history.state as Record<string, unknown> | null;
+  // Where this entry was opened from, when that was another task. A re-open in
+  // place is not a move, so it keeps whatever the entry already recorded rather
+  // than naming the task as its own origin.
+  const from = current.name === 'task' && current.taskId !== taskId ? current.taskId : previous?.[FROM_KEY];
+  const state = from ? { [TASK_KEY]: true, [FROM_KEY]: from } : { [TASK_KEY]: true };
   if (window.location.pathname === path) {
     window.history.replaceState(state, '', url);
   } else {
     window.history.pushState(state, '', url);
   }
   refresh();
+}
+
+/** Go to a task as the way *back* — the parent of the subtask on screen.
+ *
+ *  Walks back off the current entry when that entry was opened from this very
+ *  task, so working through a parent's subtasks one after another leaves the
+ *  parent's single entry behind instead of a trail of parent/child/parent pushes
+ *  that Back then has to step through. The header only offers the way back when
+ *  that is the case (see `useOpenedFromTaskId`), so the push below is the contract
+ *  holding rather than a path the UI takes: called with a task that is not behind
+ *  us, this still goes there. */
+export function navigateBackToTask(taskId: string): void {
+  if (closingTask) {
+    return;
+  }
+  const state = window.history.state as Record<string, unknown> | null;
+  if (current.name === 'task' && state?.[TASK_KEY] && state?.[FROM_KEY] === taskId) {
+    closingTask = true;
+    window.history.back();
+    return;
+  }
+  navigateToTask(taskId);
 }
 
 /** Leave the open task. Walks back off the entry opening it pushed, so closing it
@@ -431,4 +471,21 @@ export function useTaskFormInstance(): TaskFormInstance {
 export function useDetailId(): string | null {
   const route = useRoute();
   return route.name === 'task' ? route.taskId : null;
+}
+
+/** The task the entry we are on was opened from, or null. Exported for tests; the
+ *  app reads the hook below. */
+export function openedFromTaskId(): string | null {
+  return openedFrom;
+}
+
+/** Which task the open one was reached from, when it was reached from one at all.
+ *
+ *  Deliberately not "does this task have a parent": the same subtask is opened
+ *  from its parent, from the day it is due on, and from a shared link, and only
+ *  the first of those has a parent behind it to go back to. It is history state
+ *  rather than a URL segment because it describes the journey, not the task — the
+ *  address stays the one thing you can copy and hand to someone. */
+export function useOpenedFromTaskId(): string | null {
+  return useSyncExternalStore(subscribe, openedFromTaskId, () => null);
 }

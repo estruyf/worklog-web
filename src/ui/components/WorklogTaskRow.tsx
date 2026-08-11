@@ -9,10 +9,15 @@ import { PriorityChip } from './PriorityChip';
 import { StatusPicker } from './StatusPicker';
 import { WorkedToggle } from './WorkedToggle';
 
-/** The fold toggle, or the space it would take. Rows without subtasks render the
- *  spacer rather than nothing, so every title in a list starts at the same x —
- *  a chevron that shifted its neighbours would be worse than no chevron. */
-function FoldToggle({ collapsed, onToggle }: { collapsed?: boolean; onToggle?: () => void }) {
+/** The fold toggle, or the space it would take. Within a list that nests, rows
+ *  without subtasks render the spacer rather than nothing, so every title starts
+ *  at the same x — a chevron that shifted its neighbours would be worse than no
+ *  chevron. A list where nothing nests (`slot` false) drops the column entirely
+ *  instead of indenting every row around a toggle it will never draw. */
+function FoldToggle({ slot, collapsed, onToggle }: { slot: boolean; collapsed?: boolean; onToggle?: () => void }) {
+  if (!slot) {
+    return null;
+  }
   if (!onToggle) {
     return <span className="w-4 shrink-0" aria-hidden="true" />;
   }
@@ -114,6 +119,18 @@ function LinkChip({ link, size }: { link: string; size: number }) {
   );
 }
 
+// How far the narrow row's meta line is indented to sit under the title: the
+// buttons to its left, which is the fold slot (16px + its 11px gap) when the list
+// reserves one, plus the done circle and — on rows that have it — the worked
+// toggle. Written out per case rather than summed into an arbitrary value at
+// runtime: Tailwind only emits the classes its source scan finds.
+const META_INDENT = {
+  'slot-worked': 'pl-[72px]',
+  'slot-plain': 'pl-[55px]',
+  'flat-worked': 'pl-[45px]',
+  'flat-plain': 'pl-[28px]',
+};
+
 // Memoized so a row skips re-rendering while its stable `row` object is
 // unchanged — important because the task lists re-render on every keystroke in
 // the surrounding views (log form, search box).
@@ -135,7 +152,7 @@ export const WorklogTaskRow = React.memo(function WorklogTaskRow({ row }: { row:
       style={{ paddingLeft: row.pad }}
     >
       <div className="flex items-center gap-[11px]">
-        <FoldToggle collapsed={row.collapsed} onToggle={row.onToggleCollapse} />
+        <FoldToggle slot={row.foldSlot} collapsed={row.collapsed} onToggle={row.onToggleCollapse} />
         <button onClick={row.onDone} title="Mark done" className="w-[17px] h-[17px] shrink-0 border-[1.5px] border-neutral-575 rounded-full bg-white cursor-pointer p-0 text-neutral-500 hover:border-success-500 hover:text-success-500 flex items-center justify-center">
           <CheckIcon size={11} strokeWidth={2.5} />
         </button>
@@ -208,11 +225,15 @@ export const WorklogTaskRow = React.memo(function WorklogTaskRow({ row }: { row:
       </div>
 
       {/* Narrow-row meta — status + progress + due + tags + link, indented under
-          the title (fold slot + done + worked buttons ≈ 72px, 55px without the
-          worked one).
+          the title by `META_INDENT`.
           Hidden from `@lg` up, and skipped entirely when there is nothing to show. */}
       {hasNarrowMeta && (
-        <div className={'flex @lg:hidden flex-wrap items-center gap-x-[10px] gap-y-[6px] mt-[6px] ' + (row.onWorked ? 'pl-[72px]' : 'pl-[55px]')}>
+        <div
+          className={
+            'flex @lg:hidden flex-wrap items-center gap-x-[10px] gap-y-[6px] mt-[6px] ' +
+            META_INDENT[`${row.foldSlot ? 'slot' : 'flat'}-${row.onWorked ? 'worked' : 'plain'}`]
+          }
+        >
           {row.status && (
             <StatusPicker
               statusId={row.status.id}

@@ -53,7 +53,7 @@ export function TaskDetailPanel() {
     // content would shift as you move between a day and a task on it.
     <div className="flex flex-1 flex-col bg-white px-6 py-8">
       <div className="flex-1 max-w-[920px] xl:max-w-[1280px] mx-auto w-full">
-        <TaskDetailHeader task={task} isTodo={isTodo} />
+        <TaskDetailHeader task={task} parent={parent} isTodo={isTodo} />
 
         {/* Below lg this is one ordered column rather than two, by the same trick
             the task form uses: `contents` dissolves the column wrappers so their

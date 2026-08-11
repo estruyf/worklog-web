@@ -85,6 +85,11 @@ export interface WorklogRow {
   id: string;
   title: string;
   pad: string;
+  /** Whether the row leaves room for the fold toggle. A list-level answer, the
+   *  same on every row in one list: true once anything in it has subtasks, so the
+   *  titles line up whether or not this particular row folds; false in a flat
+   *  list, which spends no width on a chevron none of its rows will ever show. */
+  foldSlot: boolean;
   /** Status display + the quick picker's data, omitted for rows whose status
    *  carries no information (general to-dos, which are open or closed only). */
   status?: RowStatus;

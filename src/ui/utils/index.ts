@@ -25,6 +25,7 @@ export {
   parentCandidates,
   parseCollapsedStore,
   planTaskRows,
+  plansFold,
   pruneCollapsed,
   toggleCollapsed,
 } from "./taskTree";

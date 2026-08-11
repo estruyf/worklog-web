@@ -9,7 +9,7 @@ import { describeRecurrence } from "../../../model/recurrence";
 import { isMarkedPriority, priorityDef } from "../../../model/priority";
 import { daysSinceEpoch } from "../../../util/date";
 import type { StatusChoice, StatusMetaFn, WorklogRow } from "../../model";
-import { clientIdOf, dueOn, isDone, linksOf, planTaskRows, workedLabels, workedOnDate } from "../../utils";
+import { clientIdOf, dueOn, isDone, linksOf, planTaskRows, plansFold, workedLabels, workedOnDate } from "../../utils";
 
 /** Everything a row needs that isn't the task itself: the day it is shown on, and
  *  the actions its buttons fire. */
@@ -51,7 +51,7 @@ export function useTaskRows(deps: TaskRowDeps) {
   } = deps;
 
   const makeRow = useCallback(
-    (t: Task, child: boolean): WorklogRow => {
+    (t: Task, child: boolean, foldSlot = false): WorklogRow => {
       const ls = linksOf(t);
       // General to-dos are open or closed only: no worked-on marking and no
       // status to show or move between.
@@ -74,6 +74,7 @@ export function useTaskRows(deps: TaskRowDeps) {
         id: t.id,
         title: t.title,
         pad: child ? "40px" : "10px",
+        foldSlot,
         status: m && {
           id: t.status,
           label: m.label,
@@ -123,16 +124,22 @@ export function useTaskRows(deps: TaskRowDeps) {
   /** A flat list of rows with subtasks indented under their parent, and orphaned
    *  subtasks (whose parent isn't in `list`) shown at top level. Parents the user
    *  has folded shut carry the toggle and drop their children — the nesting rules
-   *  themselves are `planTaskRows`. */
+   *  themselves are `planTaskRows`.
+   *
+   *  The fold column is decided here rather than per row, because it is a
+   *  property of the list: see `plansFold`. */
   const openRowsFor = useCallback(
-    (list: Task[]): WorklogRow[] =>
-      planTaskRows(list, collapsed).map((plan) => {
-        const row = makeRow(plan.task, plan.child);
+    (list: Task[]): WorklogRow[] => {
+      const plans = planTaskRows(list, collapsed);
+      const foldSlot = plansFold(plans);
+      return plans.map((plan) => {
+        const row = makeRow(plan.task, plan.child, foldSlot);
         if (!plan.foldable) {
           return row;
         }
         return { ...row, collapsed: plan.collapsed, onToggleCollapse: () => toggleCollapsed(plan.task.id) };
-      }),
+      });
+    },
     [makeRow, collapsed, toggleCollapsed],
   );
 
