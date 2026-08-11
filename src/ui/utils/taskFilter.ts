@@ -5,17 +5,16 @@
 
 import type { Task } from '../../model/types';
 import { priorityBucket, priorityRank } from '../../model/priority';
+import { DEFAULT_TASK_SORT, type TaskSortDirection, type TaskSortKey, type TaskSortPref } from '../../model/taskSort';
 import { clientIdOf } from './task';
 
-/** How a list is ordered. `created` is the default: oldest first, which is the
- *  order the work actually arrived in. Priority stays an explicit choice rather
- *  than a tiebreak folded into the others — it would silently re-order every
- *  list in the app for someone who has never set a priority. */
-export type TaskSortKey = 'created' | 'due' | 'title' | 'status' | 'priority';
+// The sort vocabulary itself lives in `model/taskSort` — the chosen order is
+// persisted in config.json, so the workspace and settings layers have to be able
+// to validate it without importing anything here. Re-exported so the components
+// keep taking their whole filter vocabulary from one place.
+export type { TaskSortDirection, TaskSortKey, TaskSortPref };
 
-export type TaskSortDirection = 'asc' | 'desc';
-
-/** The sort options in the order the picker offers them. */
+/** The sort options with the labels the picker shows, in offer order. */
 export const TASK_SORTS: { key: TaskSortKey; label: string }[] = [
   { key: 'created', label: 'Created' },
   { key: 'due', label: 'Due date' },
@@ -23,6 +22,23 @@ export const TASK_SORTS: { key: TaskSortKey; label: string }[] = [
   { key: 'title', label: 'Title' },
   { key: 'status', label: 'Status' },
 ];
+
+/** What ascending and descending mean for one sort key. Generic "A → Z" reads as
+ *  a riddle on a date column, and "oldest first" is the phrase the setting is
+ *  actually chosen by. */
+export function sortDirectionLabels(key: TaskSortKey): { asc: string; desc: string } {
+  switch (key) {
+    case 'created':
+    case 'due':
+      return { asc: 'Oldest first', desc: 'Newest first' };
+    case 'priority':
+      return { asc: 'Highest first', desc: 'Lowest first' };
+    case 'title':
+      return { asc: 'A → Z', desc: 'Z → A' };
+    default:
+      return { asc: 'First status first', desc: 'Last status first' };
+  }
+}
 
 export interface TaskListFilters {
   /** Free text, matched against title, description, tags, links, id and client name. */
@@ -38,20 +54,33 @@ export interface TaskListFilters {
   dir: TaskSortDirection;
 }
 
+/** An unfiltered list in the shipped order. A list actually starts from
+ *  `taskListFiltersFor(config.defaultTaskSort)`; this is the fallback for a repo
+ *  that has no config, and the shape everything else spreads over. */
 export const DEFAULT_TASK_LIST_FILTERS: TaskListFilters = {
   query: '',
   tags: [],
   status: '',
   priority: '',
-  sort: 'created',
-  dir: 'asc',
+  sort: DEFAULT_TASK_SORT.key,
+  dir: DEFAULT_TASK_SORT.dir,
 };
+
+/** The state a list opens in, and what Reset returns it to: no narrowing, in the
+ *  user's configured order. */
+export function taskListFiltersFor(sort: TaskSortPref): TaskListFilters {
+  return { ...DEFAULT_TASK_LIST_FILTERS, sort: sort.key, dir: sort.dir };
+}
 
 /** The read-model helpers the derivation needs, injected so it stays pure. */
 export interface TaskListDeps {
   clientName: (id: string) => string;
   /** Configured status ids in display order — what "sort by status" sorts by. */
   statusOrder: string[];
+  /** The user's saved order. `dirty` is measured against this, not against the
+   *  shipped default — otherwise every list would open showing Reset for
+   *  someone whose default is anything but created-ascending. */
+  defaultSort?: TaskSortPref;
 }
 
 export interface TaskTagCount {
@@ -157,14 +186,11 @@ function compare(
 /** Filter, then order. `tasks` is never mutated — the caller's array is the
  *  store's, and sorting it in place would reorder the snapshot itself. */
 export function deriveTaskList(tasks: Task[], filters: TaskListFilters, deps: TaskListDeps): TaskListDerived {
-  const { clientName, statusOrder } = deps;
+  const { clientName, statusOrder, defaultSort = DEFAULT_TASK_SORT } = deps;
   const q = filters.query.trim().toLowerCase();
   const tags = filters.tags.map((t) => t.toLowerCase());
   const filtered = q !== '' || tags.length > 0 || filters.status !== '' || filters.priority !== '';
-  const dirty =
-    filtered ||
-    filters.sort !== DEFAULT_TASK_LIST_FILTERS.sort ||
-    filters.dir !== DEFAULT_TASK_LIST_FILTERS.dir;
+  const dirty = filtered || filters.sort !== defaultSort.key || filters.dir !== defaultSort.dir;
 
   // Query + tags only: the two picker facets are counted from here, each with its
   // own selection lifted but the other one applied — so a number is exactly the

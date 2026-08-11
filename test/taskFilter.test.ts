@@ -5,6 +5,7 @@ import {
   DEFAULT_TASK_LIST_FILTERS,
   deriveTaskList,
   matchesTaskQuery,
+  taskListFiltersFor,
   type TaskListFilters,
 } from '../src/ui/utils/taskFilter';
 import type { Task } from '../src/model/types';
@@ -223,5 +224,43 @@ describe('deriveTaskList', () => {
     const d = deriveTaskList(tasks, filters({ tags: ['billing'], query: 'invoice' }), deps);
     expect(d.count).toBe(0);
     expect(d.tagCounts).toEqual([{ tag: 'billing', count: 0, selected: true }]);
+  });
+});
+
+// The order is a saved preference (`.worklog/config.json` → `defaultTaskSort`),
+// unlike the narrowing, which is session-local. These cover the two things that
+// makes true of the pure layer: where a list starts, and what "dirty" measures
+// against. The normalization of the stored value is in settings.test.ts.
+describe('the configured default order', () => {
+  it('starts a list in the saved order rather than the shipped one', () => {
+    expect(taskListFiltersFor({ key: 'created', dir: 'desc' })).toEqual({
+      ...DEFAULT_TASK_LIST_FILTERS,
+      sort: 'created',
+      dir: 'desc',
+    });
+    // Alpha and Delta share a created date; the title tiebreak stays ascending
+    // in both directions, so they don't swap when the arrow flips.
+    const newestFirst = deriveTaskList(tasks, taskListFiltersFor({ key: 'created', dir: 'desc' }), deps);
+    expect(ids(newestFirst)).toEqual(['alpha', 'delta', 'charlie', 'bravo']);
+  });
+
+  it('leaves the narrowing alone — only the order is a preference', () => {
+    const started = taskListFiltersFor({ key: 'title', dir: 'desc' });
+    expect([started.query, started.tags, started.status, started.priority]).toEqual(['', [], '', '']);
+  });
+
+  it('measures dirty against the saved order, so a list does not open showing Reset', () => {
+    const defaultSort = { key: 'created', dir: 'desc' } as const;
+    const opened = deriveTaskList(tasks, taskListFiltersFor(defaultSort), { ...deps, defaultSort });
+    expect([opened.filtered, opened.dirty]).toEqual([false, false]);
+
+    // The shipped order is now the deviation, for someone whose default isn't it.
+    const shipped = deriveTaskList(tasks, filters(), { ...deps, defaultSort });
+    expect(shipped.dirty).toBe(true);
+  });
+
+  it('falls back to the shipped order when no preference is passed', () => {
+    const d = deriveTaskList(tasks, filters(), deps);
+    expect([d.dirty, ids(d)]).toEqual([false, ['bravo', 'charlie', 'alpha', 'delta']]);
   });
 });

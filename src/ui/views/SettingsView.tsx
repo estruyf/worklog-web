@@ -3,6 +3,7 @@ import { Button, Card, Input, Select, Toggle } from '../primitives';
 import { StatusSettings } from '../components';
 import { useData } from '../context';
 import { AUTO_SYNC_EVENTS, type AutoSyncEvent } from '../../model/syncEvents';
+import { sortDirectionLabels, TASK_SORTS, type TaskSortDirection, type TaskSortKey } from '../utils';
 
 const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
@@ -38,11 +39,13 @@ function SettingRow({
  *  settings not managed elsewhere (clients live in the Clients view), plus the
  *  task-status list, which manages itself — see `StatusSettings`. */
 export function SettingsView() {
-  const { hoursPerDay, weekStart, todosPerPage, autoSync, saveSettings } = useData();
+  const { hoursPerDay, weekStart, todosPerPage, defaultTaskSort, autoSync, saveSettings } = useData();
 
   const [hours, setHours] = useState(String(hoursPerDay));
   const [week, setWeek] = useState(weekStart);
   const [todoPage, setTodoPage] = useState(String(todosPerPage));
+  const [sortKey, setSortKey] = useState<TaskSortKey>(defaultTaskSort.key);
+  const [sortDir, setSortDir] = useState<TaskSortDirection>(defaultTaskSort.dir);
   const [syncEnabled, setSyncEnabled] = useState(autoSync.enabled);
   const [syncDelay, setSyncDelay] = useState(String(autoSync.delayMinutes));
   const [syncEvents, setSyncEvents] = useState<AutoSyncEvent[]>(autoSync.events);
@@ -66,6 +69,15 @@ export function SettingsView() {
   useEffect(() => {
     setTodoPage(String(todosPerPage));
   }, [todosPerPage]);
+  // Two effects, not one on `defaultTaskSort`: it is rebuilt on every derive, so
+  // the object identity changes on any unrelated edit and would re-seed a
+  // half-made choice back to what is saved.
+  useEffect(() => {
+    setSortKey(defaultTaskSort.key);
+  }, [defaultTaskSort.key]);
+  useEffect(() => {
+    setSortDir(defaultTaskSort.dir);
+  }, [defaultTaskSort.dir]);
   useEffect(() => {
     setSyncEnabled(autoSync.enabled);
   }, [autoSync.enabled]);
@@ -89,6 +101,8 @@ export function SettingsView() {
     (hoursValid && parsedHours !== hoursPerDay) ||
     week !== weekStart ||
     (todoPageValid && parsedTodoPage !== todosPerPage) ||
+    sortKey !== defaultTaskSort.key ||
+    sortDir !== defaultTaskSort.dir ||
     syncEnabled !== autoSync.enabled ||
     (delayValid && parsedDelay !== autoSync.delayMinutes) ||
     syncEvents.join(',') !== savedEvents;
@@ -104,6 +118,10 @@ export function SettingsView() {
   // The all-switch reads as on only when every event is: a half-ticked list is
   // not "on", and the first click from there should complete the set rather than
   // clear the few that were chosen.
+  // "Oldest first" on a date column, "A → Z" on a title: the direction options
+  // are named after the sort they apply to, since asc/desc says nothing here.
+  const sortDirLabels = sortDirectionLabels(sortKey);
+
   const allEvents = syncEvents.length === AUTO_SYNC_EVENTS.length;
   const toggleAllEvents = (on: boolean) => setSyncEvents(on ? AUTO_SYNC_EVENTS.map((e) => e.id) : []);
 
@@ -115,6 +133,7 @@ export function SettingsView() {
       hoursPerDay: parsedHours,
       weekStart: week,
       todosPerPage: parsedTodoPage,
+      defaultTaskSort: { key: sortKey, dir: sortDir },
       autoSync: { enabled: syncEnabled, delayMinutes: parsedDelay, events: syncEvents },
     });
     setSaved(true);
@@ -183,6 +202,36 @@ export function SettingsView() {
               onChange={(e) => setTodoPage(e.target.value)}
               className="w-[96px] shrink-0 text-right"
             />
+          </SettingRow>
+
+          <SettingRow
+            id={`${ids}-sort`}
+            title="Default task order"
+            description="How open-task lists are ordered when you open them, and what their Reset returns to. A list’s own sort picker overrides this until you reload."
+          >
+            <div className="flex gap-2 shrink-0">
+              <Select
+                id={`${ids}-sort`}
+                value={sortKey}
+                onChange={(e) => setSortKey(e.target.value as TaskSortKey)}
+                className="w-[130px]"
+              >
+                {TASK_SORTS.map((s) => (
+                  <option key={s.key} value={s.key}>
+                    {s.label}
+                  </option>
+                ))}
+              </Select>
+              <Select
+                aria-label="Default task order direction"
+                value={sortDir}
+                onChange={(e) => setSortDir(e.target.value as TaskSortDirection)}
+                className="w-[150px]"
+              >
+                <option value="asc">{sortDirLabels.asc}</option>
+                <option value="desc">{sortDirLabels.desc}</option>
+              </Select>
+            </div>
           </SettingRow>
 
           <div className="flex items-start justify-between gap-6 px-[18px] py-[18px]">

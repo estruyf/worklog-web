@@ -11,7 +11,14 @@ export { splitMatch, deriveSearch, deriveNoteGroup, appendGroup, snippetAround, 
 export type { NoteSearchDeps, SearchDeps, SearchDerived, SearchFilters, SplitMatch } from "./search";
 export { deriveArchive, pageWindow, periodStart, ARCHIVE_PAGE_SIZES } from "./archive";
 export type { ArchiveDeps, ArchiveDerived, ArchiveFilters, ArchivePeriod } from "./archive";
-export { deriveTaskList, matchesTaskQuery, DEFAULT_TASK_LIST_FILTERS, TASK_SORTS } from "./taskFilter";
+export {
+  deriveTaskList,
+  matchesTaskQuery,
+  sortDirectionLabels,
+  taskListFiltersFor,
+  DEFAULT_TASK_LIST_FILTERS,
+  TASK_SORTS,
+} from "./taskFilter";
 export {
   canHaveParent,
   parentCandidates,
@@ -27,6 +34,7 @@ export type {
   TaskListFilters,
   TaskSortDirection,
   TaskSortKey,
+  TaskSortPref,
   TaskTagCount,
 } from "./taskFilter";
 export {

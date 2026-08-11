@@ -431,7 +431,7 @@ https://<your-domain>/api/auth/callback
 Point the app at a repo that already uses the Worklog layout:
 
 ```
-.worklog/config.json           # clients, statuses, hoursPerDay, weekStart
+.worklog/config.json           # clients, statuses, hoursPerDay, weekStart, defaultTaskSort
 clients/<id>.md                # open tasks
 archive/<client>/<YYYY-MM>.md  # closed tasks
 worklog/<YYYY-MM>.md           # time entries: - <YYYY-MM-DD> <clientId|event:type> <hours>
@@ -446,6 +446,7 @@ in the order the picker offers them — the app writes it, and it is safe to han
 {
   "hoursPerDay": 8,
   "weekStart": "monday",
+  "defaultTaskSort": { "key": "created", "dir": "desc" },
   "clients": [{ "id": "acme", "name": "Acme Corp", "color": "#2D6CDF" }],
   "statuses": [
     { "id": "open", "label": "Open" },
@@ -455,6 +456,12 @@ in the order the picker offers them — the app writes it, and it is safe to han
   ]
 }
 ```
+
+`defaultTaskSort` is the order task lists open in, and what their **Reset** returns to. `key` is one
+of `created`, `due`, `priority`, `title` or `status`; `dir` is `asc` or `desc` — so newest-first is
+`{ "key": "created", "dir": "desc" }`. Set it in Settings, or from **Save as default** in any list's
+filter bar. A list's own sort picker overrides it for that session without changing the setting.
+Leaving the key out reads as created / ascending, which is how lists have always been ordered.
 
 `id` is what a task's `- status:` line carries; `label` is what you see; `color` is an optional
 `#rrggbb` accent. Exactly one status is `terminal` — the closing one, which archives a task — and

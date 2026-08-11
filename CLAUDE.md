@@ -12,7 +12,7 @@ Read it before changing anything user-facing. This file covers how to work in th
 
 ```bash
 npm run dev      # http://localhost:4321 (needs .dev.vars — see README step 2)
-npm test         # vitest, 471 tests / 31 files — must stay green
+npm test         # vitest, 538 tests / 34 files — must stay green
 npm run lint     # eslint, 0 errors AND 0 warnings expected
 npx tsc --noEmit # must be clean
 npm run build    # astro build → dist/_worker.js (Cloudflare)

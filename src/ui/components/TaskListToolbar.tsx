@@ -7,7 +7,7 @@
 import React, { useState } from 'react';
 import { ArrowDownWideNarrowIcon, ArrowUpNarrowWideIcon, SearchIcon } from 'lucide-react';
 import { Chip, IconButton, Input, LinkButton, Select } from '../primitives';
-import { TASK_SORTS, type TaskSortDirection, type TaskSortKey, type TaskTagCount } from '../utils';
+import { sortDirectionLabels, TASK_SORTS, type TaskSortDirection, type TaskSortKey, type TaskTagCount } from '../utils';
 
 /** How many tag chips show before the row collapses behind "+n more". Selected
  *  tags are never hidden — a filter has to be switchable off where it went on. */
@@ -42,6 +42,11 @@ export interface TaskListToolbarProps {
   onSort: (v: TaskSortKey) => void;
   dir: TaskSortDirection;
   onToggleDir: () => void;
+  /** Saves the current order as the default for every list, or `null` when it
+   *  already is the default. Writes config.json, so it's an explicit click
+   *  rather than a side effect of the picker — the same order is often wanted
+   *  for one look at one list. */
+  onSaveDefault: (() => void) | null;
   /** Something deviates from the defaults — sort included. Shows Reset. */
   dirty: boolean;
   onReset: () => void;
@@ -67,6 +72,7 @@ export function TaskListToolbar({
   onSort,
   dir,
   onToggleDir,
+  onSaveDefault,
   dirty,
   onReset,
   filtered,
@@ -78,6 +84,8 @@ export function TaskListToolbar({
   const hiddenTagCount = tags.length - visibleTags.length;
   const statusCount = statusOptions?.reduce((n, o) => n + o.count, 0) ?? 0;
   const priorityCount = priorityOptions?.reduce((n, o) => n + o.count, 0) ?? 0;
+  const dirLabels = sortDirectionLabels(sort);
+  const sortLabel = TASK_SORTS.find((s) => s.key === sort)?.label ?? sort;
 
   return (
     <div className="mb-3">
@@ -152,7 +160,7 @@ export function TaskListToolbar({
           variant="outline"
           onClick={onToggleDir}
           aria-label={dir === 'asc' ? `Sort ${label} descending` : `Sort ${label} ascending`}
-          title={dir === 'asc' ? 'Ascending — switch to descending' : 'Descending — switch to ascending'}
+          title={dir === 'asc' ? `${dirLabels.asc} — switch to ${dirLabels.desc.toLowerCase()}` : `${dirLabels.desc} — switch to ${dirLabels.asc.toLowerCase()}`}
         >
           {dir === 'asc' ? <ArrowUpNarrowWideIcon size={15} /> : <ArrowDownWideNarrowIcon size={15} />}
         </IconButton>
@@ -161,6 +169,16 @@ export function TaskListToolbar({
           <span className="text-chip text-neutral-675 tabular-nums">
             {count} of {total}
           </span>
+        )}
+
+        {onSaveDefault && (
+          <LinkButton
+            onClick={onSaveDefault}
+            className="px-1"
+            title={`Open every list in this order from now on (${sortLabel} — ${(dir === 'asc' ? dirLabels.asc : dirLabels.desc).toLowerCase()})`}
+          >
+            Save as default
+          </LinkButton>
         )}
 
         {dirty && (

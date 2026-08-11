@@ -165,6 +165,45 @@ describe('mergeFile — config.json', () => {
     expect(text).toContain('Acme Ltd');
     expect(conflicts).toHaveLength(1);
   });
+
+  // `defaultTaskSort` is the first nested object in config.json — every other
+  // non-array setting is a scalar. It needs no strategy of its own: `pick3`
+  // compares by serialized value, so the object merges whole rather than field
+  // by field, which is what a sort key and its direction want.
+  it('merges the default task order as one value, not two independent fields', () => {
+    const base = conf({ defaultTaskSort: { key: 'created', dir: 'asc' } });
+    const local = conf({ defaultTaskSort: { key: 'created', dir: 'asc' } });
+    const remote = conf({ defaultTaskSort: { key: 'due', dir: 'desc' } });
+
+    const { text, conflicts } = mergeFile(CONFIG, { base, local, remote });
+
+    expect(conflicts).toEqual([]);
+    expect(JSON.parse(text!).defaultTaskSort).toEqual({ key: 'due', dir: 'desc' });
+  });
+
+  it('keeps the local order when both devices changed it', () => {
+    const base = conf({ defaultTaskSort: { key: 'created', dir: 'asc' } });
+    const local = conf({ defaultTaskSort: { key: 'created', dir: 'desc' } });
+    const remote = conf({ defaultTaskSort: { key: 'title', dir: 'asc' } });
+
+    const { text, conflicts } = mergeFile(CONFIG, { base, local, remote });
+
+    expect(JSON.parse(text!).defaultTaskSort).toEqual({ key: 'created', dir: 'desc' });
+    expect(conflicts).toHaveLength(1);
+  });
+
+  it('takes the order from the other device when this one never set it', () => {
+    const base = conf({ hoursPerDay: 8 });
+    const local = conf({ hoursPerDay: 7 });
+    const remote = conf({ hoursPerDay: 8, defaultTaskSort: { key: 'created', dir: 'desc' } });
+
+    const { text, conflicts } = mergeFile(CONFIG, { base, local, remote });
+    const merged = JSON.parse(text!);
+
+    expect(conflicts).toEqual([]);
+    expect(merged.defaultTaskSort).toEqual({ key: 'created', dir: 'desc' });
+    expect(merged.hoursPerDay).toBe(7);
+  });
 });
 
 describe('mergeFile — unknown ancestor', () => {

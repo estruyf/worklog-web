@@ -3,7 +3,7 @@
 // is small, so the UI holds everything and derives Today / reporting / search /
 // insights client-side — no per-view round trips. Kept DOM- and dependency-free.
 
-import type { AutoSyncConfig, Client, DayNote, StatusDef, Task, WorklogEntry } from "../model/types";
+import type { AutoSyncConfig, Client, DayNote, StatusDef, Task, TaskSortPref, WorklogEntry } from "../model/types";
 
 /**
  * The full app state, re-derived on every edit and read by the UI through the
@@ -14,6 +14,7 @@ export interface WorklogState {
   hoursPerDay: number;
   weekStart: number; // first weekday of the calendar grid: 0 = Sunday … 6 = Saturday
   todosPerPage: number; // page size of the day view's to-do side list
+  defaultTaskSort: TaskSortPref; // the order open-task lists start in
   autoSync: AutoSyncConfig; // background Git-sync behaviour after logging time
 
   statuses: StatusDef[];

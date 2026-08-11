@@ -673,6 +673,7 @@ class WorklogStore {
       hoursPerDay: config.hoursPerDay,
       weekStart: config.weekStart,
       todosPerPage: config.todosPerPage,
+      defaultTaskSort: config.defaultTaskSort,
       autoSync: config.autoSync,
       statuses: config.statuses,
       // The general to-do bucket is a task-only concept; keep it out of the

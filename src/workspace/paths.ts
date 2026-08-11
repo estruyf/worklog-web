@@ -7,6 +7,7 @@
 import type { AutoSyncConfig, Client, DaylogConfig, TaskLink } from '../model/types';
 import { DEFAULT_STATUSES, normalizeStatuses } from '../model/status';
 import { parseAutoSyncEvents } from '../model/syncEvents';
+import { DEFAULT_TASK_SORT, normalizeTaskSort } from '../model/taskSort';
 
 export const DEFAULT_HOURS_PER_DAY = 8;
 export const DEFAULT_WEEK_START = 0; // Sunday
@@ -186,6 +187,7 @@ function defaultConfig(): DaylogConfig {
     hoursPerDay: DEFAULT_HOURS_PER_DAY,
     weekStart: DEFAULT_WEEK_START,
     todosPerPage: DEFAULT_TODOS_PER_PAGE,
+    defaultTaskSort: { ...DEFAULT_TASK_SORT },
     clients: [],
     // Copied, not shared: the caller may edit the result, and the status editor
     // splices this very array when config.json is missing.
@@ -244,6 +246,9 @@ export class Workspace {
         hoursPerDay: parsed.hoursPerDay && parsed.hoursPerDay > 0 ? parsed.hoursPerDay : DEFAULT_HOURS_PER_DAY,
         weekStart: parseWeekStart(parsed.weekStart),
         todosPerPage: parseTodosPerPage(parsed.todosPerPage),
+        // Absent in every repo written before this setting existed, so the
+        // fallback is the order those repos have always been shown in.
+        defaultTaskSort: normalizeTaskSort(parsed.defaultTaskSort),
         // `archived`, `description` and `links` are normalized to value-or-absent
         // so they never round-trip a stray value into config.json (JSON.stringify
         // drops the undefined).

@@ -12,7 +12,8 @@
 import { useCallback, useMemo } from "react";
 import { repoKeyOf } from "../../data/pendingStore";
 import { worklogStore, type ToastMessage } from "../../data/worklogStore";
-import type { AutoSyncConfig, AutoSyncEvent } from "../../model/types";
+import type { AutoSyncConfig, AutoSyncEvent, TaskSortPref } from "../../model/types";
+import { DEFAULT_TASK_SORT } from "../../model/taskSort";
 import type { WorklogState } from "../state";
 import { useCollapsedTasks } from "./useCollapsedTasks";
 import { useClientModel } from "./model/useClientModel";
@@ -28,6 +29,10 @@ import type { WorklogUiState } from "./useWorklogUiState";
 /** What `autoSync` reads as before a repo is loaded. A module constant so the
  *  reference is stable across renders, like the memoized collections below. */
 const NO_AUTO_SYNC: AutoSyncConfig = { enabled: false, delayMinutes: 5, events: [] };
+
+/** Same reason as `NO_AUTO_SYNC`: `useTaskListFilter` seeds its state from this
+ *  and resets to it, so a fresh object per render would re-seed every list. */
+const NO_TASK_SORT: TaskSortPref = { ...DEFAULT_TASK_SORT };
 
 export function useWorklogModel(
   snap: WorklogState | null,
@@ -56,6 +61,7 @@ export function useWorklogModel(
   const hoursPerDay = snap?.hoursPerDay ?? 0;
   const weekStart = snap?.weekStart ?? 0;
   const todosPerPage = snap?.todosPerPage ?? 5;
+  const defaultTaskSort = snap?.defaultTaskSort ?? NO_TASK_SORT;
   const autoSync = snap?.autoSync ?? NO_AUTO_SYNC;
   const { selectedDate, selectedClient } = ui;
 
@@ -105,6 +111,7 @@ export function useWorklogModel(
     hoursPerDay?: number;
     weekStart?: number;
     todosPerPage?: number;
+    defaultTaskSort?: TaskSortPref;
     autoSync?: { enabled?: boolean; delayMinutes?: number; events?: AutoSyncEvent[] };
   }) => worklogStore.updateSettings(fields);
 
@@ -123,6 +130,7 @@ export function useWorklogModel(
     hoursPerDay,
     weekStart,
     todosPerPage,
+    defaultTaskSort,
     autoSync,
     assetUrl,
     // Archived clients still count as clients — otherwise archiving the last one

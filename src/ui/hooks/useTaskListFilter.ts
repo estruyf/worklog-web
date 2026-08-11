@@ -1,14 +1,20 @@
-// Session-scoped filter + sort state for one open-task list, plus the props its
-// toolbar renders from. Deliberately local: the choice belongs to the list you
-// are looking at right now, so it dies with the view and never reaches the
-// user's Markdown. The rules themselves live in `ui/utils/taskFilter`.
+// Filter + sort state for one open-task list, plus the props its toolbar renders
+// from. The rules themselves live in `ui/utils/taskFilter`.
+//
+// The narrowing (query, tags, status, priority) is session-scoped on purpose: it
+// belongs to the list you are looking at right now, and a restored query would
+// make a list read as empty for no visible reason on the next open. The *order*
+// is not — it is a standing preference, so it comes from `config.defaultTaskSort`
+// and is what Reset returns to. Changing it here is a session-local override
+// until it is saved as the default (`saveDefault`, or the Settings row).
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Task } from '../../model/types';
 import { NORMAL_PRIORITY_ID, PRIORITIES } from '../../model/priority';
+import { sameTaskSort } from '../../model/taskSort';
 import type { TaskListToolbarProps, TaskStatusOption } from '../components/TaskListToolbar';
 import { useData } from '../context';
-import { DEFAULT_TASK_LIST_FILTERS, deriveTaskList, type TaskListFilters, type TaskSortKey } from '../utils';
+import { deriveTaskList, taskListFiltersFor, type TaskListFilters, type TaskSortKey } from '../utils';
 
 export interface TaskListFilterOptions {
   /** Names the controls for screen readers — "open tasks", "to-dos". */
@@ -32,6 +38,7 @@ export interface TaskListFilterApi {
   total: number;
   /** True when a filter is hiding rows — what an empty list should explain. */
   filtered: boolean;
+  /** Back to no narrowing, in the user's configured order. */
   reset: () => void;
   /** Props to spread onto `<TaskListToolbar>`, or null when the list is too
    *  short to be worth one. */
@@ -40,14 +47,39 @@ export interface TaskListFilterApi {
 
 export function useTaskListFilter(tasks: Task[], options: TaskListFilterOptions = {}): TaskListFilterApi {
   const { label = 'tasks', withStatus = true, resetKey, minItems = 2 } = options;
-  const { clientName, statuses, statusMeta } = useData();
-  const [filters, setFilters] = useState<TaskListFilters>(DEFAULT_TASK_LIST_FILTERS);
+  const { clientName, statuses, statusMeta, defaultTaskSort: savedSort, saveSettings } = useData();
 
-  const reset = useCallback(() => setFilters(DEFAULT_TASK_LIST_FILTERS), []);
+  // Re-memoized from the two values, not taken as the snapshot's object:
+  // config.json is re-read on every rebuild, so `defaultTaskSort` is a fresh
+  // object after any edit anywhere in the app. Depending on its identity would
+  // re-run the adopt effect below each time and throw away the sort the user had
+  // picked for this list.
+  const defaultSort = useMemo(() => ({ key: savedSort.key, dir: savedSort.dir }), [savedSort.key, savedSort.dir]);
+
+  const [filters, setFilters] = useState<TaskListFilters>(() => taskListFiltersFor(defaultSort));
+
+  // Read through a ref by the reset effect below: a `resetKey` change must clear
+  // the filters, but a saved default must not — `saveDefault` writes the same
+  // order the list is already in, and re-running a full reset on the way back
+  // would wipe the query the user was in the middle of.
+  const defaultSortRef = useRef(defaultSort);
+  defaultSortRef.current = defaultSort;
+
+  const reset = useCallback(() => setFilters(taskListFiltersFor(defaultSortRef.current)), []);
 
   useEffect(() => {
-    setFilters(DEFAULT_TASK_LIST_FILTERS);
+    setFilters(taskListFiltersFor(defaultSortRef.current));
   }, [resetKey]);
+
+  // A default changed in Settings reorders the lists already on screen, without
+  // touching their narrowing. A no-op when the change came from `saveDefault`.
+  useEffect(() => {
+    setFilters((f) =>
+      f.sort === defaultSort.key && f.dir === defaultSort.dir
+        ? f
+        : { ...f, sort: defaultSort.key, dir: defaultSort.dir },
+    );
+  }, [defaultSort]);
 
   const statusOrder = useMemo(() => statuses.map((s) => s.id), [statuses]);
   const effective = useMemo<TaskListFilters>(
@@ -56,8 +88,16 @@ export function useTaskListFilter(tasks: Task[], options: TaskListFilterOptions 
   );
 
   const derived = useMemo(
-    () => deriveTaskList(tasks, effective, { clientName, statusOrder }),
-    [tasks, effective, clientName, statusOrder],
+    () => deriveTaskList(tasks, effective, { clientName, statusOrder, defaultSort }),
+    [tasks, effective, clientName, statusOrder, defaultSort],
+  );
+
+  // Offered only while the list deviates from the saved order — a button that
+  // saves what is already saved is a button that does nothing.
+  const sortIsDefault = sameTaskSort({ key: filters.sort, dir: filters.dir }, defaultSort);
+  const saveDefault = useCallback(
+    () => void saveSettings({ defaultTaskSort: { key: filters.sort, dir: filters.dir } }),
+    [saveSettings, filters.sort, filters.dir],
   );
 
   const setQuery = useCallback((query: string) => setFilters((f) => ({ ...f, query })), []);
@@ -133,6 +173,7 @@ export function useTaskListFilter(tasks: Task[], options: TaskListFilterOptions 
       onSort: setSort,
       dir: filters.dir,
       onToggleDir: toggleDir,
+      onSaveDefault: sortIsDefault ? null : saveDefault,
       dirty: derived.dirty,
       onReset: reset,
       filtered: derived.filtered,
@@ -154,6 +195,8 @@ export function useTaskListFilter(tasks: Task[], options: TaskListFilterOptions 
     setSort,
     toggleDir,
     toggleTag,
+    sortIsDefault,
+    saveDefault,
     reset,
   ]);
 

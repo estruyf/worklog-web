@@ -4,10 +4,12 @@
 import type { Recurrence } from './recurrence';
 import type { AutoSyncEvent } from './syncEvents';
 import type { TaskPriority } from './priority';
+import type { TaskSortPref } from './taskSort';
 
 export type { Recurrence } from './recurrence';
 export type { AutoSyncEvent } from './syncEvents';
 export type { TaskPriority } from './priority';
+export type { TaskSortPref } from './taskSort';
 
 // Statuses are configurable (see StatusDef / config.json). The type is a plain
 // string id; the configured StatusDef list supplies labels, colors and which id
@@ -128,6 +130,8 @@ export interface DaylogConfig {
   weekStart: number;
   /** How many open to-dos the day view's side list shows per page. */
   todosPerPage: number;
+  /** The order open-task lists start in, and what their Reset returns to. */
+  defaultTaskSort: TaskSortPref;
   clients: Client[];
   statuses: StatusDef[];
   autoSync: AutoSyncConfig;
