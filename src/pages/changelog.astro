@@ -1,0 +1,297 @@
+---
+// The published changelog. CHANGELOG.md is rendered as-is by Astro's own Markdown
+// pipeline — no custom renderer, so this adds no escaping surface to the three
+// `dangerouslySetInnerHTML` sites the CSP in src/middleware.ts exists for. The file
+// is the single source: writing an entry publishes it, and the reader-facing header
+// lives in the Markdown (see the comment at the top of CHANGELOG.md).
+//
+// SSR like every other page rather than prerendered: a prerendered route is served
+// by the adapter without running middleware, which would leave this the one page on
+// the origin with no CSP — on an origin whose cookie holds a `repo`-scoped token.
+import Layout from "../layouts/Layout.astro";
+import { Content, getHeadings } from "../../CHANGELOG.md";
+import { TOKEN_COOKIE } from "../server/session";
+
+export const prerender = false;
+
+const signedIn = Boolean(Astro.cookies.get(TOKEN_COOKIE)?.value);
+
+// The `## YYYY-MM-DD` headings, newest first — the file's own order.
+const days = getHeadings().filter((h) => h.depth === 2);
+const latest = days[0]?.text;
+---
+
+<Layout
+  title="Worklog — changelog"
+  description="Every change to Worklog, by day. What shipped, what it means if you use the app, and when it landed."
+  noindex={false}
+>
+  <div class="page">
+    <header class="nav">
+      <a class="brand" href="/">
+        <img src="/worklog-logo-outline.svg" alt="" width="32" height="32" />
+        <span>Worklog</span>
+      </a>
+      <a class="nav-cta" href={signedIn ? "/app" : "/api/auth/login"}>
+        {signedIn ? "Open the app" : "Sign in"}
+      </a>
+    </header>
+
+    <main class="wrap">
+      {
+        latest && (
+          <p class="eyebrow">
+            Last updated <time datetime={latest}>{latest}</time> ·{" "}
+            {days.length} {days.length === 1 ? "day" : "days"} of changes
+          </p>
+        )
+      }
+      <div class="log"><Content /></div>
+    </main>
+
+    <footer class="foot">
+      <span class="foot-note">A GitHub-backed timesheet · your data lives in your repo.</span>
+      <nav class="foot-links" aria-label="Footer">
+        <a href="/">Home</a>
+        <a href="https://github.com/estruyf/worklog-web">Source on GitHub</a>
+        <a href="https://github.com/estruyf/worklog-web/issues">Report an issue</a>
+      </nav>
+    </footer>
+  </div>
+</Layout>
+
+<style>
+  /* Same palette as src/pages/index.astro — this page is part of that site, not
+     part of the app, and the app's Tailwind theme doesn't reach here. */
+  .page {
+    --ink: #1f2328;
+    --muted: #57606a;
+    --faint: #8b949e;
+    --border: #e5e7eb;
+    --border-strong: #d0d7de;
+    --surface: #f6f8fa;
+    --brand: #f4cf4d;
+    --brand-strong: #e2be2e;
+    --brand-tint: #fbefc0;
+
+    color: var(--ink);
+    background:
+      radial-gradient(55% 45% at 82% -10%, var(--brand-tint) 0%, transparent 60%),
+      linear-gradient(180deg, #fff, var(--surface));
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .nav {
+    width: 100%;
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 20px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 700;
+    font-size: 17px;
+    color: var(--ink);
+    text-decoration: none;
+  }
+  .nav-cta {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--ink);
+    text-decoration: none;
+    padding: 8px 16px;
+    border: 1px solid var(--border-strong);
+    border-radius: 8px;
+    background: #fff;
+    transition:
+      border-color 0.15s,
+      background 0.15s;
+  }
+  .nav-cta:hover {
+    border-color: var(--brand-strong);
+    background: var(--brand-tint);
+  }
+
+  .wrap {
+    flex: 1;
+    width: 100%;
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 32px 24px 72px;
+  }
+  .eyebrow {
+    margin: 0 0 8px;
+    font-size: 12.5px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  /* The dates sit in a gutter and the entries beside them. `<Content />` emits a
+     flat run of `h2, ul, h2, ul…`, so grid auto-placement pairs each day with its
+     own entries without a wrapper per day — which is what lets the Markdown stay
+     plain Markdown. */
+  .log {
+    display: grid;
+    grid-template-columns: 132px minmax(0, 1fr);
+    column-gap: 32px;
+  }
+  .log > :global(h1),
+  .log > :global(p) {
+    grid-column: 1 / -1;
+  }
+  .log > :global(h1) {
+    margin: 0;
+    font-size: clamp(30px, 5vw, 40px);
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+  }
+  .log > :global(p) {
+    margin: 10px 0 8px;
+    font-size: 17px;
+    color: var(--muted);
+  }
+
+  .log > :global(h2) {
+    grid-column: 1;
+    /* Sticks while its own day's entries scroll past, then hands over to the next
+       — the gutter is empty either side of it, so nothing scrolls underneath. */
+    position: sticky;
+    top: 20px;
+    align-self: start;
+    margin: 0;
+    /* Matches the entries' padding-top so the date lines up with its first entry.
+       The row's rule lives on the `ul` alone: a border here would travel with the
+       heading as it sticks and end up a line floating in the middle of the page. */
+    padding: 28px 0 0;
+    font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--muted);
+    scroll-margin-top: 20px;
+  }
+  /* The newest day, called out without touching the Markdown. */
+  .log > :global(h2:first-of-type)::after {
+    content: "Latest";
+    display: block;
+    margin-top: 8px;
+    width: fit-content;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--brand);
+    color: var(--ink);
+    font-family: var(--font-inter), sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .log > :global(ul) {
+    grid-column: 2;
+    margin: 0;
+    padding: 28px 0 32px;
+    border-top: 1px solid var(--border);
+    list-style: none;
+  }
+  .log :global(li) {
+    position: relative;
+    padding-left: 20px;
+    font-size: 15.5px;
+    line-height: 1.65;
+  }
+  .log :global(li + li) {
+    margin-top: 14px;
+  }
+  .log :global(li)::before {
+    content: "";
+    position: absolute;
+    left: 2px;
+    top: 0.62em;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--brand-strong);
+  }
+  .log :global(li code) {
+    font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+    font-size: 0.88em;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 1px 5px;
+  }
+  .log :global(li a) {
+    color: var(--ink);
+    text-decoration-color: var(--brand-strong);
+    text-underline-offset: 3px;
+  }
+  .log :global(li a:hover) {
+    color: var(--brand-strong);
+  }
+
+  .foot {
+    border-top: 1px solid var(--border);
+    padding: 24px;
+    max-width: 1080px;
+    margin: 0 auto;
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 24px;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .foot-note {
+    font-size: 13px;
+    color: var(--faint);
+  }
+  .foot-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 22px;
+  }
+  .foot-links a {
+    font-size: 13.5px;
+    color: var(--muted);
+    text-decoration: none;
+    transition: color 0.15s;
+  }
+  .foot-links a:hover {
+    color: var(--brand-strong);
+  }
+
+  @media (max-width: 720px) {
+    /* One column: the date becomes a label above its entries, and stops sticking —
+       a sticky heading in a single-column flow would sit on top of the text. */
+    .log {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .log > :global(h2) {
+      grid-column: 1;
+      position: static;
+      /* The rule moves up here with it — in one column the entries no longer start
+         a new row of their own. */
+      border-top: 1px solid var(--border);
+      padding-bottom: 14px;
+    }
+    .log > :global(h2:first-of-type)::after {
+      display: inline-block;
+      margin: 0 0 0 10px;
+      vertical-align: 2px;
+    }
+    .log > :global(ul) {
+      grid-column: 1;
+      padding-top: 0;
+      border-top: 0;
+    }
+  }
+</style>

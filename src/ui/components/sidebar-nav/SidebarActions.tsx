@@ -1,8 +1,8 @@
 import React from 'react';
 import type { AppView } from '../../model';
-import { CloudOffIcon, ExternalLinkIcon, FolderSyncIcon, KeyboardIcon, PuzzleIcon, SearchIcon, SettingsIcon } from 'lucide-react';
+import { CloudOffIcon, ExternalLinkIcon, FolderSyncIcon, KeyboardIcon, PuzzleIcon, SearchIcon, SettingsIcon, SparklesIcon } from 'lucide-react';
 import { useData, useUi } from '../../context';
-import { CHROME_EXTENSION_URL } from '../../../model/links';
+import { CHANGELOG_PATH, CHROME_EXTENSION_URL } from '../../../model/links';
 import { actionClass } from './styles';
 
 /** The rail's bottom block: the things you reach for from any view. Search and
@@ -91,6 +91,21 @@ export function SidebarActions({ onGo, onNavigate }: { onGo: (view: AppView) => 
       >
         <PuzzleIcon size={15} strokeWidth={1.5} />
         Browser extension
+        <ExternalLinkIcon size={12} className="ml-auto shrink-0" />
+      </a>
+
+      {/* Same quiet treatment, and a new tab for the same reason: the changelog is
+          served outside the app's router, so following it in place would tear down
+          the island — and with it anything not yet committed. */}
+      <a
+        href={CHANGELOG_PATH}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={actionClass + ' no-underline border-transparent text-neutral-650 hover:bg-neutral-200 hover:text-neutral-750'}
+        title="What's new — every change to Worklog, by day"
+      >
+        <SparklesIcon size={15} strokeWidth={1.5} />
+        What's new
         <ExternalLinkIcon size={12} className="ml-auto shrink-0" />
       </a>
     </div>

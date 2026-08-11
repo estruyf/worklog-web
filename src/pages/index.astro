@@ -1,6 +1,6 @@
 ---
 import Layout from "../layouts/Layout.astro";
-import { CHROME_EXTENSION_URL } from "../model/links";
+import { CHANGELOG_PATH, CHROME_EXTENSION_URL } from "../model/links";
 import { TOKEN_COOKIE } from "../server/session";
 
 export const prerender = false;
@@ -740,6 +740,7 @@ Export queue prototype. Renders, doesn't paginate yet.`;
           Worklog
         </span>
         <nav class="foot-links" aria-label="Footer">
+          <a href={CHANGELOG_PATH}>Changelog</a>
           <a href="https://github.com/estruyf/worklog-web">Source on GitHub</a>
           <a href={CHROME_EXTENSION_URL}>Browser extension</a>
           <a href="https://github.com/estruyf/worklog-web/issues"

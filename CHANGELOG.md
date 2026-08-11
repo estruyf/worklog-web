@@ -1,11 +1,26 @@
 # Changelog
 
-What changed, by day, newest first. One line per change, written as what it means for
-someone using the app — not as a commit message. Internal work (refactors, docs, test
-plumbing) gets a line too when it changes how the codebase is worked in.
+Every change to Worklog, by day, newest first.
+
+<!-- This file is the /changelog page: src/pages/changelog.astro renders it as-is, so
+     the heading and the line above are what a reader sees, and the notes below stay
+     invisible. Anything that would only make sense to whoever writes the entries
+     belongs in a comment like this one, not in the prose.
+
+     One line per change, written as what it means for someone using the app — not as
+     a commit message. Internal work (refactors, docs, test plumbing) gets a line too
+     when it changes how the codebase is worked in.
+
+     Newest day on top; date headings are YYYY-MM-DD (test/changelog.test.ts enforces
+     both). Links must be absolute — a relative path resolves against /changelog and
+     404s. -->
 
 ## 2026-08-11
 
+- This changelog is now a page anyone can read, at `/changelog` — linked from the site footer
+  and from "What's new" at the bottom of the app's sidebar. It is this file, rendered: the
+  dates run down one side and the day's changes beside them, so what shipped and when is
+  answerable without reading the commit log.
 - Task notes take images now. Paste a screenshot, drop a file on the note box, or use
   "+ Add image" — in the composer and when correcting a note already written. Notes have
   always *shown* images; they were the one place you couldn't put one in, which meant
@@ -107,7 +122,7 @@ plumbing) gets a line too when it changes how the codebase is worked in.
 
 - Destructive actions ask first, and a shortcuts view lists every key binding; `d` jumps to the day view.
 - Task creation and editing moved to a full page with a sidebar that stacks on mobile.
-- Internal: buttons, modals and dialogs rebuilt on a shared primitives layer, so tone and focus behaviour are decided in one place ([docs/ui-primitives.md](docs/ui-primitives.md)).
+- Internal: buttons, modals and dialogs rebuilt on a shared primitives layer, so tone and focus behaviour are decided in one place ([docs/ui-primitives.md](https://github.com/estruyf/worklog-web/blob/main/docs/ui-primitives.md)).
 
 ## 2026-07-29
 
@@ -139,5 +154,3 @@ plumbing) gets a line too when it changes how the codebase is worked in.
 - Auto-sync commits your edits on a delay you choose.
 - Unsynced edits survive a closed tab and are offered back on the next open.
 - Installable as an app, with offline caching, splash screens and icons.
-
-<!-- Newest day goes on top. Keep entries to one line; date headings are YYYY-MM-DD. -->
