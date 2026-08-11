@@ -6,6 +6,8 @@ plumbing) gets a line too when it changes how the codebase is worked in.
 
 ## 2026-08-11
 
+- Opening a task from a day no longer nudges the page sideways: the task view's content now
+  lines up with the same column every other view uses.
 - A tab left open overnight now notices the new day when you come back to it, instead of going
   on calling yesterday "today": the Day view's Today button works again, overdue counts are
   counted against the real date, and a recurring task due today shows up. It used to depend on

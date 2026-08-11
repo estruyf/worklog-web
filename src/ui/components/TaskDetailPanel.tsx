@@ -48,8 +48,11 @@ export function TaskDetailPanel() {
   // General to-dos are open or closed only — no worked-on marking.
   const isTodo = isGeneralTodoClientId(clientIdOf(task));
   return (
-    <div className="flex flex-1 flex-col bg-white">
-      <div className="flex-1 max-w-[920px] xl:max-w-[1280px] mx-auto w-full px-6 py-8">
+    // The gutter sits outside the centering box, the way every view under
+    // src/ui/views does it — inside, it would eat into the 920px column and the
+    // content would shift as you move between a day and a task on it.
+    <div className="flex flex-1 flex-col bg-white px-6 py-8">
+      <div className="flex-1 max-w-[920px] xl:max-w-[1280px] mx-auto w-full">
         <TaskDetailHeader task={task} isTodo={isTodo} />
 
         {/* Below lg this is one ordered column rather than two, by the same trick
