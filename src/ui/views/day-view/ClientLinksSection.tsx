@@ -1,6 +1,6 @@
 import React from 'react';
-import { ExternalLinkIcon } from 'lucide-react';
 import { Card, LinkButton, SectionLabel } from '../../primitives';
+import { LinkList } from '../../components';
 import type { ClientLinkGroup } from '../../utils';
 
 export interface ClientLinksSectionProps {
@@ -39,21 +39,7 @@ export function ClientLinksSection({ groups, onOpenClient }: ClientLinksSectionP
                 {g.name}
               </LinkButton>
             </div>
-            <div className="flex flex-col gap-1 pl-[18px]">
-              {g.links.map((l, i) => (
-                <a
-                  key={i}
-                  href={l.url}
-                  target="_blank"
-                  rel="noreferrer noopener"
-                  title={l.url}
-                  className="flex items-center gap-[7px] text-control-lg text-info hover:underline max-w-full"
-                >
-                  <ExternalLinkIcon size={14} className="shrink-0" />
-                  <span className="truncate">{l.label || l.url}</span>
-                </a>
-              ))}
-            </div>
+            <LinkList links={g.links} className="pl-[18px]" />
           </div>
         ))}
       </Card>

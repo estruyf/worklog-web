@@ -1,8 +1,8 @@
 import React, { useMemo } from 'react';
-import { clientIdOf, isDone, linksOf } from '../utils';
-import { ExternalLinkIcon } from 'lucide-react';
+import { clientIdOf, isDone } from '../utils';
 import { isGeneralTodoClientId } from '../../model/todos';
 import { Button } from '../primitives';
+import { LinkList } from './LinkList';
 import { DescriptionEditor } from './DescriptionEditor';
 import { NotesSection, SubtaskList, TaskDetailHeader, TaskSidebar } from './task-detail';
 import { useData, useUi } from '../context';
@@ -69,16 +69,7 @@ export function TaskDetailPanel({ routed = false }: { routed?: boolean } = {}) {
                 {task.title}
               </h1>
 
-              {linksOf(task).length > 0 && (
-                <div className="flex flex-col gap-1 mb-6">
-                  {task.links.map((l, i) => (
-                    <a key={i} href={l.url} target="_blank" rel="noreferrer noopener" className="flex items-center gap-[7px] text-control-lg text-info hover:underline w-fit break-all">
-                      <ExternalLinkIcon size={14} className="shrink-0" />
-                      {l.label || l.url}
-                    </a>
-                  ))}
-                </div>
-              )}
+              <LinkList links={task.links} className="mb-6" />
             </div>
 
             <div className="order-3">

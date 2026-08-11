@@ -25,6 +25,8 @@ export type { TaskMention, TaskMentionOptions } from './task-mention';
 export type { DescriptionEditorProps, DescriptionEditorVariant, DescriptionMode } from './DescriptionEditor';
 export { LinksField } from './LinksField';
 export type { LinksFieldProps } from './LinksField';
+export { LinkList } from './LinkList';
+export type { LinkListProps } from './LinkList';
 export { Sidebar } from './Sidebar';
 export { TaskFormPage } from './TaskFormPage';
 export { TagPicker } from './TagPicker';

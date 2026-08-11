@@ -38,6 +38,7 @@ export function CopyButton({ value, label, className }: CopyButtonProps) {
   return (
     <IconButton
       size="xs"
+      tone={copied ? 'success' : 'neutral'}
       onClick={copy}
       title={copied ? 'Copied' : label}
       aria-label={label}

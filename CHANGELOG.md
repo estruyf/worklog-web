@@ -6,6 +6,10 @@ plumbing) gets a line too when it changes how the codebase is worked in.
 
 ## 2026-08-11
 
+- Every listed link — a task's issue links, a client's reference links in the day view and on
+  the client page — now has a copy button next to it, so the URL no longer needs the browser's
+  right-click menu; the button answers with a green check. Long links show truncated on one
+  line with the full URL on hover.
 - Timesheets can carry a default order for open-task lists in `.worklog/config.json`
   (`defaultTaskSort`); repos without one keep showing tasks in the order they were created.
 - Saving a new task now opens that task instead of returning to the day view.
