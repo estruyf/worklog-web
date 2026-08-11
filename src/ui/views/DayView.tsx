@@ -6,6 +6,7 @@ import type { ClientTaskGroup } from '../model';
 import { useData, useUi } from '../context';
 import { useTaskListFilter } from '../hooks';
 import { Card } from '../primitives';
+import { navigateToView } from '../router';
 import {
   clientIdOf,
   deriveClientLinks,
@@ -130,7 +131,7 @@ function useDayData() {
 
 export function DayView() {
   const { today, worklog, clients, allClients, colorOf, clientName, statusMeta, reopen, openDetail, typeLabel, hoursPerDay, todosPerPage, logState, setLogState, saveLog, removeLog, closeLogForm, editLog, openLogForm, copyDayLogs, openTaskFormForDue, dayNoteDirty, saveDayNote, saveDayNoteText, editDayNote, cancelDayNote, hasDayNote } = useData();
-  const { selectedDate, setSelectedDate, editDayOpen, setEditDayOpen, dayNoteDraft, setDayNoteDraft, dayNoteMode, setDayNoteMode, dayNoteSavedAt } = useUi();
+  const { selectedDate, setSelectedDate, setSelectedClient, setShowArchivedClients, editDayOpen, setEditDayOpen, dayNoteDraft, setDayNoteDraft, dayNoteMode, setDayNoteMode, dayNoteSavedAt } = useUi();
   const {
     openTasks,
     dayLogs,
@@ -146,6 +147,16 @@ export function DayView() {
     isTodaySel,
   } = useDayData();
   const onSelectDate = setSelectedDate;
+  // Select-then-navigate, the same shape the calendar uses to open a day. The
+  // day can surface a client that has since been archived, so unfold the
+  // archived list too — otherwise the rail lands on a selection it doesn't show.
+  const openClient = (clientId: string) => {
+    if (allClients.find((c) => c.id === clientId)?.archived) {
+      setShowArchivedClients(true);
+    }
+    setSelectedClient(clientId);
+    navigateToView('clients');
+  };
   // New time goes to active clients only, but editing an entry logged before its
   // client was archived still shows (and keeps) that client.
   const logClients = useMemo(() => {
@@ -196,7 +207,7 @@ export function DayView() {
           </div>
 
           <aside className="min-w-0 xl:col-start-2 xl:row-start-1 xl:row-end-3 xl:self-start xl:sticky xl:top-0">
-            <ClientLinksSection groups={linkGroups} />
+            <ClientLinksSection groups={linkGroups} onOpenClient={openClient} />
             <TodoTasksSection todoRows={todoRows} pageSize={todosPerPage} />
           </aside>
 
