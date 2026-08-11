@@ -16,7 +16,7 @@ import type { Client, Task, WorklogEntry } from "../../../model/types";
 import { GENERAL_TODO_CLIENT_ID } from "../../../model/todos";
 import { parseRecurrence } from "../../../model/recurrence";
 import { worklogStore } from "../../../data/worklogStore";
-import { closeTaskForm, navigateToTaskForm } from "../../router";
+import { closeTaskForm, closeTaskFormOnto, navigateToTaskForm } from "../../router";
 import type { TaskFormFields } from "../../model";
 import { clientIdOf, defaultTaskClientId, isDone } from "../../utils";
 import type { WorklogUiState } from "../useWorklogUiState";
@@ -63,8 +63,12 @@ export function useTaskFormActions(deps: TaskFormDeps, ui: WorklogUiState) {
 
   /** Write the open form back to the files. Takes the fields as an argument —
    *  the form holds them, this only knows how to persist them. `editingId` is
-   *  the task being edited, or null for a new one. */
-  const submitTask = (editingId: string | null, fields: TaskFormFields) => {
+   *  the task being edited, or null for a new one.
+   *
+   *  A new task is awaited rather than fired and forgotten, because where the form
+   *  goes next depends on it: the created task opens, and both its id and the state
+   *  the panel reads it from only exist once the write has rebuilt the store. */
+  const submitTask = async (editingId: string | null, fields: TaskFormFields) => {
     const title = fields.title.trim();
     if (!title || !fields.clientId) {
       return;
@@ -94,20 +98,27 @@ export function useTaskFormActions(deps: TaskFormDeps, ui: WorklogUiState) {
         tags,
         repeat: repeat ?? null,
       });
-    } else {
-      worklogStore.createTask({
-        title,
-        clientId: fields.clientId,
-        priority: fields.priority,
-        parentId: fields.parentId || undefined,
-        links,
-        description: description || undefined,
-        due,
-        tags,
-        repeat,
-      });
+      closeTaskForm();
+      return;
     }
-    closeTaskForm();
+    const created = await worklogStore.createTask({
+      title,
+      clientId: fields.clientId,
+      priority: fields.priority,
+      parentId: fields.parentId || undefined,
+      links,
+      description: description || undefined,
+      due,
+      tags,
+      repeat,
+    });
+    // A failed write has already toasted, and there is no task to open; leave the
+    // form the way any other close does.
+    if (!created) {
+      closeTaskForm();
+      return;
+    }
+    closeTaskFormOnto(created.id);
   };
 
   return {

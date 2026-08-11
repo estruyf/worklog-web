@@ -28,6 +28,10 @@ devDependencies, so it prompts interactively. Use `npx tsc --noEmit` instead.
 Tests run against the fixture repo in `test/fixtures/timesheet` (no network, no auth).
 `WORKLOG_DATA_DIR=/path/to/repo npm test` runs the same assertions over a real timesheet.
 
+Finishing a change includes a one-liner in [CHANGELOG.md](CHANGELOG.md) under today's date
+(`YYYY-MM-DD`, newest day on top) — what it means for someone using the app, not a restated
+commit message. Add the heading if the day has none; add to it if it's already there.
+
 ---
 
 ## Architecture — the layering is the point

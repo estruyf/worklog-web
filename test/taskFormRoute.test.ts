@@ -13,15 +13,17 @@ interface Entry {
 
 /** The slice of `window` the router touches, backed by a real entry stack so
  *  back() behaves the way the app relies on. */
-function installWindow() {
-  const entries: Entry[] = [{ url: '/app', state: null }];
+function installWindow(initial = '/app') {
+  const entries: Entry[] = [{ url: initial, state: null }];
   let index = 0;
   const popListeners: Array<() => void> = [];
 
   const win = {
     get location() {
-      const [pathname, search] = entries[index].url.split('?');
-      return { pathname, search: search ? `?${search}` : '', href: `https://x${entries[index].url}` };
+      // Resolved rather than split, because the router pushes `location.href`
+      // (an absolute URL) for the detail overlay's same-URL entry.
+      const url = new URL(entries[index].url, 'https://x');
+      return { pathname: url.pathname, search: url.search, href: url.href };
     },
     history: {
       get state() {
@@ -56,11 +58,16 @@ function installWindow() {
   return { depth: () => entries.length, at: () => index };
 }
 
-async function setup() {
+async function setup(initial?: string) {
   vi.resetModules();
-  const win = installWindow();
+  const win = installWindow(initial);
   const router = await import('../src/ui/router');
   return { ...win, ...router };
+}
+
+/** The task the detail overlay is open on, read the way the router stores it. */
+function overlayTaskId(): unknown {
+  return (window.history.state as Record<string, unknown> | null)?.worklogDetail;
 }
 
 describe('task form route', () => {
@@ -113,6 +120,51 @@ describe('task form route', () => {
 
     expect(window.location.pathname).toBe('/app/calendar');
     expect(r.taskFormInstance().seed).toEqual({});
+  });
+
+  it('closes onto the task it just created, over the view the form was opened from', async () => {
+    const r = await setup();
+    r.navigateToView('todos');
+    r.navigateToTaskForm(null, { clientId: 'acme' });
+
+    r.closeTaskFormOnto('t-new');
+
+    expect(window.location.pathname).toBe('/app/todos');
+    expect(overlayTaskId()).toBe('t-new');
+  });
+
+  it('leaves no form entry behind, so Back off the new task returns to that view', async () => {
+    const r = await setup();
+    r.navigateToView('todos');
+    r.navigateToTaskForm(null, { clientId: 'acme' });
+    r.closeTaskFormOnto('t-new');
+
+    window.history.back();
+
+    expect(window.location.pathname).toBe('/app/todos');
+    expect(overlayTaskId()).toBeUndefined();
+    expect(r.taskFormInstance().seed).toEqual({});
+  });
+
+  it('routes to the new task when it closes back onto a task page', async () => {
+    const r = await setup();
+    // A subtask added from /app/task/<parent>: the panel there follows the URL's
+    // own task, so an overlay entry would leave the new one invisible.
+    r.navigateToTask('t-parent');
+    r.navigateToTaskForm(null, { parentId: 't-parent' });
+
+    r.closeTaskFormOnto('t-child');
+
+    expect(r.parseRoute(window.location.pathname)).toEqual({ name: 'task', taskId: 't-child' });
+  });
+
+  it('sends a form reached by URL alone straight to the new task', async () => {
+    const r = await setup('/app/new');
+
+    // Nothing of ours pushed this entry, so there is nothing to walk back off.
+    r.closeTaskFormOnto('t-new');
+
+    expect(r.parseRoute(window.location.pathname)).toEqual({ name: 'task', taskId: 't-new' });
   });
 
   it('leaves a form reached by URL alone with an empty seed', async () => {

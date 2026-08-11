@@ -40,7 +40,7 @@ import { setDayNote } from '../services/dayNotes';
 import { updateSettings, type SettingsFields } from '../services/settings';
 import { createStatus, deleteStatus, moveStatus, updateStatus, type NewStatusInput, type StatusFields } from '../services/statuses';
 import type { WorklogState } from '../ui/state';
-import type { AutoSyncConfig, Client } from '../model/types';
+import type { AutoSyncConfig, Client, Task } from '../model/types';
 import { syncsOnChange } from '../model/syncEvents';
 import { DEFAULT_AUTO_SYNC } from '../workspace/paths';
 import { clearPending, clearSnapshot, loadPending, repoKeyOf, savePending, type PendingSnapshot } from './pendingStore';
@@ -528,8 +528,11 @@ class WorklogStore {
 
   // ---- actions (call the domain services directly) --------------------------
 
-  createTask(input: NewTaskInput): Promise<void> {
-    return this.run(() => createTask(this.store, input));
+  /** Resolves to the created task, or undefined when the write failed (the error
+   *  is already on screen as a toast). Callers need the id: saving the new-task
+   *  form ends on the task it just made, and the id is minted inside the service. */
+  createTask(input: NewTaskInput): Promise<Task | undefined> {
+    return this.runFor(() => createTask(this.store, input));
   }
 
   updateTask(taskId: string, fields: TaskFields): Promise<void> {

@@ -193,6 +193,10 @@ let closingDetail = false;
 // second close request in that window must not pop an extra entry (saving and
 // deleting both close the form on their way out).
 let closingForm = false;
+// A task to show once the form's `history.back()` has landed — see
+// `closeTaskFormOnto`. Held here rather than passed along because the landing is
+// a popstate, and popstate carries nothing of ours.
+let showAfterFormClose: string | null = null;
 
 function refresh(): void {
   current = parseRoute(window.location.pathname);
@@ -200,7 +204,12 @@ function refresh(): void {
   formInstance = readFormInstance();
   closingDetail = false;
   closingForm = false;
+  const pending = showAfterFormClose;
+  showAfterFormClose = null;
   notify();
+  if (pending) {
+    showTask(pending);
+  }
 }
 
 if (typeof window !== 'undefined') {
@@ -320,6 +329,44 @@ export function closeTaskForm(): void {
     window.history.back();
   } else {
     navigate(APP_BASE);
+  }
+}
+
+/** Leave the task form onto the task it just created, instead of onto whatever
+ *  the user was looking at before: a task you have only just described is the one
+ *  thing you want in front of you, and the day view isn't it.
+ *
+ *  Walks back off the form's entry first, exactly the way closing it does, so the
+ *  form leaves no trace in history and Back from the task lands where the form was
+ *  opened from. Showing it can't happen until that back has *landed* — the entry
+ *  is only gone on the next popstate, and pushing before then would put the task on
+ *  top of the form and the back would take it straight off again. Hence the deferral
+ *  through `refresh`.
+ *
+ *  A form reached by URL alone has no entry of ours to walk off (see
+ *  `closeTaskForm`), so that one goes straight to the task's own page. */
+export function closeTaskFormOnto(taskId: string): void {
+  if (closingForm) {
+    return;
+  }
+  const state = window.history.state as Record<string, unknown> | null;
+  if (!state?.[FORM_KEY]) {
+    navigateToTask(taskId);
+    return;
+  }
+  closingForm = true;
+  showAfterFormClose = taskId;
+  window.history.back();
+}
+
+/** Show a task on whatever the app is currently displaying: the overlay on the
+ *  dashboard, the routed page when we're already on one — there the panel follows
+ *  the URL's own task (see `useDetailId`), so an overlay entry would be invisible. */
+function showTask(taskId: string): void {
+  if (current.name === 'task') {
+    navigateToTask(taskId);
+  } else {
+    openTaskDetail(taskId);
   }
 }
 
