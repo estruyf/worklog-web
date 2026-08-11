@@ -6,6 +6,11 @@ plumbing) gets a line too when it changes how the codebase is worked in.
 
 ## 2026-08-11
 
+- A tab left open overnight now notices the new day when you come back to it, instead of going
+  on calling yesterday "today": the Day view's Today button works again, overdue counts are
+  counted against the real date, and a recurring task due today shows up. It used to depend on
+  a timer at midnight, which a backgrounded or sleeping machine never runs. The day you were
+  looking at stays put — only the app's idea of the date moves.
 - Opening a task now goes to its own address (`/app/task/<id>`), so the task in front of you
   is a link you can copy out of the address bar and hand to someone — it used to open as a
   panel over the app with the URL never changing. Leaving it — the button top left, which now

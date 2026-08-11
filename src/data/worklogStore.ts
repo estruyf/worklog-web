@@ -149,6 +149,16 @@ class WorklogStore {
     if (typeof window !== 'undefined') {
       window.addEventListener('offline', this.onConnectionLost);
       window.addEventListener('online', this.onConnectionBack);
+      window.addEventListener('focus', this.checkDateRollover);
+    }
+    // Separately from `window`, and not because a browser ever has one without the
+    // other: guarding on what is actually about to be touched is what keeps this
+    // from throwing wherever only part of the pair is stubbed. The two events
+    // answer different absences — `visibilitychange` a tab that was in the
+    // background (or frozen there), `focus` a window that was behind another app
+    // with the tab visible the whole time.
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', this.onTabVisible);
     }
   }
 
@@ -809,25 +819,45 @@ class WorklogStore {
     }
   }
 
-  /** Re-derive the state just after local midnight. `today` is only recomputed
-   *  when the state is derived, so without this a tab left open overnight keeps
-   *  yesterday's date: nothing would become overdue and a recurring task due the
-   *  next day would never move into the day view. */
+  /** Re-derive if the local date has moved on. `today` is only recomputed when the
+   *  state is derived, so without this a tab left open overnight keeps yesterday's
+   *  date: nothing would become overdue, a recurring task due the next day would
+   *  never move into the day view, and the day view would go on calling yesterday
+   *  "today".
+   *
+   *  Comparing the date rather than trusting whatever woke us is what lets every
+   *  trigger share one path: the timer below, coming back to the tab, refocusing
+   *  the window. Each is unreliable on its own and none of them has to be right —
+   *  a check that finds the same date is free. */
+  private checkDateRollover = (): void => {
+    if (this.loaded && this.snapshot.data && this.snapshot.data.today !== today()) {
+      this.updateSnapshot({ data: this.deriveState() });
+    }
+    this.scheduleDateRollover();
+  };
+
+  /** Fire the check just after the next local midnight — the case where the app is
+   *  open in front of someone as the day turns, and nothing else would run.
+   *
+   *  Not sufficient by itself, which is why `checkDateRollover` has the other two
+   *  triggers: a backgrounded tab can be frozen outright (no JS runs until you come
+   *  back to it), and a sleeping machine fires this late or not at all. Precisely
+   *  the overnight case this exists for. */
   private scheduleDateRollover(): void {
     this.clearRolloverTimer();
     const now = new Date();
     // 30s past midnight, so a timer firing a touch early still lands on the new day.
     const nextMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 30);
-    this.rolloverTimer = setTimeout(
-      () => {
-        if (this.loaded) {
-          this.updateSnapshot({ data: this.deriveState() });
-        }
-        this.scheduleDateRollover();
-      },
-      Math.max(1_000, nextMidnight.getTime() - now.getTime()),
-    );
+    this.rolloverTimer = setTimeout(this.checkDateRollover, Math.max(1_000, nextMidnight.getTime() - now.getTime()));
   }
+
+  /** Coming back to the tab is the moment the date is most likely to be stale, and
+   *  the moment it matters — it is when someone looks at the app again. */
+  private onTabVisible = (): void => {
+    if (document.visibilityState === 'visible') {
+      this.checkDateRollover();
+    }
+  };
 
   private clearRolloverTimer(): void {
     if (this.rolloverTimer) {
