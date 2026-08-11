@@ -95,6 +95,25 @@ describe('updateTaskNote', () => {
     expect(task().notes?.[0].text).toBe('Reproduced.\n\n- iPhone SE\n- Pixel 4a');
   });
 
+  it('round-trips an image ref, so a pasted screenshot survives the commit', async () => {
+    // The shape `useMarkdownImages` splices in: the ref on a line of its own,
+    // with the trailing newline the composer leaves behind. The continuation
+    // indent is what would eat the `![](…)` if the serializer and the parser
+    // ever disagreed about it.
+    await updateTaskNote(store, 't_acme01', 0, 'Reproduced.\n![](assets/img-mf3k1a-7q2.png)\n');
+
+    const text = fm.text.get('clients/acme.md') ?? '';
+    expect(text).toContain('- 2026-07-02 10:00 — Reproduced.\n  ![](assets/img-mf3k1a-7q2.png)');
+    expect(task().notes?.[0].text).toBe('Reproduced.\n![](assets/img-mf3k1a-7q2.png)');
+  });
+
+  it('keeps an image that is the whole note on the entry line', async () => {
+    await updateTaskNote(store, 't_acme01', 1, '![](assets/img-mf3k1b-x8.png)');
+
+    expect(fm.text.get('clients/acme.md') ?? '').toContain('- 2026-07-03 09:30 — ![](assets/img-mf3k1b-x8.png)');
+    expect(task().notes?.[1].text).toBe('![](assets/img-mf3k1b-x8.png)');
+  });
+
   it('trims the text it is given', async () => {
     await updateTaskNote(store, 't_acme01', 0, '  Trimmed.  \n');
 

@@ -6,6 +6,14 @@ plumbing) gets a line too when it changes how the codebase is worked in.
 
 ## 2026-08-11
 
+- Task notes take images now. Paste a screenshot, drop a file on the note box, or use
+  "+ Add image" — in the composer and when correcting a note already written. Notes have
+  always *shown* images; they were the one place you couldn't put one in, which meant
+  screenshotting a bug meant writing it in the description instead of in the log where it
+  belonged.
+- Fixed the README's claim that a pasted image only appears after the next sync and doesn't
+  work in private repos. Neither has been true for a while — images render from the copy in
+  memory, so they show immediately and private repos behave like public ones.
 - A task's subtasks can now be logged as worked on straight from the list, the way the Day
   view's rows can — no more opening each subtask to say you spent time on it.
 - The worked-on button says what it does: "Log work today" rather than "Mark worked", and

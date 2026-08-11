@@ -669,16 +669,20 @@ test/roundtrip.test.ts   # golden round-trip tests
   the files first.
 - **Repo list is empty or a repo 404s on commit** — you didn't grant the `repo` scope. Sign out and
   back in, and approve the requested permissions.
-- **A pasted image doesn't show immediately** — inline images resolve via `raw.githubusercontent.com`
-  and only appear after the next sync (and for public repos); see limitations.
+- **An image shows as its alt text** — the bytes aren't on the device. Either you're offline (the
+  cached repo holds your Markdown, not the images — see Working offline), or the Markdown came from
+  somewhere else and points at an `assets/` file this repo doesn't have.
 
 ## Known limitations
 
 - Single user, one repo mounted at a time. Commits three-way merge per record before pushing (see
   Saving), so concurrent edits to different tasks, days or clients all survive; the same record
   changed in two places at once resolves to your version, with a notice.
-- Inline images resolve via `raw.githubusercontent.com`, so freshly-pasted images render only after
-  the next sync, and private-repo inline image auth is a follow-up.
+- Inline images render from the copy held in memory, so a pasted image appears straight away and
+  private repos work the same as public ones — but an image is only visible on a device that has
+  the repo's bytes, which is why an offline open falls back to alt text.
+- Images added to a task or a note are never cleaned up: deleting the task or note leaves the file
+  in `assets/`, to be removed by hand if you want the space back.
 - Scaffolding writes the Worklog layout only where it is missing: files that already exist in the
   target repo are left as they are.
 - A task deeplink opened without a session is dropped rather than resumed after signing in — the

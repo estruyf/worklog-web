@@ -1,7 +1,8 @@
-import React, { useRef, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import type { Task } from '../../../model/types';
 import { Button, Card, EmptyState, LinkButton, SectionLabel, TextArea } from '../../primitives';
 import { useData, useUi } from '../../context';
+import { useMarkdownImages } from '../../hooks';
 import { MarkdownView } from '../MarkdownView';
 import { useTaskMention } from '../task-mention';
 
@@ -17,17 +18,29 @@ export function NotesSection({ task }: { task: Task }) {
   // has nothing to say once the panel is gone.
   const [editing, setEditing] = useState<{ index: number; text: string } | null>(null);
 
+  // An image upload resolves after the fact, so the splice has to apply to the
+  // text as it is *then* — hence a state setter rather than a plain callback.
+  // Folding it back through `setEditing` keeps the index and the text together,
+  // and an insert that lands after Cancel is dropped rather than resurrecting a
+  // correction the user closed.
+  const setEditText = useCallback<React.Dispatch<React.SetStateAction<string>>>((update) => {
+    setEditing((e) => (e ? { ...e, text: typeof update === 'function' ? update(e.text) : update } : e));
+  }, []);
+
   // One `#` picker per box: the composer and the correction are two fields that
-  // can't be open at once, but they are two textareas either way.
+  // can't be open at once, but they are two textareas either way. Same for the
+  // image wiring — each box needs its own caret and its own file input.
   const composerRef = useRef<HTMLTextAreaElement>(null);
   const editRef = useRef<HTMLTextAreaElement>(null);
   const composerMention = useTaskMention({ value: noteDraft, onChange: setNoteDraft, textareaRef: composerRef, selfId: task.id });
   const editMention = useTaskMention({
     value: editing?.text ?? '',
-    onChange: (text) => setEditing((e) => (e ? { ...e, text } : e)),
+    onChange: setEditText,
     textareaRef: editRef,
     selfId: task.id,
   });
+  const composerImg = useMarkdownImages(noteDraft, setNoteDraft);
+  const editImg = useMarkdownImages(editing?.text ?? '', setEditText);
 
   const onAddNote = () => {
     const text = noteDraft.trim();
@@ -101,6 +114,9 @@ export function NotesSection({ task }: { task: Task }) {
                       autoGrow
                       value={edit.text}
                       onChange={(e) => setEditing({ index: i, text: e.target.value })}
+                      onPaste={editImg.onPaste}
+                      onDrop={editImg.onDrop}
+                      onDragOver={editImg.onDragOver}
                       {...editMention.props}
                       onKeyDown={(e) => {
                         // The open task list owns Escape, Enter and the arrows;
@@ -122,14 +138,20 @@ export function NotesSection({ task }: { task: Task }) {
                       aria-label={`Edit note from ${n.timestamp}`}
                       className="w-full min-h-[68px] max-h-[60vh] leading-[1.55]"
                     />
-                    <div className="flex justify-end items-center gap-3">
-                      <LinkButton size="xs" tone="muted" onClick={() => setEditing(null)}>
-                        Cancel
+                    <div className="flex justify-between items-center gap-3">
+                      <LinkButton size="xs" onClick={editImg.openFilePicker} disabled={editImg.uploading} className="font-medium">
+                        {editImg.uploading ? 'Adding…' : '+ Add image'}
                       </LinkButton>
-                      <Button variant="primary" size="xs" onClick={onSaveEdit} disabled={!edit.text.trim()} className="font-semibold">
-                        Save note
-                      </Button>
+                      <div className="flex items-center gap-3">
+                        <LinkButton size="xs" tone="muted" onClick={() => setEditing(null)}>
+                          Cancel
+                        </LinkButton>
+                        <Button variant="primary" size="xs" onClick={onSaveEdit} disabled={!edit.text.trim()} className="font-semibold">
+                          Save note
+                        </Button>
+                      </div>
                     </div>
+                    {editImg.error && <div className="text-chip text-danger-675">{editImg.error}</div>}
                   </div>
                 ) : (
                   <MarkdownView text={n.text} className="text-control-lg leading-[1.6]" />
@@ -147,6 +169,9 @@ export function NotesSection({ task }: { task: Task }) {
           autoGrow
           value={noteDraft}
           onChange={(e) => setNoteDraft(e.target.value)}
+          onPaste={composerImg.onPaste}
+          onDrop={composerImg.onDrop}
+          onDragOver={composerImg.onDragOver}
           {...composerMention.props}
           onKeyDown={(e) => {
             composerMention.props.onKeyDown(e);
@@ -159,17 +184,25 @@ export function NotesSection({ task }: { task: Task }) {
             }
           }}
           aria-label="New note"
-          placeholder="Add a note… (⌘/Ctrl+Enter to save). Supports Markdown, and # to link a task."
+          placeholder="Add a note… (⌘/Ctrl+Enter to save). Supports Markdown, # to link a task, and pasted or dropped images."
           className="w-full min-h-[68px] max-h-[60vh] leading-[1.55]"
         />
         {composerMention.panel}
         {editMention.panel}
-        <div className="flex justify-end">
+        <div className="flex justify-between items-center gap-3">
+          <LinkButton size="xs" onClick={composerImg.openFilePicker} disabled={composerImg.uploading} className="font-medium">
+            {composerImg.uploading ? 'Adding…' : '+ Add image'}
+          </LinkButton>
           <Button variant="primary" size="xs" onClick={onAddNote} disabled={!noteDraft.trim()} className="font-semibold">
             Add note
           </Button>
         </div>
+        {composerImg.error && <div className="text-chip text-danger-675">{composerImg.error}</div>}
       </div>
+      {/* One input per box: a single shared one would be pointed at whichever
+          picker opened it last, and the two can be open at the same time. */}
+      <input ref={composerImg.fileInputRef} type="file" accept="image/*" multiple onChange={composerImg.onFileChange} className="hidden" />
+      <input ref={editImg.fileInputRef} type="file" accept="image/*" multiple onChange={editImg.onFileChange} className="hidden" />
     </div>
   );
 }
