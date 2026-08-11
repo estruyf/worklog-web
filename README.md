@@ -1,5 +1,7 @@
 # Worklog
 
+![Visitors](https://api.visitorbadge.io/api/visitors?path=https%3A%2F%2Fworklog.struyfconsulting.be&labelColor=%23e2be2e&countColor=%23e2be2e&slug=github)
+
 A standalone, GitHub-backed web app for managing a **Worklog** timesheet. Sign in with GitHub,
 pick the repo that holds your timesheet, and manage tasks, time entries, clients, archiving and
 insights. Every edit is committed straight back to your repo.
