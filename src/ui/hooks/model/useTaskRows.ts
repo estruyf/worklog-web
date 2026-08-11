@@ -9,7 +9,7 @@ import { describeRecurrence } from "../../../model/recurrence";
 import { isMarkedPriority, priorityDef } from "../../../model/priority";
 import { daysSinceEpoch } from "../../../util/date";
 import type { StatusChoice, StatusMetaFn, WorklogRow } from "../../model";
-import { clientIdOf, dueOn, isDone, linksOf, planTaskRows, workedOnDate } from "../../utils";
+import { clientIdOf, dueOn, isDone, linksOf, planTaskRows, workedLabels, workedOnDate } from "../../utils";
 
 /** Everything a row needs that isn't the task itself: the day it is shown on, and
  *  the actions its buttons fire. */
@@ -59,6 +59,7 @@ export function useTaskRows(deps: TaskRowDeps) {
       const done = isDone(t);
       const m = todo ? undefined : statusMeta(t.status, done);
       const worked = !todo && workedOnDate(t, selectedDate);
+      const workedText = workedLabels(worked, selectedDate, today);
       const children = tasks.filter((c) => c.parentId === t.id);
       const progress = children.length ? { done: children.filter(isDone).length, total: children.length } : undefined;
       // On a day the rule lands on, the chip shows *that* occurrence — a
@@ -85,7 +86,8 @@ export function useTaskRows(deps: TaskRowDeps) {
         // Shown on done rows too: a completed task that was urgent still was.
         priority: isMarkedPriority(t.priority) ? priorityDef(t.priority) : undefined,
         worked,
-        workedTitle: worked ? "Unmark worked on this day" : "Mark worked on this day",
+        workedTitle: workedText.title,
+        workedLabel: workedText.action,
         hasLink: ls.length > 0,
         link: ls[0] || "",
         due: displayDue,

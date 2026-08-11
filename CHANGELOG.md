@@ -6,6 +6,12 @@ plumbing) gets a line too when it changes how the codebase is worked in.
 
 ## 2026-08-11
 
+- A task's subtasks can now be logged as worked on straight from the list, the way the Day
+  view's rows can — no more opening each subtask to say you spent time on it.
+- The worked-on button says what it does: "Log work today" rather than "Mark worked", and
+  hovering it spells out the day it writes to ("Log this task as worked on Tue 11 Aug 2026 —
+  it then shows under that day's worked tasks"). It names the date you are looking at, so
+  logging against an earlier day can't be mistaken for logging against today.
 - Opening a task from a day no longer nudges the page sideways: the task view's content now
   lines up with the same column every other view uses.
 - A tab left open overnight now notices the new day when you come back to it, instead of going

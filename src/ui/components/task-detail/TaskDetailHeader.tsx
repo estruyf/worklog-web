@@ -1,11 +1,12 @@
 import React from 'react';
 import type { Task } from '../../../model/types';
-import { BriefcaseIcon, CheckIcon } from 'lucide-react';
+import { CheckIcon } from 'lucide-react';
 import { Button } from '../../primitives';
 import { useData, useUi } from '../../context';
 import { navigateToView } from '../../router';
 import { VIEW_LABELS } from '../../views/routes';
-import { isDone, workedOnDate } from '../../utils';
+import { isDone, workedLabels, workedOnDate } from '../../utils';
+import { WorkedToggle } from '../WorkedToggle';
 
 export interface TaskDetailHeaderProps {
   task: Task;
@@ -26,10 +27,11 @@ export interface TaskDetailHeaderProps {
  *  lands on its parent task, and a button reading "Back to Day" must not do that.
  *  (Escape still walks the chain, the same as the browser's own Back.) */
 export function TaskDetailHeader({ task, isTodo }: TaskDetailHeaderProps) {
-  const { reopen, toggleWorked, markDone } = useData();
+  const { reopen, toggleWorked, markDone, today } = useData();
   const { selectedDate, view } = useUi();
   const done = isDone(task);
   const worked = !isTodo && workedOnDate(task, selectedDate);
+  const workedText = workedLabels(worked, selectedDate, today);
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
       <Button size="xs" onClick={() => navigateToView(view)}>
@@ -37,19 +39,13 @@ export function TaskDetailHeader({ task, isTodo }: TaskDetailHeaderProps) {
       </Button>
       <div className="flex flex-wrap gap-[8px]">
         {!isTodo && (
-          <button
-            onClick={() => toggleWorked(task)}
-            title={worked ? 'Unmark worked on this day' : 'Mark worked on this day'}
-            className={
-              'flex items-center gap-[6px] px-[14px] py-[7px] border rounded-control font-semibold text-control cursor-pointer ' +
-              (worked
-                ? 'border-brand-500 bg-brand-225 text-brand-650 hover:bg-brand-275'
-                : 'border-brand-400 bg-brand-100 text-brand-625 hover:bg-brand-200')
-            }
-          >
-            <BriefcaseIcon className="w-[13px] h-[13px]" />
-            {worked ? 'Worked marked' : 'Mark worked'}
-          </button>
+          <WorkedToggle
+            variant="labeled"
+            worked={worked}
+            onToggle={() => toggleWorked(task)}
+            title={workedText.title}
+            label={workedText.action}
+          />
         )}
         {done ? (
           <Button onClick={() => reopen(task)}>Reopen</Button>

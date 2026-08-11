@@ -91,7 +91,9 @@ export interface WorklogRow {
   /** Worked-on state for the selected day. Always false for rows that don't
    *  track it (general to-dos), where `onWorked` is omitted too. */
   worked: boolean;
+  /** The toggle's hover sentence and its short action text — see `workedLabels`. */
   workedTitle: string;
+  workedLabel: string;
   hasLink: boolean;
   link: string;
   /** The priority chip's id and label, present only when the task carries a

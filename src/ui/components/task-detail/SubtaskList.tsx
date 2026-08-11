@@ -1,13 +1,22 @@
 import React, { useMemo, useState } from 'react';
 import type { Task } from '../../../model/types';
 import { CheckIcon, PlusIcon } from 'lucide-react';
+import { isGeneralTodoClientId } from '../../../model/todos';
 import { Button, Card, EmptyState, LinkButton, SectionLabel } from '../../primitives';
-import { useData } from '../../context';
-import { deriveSubtaskList, isDone } from '../../utils';
+import { useData, useUi } from '../../context';
+import { clientIdOf, deriveSubtaskList, isDone, workedLabels, workedOnDate } from '../../utils';
 import { StatusPicker } from '../StatusPicker';
+import { WorkedToggle } from '../WorkedToggle';
 
 /** The task's children, each with a tick that closes it in place, under a header
- *  that carries the count and the way to add another. The add button sits here
+ *  that carries the count and the way to add another.
+ *
+ *  Each row also carries the worked-on toggle the day view's rows have: a subtask
+ *  is work logged against a day like any other task, and needing to open each one
+ *  to say so was the one thing this list couldn't do that the day view could. It
+ *  writes to the selected day, the same as every other worked-on control.
+ *
+ *  The add button sits here
  *  rather than in the panel's action row — the way GitHub hangs "Add sub-issue"
  *  off the sub-issues section and not off the issue's own actions — so the list
  *  it adds to is on screen when you press it. That is also why the section still
@@ -28,7 +37,8 @@ export function SubtaskList({
   subtasks: Task[];
   onOpenTask: (id: string) => void;
 }) {
-  const { statusMeta, statusChoices, setTaskStatus, markDone, openSubtaskForm } = useData();
+  const { statusMeta, statusChoices, setTaskStatus, markDone, openSubtaskForm, today, toggleWorked } = useData();
+  const { selectedDate } = useUi();
   const [showDone, setShowDone] = useState(false);
   const { visible, doneCount, showingDone, canToggle } = useMemo(
     () => deriveSubtaskList(subtasks, showDone),
@@ -71,6 +81,13 @@ export function SubtaskList({
           {visible.map((c) => {
             const done = isDone(c);
             const status = statusMeta(c.status, done);
+            // Same rule the day view's rows follow: general to-dos are open or
+            // closed only, so they carry no worked-on state to toggle. A subtask
+            // has its parent's client, so this is all-or-nothing across the list
+            // and the titles stay lined up either way.
+            const tracksWork = !isGeneralTodoClientId(clientIdOf(c));
+            const worked = tracksWork && workedOnDate(c, selectedDate);
+            const workedText = workedLabels(worked, selectedDate, today);
             return (
               <div key={c.id} className="flex items-center gap-[11px] py-2 px-2.5 rounded-lg hover:bg-neutral-175">
                 {done ? (
@@ -82,7 +99,19 @@ export function SubtaskList({
                     onClick={() => markDone(c)}
                     title="Mark done"
                     aria-label={`Mark ${c.title} done`}
-                    className="w-[16px] h-[16px] shrink-0 border-[1.5px] border-neutral-575 rounded-full bg-white cursor-pointer p-0 hover:border-success-500"
+                    className="w-[16px] h-[16px] shrink-0 border-[1.5px] border-neutral-575 rounded-full bg-white cursor-pointer p-0 text-neutral-500 hover:border-success-500 hover:text-success-500 flex items-center justify-center"
+                  >
+                    <CheckIcon size={10} strokeWidth={2.5} aria-hidden="true" />
+                  </button>
+                )}
+                {tracksWork && (
+                  <WorkedToggle
+                    size="sm"
+                    worked={worked}
+                    onToggle={() => toggleWorked(c)}
+                    title={workedText.title}
+                    label={workedText.action}
+                    ariaLabel={`${workedText.action} — ${c.title}`}
                   />
                 )}
                 <span className="min-w-16 shrink-0">

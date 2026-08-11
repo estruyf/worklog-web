@@ -1,12 +1,13 @@
 import React from 'react';
 import type { WorklogRow } from '../model';
-import { BriefcaseIcon, CalendarIcon, EyeIcon, GlobeIcon, Pencil, RefreshCwIcon, Trash } from 'lucide-react';
+import { CalendarIcon, CheckIcon, EyeIcon, GlobeIcon, Pencil, RefreshCwIcon, Trash } from 'lucide-react';
 import { formatDaysLate } from '../../model/overdue';
 import { Button, Chip } from '../primitives';
 import { fmtShort } from '../utils';
 import { DisclosureIcon } from './icons';
 import { PriorityChip } from './PriorityChip';
 import { StatusPicker } from './StatusPicker';
+import { WorkedToggle } from './WorkedToggle';
 
 /** The fold toggle, or the space it would take. Rows without subtasks render the
  *  spacer rather than nothing, so every title in a list starts at the same x —
@@ -135,19 +136,18 @@ export const WorklogTaskRow = React.memo(function WorklogTaskRow({ row }: { row:
     >
       <div className="flex items-center gap-[11px]">
         <FoldToggle collapsed={row.collapsed} onToggle={row.onToggleCollapse} />
-        <button onClick={row.onDone} title="Mark done" className="w-[17px] h-[17px] shrink-0 border-[1.5px] border-neutral-575 rounded-full bg-white cursor-pointer p-0 hover:border-success-500" />
+        <button onClick={row.onDone} title="Mark done" className="w-[17px] h-[17px] shrink-0 border-[1.5px] border-neutral-575 rounded-full bg-white cursor-pointer p-0 text-neutral-500 hover:border-success-500 hover:text-success-500 flex items-center justify-center">
+          <CheckIcon size={11} strokeWidth={2.5} />
+        </button>
         {/* Worked toggle — absent for rows with no worked-on state (to-dos). */}
         {row.onWorked && (
-          <button
-            onClick={row.onWorked}
+          <WorkedToggle
+            worked={row.worked}
+            onToggle={row.onWorked}
             title={row.workedTitle}
-            className={
-              'w-[17px] h-[17px] shrink-0 rounded-full cursor-pointer p-0 flex items-center justify-center ' +
-              (row.worked ? 'border border-brand-575 text-brand-575 bg-brand-225 hover:bg-brand-300' : 'border-[1.5px] border-brand-525 bg-white hover:border-brand-575 text-brand-525 hover:text-brand-575')
-            }
-          >
-            <BriefcaseIcon className={`w-[10px] h-[10px]`} />
-          </button>
+            label={row.workedLabel}
+            ariaLabel={`${row.workedLabel} — ${row.title}`}
+          />
         )}
         {/* Status column — wide rows only; when narrow it moves to the meta row
             below. Absent for rows without a meaningful status (to-dos).
