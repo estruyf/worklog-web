@@ -1,9 +1,11 @@
-# Worklog Web
+# Worklog
 
 A standalone, GitHub-backed web app for managing a **Worklog** timesheet. Sign in with GitHub,
 pick the repo that holds your timesheet, and manage tasks, time entries, clients, archiving and
 insights. Every edit is committed straight back to your repo.
 **Markdown is the source of truth.**
+
+**Try it: <https://worklog.struyfconsulting.be>**
 
 - **Stack:** Astro (SSR) + React islands + Tailwind, deployed on Cloudflare.
 - **Auth:** GitHub OAuth App; the token stays in an httpOnly cookie and never reaches the browser.
