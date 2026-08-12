@@ -222,12 +222,11 @@ function TaskForm({ editingId, task, seed }: { editingId: string | null; task: T
 
   return (
     // Fills the dashboard's main column, so the nav stays put and this reads as a
-    // view rather than a separate app. The document scrolls — nothing can be
-    // stranded below the fold the way it was in the old dialog — with the header
-    // and actions stuck to the top and bottom of the viewport. The mobile header
-    // clears the sidebar's own top bar (h-13); at md+ the sidebar is a column and
-    // this column starts at the top.
-    <div className="flex flex-1 flex-col bg-white">
+    // view rather than a separate app. This column is what scrolls — nothing can
+    // be stranded below the fold the way it was in the old dialog — with the
+    // actions stuck to the bottom of it. No header band: the form's own actions
+    // are the footer, and on a phone the top bar carries Save.
+    <div className="flex flex-1 flex-col overflow-auto bg-white">
       <div className="flex-1 max-w-[920px] xl:max-w-[1280px] mx-auto w-full px-5 py-6 md:px-8">
         <h1 className="text-[22px] font-bold m-0 mb-6">{editingId ? 'Edit task' : 'New task'}</h1>
 

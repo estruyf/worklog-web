@@ -18,11 +18,10 @@ import { useData } from '../context';
  *  Silent in the one case that doesn't need it: online, with automatic sync (by
  *  timer or by change event) about to send everything anyway. Nagging about work
  *  that is already on its way is how a banner teaches people to ignore banners. */
-/** @param sticky Pin it to the top while the view scrolls. The offset is the
- *  mobile top bar's height, which only the dashboard has — the single-task page
- *  has no chrome above it, so it takes the bar in flow instead of leaving a gap
- *  where the missing bar would be. */
-export function SyncStatusBar({ sticky = true }: { sticky?: boolean } = {}) {
+/** It is mounted above the view's scroll area rather than inside it, so it stays
+ *  on screen without needing to be `sticky` at an offset that depends on what
+ *  chrome happens to sit above it. */
+export function SyncStatusBar() {
   const { offline, gitPending, pendingCount, autoSync, triggerGitSync } = useData();
   const willSyncItself = autoSync.enabled || autoSync.events.length > 0;
 
@@ -35,10 +34,7 @@ export function SyncStatusBar({ sticky = true }: { sticky?: boolean } = {}) {
   return (
     <div
       role="status"
-      className={
-        (sticky ? 'sticky top-[52px] md:top-0 z-30 ' : '') +
-        'flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-brand-375 bg-brand-150 px-4 py-2 text-control text-brand-600'
-      }
+      className="shrink-0 flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-brand-375 bg-brand-150 px-4 py-2 text-control text-brand-600"
     >
       {offline ? <CloudOffIcon size={15} className="shrink-0" /> : <RefreshCwIcon size={15} className="shrink-0" />}
       <span className="font-semibold text-brand-800">{offline ? 'Offline' : 'Not synced'}</span>

@@ -3,6 +3,7 @@ import type { MonthlyRow } from '../model';
 import { useData, useUi } from '../context';
 import { navigateToView } from '../router';
 import { EVENT_COLOR, num } from '../utils';
+import { ViewHeader } from '../primitives';
 import { HoursByClientChart } from '../components/charts/HoursByClientChart';
 import { MonthlyTrendChart, type TrendPoint } from '../components/charts/MonthlyTrendChart';
 import { isEventWorklogClientId } from '../../model/worklog';
@@ -106,53 +107,57 @@ export function InsightsView() {
     setSelectedDate(d);
   };
   return (
-    <div className="flex-1 overflow-auto px-6 py-[34px]">
-      <div className="max-w-[920px] xl:max-w-[1280px] mx-auto">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-6">
-          <h1 className="text-[24px] font-bold m-0">Insights</h1>
-          <MonthPicker
-            value={month}
-            onChange={setMonth}
-            hoursByMonth={hoursByMonth}
-            currentMonth={today.slice(0, 7)}
-            className="self-start md:self-auto"
-          />
-        </div>
-
-        <div className="grid grid-cols-3 gap-[14px] mb-[26px]">
-          <StatTile label="Clients" value={clientCount} />
-          <StatTile label="Total hours" value={totalHours} />
-          <StatTile label="Total days" value={totalDays} />
-        </div>
-
-        <HoursByClientChart rows={monthlyRows} />
-
-        <HoursTable
-          heading="Client"
-          rows={monthlyRows}
-          totalLabel="Total"
-          totalHours={totalHours}
-          totalDays={totalDays}
-          onOpenDate={onOpenDate}
-          empty="No time logged this month."
+    <div className="flex flex-1 flex-col min-h-0">
+      {/* The month you are looking at is the question this view answers, so the
+          picker stays put however far down the tables you are. */}
+      <ViewHeader className="max-w-[920px] xl:max-w-[1280px] flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+        <h1 className="text-[24px] font-bold m-0">Insights</h1>
+        <MonthPicker
+          value={month}
+          onChange={setMonth}
+          hoursByMonth={hoursByMonth}
+          currentMonth={today.slice(0, 7)}
+          className="self-start md:self-auto"
         />
+      </ViewHeader>
 
-        {/* Events are their own table rather than more rows: they are not clients,
-            and folding them in would double-count the month's total. */}
-        {eventRows.length > 0 && (
+      <div className="flex-1 overflow-auto px-6 pt-6 pb-[34px]">
+        <div className="max-w-[920px] xl:max-w-[1280px] mx-auto">
+          <div className="grid grid-cols-3 gap-[14px] mb-[26px]">
+            <StatTile label="Clients" value={clientCount} />
+            <StatTile label="Total hours" value={totalHours} />
+            <StatTile label="Total days" value={totalDays} />
+          </div>
+
+          <HoursByClientChart rows={monthlyRows} />
+
           <HoursTable
-            heading="Event"
-            rows={eventRows}
-            totalLabel="Total events"
-            totalHours={eventTotalHours}
-            totalDays={eventTotalDays}
+            heading="Client"
+            rows={monthlyRows}
+            totalLabel="Total"
+            totalHours={totalHours}
+            totalDays={totalDays}
             onOpenDate={onOpenDate}
-            className="mt-[18px]"
+            empty="No time logged this month."
           />
-        )}
-        <div className="text-control text-neutral-625 mt-[14px]">Days derived as hours / {hoursPerDay} (hoursPerDay). Click a date to open that day.</div>
 
-        <MonthlyTrendChart data={trend} selectedMonth={month} />
+          {/* Events are their own table rather than more rows: they are not clients,
+              and folding them in would double-count the month's total. */}
+          {eventRows.length > 0 && (
+            <HoursTable
+              heading="Event"
+              rows={eventRows}
+              totalLabel="Total events"
+              totalHours={eventTotalHours}
+              totalDays={eventTotalDays}
+              onOpenDate={onOpenDate}
+              className="mt-[18px]"
+            />
+          )}
+          <div className="text-control text-neutral-625 mt-[14px]">Days derived as hours / {hoursPerDay} (hoursPerDay). Click a date to open that day.</div>
+
+          <MonthlyTrendChart data={trend} selectedMonth={month} />
+        </div>
       </div>
     </div>
   );

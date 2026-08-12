@@ -30,10 +30,10 @@ export function Sidebar(repoProps: SidebarRepoProps = {}) {
     <>
       <MobileTopBar onOpenDrawer={() => setOpen(true)} />
 
-      {/* Desktop static rail — pinned to the viewport so it never scrolls with the
-          page content; `self-start` keeps the flex row from stretching it, which
-          would leave sticky nothing to stick against. */}
-      <aside className="hidden md:flex sticky top-0 self-start h-screen overflow-y-auto w-[228px] shrink-0 border-r border-neutral-400 bg-white">
+      {/* Desktop static rail. The shell is one screen tall, so this stretches to
+          the full height and scrolls its own overflow — it never moves with the
+          view's content. */}
+      <aside className="hidden md:flex overflow-y-auto w-[228px] shrink-0 border-r border-neutral-400 bg-white">
         <div className="w-full">
           <SidebarContent repoProps={repoProps} />
         </div>

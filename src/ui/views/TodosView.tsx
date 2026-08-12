@@ -7,7 +7,7 @@ import { PlusIcon } from 'lucide-react';
 import { GENERAL_TODO_COLOR, GENERAL_TODO_LABEL, isGeneralTodoClientId } from '../../model/todos';
 import type { Task } from '../../model/types';
 import { CompletedTaskRow, DisclosureIcon, TaskListToolbar, WorklogTaskRow } from '../components';
-import { Button, Card, EmptyState, LinkButton, SectionLabel } from '../primitives';
+import { Button, Card, EmptyState, LinkButton, SectionLabel, ViewHeader } from '../primitives';
 import { useData } from '../context';
 import { useTaskListFilter } from '../hooks';
 import { clientIdOf, fmtShort, isDone } from '../utils';
@@ -74,45 +74,47 @@ export function TodosView() {
   const { openRows, openCount, doneTasks, filter } = useTodosData();
 
   return (
-    <div className="flex-1 overflow-auto px-6 py-10">
-      <div className="max-w-[920px] xl:max-w-[1280px] mx-auto">
-        <div className="flex items-center justify-between gap-3 mb-6">
-          <div className="flex items-center gap-[10px]">
-            <span className="w-[10px] h-[10px] rounded-full shrink-0" style={{ background: GENERAL_TODO_COLOR }} />
-            <h1 className="text-[24px] font-bold m-0">{GENERAL_TODO_LABEL}</h1>
-            <span className="text-control text-neutral-675">
-              {openCount} open{doneTasks.length > 0 ? ` · ${doneTasks.length} completed` : ''}
-            </span>
-          </div>
-          <Button variant="primary" size="md" onClick={openTodoForm}>
-            <PlusIcon size={15} />
-            New to-do
-          </Button>
+    <div className="flex flex-1 flex-col min-h-0">
+      <ViewHeader className="max-w-[920px] xl:max-w-[1280px] flex items-center justify-between gap-3">
+        <div className="flex items-center gap-[10px]">
+          <span className="w-[10px] h-[10px] rounded-full shrink-0" style={{ background: GENERAL_TODO_COLOR }} />
+          <h1 className="text-[24px] font-bold m-0">{GENERAL_TODO_LABEL}</h1>
+          <span className="text-control text-neutral-675">
+            {openCount} open{doneTasks.length > 0 ? ` · ${doneTasks.length} completed` : ''}
+          </span>
         </div>
+        <Button variant="primary" size="md" onClick={openTodoForm}>
+          <PlusIcon size={15} />
+          New to-do
+        </Button>
+      </ViewHeader>
 
-        {openCount === 0 ? (
-          <EmptyState>No open to-dos. These are the tasks that aren&apos;t linked to a client.</EmptyState>
-        ) : (
-          <>
-            {filter.toolbar && <TaskListToolbar {...filter.toolbar} />}
-            {openRows.length === 0 ? (
-              <EmptyState>
-                No to-dos match these filters.{' '}
-                <LinkButton size="inherit" onClick={filter.reset} className="italic underline">
-                  Reset
-                </LinkButton>
-              </EmptyState>
-            ) : (
-              <Card padding="list">
-                {openRows.map((row) => (
-                  <WorklogTaskRow key={row.id} row={row} />
-                ))}
-              </Card>
-            )}
-          </>
-        )}
+      <div className="flex-1 overflow-auto px-6 pt-6 pb-10">
+        <div className="max-w-[920px] xl:max-w-[1280px] mx-auto">
+          {openCount === 0 ? (
+            <EmptyState>No open to-dos. These are the tasks that aren&apos;t linked to a client.</EmptyState>
+          ) : (
+            <>
+              {filter.toolbar && <TaskListToolbar {...filter.toolbar} />}
+              {openRows.length === 0 ? (
+                <EmptyState>
+                  No to-dos match these filters.{' '}
+                  <LinkButton size="inherit" onClick={filter.reset} className="italic underline">
+                    Reset
+                  </LinkButton>
+                </EmptyState>
+              ) : (
+                <Card padding="list">
+                  {openRows.map((row) => (
+                    <WorklogTaskRow key={row.id} row={row} />
+                  ))}
+                </Card>
+              )}
+            </>
+          )}
 
-        <CompletedTodos doneTasks={doneTasks} />
+          <CompletedTodos doneTasks={doneTasks} />
+        </div>
       </div>
     </div>
   );

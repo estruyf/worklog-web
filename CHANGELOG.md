@@ -15,6 +15,14 @@ Every change to Worklog, by day, newest first.
      both). Links must be absolute — a relative path resolves against /changelog and
      404s. -->
 
+## 2026-08-12
+
+- Every view now keeps its header on screen while you scroll. Stepping to yesterday, jumping to
+  today, switching the calendar's month, marking the open task done — the buttons stay where you
+  left them instead of scrolling off the top of a long day. The nav rail and the "not synced"
+  banner stay put with them, and the Day view's to-do list finally pins itself beside your work
+  on a wide screen the way it was always meant to.
+
 ## 2026-08-11
 
 - Open a subtask *from its parent* and the way out now leads back to the parent, so you can work

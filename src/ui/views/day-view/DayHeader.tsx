@@ -1,6 +1,6 @@
 import React from 'react';
 import { CalendarArrowUpIcon, ChevronLeftIcon, ChevronRightIcon } from 'lucide-react';
-import { Badge, Button, IconButton } from '../../primitives';
+import { Badge, Button, IconButton, ViewHeader } from '../../primitives';
 import { fmtLong, shiftDate } from '../../utils';
 
 type DayHeaderProps = {
@@ -25,7 +25,10 @@ export function DayHeader({
   openTaskFormForDue,
 }: DayHeaderProps) {
   return (
-    <div className="flex flex-col gap-3 mb-7 sm:flex-row sm:items-center">
+    // In the band above the day's scroll area rather than at the top of it:
+    // stepping to another day is the thing you reach for after reading to the
+    // bottom of this one.
+    <ViewHeader className="max-w-[920px] xl:max-w-[1280px] flex flex-col gap-3 sm:flex-row sm:items-center">
       {/* Day navigation, then the date. The controls sit left of the label at a
        * fixed width, so stepping through days never shifts them under the cursor
        * the way a date sandwiched between the arrows does. */}
@@ -79,6 +82,6 @@ export function DayHeader({
           </Button>
         )}
       </div>
-    </div>
+    </ViewHeader>
   );
 }

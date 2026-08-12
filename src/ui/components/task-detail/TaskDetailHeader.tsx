@@ -1,7 +1,7 @@
 import React from 'react';
 import type { Task } from '../../../model/types';
 import { CheckIcon } from 'lucide-react';
-import { Button } from '../../primitives';
+import { Button, ViewHeader } from '../../primitives';
 import { useData, useUi } from '../../context';
 import { navigateBackToTask, navigateToView, useOpenedFromTaskId } from '../../router';
 import { VIEW_LABELS } from '../../views/routes';
@@ -49,7 +49,9 @@ export function TaskDetailHeader({ task, parent, isTodo }: TaskDetailHeaderProps
   const worked = !isTodo && workedOnDate(task, selectedDate);
   const workedText = workedLabels(worked, selectedDate, today);
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+    // In the band above the task's scroll area: the way out and "mark done" are
+    // what you reach for after reading a long description or a list of notes.
+    <ViewHeader className="max-w-[920px] xl:max-w-[1280px] flex flex-wrap items-center justify-between gap-3">
       {backToParent ? (
         <Button size="xs" onClick={() => navigateBackToTask(backToParent.id)} title={`Back to “${backToParent.title}”`}>
           <span className="text-[15px] leading-none">‹</span>
@@ -81,6 +83,6 @@ export function TaskDetailHeader({ task, parent, isTodo }: TaskDetailHeaderProps
           </Button>
         )}
       </div>
-    </div>
+    </ViewHeader>
   );
 }

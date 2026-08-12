@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import type { WorklogRow } from '../model';
 import { PencilIcon } from 'lucide-react';
 import { TaskListToolbar, WorklogTaskRow } from '../components';
-import { Badge, Button, Card, EmptyState, LinkButton, SectionLabel } from '../primitives';
+import { Badge, Button, Card, EmptyState, LinkButton, SectionLabel, ViewHeader } from '../primitives';
 import { useData, useUi } from '../context';
 import { useTaskListFilter } from '../hooks';
 import { clientIdOf, fmtLong, isDone } from '../utils';
@@ -72,7 +72,6 @@ export function ClientsView() {
   const addClient = () => openClientEditor();
   const clientDescription = selectedClientObj?.description?.trim() ?? '';
   const clientLinks = selectedClientObj?.links ?? [];
-  const hasClientInfo = !!clientDescription || clientLinks.length > 0;
   return (
     <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
       <MobileClientDropdown
@@ -89,8 +88,12 @@ export function ClientsView() {
         onAdd={addClient}
       />
 
-      <div className="flex-1 overflow-auto px-5 py-6 md:px-9 md:py-[30px]">
-        <div className={'flex items-center flex-wrap gap-[14px] ' + (hasClientInfo ? 'mb-4' : 'mb-7')}>
+      {/* The client's own column: which client you are on, and the two things you
+          can do to it, stay in the band while its task lists scroll. Full width
+          rather than the centred column the other views use — this pane is
+          already narrowed by the two rails to its left. */}
+      <div className="flex flex-1 flex-col min-w-0 min-h-0">
+        <ViewHeader className="flex items-center flex-wrap gap-[14px]">
           <span className="w-[11px] h-[11px] rounded-full" style={{ background: selectedColor }} />
           <h1 className="text-[24px] font-bold m-0">{selectedName}</h1>
           {selectedClientObj?.archived && (
@@ -110,31 +113,33 @@ export function ClientsView() {
               Restore
             </Button>
           )}
+        </ViewHeader>
+
+        <div className="flex-1 overflow-auto px-6 pt-6 pb-10">
+          <ClientInfoCard description={clientDescription} links={clientLinks} />
+
+          <SectionLabel className="mb-[14px]">Open tasks · {selectedOpenCount}</SectionLabel>
+          {openFilter.toolbar && <TaskListToolbar {...openFilter.toolbar} />}
+          <Card padding="list" className="mb-[38px]">
+            {selectedOpenRows.map((r) => <WorklogTaskRow key={r.id} row={r} />)}
+            {selectedOpenRows.length === 0 && (
+              <EmptyState className="py-2 px-2.5">
+                {selectedOpenCount === 0 ? (
+                  'No open tasks.'
+                ) : (
+                  <>
+                    No open tasks match these filters.{' '}
+                    <LinkButton size="inherit" onClick={openFilter.reset} className="italic underline">
+                      Reset
+                    </LinkButton>
+                  </>
+                )}
+              </EmptyState>
+            )}
+          </Card>
+
+          <CompletedTaskList tasks={selectedDone} clientName={selectedName} />
         </div>
-
-        <ClientInfoCard description={clientDescription} links={clientLinks} />
-
-        <SectionLabel className="mb-[14px]">Open tasks · {selectedOpenCount}</SectionLabel>
-        {openFilter.toolbar && <TaskListToolbar {...openFilter.toolbar} />}
-        <Card padding="list" className="mb-[38px]">
-          {selectedOpenRows.map((r) => <WorklogTaskRow key={r.id} row={r} />)}
-          {selectedOpenRows.length === 0 && (
-            <EmptyState className="py-2 px-2.5">
-              {selectedOpenCount === 0 ? (
-                'No open tasks.'
-              ) : (
-                <>
-                  No open tasks match these filters.{' '}
-                  <LinkButton size="inherit" onClick={openFilter.reset} className="italic underline">
-                    Reset
-                  </LinkButton>
-                </>
-              )}
-            </EmptyState>
-          )}
-        </Card>
-
-        <CompletedTaskList tasks={selectedDone} clientName={selectedName} />
       </div>
     </div>
   );

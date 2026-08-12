@@ -48,59 +48,62 @@ export function TaskDetailPanel() {
   // General to-dos are open or closed only — no worked-on marking.
   const isTodo = isGeneralTodoClientId(clientIdOf(task));
   return (
-    // The gutter sits outside the centering box, the way every view under
-    // src/ui/views does it — inside, it would eat into the 920px column and the
-    // content would shift as you move between a day and a task on it.
-    <div className="flex flex-1 flex-col bg-white px-6 py-8">
-      <div className="flex-1 max-w-[920px] xl:max-w-[1280px] mx-auto w-full">
-        <TaskDetailHeader task={task} parent={parent} isTodo={isTodo} />
+    // The header is the band; the rest scrolls under it. The gutter sits outside
+    // the centering box, the way every view under src/ui/views does it — inside,
+    // it would eat into the 920px column and the content would shift as you move
+    // between a day and a task on it.
+    <div className="flex flex-1 flex-col min-h-0 bg-white">
+      <TaskDetailHeader task={task} parent={parent} isTodo={isTodo} />
 
-        {/* Below lg this is one ordered column rather than two, by the same trick
-            the task form uses: `contents` dissolves the column wrappers so their
-            blocks become siblings, and the rail can sit under the title and its
-            links — what the task is, then where it stands — with the long content
-            below. At lg the wrappers become real columns and the order utilities
-            go inert, since the blocks are no longer flex items. */}
-        <div className="flex flex-col lg:flex-row lg:gap-8">
-          <div className="contents lg:block lg:flex-1 lg:min-w-0">
-            <div className="order-1">
-              <h1 className={'text-[26px] font-bold m-0 mb-5 tracking-[-0.01em] ' + (isDone(task) ? 'line-through decoration-neutral-550 text-neutral-700' : '')}>
-                {task.title}
-              </h1>
+      <div className="flex-1 overflow-auto px-6 pt-6 pb-8">
+        <div className="max-w-[920px] xl:max-w-[1280px] mx-auto w-full">
+          {/* Below lg this is one ordered column rather than two, by the same trick
+              the task form uses: `contents` dissolves the column wrappers so their
+              blocks become siblings, and the rail can sit under the title and its
+              links — what the task is, then where it stands — with the long content
+              below. At lg the wrappers become real columns and the order utilities
+              go inert, since the blocks are no longer flex items. */}
+          <div className="flex flex-col lg:flex-row lg:gap-8">
+            <div className="contents lg:block lg:flex-1 lg:min-w-0">
+              <div className="order-1">
+                <h1 className={'text-[26px] font-bold m-0 mb-5 tracking-[-0.01em] ' + (isDone(task) ? 'line-through decoration-neutral-550 text-neutral-700' : '')}>
+                  {task.title}
+                </h1>
 
-              <LinkList links={task.links} className="mb-6" />
+                <LinkList links={task.links} className="mb-6" />
+              </div>
+
+              <div className="order-3">
+                <DescriptionEditor
+                  value={descDraft}
+                  onChange={setDescDraft}
+                  mode={descMode}
+                  onModeChange={setDescMode}
+                  taskId={task.id}
+                  // Ticking a box on a saved task saves: there is no Save to press in
+                  // preview, and a checkbox that needs one is a checkbox that lies.
+                  onTaskToggle={saveDescriptionText}
+                  action={
+                    descDirty && (
+                      <Button variant="primary" size="xs" onClick={saveDescription} className="font-semibold">
+                        Save
+                      </Button>
+                    )
+                  }
+                />
+
+                <SubtaskList task={task} subtasks={subtasks} onOpenTask={navigateToTask} />
+
+                <NotesSection task={task} />
+              </div>
             </div>
 
-            <div className="order-3">
-              <DescriptionEditor
-                value={descDraft}
-                onChange={setDescDraft}
-                mode={descMode}
-                onModeChange={setDescMode}
-                taskId={task.id}
-                // Ticking a box on a saved task saves: there is no Save to press in
-                // preview, and a checkbox that needs one is a checkbox that lies.
-                onTaskToggle={saveDescriptionText}
-                action={
-                  descDirty && (
-                    <Button variant="primary" size="xs" onClick={saveDescription} className="font-semibold">
-                      Save
-                    </Button>
-                  )
-                }
-              />
-
-              <SubtaskList task={task} subtasks={subtasks} onOpenTask={navigateToTask} />
-
-              <NotesSection task={task} />
-            </div>
+            <aside className="contents lg:block lg:w-[320px] lg:shrink-0 lg:border-l lg:border-neutral-375 lg:pl-8">
+              <div className="order-2 mb-4 lg:mb-0">
+                <TaskSidebar task={task} parent={parent} isTodo={isTodo} occurrences={occurrences} onOpenTask={navigateToTask} />
+              </div>
+            </aside>
           </div>
-
-          <aside className="contents lg:block lg:w-[320px] lg:shrink-0 lg:border-l lg:border-neutral-375 lg:pl-8">
-            <div className="order-2 mb-4 lg:mb-0">
-              <TaskSidebar task={task} parent={parent} isTodo={isTodo} occurrences={occurrences} onOpenTask={navigateToTask} />
-            </div>
-          </aside>
         </div>
       </div>
     </div>

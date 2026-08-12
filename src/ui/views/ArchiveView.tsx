@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { SearchIcon } from 'lucide-react';
-import { Badge, Button, Card, EmptyState, Input, LinkButton, Pager, SegmentedControl, Select } from '../primitives';
+import { Badge, Button, Card, EmptyState, Input, LinkButton, Pager, SegmentedControl, Select, ViewHeader } from '../primitives';
 import { CompletedTaskRow } from '../components';
 import { useData } from '../context';
 import { ARCHIVE_PAGE_SIZES, deriveArchive, fmtShort, pageWindow } from '../utils';
@@ -185,76 +185,78 @@ export function ArchiveView() {
   } = useArchiveData();
   const deleteForever = (id: string) => deleteTask(id, { permanent: true });
   return (
-    <div className="flex-1 overflow-auto px-6 py-10">
-      <div className="max-w-[920px] xl:max-w-[1280px] mx-auto">
-        <div className="flex items-center justify-between gap-3 mb-6">
-          <h1 className="text-[24px] font-bold m-0">Archive</h1>
-          <span className="text-control text-neutral-675">
-            {filteredCount === 0
-              ? `${totalCount} task${totalCount === 1 ? '' : 's'}`
-              : `${from}–${to} of ${filteredCount}${filteredCount === totalCount ? '' : ` (of ${totalCount})`}`}
-          </span>
+    <div className="flex flex-1 flex-col min-h-0">
+      <ViewHeader className="max-w-[920px] xl:max-w-[1280px] flex items-center justify-between gap-3">
+        <h1 className="text-[24px] font-bold m-0">Archive</h1>
+        <span className="text-control text-neutral-675">
+          {filteredCount === 0
+            ? `${totalCount} task${totalCount === 1 ? '' : 's'}`
+            : `${from}–${to} of ${filteredCount}${filteredCount === totalCount ? '' : ` (of ${totalCount})`}`}
+        </span>
+      </ViewHeader>
+
+      <div className="flex-1 overflow-auto px-6 pt-6 pb-10">
+        <div className="max-w-[920px] xl:max-w-[1280px] mx-auto">
+          {totalCount > 0 && (
+            <ArchiveFilterBar
+              query={query}
+              setQuery={setQuery}
+              clientId={clientId}
+              setClientId={setClientId}
+              period={period}
+              setPeriod={setPeriod}
+              clientCounts={clientCounts}
+              filtersActive={filtersActive}
+              resetFilters={resetFilters}
+            />
+          )}
+
+          {totalCount === 0 && <EmptyState>No archived tasks yet.</EmptyState>}
+
+          {totalCount > 0 && filteredCount === 0 && (
+            <EmptyState>
+              No archived tasks match these filters.{' '}
+              <LinkButton size="inherit" onClick={resetFilters} className="italic underline">
+                Reset
+              </LinkButton>
+            </EmptyState>
+          )}
+
+          {groups.map((g) => (
+            <Card key={g.id} tone="muted" className="mb-[14px] overflow-hidden">
+              <div className="flex items-center gap-[9px] px-[18px] py-[13px] bg-neutral-175 border-b border-neutral-375 whitespace-nowrap">
+                <span className="w-[9px] h-[9px] rounded-full shrink-0" style={{ background: g.color }} />
+                <span className="font-bold text-row">{g.name}</span>
+                <Badge>{g.count}</Badge>
+              </div>
+
+              <div className="px-2 py-[6px]">
+                {g.tasks.map((t) => (
+                  <CompletedTaskRow
+                    key={t.id}
+                    task={t}
+                    onOpen={() => openDetail(t)}
+                    status={statusMeta(t.status, true).label}
+                    statusColor={statusMeta(t.status, true).color}
+                    meta={t.completed ? fmtShort(t.completed) : ''}
+                    actions={
+                      <>
+                        <Button size="xs" onClick={() => reopen(t)}>
+                          Restore
+                        </Button>
+                        <Button size="xs" variant="danger" onClick={() => deleteForever(t.id)}>
+                          Delete forever
+                        </Button>
+                      </>
+                    }
+                  />
+                ))}
+              </div>
+            </Card>
+          ))}
+
+          {pageCount > 1 && <ArchivePager page={page} pageCount={pageCount} pageSize={pageSize} setPage={setPage} setPageSize={setPageSize} />}
         </div>
-
-        {totalCount > 0 && (
-          <ArchiveFilterBar
-            query={query}
-            setQuery={setQuery}
-            clientId={clientId}
-            setClientId={setClientId}
-            period={period}
-            setPeriod={setPeriod}
-            clientCounts={clientCounts}
-            filtersActive={filtersActive}
-            resetFilters={resetFilters}
-          />
-        )}
-
-        {totalCount === 0 && <EmptyState>No archived tasks yet.</EmptyState>}
-
-        {totalCount > 0 && filteredCount === 0 && (
-          <EmptyState>
-            No archived tasks match these filters.{' '}
-            <LinkButton size="inherit" onClick={resetFilters} className="italic underline">
-              Reset
-            </LinkButton>
-          </EmptyState>
-        )}
-
-        {groups.map((g) => (
-          <Card key={g.id} tone="muted" className="mb-[14px] overflow-hidden">
-            <div className="flex items-center gap-[9px] px-[18px] py-[13px] bg-neutral-175 border-b border-neutral-375 whitespace-nowrap">
-              <span className="w-[9px] h-[9px] rounded-full shrink-0" style={{ background: g.color }} />
-              <span className="font-bold text-row">{g.name}</span>
-              <Badge>{g.count}</Badge>
-            </div>
-
-            <div className="px-2 py-[6px]">
-              {g.tasks.map((t) => (
-                <CompletedTaskRow
-                  key={t.id}
-                  task={t}
-                  onOpen={() => openDetail(t)}
-                  status={statusMeta(t.status, true).label}
-                  statusColor={statusMeta(t.status, true).color}
-                  meta={t.completed ? fmtShort(t.completed) : ''}
-                  actions={
-                    <>
-                      <Button size="xs" onClick={() => reopen(t)}>
-                        Restore
-                      </Button>
-                      <Button size="xs" variant="danger" onClick={() => deleteForever(t.id)}>
-                        Delete forever
-                      </Button>
-                    </>
-                  }
-                />
-              ))}
-            </div>
-          </Card>
-        ))}
-
-        {pageCount > 1 && <ArchivePager page={page} pageCount={pageCount} pageSize={pageSize} setPage={setPage} setPageSize={setPageSize} />}
       </div>
     </div>
   );

@@ -7,7 +7,7 @@
 import React from 'react';
 import { KeyboardIcon } from 'lucide-react';
 import { Kbd } from '../components';
-import { Card, SectionLabel } from '../primitives';
+import { Card, SectionLabel, ViewHeader } from '../primitives';
 
 /** One binding: the chords that trigger it, what it does, and any caveat about
  *  where or when it applies. Multiple combos read as "A or B" — the handlers
@@ -121,42 +121,43 @@ function Combos({ combos }: { combos: string[][] }) {
 
 export function ShortcutsView() {
   return (
-    <div className="flex-1 overflow-auto px-6 py-10">
-      <div className="max-w-[920px] xl:max-w-[1280px] mx-auto">
-        <div className="mb-8">
-          <div className="flex flex-wrap items-center gap-[10px]">
-            <KeyboardIcon size={20} className="text-neutral-650" />
-            <h1 className="text-[24px] font-bold m-0">Keyboard shortcuts</h1>
-          </div>
-          <p className="text-control text-neutral-675 mt-2 mb-0">
+    <div className="flex flex-1 flex-col min-h-0">
+      <ViewHeader className="max-w-[920px] xl:max-w-[1280px] flex flex-wrap items-center gap-[10px]">
+        <KeyboardIcon size={20} className="text-neutral-650" />
+        <h1 className="text-[24px] font-bold m-0">Keyboard shortcuts</h1>
+      </ViewHeader>
+
+      <div className="flex-1 overflow-auto px-6 pt-6 pb-10">
+        <div className="max-w-[920px] xl:max-w-[1280px] mx-auto">
+          <p className="text-control text-neutral-675 mt-0 mb-8">
             Every shortcut the app binds. Modifier keys work as {MOD === '⌘' ? '⌘ or Ctrl' : 'Ctrl or ⌘'} — whichever your
             keyboard has.
           </p>
-        </div>
 
-        {GROUPS.map((group) => (
-          <section key={group.title} className="mb-7">
-            <div className="mb-3">
-              <SectionLabel>{group.title}</SectionLabel>
-              <div className="text-control text-neutral-675 mt-[5px]">{group.hint}</div>
-            </div>
+          {GROUPS.map((group) => (
+            <section key={group.title} className="mb-7">
+              <div className="mb-3">
+                <SectionLabel>{group.title}</SectionLabel>
+                <div className="text-control text-neutral-675 mt-[5px]">{group.hint}</div>
+              </div>
 
-            <Card className="divide-y divide-neutral-250">
-              {group.items.map((item, i) => (
-                <div
-                  key={`${item.label}-${i}`}
-                  className="flex items-start justify-between gap-5 px-[18px] py-[13px]"
-                >
-                  <div className="min-w-0">
-                    <div className="text-body font-medium">{item.label}</div>
-                    {item.note && <div className="text-chip text-neutral-675 mt-[3px]">{item.note}</div>}
+              <Card className="divide-y divide-neutral-250">
+                {group.items.map((item, i) => (
+                  <div
+                    key={`${item.label}-${i}`}
+                    className="flex items-start justify-between gap-5 px-[18px] py-[13px]"
+                  >
+                    <div className="min-w-0">
+                      <div className="text-body font-medium">{item.label}</div>
+                      {item.note && <div className="text-chip text-neutral-675 mt-[3px]">{item.note}</div>}
+                    </div>
+                    <Combos combos={item.combos} />
                   </div>
-                  <Combos combos={item.combos} />
-                </div>
-              ))}
-            </Card>
-          </section>
-        ))}
+                ))}
+              </Card>
+            </section>
+          ))}
+        </div>
       </div>
     </div>
   );

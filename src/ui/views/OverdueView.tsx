@@ -8,7 +8,7 @@ import { TriangleAlertIcon } from 'lucide-react';
 import { collectOverdue, daysOverdue, formatDaysLate } from '../../model/overdue';
 import type { Task } from '../../model/types';
 import { WorklogTaskRow } from '../components';
-import { Badge, Card, EmptyState, SectionLabel } from '../primitives';
+import { Badge, Card, EmptyState, SectionLabel, ViewHeader } from '../primitives';
 import { useData } from '../context';
 import type { ClientTaskGroup } from '../model';
 import { clientIdOf, dueOn, isDone } from '../utils';
@@ -57,40 +57,42 @@ export function OverdueView() {
   const { groups, overdueCount, dueTodayRows, worstDays } = useOverdueData();
 
   return (
-    <div className="flex-1 overflow-auto px-6 py-10">
-      <div className="max-w-[920px] xl:max-w-[1280px] mx-auto">
-        <div className="flex flex-wrap items-center gap-[10px] mb-6">
-          <TriangleAlertIcon size={20} className={overdueCount > 0 ? 'text-danger-675' : 'text-neutral-650'} />
-          <h1 className="text-[24px] font-bold m-0">Overdue</h1>
-          <span className="text-control text-neutral-675">
-            {overdueCount === 0
-              ? 'nothing late'
-              : `${overdueCount} task${overdueCount === 1 ? '' : 's'} · worst ${formatDaysLate(worstDays).toLowerCase()}`}
-          </span>
+    <div className="flex flex-1 flex-col min-h-0">
+      <ViewHeader className="max-w-[920px] xl:max-w-[1280px] flex flex-wrap items-center gap-[10px]">
+        <TriangleAlertIcon size={20} className={overdueCount > 0 ? 'text-danger-675' : 'text-neutral-650'} />
+        <h1 className="text-[24px] font-bold m-0">Overdue</h1>
+        <span className="text-control text-neutral-675">
+          {overdueCount === 0
+            ? 'nothing late'
+            : `${overdueCount} task${overdueCount === 1 ? '' : 's'} · worst ${formatDaysLate(worstDays).toLowerCase()}`}
+        </span>
+      </ViewHeader>
+
+      <div className="flex-1 overflow-auto px-6 pt-6 pb-10">
+        <div className="max-w-[920px] xl:max-w-[1280px] mx-auto">
+          {overdueCount === 0 ? (
+            <EmptyState>
+              Nothing is past its due date. Tasks land here the day after they were due — including a recurring one
+              that fell on a weekend and is still waiting.
+            </EmptyState>
+          ) : (
+            groups.map((group) => <GroupCard key={group.id} group={group} tone="overdue" />)
+          )}
+
+          {dueTodayRows.length > 0 && (
+            <>
+              <div className="flex items-center gap-[10px] mt-9 mb-3">
+                <SectionLabel>Due today</SectionLabel>
+                <Badge>{dueTodayRows.length}</Badge>
+              </div>
+              <Card padding="list">
+                {dueTodayRows.map((row) => (
+                  <WorklogTaskRow key={row.id} row={row} />
+                ))}
+              </Card>
+            </>
+          )}
         </div>
-
-        {overdueCount === 0 ? (
-          <EmptyState>
-            Nothing is past its due date. Tasks land here the day after they were due — including a recurring one
-            that fell on a weekend and is still waiting.
-          </EmptyState>
-        ) : (
-          groups.map((group) => <GroupCard key={group.id} group={group} tone="overdue" />)
-        )}
-
-        {dueTodayRows.length > 0 && (
-          <>
-            <div className="flex items-center gap-[10px] mt-9 mb-3">
-              <SectionLabel>Due today</SectionLabel>
-              <Badge>{dueTodayRows.length}</Badge>
-            </div>
-            <Card padding="list">
-              {dueTodayRows.map((row) => (
-                <WorklogTaskRow key={row.id} row={row} />
-              ))}
-            </Card>
-          </>
-        )}
       </div>
     </div>
   );

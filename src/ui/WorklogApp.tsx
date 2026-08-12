@@ -154,12 +154,20 @@ export function WorklogApp({ repoProps }: { repoProps?: SidebarRepoProps } = {})
   const ActiveView = ROUTES[view];
 
   return (
-    <div className="flex min-h-screen flex-col md:flex-row bg-white text-neutral-825 antialiased" style={{ fontFamily: "'Inter', -apple-system, system-ui, sans-serif" }}>
+    // The app is the viewport, not the document: it is exactly one screen tall and
+    // the view inside it does the scrolling. That is what lets the nav, the sync
+    // banner and each view's own header stay put while its content moves — with the
+    // document scrolling, every one of them would need an offset for whatever sits
+    // above it. `dvh` rather than `vh` so a phone's collapsing address bar doesn't
+    // leave the bottom of the app under it.
+    <div className="flex h-dvh flex-col md:flex-row bg-white text-neutral-825 antialiased" style={{ fontFamily: "'Inter', -apple-system, system-ui, sans-serif" }}>
       {loading && <Loader overlay={false} />}
 
       <Sidebar {...repoProps} />
 
-      <main className="flex flex-1 min-w-0 flex-col">
+      {/* `min-h-0` so the view below can be shorter than its content and scroll,
+          rather than pushing this column past the bottom of the screen. */}
+      <main className="flex flex-1 min-w-0 min-h-0 flex-col">
         {/* Above the view rather than inside it: every view scrolls its own
             content, and this has to stay put in all of them. */}
         <SyncStatusBar />

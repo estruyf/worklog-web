@@ -181,105 +181,109 @@ export function DayView() {
     logState.open && logState.editingClientId === clientId ? closeLogForm() : editLog(clientId);
 
   return (
-    <div className="flex-1 overflow-auto px-6 pt-8 pb-20">
-      {/* The main column keeps its comfortable reading width; the extra room from
-       * `xl:` up goes to the to-do side list, so a long to-do list never pushes
-       * the logged time and client sections down the page. */}
-      <div className="max-w-[920px] xl:max-w-[1280px] mx-auto">
-        <DayHeader
-          selectedDate={selectedDate}
-          today={today}
-          isTodaySel={isTodaySel}
-          editDayOpen={editDayOpen}
-          setEditDayOpen={setEditDayOpen}
-          onSelectDate={onSelectDate}
-          isFuture={isFuture}
-          openTaskFormForDue={openTaskFormForDue}
-        />
+    // The header is the band; everything below it scrolls under it.
+    <div className="flex flex-1 flex-col min-h-0">
+      <DayHeader
+        selectedDate={selectedDate}
+        today={today}
+        isTodaySel={isTodaySel}
+        editDayOpen={editDayOpen}
+        setEditDayOpen={setEditDayOpen}
+        onSelectDate={onSelectDate}
+        isFuture={isFuture}
+        openTaskFormForDue={openTaskFormForDue}
+      />
 
-        {/* The to-do panel is placed by the grid, not duplicated: it stacks in the
-          * flow under the due tasks on narrow screens, and moves into a sticky
-          * second column from `xl:` up, spanning both rows of the main column. */}
-        <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_320px] xl:gap-x-8">
-          <div className="min-w-0 xl:col-start-1 xl:row-start-1">
-            <OverdueTasksSection overdueRows={overdueRows} />
-            <DueTasksSection dueRows={dueRows} />
-          </div>
+      <div className="flex-1 overflow-auto px-6 pt-6 pb-20">
+        {/* The main column keeps its comfortable reading width; the extra room from
+         * `xl:` up goes to the to-do side list, so a long to-do list never pushes
+         * the logged time and client sections down the page. */}
+        <div className="max-w-[920px] xl:max-w-[1280px] mx-auto">
+          {/* The to-do panel is placed by the grid, not duplicated: it stacks in the
+            * flow under the due tasks on narrow screens, and moves into a second
+            * column from `xl:` up, spanning both rows of the main column and
+            * pinned to the top of the scroll area while that column scrolls. */}
+          <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_320px] xl:gap-x-8">
+            <div className="min-w-0 xl:col-start-1 xl:row-start-1">
+              <OverdueTasksSection overdueRows={overdueRows} />
+              <DueTasksSection dueRows={dueRows} />
+            </div>
 
-          <aside className="min-w-0 xl:col-start-2 xl:row-start-1 xl:row-end-3 xl:self-start xl:sticky xl:top-0">
-            <ClientLinksSection groups={linkGroups} onOpenClient={openClient} />
-            <TodoTasksSection todoRows={todoRows} pageSize={todosPerPage} />
-          </aside>
+            <aside className="min-w-0 xl:col-start-2 xl:row-start-1 xl:row-end-3 xl:self-start xl:sticky xl:top-6">
+              <ClientLinksSection groups={linkGroups} onOpenClient={openClient} />
+              <TodoTasksSection todoRows={todoRows} pageSize={todosPerPage} />
+            </aside>
 
-          <div className="min-w-0 xl:col-start-1 xl:row-start-2">
-            {/* The day is one card: the bar, the form for whichever slice of it
-              * you clicked, whatever was written about it, and a footer holding
-              * the two verbs that apply to the day rather than to a segment. */}
-            <Card padding="md" className="mb-[34px]">
-              <DayBar
-                bar={bar}
-                selectedDate={selectedDate}
-                clientName={clientName}
-                colorOf={colorOf}
-                typeLabel={typeLabel}
-                activeClientId={logState.open ? logState.editingClientId : ''}
-                editLog={onEditLog}
-                logTime={openLogForm}
-                copyFrom={copyFrom}
-                copyDay={copyDayLogs}
-              />
-
-              {logState.open && (
-                <LogForm
-                  logState={logState}
-                  setLogState={setLogState}
-                  saveLog={saveLog}
-                  removeLog={removeLog}
-                  close={closeLogForm}
-                  clients={logClients}
+            <div className="min-w-0 xl:col-start-1 xl:row-start-2">
+              {/* The day is one card: the bar, the form for whichever slice of it
+                * you clicked, whatever was written about it, and a footer holding
+                * the two verbs that apply to the day rather than to a segment. */}
+              <Card padding="md" className="mb-[34px]">
+                <DayBar
+                  bar={bar}
+                  selectedDate={selectedDate}
+                  clientName={clientName}
                   colorOf={colorOf}
+                  typeLabel={typeLabel}
+                  activeClientId={logState.open ? logState.editingClientId : ''}
+                  editLog={onEditLog}
+                  logTime={openLogForm}
+                  copyFrom={copyFrom}
+                  copyDay={copyDayLogs}
                 />
-              )}
 
-              <DayNote
-                value={dayNoteDraft}
-                onChange={setDayNoteDraft}
-                mode={dayNoteMode}
-                onModeChange={setDayNoteMode}
-                dirty={dayNoteDirty}
-                onSave={saveDayNote}
-                onCancel={cancelDayNote}
-                onToggleTask={saveDayNoteText}
+                {logState.open && (
+                  <LogForm
+                    logState={logState}
+                    setLogState={setLogState}
+                    saveLog={saveLog}
+                    removeLog={removeLog}
+                    close={closeLogForm}
+                    clients={logClients}
+                    colorOf={colorOf}
+                  />
+                )}
+
+                <DayNote
+                  value={dayNoteDraft}
+                  onChange={setDayNoteDraft}
+                  mode={dayNoteMode}
+                  onModeChange={setDayNoteMode}
+                  dirty={dayNoteDirty}
+                  onSave={saveDayNote}
+                  onCancel={cancelDayNote}
+                  onToggleTask={saveDayNoteText}
+                />
+
+                <DayCardFooter
+                  onLogTime={openLogForm}
+                  onEditNote={editDayNote}
+                  hasNote={hasDayNote}
+                  editingNote={dayNoteMode === 'edit'}
+                  noteSavedAt={dayNoteSavedAt}
+                />
+              </Card>
+
+              <OpenTasksSection
+                isTodaySel={isTodaySel}
+                editDayOpen={editDayOpen}
+                openGroups={openGroups}
+                openFilter={openFilter}
+                dayLogs={dayLogs}
+                openTasksCount={openTasksCount}
               />
 
-              <DayCardFooter
-                onLogTime={openLogForm}
-                onEditNote={editDayNote}
-                hasNote={hasDayNote}
-                editingNote={dayNoteMode === 'edit'}
-                noteSavedAt={dayNoteSavedAt}
+              <WorkedTasksSection isTodaySel={isTodaySel} workedGroups={workedGroups} filter={workedFilter} />
+
+              <DoneTasksSection
+                doneTasks={doneTasks}
+                isTodaySel={isTodaySel}
+                reopen={reopen}
+                openDetail={openDetail}
+                statusMeta={statusMeta}
+                clientName={clientName}
               />
-            </Card>
-
-            <OpenTasksSection
-              isTodaySel={isTodaySel}
-              editDayOpen={editDayOpen}
-              openGroups={openGroups}
-              openFilter={openFilter}
-              dayLogs={dayLogs}
-              openTasksCount={openTasksCount}
-            />
-
-            <WorkedTasksSection isTodaySel={isTodaySel} workedGroups={workedGroups} filter={workedFilter} />
-
-            <DoneTasksSection
-              doneTasks={doneTasks}
-              isTodaySel={isTodaySel}
-              reopen={reopen}
-              openDetail={openDetail}
-              statusMeta={statusMeta}
-              clientName={clientName}
-            />
+            </div>
           </div>
         </div>
       </div>

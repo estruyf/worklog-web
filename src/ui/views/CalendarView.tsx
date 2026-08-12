@@ -3,6 +3,7 @@ import type { WorklogEntry } from '../../model/types';
 import { useData, useUi } from '../context';
 import { navigateToView } from '../router';
 import { calendarCells, deriveWorkedByClient, WEEKDAYS, ymOf, type CalendarMode } from '../utils';
+import { ViewHeader } from '../primitives';
 import { CalendarGrid, colorFor, labelFor, Legend, PeriodNav, WorkedPerClient, type LegendEntry } from './calendar-view';
 
 /** Month- or week-grid overview of who you worked for each day, with the period's
@@ -72,27 +73,31 @@ export function CalendarView() {
   const isCurrentPeriod = isWeek ? cells.includes(today) : ymOf(cursor) === ymOf(today);
 
   return (
-    <div className="flex-1 overflow-auto px-6 pt-8 pb-20">
-      <div className="max-w-[920px] xl:max-w-[1280px] mx-auto">
-        <div className="flex flex-col md:flex-row md:items-center gap-3 mb-7">
-          <h1 className="text-[24px] font-bold m-0 tracking-[-0.01em]">Calendar</h1>
-          <div className="hidden md:block flex-1" />
-          <PeriodNav mode={mode} onModeChange={setMode} cursor={cursor} onCursorChange={setCursor} isCurrentPeriod={isCurrentPeriod} />
+    <div className="flex flex-1 flex-col min-h-0">
+      {/* Stepping through periods stays in reach while the per-client roll-up
+          below the grid is being read. */}
+      <ViewHeader className="max-w-[920px] xl:max-w-[1280px] flex flex-col md:flex-row md:items-center gap-3">
+        <h1 className="text-[24px] font-bold m-0 tracking-[-0.01em]">Calendar</h1>
+        <div className="hidden md:block flex-1" />
+        <PeriodNav mode={mode} onModeChange={setMode} cursor={cursor} onCursorChange={setCursor} isCurrentPeriod={isCurrentPeriod} />
+      </ViewHeader>
+
+      <div className="flex-1 overflow-auto px-6 pt-6 pb-20">
+        <div className="max-w-[920px] xl:max-w-[1280px] mx-auto">
+          <CalendarGrid
+            weekdays={weekdays}
+            cells={cells}
+            logsByDate={logsByDate}
+            datesWithNotes={datesWithNotes}
+            cursor={cursor}
+            isWeek={isWeek}
+            onOpenDay={openDay}
+          />
+
+          <Legend entries={legend} />
+
+          <WorkedPerClient groups={groups} isWeek={isWeek} onOpenDay={openDay} onOpenTask={openTask} />
         </div>
-
-        <CalendarGrid
-          weekdays={weekdays}
-          cells={cells}
-          logsByDate={logsByDate}
-          datesWithNotes={datesWithNotes}
-          cursor={cursor}
-          isWeek={isWeek}
-          onOpenDay={openDay}
-        />
-
-        <Legend entries={legend} />
-
-        <WorkedPerClient groups={groups} isWeek={isWeek} onOpenDay={openDay} onOpenTask={openTask} />
       </div>
     </div>
   );

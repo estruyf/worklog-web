@@ -24,6 +24,8 @@ export type { ModalLayer, ModalOffset, ModalProps, ModalSize, ModalTitleSize } f
 export { Card } from './Card';
 export type { CardPadding, CardProps, CardRadius, CardTone } from './Card';
 export { SidebarSection } from './SidebarSection';
+export { ViewHeader } from './ViewHeader';
+export type { ViewHeaderProps } from './ViewHeader';
 export { SectionLabel } from './SectionLabel';
 export type { SectionLabelProps, SectionLabelSize, SectionLabelTone } from './SectionLabel';
 export { EmptyState } from './EmptyState';

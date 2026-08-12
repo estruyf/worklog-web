@@ -1,5 +1,5 @@
 import React, { useEffect, useId, useState } from 'react';
-import { Button, Card, Input, Select, Toggle } from '../primitives';
+import { Button, Card, Input, Select, Toggle, ViewHeader } from '../primitives';
 import { StatusSettings } from '../components';
 import { useData } from '../context';
 import { AUTO_SYNC_EVENTS, type AutoSyncEvent } from '../../model/syncEvents';
@@ -141,189 +141,194 @@ export function SettingsView() {
   };
 
   return (
-    <div className="flex-1 overflow-auto px-6 py-10">
-      <div className="max-w-[920px] xl:max-w-[1280px] mx-auto">
-        <div className="mb-8">
-          <h1 className="text-[24px] font-bold m-0">Settings</h1>
-          <p className="text-control text-neutral-675 mt-1 mb-0">
+    <div className="flex flex-1 flex-col min-h-0">
+      {/* Only the title is in the band: the line about where this is stored is
+          context for the settings, and belongs with them. */}
+      <ViewHeader className="max-w-[920px] xl:max-w-[1280px]">
+        <h1 className="text-[24px] font-bold m-0">Settings</h1>
+      </ViewHeader>
+
+      <div className="flex-1 overflow-auto px-6 pt-6 pb-10">
+        <div className="max-w-[920px] xl:max-w-[1280px] mx-auto">
+          <p className="text-control text-neutral-675 mt-0 mb-6">
             App configuration, stored in <code className="text-meta bg-neutral-250 rounded-chip px-[5px] py-[1px]">.worklog/config.json</code> in this repository.
           </p>
-        </div>
 
-        <Card className="divide-y divide-neutral-250">
-          <SettingRow
-            id={`${ids}-hours`}
-            title="Hours per day"
-            description="A full working day. Drives the “full / ½ day” labels and insights."
-          >
-            <Input
+          <Card className="divide-y divide-neutral-250">
+            <SettingRow
               id={`${ids}-hours`}
-              type="number"
-              min={0.5}
-              step={0.5}
-              value={hours}
-              invalid={!hoursValid}
-              onChange={(e) => setHours(e.target.value)}
-              className="w-[96px] shrink-0 text-right"
-            />
-          </SettingRow>
-
-          <SettingRow
-            id={`${ids}-week`}
-            title="Week starts on"
-            description="First day of the week in the calendar grid."
-          >
-            <Select
-              id={`${ids}-week`}
-              value={week}
-              onChange={(e) => setWeek(Number(e.target.value))}
-              className="w-[140px] shrink-0"
+              title="Hours per day"
+              description="A full working day. Drives the “full / ½ day” labels and insights."
             >
-              {WEEKDAYS.map((d, i) => (
-                <option key={d} value={i}>
-                  {d}
-                </option>
-              ))}
-            </Select>
-          </SettingRow>
+              <Input
+                id={`${ids}-hours`}
+                type="number"
+                min={0.5}
+                step={0.5}
+                value={hours}
+                invalid={!hoursValid}
+                onChange={(e) => setHours(e.target.value)}
+                className="w-[96px] shrink-0 text-right"
+              />
+            </SettingRow>
 
-          <SettingRow
-            id={`${ids}-todos`}
-            title="To-dos per page"
-            description="How many open to-dos the day view’s side list shows at once. Anything beyond that pages."
-          >
-            <Input
-              id={`${ids}-todos`}
-              type="number"
-              min={1}
-              step={1}
-              value={todoPage}
-              invalid={!todoPageValid}
-              onChange={(e) => setTodoPage(e.target.value)}
-              className="w-[96px] shrink-0 text-right"
-            />
-          </SettingRow>
-
-          <SettingRow
-            id={`${ids}-sort`}
-            title="Default task order"
-            description="How open-task lists are ordered when you open them, and what their Reset returns to. A list’s own sort picker overrides this until you reload."
-          >
-            <div className="flex gap-2 shrink-0">
+            <SettingRow
+              id={`${ids}-week`}
+              title="Week starts on"
+              description="First day of the week in the calendar grid."
+            >
               <Select
-                id={`${ids}-sort`}
-                value={sortKey}
-                onChange={(e) => setSortKey(e.target.value as TaskSortKey)}
-                className="w-[130px]"
+                id={`${ids}-week`}
+                value={week}
+                onChange={(e) => setWeek(Number(e.target.value))}
+                className="w-[140px] shrink-0"
               >
-                {TASK_SORTS.map((s) => (
-                  <option key={s.key} value={s.key}>
-                    {s.label}
+                {WEEKDAYS.map((d, i) => (
+                  <option key={d} value={i}>
+                    {d}
                   </option>
                 ))}
               </Select>
-              <Select
-                aria-label="Default task order direction"
-                value={sortDir}
-                onChange={(e) => setSortDir(e.target.value as TaskSortDirection)}
-                className="w-[150px]"
-              >
-                <option value="asc">{sortDirLabels.asc}</option>
-                <option value="desc">{sortDirLabels.desc}</option>
-              </Select>
-            </div>
-          </SettingRow>
+            </SettingRow>
 
-          <div className="flex items-start justify-between gap-6 px-[18px] py-[18px]">
-            <div>
-              {/* Not a `<label htmlFor>` like the rows above: clicking a label
-                  forwards its click to the control, and a switch flipping because
-                  you clicked anywhere in this paragraph is not what a reader
-                  means. The `Toggle` carries its own name instead. */}
-              <div className="text-row font-semibold">Automatic Git sync</div>
-              <div className="text-control text-neutral-675 mt-[3px]">
-                Commit and push in the background a while after your last change, so your timesheet doesn’t sit unpushed. Only errors are shown.
-              </div>
-            </div>
-            <Toggle checked={syncEnabled} onChange={setSyncEnabled} aria-label="Automatic Git sync" />
-          </div>
-
-          {syncEnabled && (
             <SettingRow
-              id={`${ids}-delay`}
-              title="Sync delay"
-              description="Minutes to wait after your last change before syncing. A burst of edits is coalesced into a single sync."
+              id={`${ids}-todos`}
+              title="To-dos per page"
+              description="How many open to-dos the day view’s side list shows at once. Anything beyond that pages."
             >
-              <div className="flex items-center gap-2 shrink-0">
-                <Input
-                  id={`${ids}-delay`}
-                  type="number"
-                  min={1}
-                  step={1}
-                  value={syncDelay}
-                  invalid={!delayValid}
-                  onChange={(e) => setSyncDelay(e.target.value)}
-                  className="w-[80px] text-right"
-                />
-                <span className="text-control text-neutral-675">min</span>
+              <Input
+                id={`${ids}-todos`}
+                type="number"
+                min={1}
+                step={1}
+                value={todoPage}
+                invalid={!todoPageValid}
+                onChange={(e) => setTodoPage(e.target.value)}
+                className="w-[96px] shrink-0 text-right"
+              />
+            </SettingRow>
+
+            <SettingRow
+              id={`${ids}-sort`}
+              title="Default task order"
+              description="How open-task lists are ordered when you open them, and what their Reset returns to. A list’s own sort picker overrides this until you reload."
+            >
+              <div className="flex gap-2 shrink-0">
+                <Select
+                  id={`${ids}-sort`}
+                  value={sortKey}
+                  onChange={(e) => setSortKey(e.target.value as TaskSortKey)}
+                  className="w-[130px]"
+                >
+                  {TASK_SORTS.map((s) => (
+                    <option key={s.key} value={s.key}>
+                      {s.label}
+                    </option>
+                  ))}
+                </Select>
+                <Select
+                  aria-label="Default task order direction"
+                  value={sortDir}
+                  onChange={(e) => setSortDir(e.target.value as TaskSortDirection)}
+                  className="w-[150px]"
+                >
+                  <option value="asc">{sortDirLabels.asc}</option>
+                  <option value="desc">{sortDirLabels.desc}</option>
+                </Select>
               </div>
             </SettingRow>
-          )}
 
-          <div className="px-[18px] py-[18px]">
-            <div className="flex items-start justify-between gap-6">
+            <div className="flex items-start justify-between gap-6 px-[18px] py-[18px]">
               <div>
-                <div className="text-row font-semibold">Sync right away after</div>
+                {/* Not a `<label htmlFor>` like the rows above: clicking a label
+                    forwards its click to the control, and a switch flipping because
+                    you clicked anywhere in this paragraph is not what a reader
+                    means. The `Toggle` carries its own name instead. */}
+                <div className="text-row font-semibold">Automatic Git sync</div>
                 <div className="text-control text-neutral-675 mt-[3px]">
-                  Changes of these kinds are pushed within seconds instead of waiting out the delay. They work on their
-                  own — with automatic Git sync off, these are the only changes that sync by themselves.
+                  Commit and push in the background a while after your last change, so your timesheet doesn’t sit unpushed. Only errors are shown.
                 </div>
               </div>
-              {/* A fixed name, not one that changes with the state: `aria-checked`
-                  already says which way it points, and a label that reads
-                  differently on each press is what makes a switch hard to follow. */}
-              <Toggle checked={allEvents} onChange={toggleAllEvents} aria-label="Sync right away after every change" />
+              <Toggle checked={syncEnabled} onChange={setSyncEnabled} aria-label="Automatic Git sync" />
             </div>
-            <div className="mt-3 divide-y divide-neutral-250 border-t border-neutral-250">
-              {AUTO_SYNC_EVENTS.map((event) => (
-                <div key={event.id} className="flex items-start justify-between gap-6 py-3">
-                  <div>
-                    {/* Same reasoning as the switch above: no `<label htmlFor>`, or
-                        clicking the explanation would flip the switch. */}
-                    <div className="text-control font-medium">{event.label}</div>
-                    <div className="text-meta text-neutral-675 mt-[2px]">{event.description}</div>
-                  </div>
-                  <Toggle
-                    checked={syncEvents.includes(event.id)}
-                    onChange={(on) => toggleEvent(event.id, on)}
-                    aria-label={`Sync right away after: ${event.label}`}
+
+            {syncEnabled && (
+              <SettingRow
+                id={`${ids}-delay`}
+                title="Sync delay"
+                description="Minutes to wait after your last change before syncing. A burst of edits is coalesced into a single sync."
+              >
+                <div className="flex items-center gap-2 shrink-0">
+                  <Input
+                    id={`${ids}-delay`}
+                    type="number"
+                    min={1}
+                    step={1}
+                    value={syncDelay}
+                    invalid={!delayValid}
+                    onChange={(e) => setSyncDelay(e.target.value)}
+                    className="w-[80px] text-right"
                   />
+                  <span className="text-control text-neutral-675">min</span>
                 </div>
-              ))}
+              </SettingRow>
+            )}
+
+            <div className="px-[18px] py-[18px]">
+              <div className="flex items-start justify-between gap-6">
+                <div>
+                  <div className="text-row font-semibold">Sync right away after</div>
+                  <div className="text-control text-neutral-675 mt-[3px]">
+                    Changes of these kinds are pushed within seconds instead of waiting out the delay. They work on their
+                    own — with automatic Git sync off, these are the only changes that sync by themselves.
+                  </div>
+                </div>
+                {/* A fixed name, not one that changes with the state: `aria-checked`
+                    already says which way it points, and a label that reads
+                    differently on each press is what makes a switch hard to follow. */}
+                <Toggle checked={allEvents} onChange={toggleAllEvents} aria-label="Sync right away after every change" />
+              </div>
+              <div className="mt-3 divide-y divide-neutral-250 border-t border-neutral-250">
+                {AUTO_SYNC_EVENTS.map((event) => (
+                  <div key={event.id} className="flex items-start justify-between gap-6 py-3">
+                    <div>
+                      {/* Same reasoning as the switch above: no `<label htmlFor>`, or
+                          clicking the explanation would flip the switch. */}
+                      <div className="text-control font-medium">{event.label}</div>
+                      <div className="text-meta text-neutral-675 mt-[2px]">{event.description}</div>
+                    </div>
+                    <Toggle
+                      checked={syncEvents.includes(event.id)}
+                      onChange={(on) => toggleEvent(event.id, on)}
+                      aria-label={`Sync right away after: ${event.label}`}
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
+          </Card>
+
+          {!hoursValid && (
+            <div className="text-control text-danger-675 mt-3">Hours per day must be greater than 0.</div>
+          )}
+          {!todoPageValid && (
+            <div className="text-control text-danger-675 mt-3">To-dos per page must be a whole number of at least 1.</div>
+          )}
+          {syncEnabled && !delayValid && (
+            <div className="text-control text-danger-675 mt-3">Sync delay must be a whole number of at least 1 minute.</div>
+          )}
+
+          <div className="flex items-center gap-3 mt-6">
+            <Button variant="primary" size="md" onClick={onSave} disabled={!canSave}>
+              Save changes
+            </Button>
+            {saved && <span className="text-control text-success-500 font-medium">Saved</span>}
           </div>
-        </Card>
 
-        {!hoursValid && (
-          <div className="text-control text-danger-675 mt-3">Hours per day must be greater than 0.</div>
-        )}
-        {!todoPageValid && (
-          <div className="text-control text-danger-675 mt-3">To-dos per page must be a whole number of at least 1.</div>
-        )}
-        {syncEnabled && !delayValid && (
-          <div className="text-control text-danger-675 mt-3">Sync delay must be a whole number of at least 1 minute.</div>
-        )}
-
-        <div className="flex items-center gap-3 mt-6">
-          <Button variant="primary" size="md" onClick={onSave} disabled={!canSave}>
-            Save changes
-          </Button>
-          {saved && <span className="text-control text-success-500 font-medium">Saved</span>}
+          {/* Below the Save button, not inside the card above it: the status editor
+              writes as you go and has no part in that draft. */}
+          <StatusSettings />
         </div>
-
-        {/* Below the Save button, not inside the card above it: the status editor
-            writes as you go and has no part in that draft. */}
-        <StatusSettings />
       </div>
     </div>
   );
