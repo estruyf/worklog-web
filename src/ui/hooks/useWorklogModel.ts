@@ -12,7 +12,7 @@
 import { useCallback, useMemo } from "react";
 import { repoKeyOf } from "../../data/pendingStore";
 import { worklogStore, type ToastMessage } from "../../data/worklogStore";
-import type { AutoSyncConfig, AutoSyncEvent, TaskSortPref } from "../../model/types";
+import type { AiAgent, AutoSyncConfig, AutoSyncEvent, TaskSortPref } from "../../model/types";
 import { DEFAULT_TASK_SORT } from "../../model/taskSort";
 import type { WorklogState } from "../state";
 import { useCollapsedTasks } from "./useCollapsedTasks";
@@ -57,6 +57,7 @@ export function useWorklogModel(
   const worklog = useMemo(() => snap?.worklog ?? [], [snap]);
   const dayNotes = useMemo(() => snap?.dayNotes ?? [], [snap]);
   const statuses = useMemo(() => snap?.statuses ?? [], [snap]);
+  const aiAgents = useMemo(() => snap?.aiAgents ?? [], [snap]);
   const today = snap?.today ?? "";
   const hoursPerDay = snap?.hoursPerDay ?? 0;
   const weekStart = snap?.weekStart ?? 0;
@@ -113,6 +114,7 @@ export function useWorklogModel(
     todosPerPage?: number;
     defaultTaskSort?: TaskSortPref;
     autoSync?: { enabled?: boolean; delayMinutes?: number; events?: AutoSyncEvent[] };
+    aiAgents?: AiAgent[];
   }) => worklogStore.updateSettings(fields);
 
   return {
@@ -132,6 +134,7 @@ export function useWorklogModel(
     todosPerPage,
     defaultTaskSort,
     autoSync,
+    aiAgents,
     assetUrl,
     // Archived clients still count as clients — otherwise archiving the last one
     // would drop you on the "add your first client" screen with no way back.

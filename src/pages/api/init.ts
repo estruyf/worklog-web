@@ -82,6 +82,7 @@ function scaffoldFiles(): CommitFile[] {
     clients: [],
     statuses: DEFAULT_STATUSES,
     autoSync: { ...DEFAULT_AUTO_SYNC },
+    aiAgents: [],
   };
   return [
     { path: 'README.md', content: readme() },

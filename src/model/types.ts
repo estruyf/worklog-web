@@ -3,11 +3,13 @@
 
 import type { Recurrence } from './recurrence';
 import type { AutoSyncEvent } from './syncEvents';
+import type { AiAgent } from './aiAgents';
 import type { TaskPriority } from './priority';
 import type { TaskSortPref } from './taskSort';
 
 export type { Recurrence } from './recurrence';
 export type { AutoSyncEvent } from './syncEvents';
+export type { AiAgent } from './aiAgents';
 export type { TaskPriority } from './priority';
 export type { TaskSortPref } from './taskSort';
 
@@ -135,4 +137,7 @@ export interface DaylogConfig {
   clients: Client[];
   statuses: StatusDef[];
   autoSync: AutoSyncConfig;
+  /** AI agents a task can be handed to, by id — the ones switched on in Settings.
+   *  Empty is the shipped state: nothing is offered until it is asked for. */
+  aiAgents: AiAgent[];
 }

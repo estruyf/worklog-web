@@ -1,5 +1,6 @@
 // Barrel for UI presentational components.
 export { DisclosureIcon } from './icons';
+export { AGENT_ICONS, ClaudeIcon, CopilotIcon } from './brandIcons';
 export { Kbd } from './Kbd';
 export { CopyButton } from './CopyButton';
 export type { CopyButtonProps } from './CopyButton';

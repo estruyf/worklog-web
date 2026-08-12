@@ -1,7 +1,8 @@
 import React, { useEffect, useId, useState } from 'react';
-import { Button, Card, Input, Select, Toggle, ViewHeader } from '../primitives';
-import { StatusSettings } from '../components';
+import { Button, Card, Input, SectionLabel, Select, Toggle, ViewHeader } from '../primitives';
+import { AGENT_ICONS, StatusSettings } from '../components';
 import { useData } from '../context';
+import { AI_AGENTS, COMMAND_EXECUTOR_URL, type AiAgent } from '../../model/aiAgents';
 import { AUTO_SYNC_EVENTS, type AutoSyncEvent } from '../../model/syncEvents';
 import { sortDirectionLabels, TASK_SORTS, type TaskSortDirection, type TaskSortKey } from '../utils';
 
@@ -39,7 +40,7 @@ function SettingRow({
  *  settings not managed elsewhere (clients live in the Clients view), plus the
  *  task-status list, which manages itself — see `StatusSettings`. */
 export function SettingsView() {
-  const { hoursPerDay, weekStart, todosPerPage, defaultTaskSort, autoSync, saveSettings } = useData();
+  const { hoursPerDay, weekStart, todosPerPage, defaultTaskSort, autoSync, aiAgents, saveSettings } = useData();
 
   const [hours, setHours] = useState(String(hoursPerDay));
   const [week, setWeek] = useState(weekStart);
@@ -49,6 +50,7 @@ export function SettingsView() {
   const [syncEnabled, setSyncEnabled] = useState(autoSync.enabled);
   const [syncDelay, setSyncDelay] = useState(String(autoSync.delayMinutes));
   const [syncEvents, setSyncEvents] = useState<AutoSyncEvent[]>(autoSync.events);
+  const [agents, setAgents] = useState<AiAgent[]>(aiAgents);
   const [saved, setSaved] = useState(false);
   const ids = useId();
 
@@ -58,6 +60,10 @@ export function SettingsView() {
   // unrelated edit. The order is canonical (see parseAutoSyncEvents), so this is
   // stable for as long as the setting is.
   const savedEvents = autoSync.events.join(',');
+  // Same reason as `savedEvents`: the list is rebuilt from config.json on every
+  // derive, and `parseAiAgents` makes its order canonical, so comparing the joined
+  // string is stable for as long as the setting is.
+  const savedAgents = aiAgents.join(',');
 
   // Re-seed from the snapshot after it re-derives (initial load, save, repo switch).
   useEffect(() => {
@@ -87,6 +93,9 @@ export function SettingsView() {
   useEffect(() => {
     setSyncEvents(savedEvents ? (savedEvents.split(',') as AutoSyncEvent[]) : []);
   }, [savedEvents]);
+  useEffect(() => {
+    setAgents(savedAgents ? (savedAgents.split(',') as AiAgent[]) : []);
+  }, [savedAgents]);
 
   const parsedHours = parseFloat(hours);
   const hoursValid = Number.isFinite(parsedHours) && parsedHours > 0;
@@ -105,7 +114,8 @@ export function SettingsView() {
     sortDir !== defaultTaskSort.dir ||
     syncEnabled !== autoSync.enabled ||
     (delayValid && parsedDelay !== autoSync.delayMinutes) ||
-    syncEvents.join(',') !== savedEvents;
+    syncEvents.join(',') !== savedEvents ||
+    agents.join(',') !== savedAgents;
 
   const canSave = dirty && hoursValid && todoPageValid && (!syncEnabled || delayValid);
 
@@ -125,6 +135,12 @@ export function SettingsView() {
   const allEvents = syncEvents.length === AUTO_SYNC_EVENTS.length;
   const toggleAllEvents = (on: boolean) => setSyncEvents(on ? AUTO_SYNC_EVENTS.map((e) => e.id) : []);
 
+  /** Same canonical-order rule as `toggleEvent`, and for the same reason: saving
+   *  the same set of agents twice should write the same config.json. */
+  const toggleAgent = (id: AiAgent, on: boolean) => {
+    setAgents(AI_AGENTS.filter((a) => (a.id === id ? on : agents.includes(a.id))).map((a) => a.id));
+  };
+
   const onSave = () => {
     if (!canSave) {
       return;
@@ -135,6 +151,7 @@ export function SettingsView() {
       todosPerPage: parsedTodoPage,
       defaultTaskSort: { key: sortKey, dir: sortDir },
       autoSync: { enabled: syncEnabled, delayMinutes: parsedDelay, events: syncEvents },
+      aiAgents: agents,
     });
     setSaved(true);
     window.setTimeout(() => setSaved(false), 2000);
@@ -307,6 +324,56 @@ export function SettingsView() {
               </div>
             </div>
           </Card>
+
+          {/* Its own section rather than another row in the card above: these
+              don't configure the app, they add something to every task, and the
+              extension they need is a prerequisite rather than a footnote. */}
+          <div className="mt-6">
+            <SectionLabel className="mb-[10px]">AI agents</SectionLabel>
+            <Card className="divide-y divide-neutral-250">
+              <div className="px-[18px] py-[18px]">
+                <p className="text-control text-neutral-675 m-0">
+                  Hand a task to an agent from its Actions list: the title and description open as a prompt in VS Code.
+                  This needs the{' '}
+                  <a
+                    href={COMMAND_EXECUTOR_URL}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    className="text-info hover:underline"
+                  >
+                    Command Executor
+                  </a>{' '}
+                  extension installed — a <code className="text-meta bg-neutral-250 rounded-chip px-[5px] py-[1px]">vscode://</code>{' '}
+                  link can’t run a command on its own. Nothing is sent: the prompt lands in the agent’s input for you to
+                  read, change and send yourself.
+                </p>
+              </div>
+              {AI_AGENTS.map((agent) => {
+                const AgentIcon = AGENT_ICONS[agent.id];
+                return (
+                  <div key={agent.id} className="flex items-start justify-between gap-6 px-[18px] py-[18px]">
+                    <div>
+                      {/* No `<label htmlFor>`, same as the switches above: clicking
+                          the explanation shouldn't flip anything. */}
+                      <div className="flex items-center gap-[8px] text-row font-semibold">
+                        {/* The mark sits with the name rather than out at the row's
+                            edge: it identifies which agent this is, and the switch
+                            on the right is the row's only control. */}
+                        <AgentIcon size={16} />
+                        {agent.label}
+                      </div>
+                      <div className="text-control text-neutral-675 mt-[3px]">{agent.description}</div>
+                    </div>
+                    <Toggle
+                      checked={agents.includes(agent.id)}
+                      onChange={(on) => toggleAgent(agent.id, on)}
+                      aria-label={`Offer ${agent.label} on tasks`}
+                    />
+                  </div>
+                );
+              })}
+            </Card>
+          </div>
 
           {!hoursValid && (
             <div className="text-control text-danger-675 mt-3">Hours per day must be greater than 0.</div>

@@ -26,14 +26,15 @@ insights. Every edit is committed straight back to your repo.
 7. [Using the app](#using-the-app)
 8. [Offline](#offline)
 9. [Quick capture — task deeplinks](#quick-capture--task-deeplinks)
-10. [Testing](#testing)
-11. [Deploying to Cloudflare](#deploying-to-cloudflare)
-12. [Environment variables](#environment-variables)
-13. [Expected repository layout](#expected-repository-layout)
-14. [How it works](#how-it-works)
-15. [Project structure](#project-structure)
-16. [Troubleshooting](#troubleshooting)
-17. [Known limitations](#known-limitations)
+10. [Hand a task to an AI agent](#hand-a-task-to-an-ai-agent)
+11. [Testing](#testing)
+12. [Deploying to Cloudflare](#deploying-to-cloudflare)
+13. [Environment variables](#environment-variables)
+14. [Expected repository layout](#expected-repository-layout)
+15. [How it works](#how-it-works)
+16. [Project structure](#project-structure)
+17. [Troubleshooting](#troubleshooting)
+18. [Known limitations](#known-limitations)
 
 ---
 
@@ -377,6 +378,35 @@ Notes worth knowing:
   is length-capped. If a field arrives mangled, that's why — edit it in the form.
 - **Sign in first.** A deeplink opened while signed out lands on the sign-in page and the task is
   lost; open the app once, then use the link.
+
+---
+
+## Hand a task to an AI agent
+
+The other direction: a task can open as a prompt in **GitHub Copilot** or **Claude Code** in VS Code,
+so you don't retype what you already wrote down. Both are **off until you turn them on** in
+**Settings → AI agents**; once on, they appear in a task's **Actions** list.
+
+This needs the [Command Executor](https://marketplace.visualstudio.com/items?itemName=eliostruyf.execcommand)
+extension installed in VS Code. A `vscode://` link can open a file on its own, but nothing built in
+runs a command — that extension is the bridge, and without it the link resolves to nothing.
+
+| Agent | Opens |
+| --- | --- |
+| GitHub Copilot | Copilot Chat, with the prompt in the input box, unsent. |
+| Claude Code | A Claude Code session in the VS Code terminal, with the task as its prompt. |
+
+The prompt is the task's **title and description**, nothing else. Like a deeplink in the other
+direction, the link fills something in and never submits it: you read it, change it and send it
+yourself.
+
+Worth knowing:
+
+- **It lands in the focused VS Code window.** The link carries no repo, so open the project first —
+  otherwise the prompt arrives wherever you last were.
+- **Nothing is stored on the task.** No issue is created, no branch, no link written back. This is a
+  handoff, not an integration.
+- **Desktop only.** On a phone there is no VS Code to open, so the rows do nothing there.
 
 ---
 

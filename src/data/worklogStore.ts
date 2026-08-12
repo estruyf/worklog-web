@@ -685,6 +685,7 @@ class WorklogStore {
       todosPerPage: config.todosPerPage,
       defaultTaskSort: config.defaultTaskSort,
       autoSync: config.autoSync,
+      aiAgents: config.aiAgents,
       statuses: config.statuses,
       // The general to-do bucket is a task-only concept; keep it out of the
       // client list so it never surfaces in billing (log form, dashboard, totals).

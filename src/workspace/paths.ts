@@ -6,6 +6,7 @@
 
 import type { AutoSyncConfig, Client, DaylogConfig, TaskLink } from '../model/types';
 import { DEFAULT_STATUSES, normalizeStatuses } from '../model/status';
+import { parseAiAgents } from '../model/aiAgents';
 import { parseAutoSyncEvents } from '../model/syncEvents';
 import { DEFAULT_TASK_SORT, normalizeTaskSort } from '../model/taskSort';
 
@@ -193,6 +194,7 @@ function defaultConfig(): DaylogConfig {
     // splices this very array when config.json is missing.
     statuses: DEFAULT_STATUSES.map((s) => ({ ...s })),
     autoSync: parseAutoSync(undefined),
+    aiAgents: [],
   };
 }
 
@@ -267,6 +269,9 @@ export class Workspace {
         // every caller assumes exactly one terminal status sitting last.
         statuses: normalizeStatuses(parsed.statuses),
         autoSync: parseAutoSync(parsed.autoSync),
+        // Absent in every repo written before this setting existed, and absent is
+        // the same answer as "none switched on" — no agent is offered by default.
+        aiAgents: parseAiAgents(parsed.aiAgents),
       };
     } catch {
       return defaultConfig();

@@ -17,11 +17,21 @@ Every change to Worklog, by day, newest first.
 
 ## 2026-08-12
 
+- A task can now be handed to an AI agent. Switch on GitHub Copilot or Claude Code under
+  **Settings → AI agents** — both start off — and each one you enable shows up in a task's
+  **Actions** list. Pressing it opens the task's title and description as a prompt in VS Code,
+  sitting in the input for you to read and send yourself. It needs the
+  [Command Executor](https://marketplace.visualstudio.com/items?itemName=eliostruyf.execcommand)
+  extension, which is what lets a link open a command in VS Code at all. A task whose title or
+  description contains an `&` opens correctly too — it used to arrive cut off at that character,
+  and sent itself rather than waiting in the input.
 - Every view now keeps its header on screen while you scroll. Stepping to yesterday, jumping to
   today, switching the calendar's month, marking the open task done — the buttons stay where you
   left them instead of scrolling off the top of a long day. The nav rail and the "not synced"
   banner stay put with them, and the Day view's to-do list finally pins itself beside your work
   on a wide screen the way it was always meant to.
+- Fixed the second scrollbar sitting next to the view's own one. There is one scrollbar again,
+  the one that moves your work.
 
 ## 2026-08-11
 

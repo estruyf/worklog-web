@@ -3,6 +3,7 @@
 // statuses: defaults). Writes config.json and rebuilds so views pick up the change.
 
 import { Store } from '../store';
+import { parseAiAgents, type AiAgent } from '../model/aiAgents';
 import { parseAutoSyncEvents, type AutoSyncEvent } from '../model/syncEvents';
 import { normalizeTaskSort, type TaskSortPref } from '../model/taskSort';
 import { parseWeekStart } from '../workspace/paths';
@@ -19,6 +20,8 @@ export interface SettingsFields {
   /** Automatic Git sync after logging time. Only the provided keys are changed;
    *  `events` is the change kinds that sync right away instead of on the delay. */
   autoSync?: { enabled?: boolean; delayMinutes?: number; events?: AutoSyncEvent[] };
+  /** The AI agents a task can be handed to, by id. The whole list, not a delta. */
+  aiAgents?: AiAgent[];
 }
 
 /** Update app-wide settings in config.json, then rebuild. */
@@ -63,6 +66,13 @@ export async function updateSettings(store: Store, fields: SettingsFields): Prom
     // save the rest of the settings.
     const events = fields.autoSync.events === undefined ? config.autoSync.events : parseAutoSyncEvents(fields.autoSync.events);
     config.autoSync = { enabled, delayMinutes, events };
+  }
+
+  // Normalized for the same reason as `autoSync.events`, and to the same effect:
+  // an agent id this version doesn't offer belongs to a newer one, and dropping
+  // it silently beats refusing to save the rest.
+  if (fields.aiAgents !== undefined) {
+    config.aiAgents = parseAiAgents(fields.aiAgents);
   }
 
   await store.ws.saveConfig(config);

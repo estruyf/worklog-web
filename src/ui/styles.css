@@ -216,10 +216,16 @@
   background-size: 14px 14px;
 }
 
+/* The app is the viewport and each view scrolls its own content (see WorklogApp),
+   so the document itself must never scroll — a few stray pixels of overflow put a
+   second, near-full-height scrollbar next to the view's own. `overflow: hidden`
+   rather than hunting the pixel: the app is `h-dvh`, so nothing below here is ever
+   meant to be reachable by scrolling the document. */
 html,
 body,
 #root {
   height: 100%;
+  overflow: hidden;
 }
 
 body {
