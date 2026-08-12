@@ -44,24 +44,32 @@ function config(): Promise<DaylogConfig> {
 
 const agent = (id: AiAgent) => AI_AGENTS.find((a) => a.id === id)!;
 
-/** The whole chain a link goes through, so what this returns is what the command
- *  actually receives:
+/** The whole chain a link goes through, so what this returns is the argument list
+ *  `executeCommand` is actually spread with:
  *
  *  1. VS Code parses the url and percent-decodes the query — modelled here with
  *     `decodeURIComponent`, rather than by depending on `vscode-uri`, for the same
  *     reason `test/offline.test.ts` hand-rolls IndexedDB. This step is the one
- *     that made a task title containing `&` truncate its own `args`.
- *  2. The extension reads `args` off the decoded query …
- *  3. … `JSON.parse`s it, keeping the raw string when that throws, and passes the
- *     result to `executeCommand`. */
-function received(url: string): { command: string; args: unknown } {
+ *     that made a task title containing `&` truncate its own argument.
+ *  2. The extension collects the `args<n>` params, filling the gaps with
+ *     `undefined` up to the highest index it saw …
+ *  3. … `JSON.parse`s each, keeping the raw string when that throws. */
+function received(url: string): { command: string; args: unknown[] } {
   const query = new URLSearchParams(decodeURIComponent(url.slice(url.indexOf('?') + 1)));
-  const raw = query.get('args') ?? '';
-  let args: unknown = raw;
-  try {
-    args = JSON.parse(raw);
-  } catch {
-    // The extension keeps the raw string when the parse throws.
+  const indexed: [number, string][] = [];
+  for (const [key, value] of query) {
+    const match = /^args(\d+)$/.exec(key);
+    if (match) {
+      indexed.push([Number(match[1]), value]);
+    }
+  }
+  const args = new Array<unknown>(indexed.length ? Math.max(...indexed.map(([i]) => i)) + 1 : 0).fill(undefined);
+  for (const [index, value] of indexed) {
+    try {
+      args[index] = JSON.parse(value);
+    } catch {
+      args[index] = value;
+    }
   }
   return { command: query.get('command') ?? '', args };
 }
@@ -109,41 +117,49 @@ describe('agentUrl', () => {
       command: 'workbench.action.chat.open',
       // `isPartialQuery` is the difference between filling the input and sending
       // it. Losing it would have a link start an agent nobody pressed Enter on.
-      args: { query: 'Fix the login redirect', isPartialQuery: true },
+      args: [{ query: 'Fix the login redirect', isPartialQuery: true }],
     });
   });
 
-  it('sends Claude the prompt as the command’s first argument', () => {
+  it('sends Claude the prompt past the session id it must not set', () => {
     expect(received(agentUrl(agent('claude'), 'Fix the login redirect'))).toEqual({
-      command: 'claude-vscode.terminal.open',
-      args: 'Fix the login redirect',
+      command: 'claude-vscode.editor.open',
+      // A value in the first slot would be read as a session to resume, and the
+      // prompt would be dropped with a notice — so that slot stays empty and the
+      // gap has to survive the round trip as `undefined`.
+      args: [undefined, 'Fix the login redirect'],
     });
+  });
+
+  it('leaves a skipped argument out of the link rather than sending it empty', () => {
+    const url = agentUrl(agent('claude'), 'Fix the login redirect');
+    expect(url).not.toContain('args0=');
+    expect(url).toContain('args1=');
   });
 
   it('keeps a prompt that happens to look like JSON a string', () => {
-    // The reason `args` is JSON-encoded even when it is a plain string: the
-    // extension's `JSON.parse` would otherwise turn these into a number, a
-    // boolean and an object, and `claude-vscode.terminal.open` drops anything
-    // that isn't a string without saying so.
+    // The reason each argument is JSON-encoded even when it is a plain string:
+    // the extension's `JSON.parse` would otherwise turn these into a number, a
+    // boolean and an object, and the prompt would stop being text.
     for (const prompt of ['42', 'true', 'null', '{"query":"x"}', '[1,2]']) {
-      expect(received(agentUrl(agent('claude'), prompt)).args).toBe(prompt);
+      expect(received(agentUrl(agent('claude'), prompt)).args[1]).toBe(prompt);
     }
   });
 
   it('survives a prompt carrying the url’s own punctuation', () => {
     // The `&` is the one that bit: a single encoding is undone by VS Code's own
-    // parse, so the query splits inside the prompt, `args` arrives truncated to
-    // invalid JSON, and the raw string is sent to the agent instead of filling
+    // parse, so the query splits inside the prompt, the argument arrives truncated
+    // to invalid JSON, and the raw string is sent to the agent instead of filling
     // its input. Both agents, because both put the prompt through the same url.
     const prompt = 'Investigate MS AI Search & Copilot integration #12 (a=b, 100% of the time)';
-    expect(received(agentUrl(agent('claude'), prompt)).args).toBe(prompt);
-    expect(received(agentUrl(agent('copilot'), prompt)).args).toEqual({ query: prompt, isPartialQuery: true });
+    expect(received(agentUrl(agent('claude'), prompt)).args[1]).toBe(prompt);
+    expect(received(agentUrl(agent('copilot'), prompt)).args).toEqual([{ query: prompt, isPartialQuery: true }]);
   });
 
   it('keeps the command readable in the link itself', () => {
-    // Only `args` is encoded twice — the command id is what a person reads when a
-    // link doesn't work, and it has nothing in it that needs escaping.
-    expect(agentUrl(agent('copilot'), 'x')).toContain('?command=workbench.action.chat.open&args=');
+    // Only the arguments are encoded twice — the command id is what a person reads
+    // when a link doesn't work, and it has nothing in it that needs escaping.
+    expect(agentUrl(agent('copilot'), 'x')).toContain('?command=workbench.action.chat.open&args0=');
   });
 });
 

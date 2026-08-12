@@ -2,7 +2,7 @@ import React, { useEffect, useId, useState } from 'react';
 import { Button, Card, Input, SectionLabel, Select, Toggle, ViewHeader } from '../primitives';
 import { AGENT_ICONS, StatusSettings } from '../components';
 import { useData } from '../context';
-import { AI_AGENTS, COMMAND_EXECUTOR_URL, type AiAgent } from '../../model/aiAgents';
+import { AI_AGENTS, COMMAND_EXECUTOR_MIN_VERSION, COMMAND_EXECUTOR_URL, type AiAgent } from '../../model/aiAgents';
 import { AUTO_SYNC_EVENTS, type AutoSyncEvent } from '../../model/syncEvents';
 import { sortDirectionLabels, TASK_SORTS, type TaskSortDirection, type TaskSortKey } from '../utils';
 
@@ -343,9 +343,10 @@ export function SettingsView() {
                   >
                     Command Executor
                   </a>{' '}
-                  extension installed — a <code className="text-meta bg-neutral-250 rounded-chip px-[5px] py-[1px]">vscode://</code>{' '}
-                  link can’t run a command on its own. Nothing is sent: the prompt lands in the agent’s input for you to
-                  read, change and send yourself.
+                  extension, {COMMAND_EXECUTOR_MIN_VERSION} or newer — a{' '}
+                  <code className="text-meta bg-neutral-250 rounded-chip px-[5px] py-[1px]">vscode://</code> link can’t
+                  run a command on its own. Nothing is sent: the prompt lands in the agent’s input for you to read,
+                  change and send yourself.
                 </p>
               </div>
               {AI_AGENTS.map((agent) => {

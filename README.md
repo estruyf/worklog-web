@@ -388,13 +388,15 @@ so you don't retype what you already wrote down. Both are **off until you turn t
 **Settings → AI agents**; once on, they appear in a task's **Actions** list.
 
 This needs the [Command Executor](https://marketplace.visualstudio.com/items?itemName=eliostruyf.execcommand)
-extension installed in VS Code. A `vscode://` link can open a file on its own, but nothing built in
-runs a command — that extension is the bridge, and without it the link resolves to nothing.
+extension installed in VS Code, **version 0.0.2 or newer**. A `vscode://` link can open a file on its
+own, but nothing built in runs a command — that extension is the bridge, and without it the link
+resolves to nothing. (0.0.2 is what added multi-argument commands; on an older one the agent opens
+with no prompt.)
 
 | Agent | Opens |
 | --- | --- |
 | GitHub Copilot | Copilot Chat, with the prompt in the input box, unsent. |
-| Claude Code | A Claude Code session in the VS Code terminal, with the task as its prompt. |
+| Claude Code | A Claude Code tab, with the prompt in its input box, unsent. |
 
 The prompt is the task's **title and description**, nothing else. Like a deeplink in the other
 direction, the link fills something in and never submits it: you read it, change it and send it

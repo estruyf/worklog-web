@@ -22,7 +22,8 @@ Every change to Worklog, by day, newest first.
   **Actions** list. Pressing it opens the task's title and description as a prompt in VS Code,
   sitting in the input for you to read and send yourself. It needs the
   [Command Executor](https://marketplace.visualstudio.com/items?itemName=eliostruyf.execcommand)
-  extension, which is what lets a link open a command in VS Code at all. A task whose title or
+  extension (0.0.2 or newer), which is what lets a link open a command in VS Code at all. Claude
+  opens as a proper Claude Code tab rather than a terminal command. A task whose title or
   description contains an `&` opens correctly too — it used to arrive cut off at that character,
   and sent itself rather than waiting in the input.
 - Every view now keeps its header on screen while you scroll. Stepping to yesterday, jumping to
