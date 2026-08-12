@@ -8,6 +8,30 @@ Read it before changing anything user-facing. This file covers how to work in th
 
 ---
 
+## Working principles
+
+These come before the project-specific rules below. Adapted from
+[andrej-karpathy-skills](https://github.com/multica-ai/andrej-karpathy-skills/blob/main/CLAUDE.md).
+
+- **Think before coding.** Don't assume, don't hide confusion, surface tradeoffs. State the
+  assumption you're working under; if a request has two readings that produce different code,
+  say both rather than silently picking one. The invariants here are the kind a wrong guess
+  breaks quietly — the merge record keys, the serializer half of a parser change, the single
+  terminal status.
+- **Simplicity first.** The minimum code that solves the problem, nothing speculative. No
+  unrequested features, no single-use abstraction, no error handling for cases that can't occur
+  in this app (one person's timesheet, no disk, nothing in the background). If it could be
+  substantially shorter, rewrite it.
+- **Surgical changes.** Touch only what you must; clean up only your own mess. Match the style
+  of the file you're in. Code your change orphaned goes; pre-existing dead code stays. The
+  rough edges in [docs/code-audit.md](docs/code-audit.md) are known and deliberate — don't
+  drive-by fix them.
+- **Goal-driven execution.** Turn a vague request into a criterion you can check, then loop
+  until it holds. Here that criterion is concrete more often than not: a failing test that
+  passes, the four commands below all clean, the round-trip test still byte-faithful.
+
+---
+
 ## Commands
 
 ```bash
