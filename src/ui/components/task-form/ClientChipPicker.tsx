@@ -1,11 +1,11 @@
 import React, { useMemo, useState } from 'react';
 import { Button, Chip, Input, LinkButton, SidebarSection } from '../../primitives';
 import { useData } from '../../context';
-import { GENERAL_TODO_CLIENT_ID, GENERAL_TODO_COLOR, GENERAL_TODO_LABEL } from '../../../model/todos';
 
 /** Who the task is for, as a row of chips rather than a select: the list is short,
- *  and picking is the single most common thing done in this rail. Includes the
- *  general to-do bucket, and can create a client without leaving the form. */
+ *  and picking is the single most common thing done in this rail. Can create a
+ *  client without leaving the form. Clients only — the general to-do bucket is the
+ *  Task/To-do switch's job, and this picker isn't rendered at all for a to-do. */
 export function ClientChipPicker({ value, onChange }: { value: string; onChange: (clientId: string) => void }) {
   const { clients, allClients, colorOf, createClient } = useData();
   const [addingClient, setAddingClient] = useState(false);
@@ -44,15 +44,6 @@ export function ClientChipPicker({ value, onChange }: { value: string; onChange:
             {c.name}
           </Chip>
         ))}
-        <Chip
-          variant="select"
-          selected={value === GENERAL_TODO_CLIENT_ID}
-          onClick={() => onChange(GENERAL_TODO_CLIENT_ID)}
-          title="A general to-do not linked to any client"
-        >
-          <span className="w-[9px] h-[9px] rounded-full" style={{ background: GENERAL_TODO_COLOR }} />
-          {GENERAL_TODO_LABEL}
-        </Chip>
         {!addingClient && (
           <Chip variant="add" onClick={() => setAddingClient(true)}>
             + Add client

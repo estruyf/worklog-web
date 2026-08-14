@@ -17,6 +17,9 @@ Every change to Worklog, by day, newest first.
 
 ## 2026-08-14
 
+- The task form's client picker is now only about clients: the To-do chip is gone — the
+  Task/To-do switch above already picks that — and switching to To-do hides the client
+  section entirely instead of leaving an empty one behind.
 - Every Markdown field — a task's description, its notes, a day note, a client's description —
   now has a formatting bar along the top of the box, the way GitHub's comment field does: bold,
   italic, strikethrough, code, link, and the four block markers. The shortcuts work without it

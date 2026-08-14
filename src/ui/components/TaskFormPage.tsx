@@ -326,18 +326,13 @@ function TaskForm({
           </div>
 
           <aside className="contents lg:block lg:w-[320px] lg:shrink-0 lg:border-l lg:border-neutral-375 lg:pl-8">
-            {/* Kept as a block rather than dropped when the switch says to-do: the
-                rail losing a section outright reads as the picker having gone
-                missing, and this says where the client went. */}
-            <div className="order-2">
-              {isTodo ? (
-                <SidebarSection title="Client" divider={false}>
-                  <p className="m-0 text-meta text-neutral-675">Not linked to a client.</p>
-                </SidebarSection>
-              ) : (
+            {/* Dropped outright when the switch says to-do: the switch above already
+                says a to-do has no client, so a section here could only repeat it. */}
+            {!isTodo && (
+              <div className="order-2">
                 <ClientChipPicker value={clientId} onChange={onPickClient} />
-              )}
-            </div>
+              </div>
+            )}
 
             <div className="order-5 mt-[22px] lg:mt-0">
               {/* Titled by the section rather than a `Field`: the picker is a
