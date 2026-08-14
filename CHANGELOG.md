@@ -26,8 +26,14 @@ Every change to Worklog, by day, newest first.
   instead, so there is a way out without deleting the marker by hand.
 - The note box under a task only shows that bar once you are writing in it, so an untouched
   task doesn't carry a row of buttons it has nothing to format.
-- A task's description now has **Cancel** beside its **Save**, the same pair the day note has —
-  a description you started editing can be put back the way it was.
+- A task's description is now something you open rather than something that is always half
+  open. It sits there as written, with an **Edit** button; once you're in, **Write** and
+  **Preview** are two looks at the same unsaved draft — switching to Preview no longer means
+  giving anything up — and **Cancel** or **Save** are the two ways out. Cancel puts the
+  description back the way it was.
+- "+ Add image" has moved onto the formatting bar as a button, in notes and descriptions alike.
+  It belongs with the other things that write at the cursor — and it now appears only while you
+  are actually writing, rather than in Preview, where it edited text you weren't looking at.
 - A subtask no longer offers subtasks of its own. The Subtasks section is gone from its detail
   panel, and the new-task shortcut opens a plain task there instead — the tree is one level
   deep, so there was nothing that section could ever hold.

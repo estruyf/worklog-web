@@ -8,14 +8,16 @@
 // write/preview toggle and image paste/drop behave exactly as they do on a task.
 
 import React from 'react';
-import { DescriptionEditor, MARKDOWN_CHEATSHEET, MarkdownView, type DescriptionMode } from '../../components';
+import { DescriptionEditor, MARKDOWN_CHEATSHEET, MarkdownView, type DescriptionDraftMode } from '../../components';
 import { Button, Card, SectionLabel } from '../../primitives';
 
 export interface DayNoteProps {
   value: string;
   onChange: React.Dispatch<React.SetStateAction<string>>;
-  mode: DescriptionMode;
-  onModeChange: (mode: DescriptionMode) => void;
+  /** The day note has no `read` of its own: the card renders the note when there
+   *  is no editor open, and `preview` here is that same read-only card. */
+  mode: DescriptionDraftMode;
+  onModeChange: (mode: DescriptionDraftMode) => void;
   dirty: boolean;
   onSave: () => void;
   /** Puts the draft back and closes the editor — the only way out that discards. */

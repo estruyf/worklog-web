@@ -45,8 +45,18 @@ export function NotesSection({ task }: { task: Task }) {
   });
   const composerImg = useMarkdownImages(noteDraft, setNoteDraft);
   const editImg = useMarkdownImages(editing?.text ?? '', setEditText);
-  const composerFormat = useMarkdownFormat({ value: noteDraft, onChange: setNoteDraft, textareaRef: composerRef });
-  const editFormat = useMarkdownFormat({ value: editing?.text ?? '', onChange: setEditText, textareaRef: editRef });
+  const composerFormat = useMarkdownFormat({
+    value: noteDraft,
+    onChange: setNoteDraft,
+    textareaRef: composerRef,
+    image: { onAdd: composerImg.openFilePicker, busy: composerImg.uploading },
+  });
+  const editFormat = useMarkdownFormat({
+    value: editing?.text ?? '',
+    onChange: setEditText,
+    textareaRef: editRef,
+    image: { onAdd: editImg.openFilePicker, busy: editImg.uploading },
+  });
 
   const onAddNote = () => {
     const text = noteDraft.trim();
@@ -148,18 +158,15 @@ export function NotesSection({ task }: { task: Task }) {
                       aria-label={`Edit note from ${n.timestamp}`}
                       className="w-full min-h-[68px] max-h-[60vh] leading-[1.55]"
                     />
-                    <div className="flex justify-between items-center gap-3">
-                      <LinkButton size="xs" onClick={editImg.openFilePicker} disabled={editImg.uploading} className="font-medium">
-                        {editImg.uploading ? 'Adding…' : '+ Add image'}
+                    {/* Adding an image is on the formatting bar above now, so
+                        this row is only the two ways out of the correction. */}
+                    <div className="flex justify-end items-center gap-3">
+                      <LinkButton size="xs" tone="muted" onClick={() => setEditing(null)}>
+                        Cancel
                       </LinkButton>
-                      <div className="flex items-center gap-3">
-                        <LinkButton size="xs" tone="muted" onClick={() => setEditing(null)}>
-                          Cancel
-                        </LinkButton>
-                        <Button variant="primary" size="xs" onClick={onSaveEdit} disabled={!edit.text.trim()} className="font-semibold">
-                          Save note
-                        </Button>
-                      </div>
+                      <Button variant="primary" size="xs" onClick={onSaveEdit} disabled={!edit.text.trim()} className="font-semibold">
+                        Save note
+                      </Button>
                     </div>
                     {editImg.error && <div className="text-chip text-danger-675">{editImg.error}</div>}
                   </div>
@@ -214,18 +221,7 @@ export function NotesSection({ task }: { task: Task }) {
         />
         {composerMention.panel}
         {editMention.panel}
-        <div className="flex justify-between items-center gap-3">
-          {/* Keeps the focus — and so the toolbar above — where it is: blurring
-              on mousedown would shift this row up out from under the click. */}
-          <LinkButton
-            size="xs"
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={composerImg.openFilePicker}
-            disabled={composerImg.uploading}
-            className="font-medium"
-          >
-            {composerImg.uploading ? 'Adding…' : '+ Add image'}
-          </LinkButton>
+        <div className="flex justify-end items-center gap-3">
           <Button variant="primary" size="xs" onClick={onAddNote} disabled={!noteDraft.trim()} className="font-semibold">
             Add note
           </Button>

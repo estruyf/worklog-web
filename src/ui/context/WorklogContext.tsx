@@ -110,7 +110,7 @@ export function WorklogProvider({ children }: { children: React.ReactNode }) {
     }
     const t = snap?.tasks.find((x) => x.id === ui.detailId);
     ui.setDescDraft(t?.description ?? '');
-    ui.setDescMode('preview');
+    ui.setDescMode('read');
     ui.setNoteDraft('');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ui.detailId]);

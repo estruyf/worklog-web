@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card, LinkButton, SectionLabel, SegmentedControl, TextArea, cn } from '../primitives';
+import { Card, SectionLabel, SegmentedControl, TextArea, cn } from '../primitives';
 import { useMarkdownImages } from '../hooks';
 import { MarkdownView } from './MarkdownView';
 import { useMarkdownFormat } from './markdown-format';
@@ -11,7 +11,19 @@ import { useTaskMention } from './task-mention';
  *  and the preview is a card rather than the inside of a frame. */
 export type DescriptionEditorVariant = 'boxed' | 'inline';
 
-export type DescriptionMode = 'edit' | 'preview';
+/** `read` is not editing at all: the description as it is stored, with whatever
+ *  way in the call site puts in `action`. `edit` and `preview` are two views of
+ *  the *draft* — one editor, open, that you can look at rendered and go back
+ *  from without deciding anything. Keeping `read` distinct from `preview` is
+ *  what makes Save and Cancel mean something: in `preview` there is still an
+ *  edit in hand. A surface that is only ever an editor — the task form — never
+ *  passes `read`. */
+export type DescriptionMode = 'read' | 'edit' | 'preview';
+
+/** The two halves of an open editor — what the toggle switches between, and the
+ *  only thing this component ever asks for. Leaving `read` is the call site's
+ *  own action, so a surface that never opens one can hold just these two. */
+export type DescriptionDraftMode = Exclude<DescriptionMode, 'read'>;
 
 /** The Markdown cheatsheet every placeholder ends with. It lives here for the
  *  same reason it always did: two copies of it drift, and the one that drifts is
@@ -21,7 +33,9 @@ export const MARKDOWN_CHEATSHEET =
 
 const PLACEHOLDER = `Add a description in Markdown…\n\n${MARKDOWN_CHEATSHEET}`;
 
-const MODES: { value: DescriptionMode; label: string }[] = [
+/** The toggle offers the two halves of an open editor; `read` is left by the
+ *  call site's own action, not by a tab. */
+const MODES: { value: DescriptionDraftMode; label: string }[] = [
   { value: 'edit', label: 'Write' },
   { value: 'preview', label: 'Preview' },
 ];
@@ -36,7 +50,7 @@ export interface DescriptionEditorProps {
    *  the caret, which has to be applied to the text as it is at that moment. */
   onChange: React.Dispatch<React.SetStateAction<string>>;
   mode: DescriptionMode;
-  onModeChange: (mode: DescriptionMode) => void;
+  onModeChange: (mode: DescriptionDraftMode) => void;
   variant?: DescriptionEditorVariant;
   /** The heading, and the editor's accessible name. It is a heading rather than a
    *  `<label>` on purpose: in preview mode there is no control for it to point at,
@@ -44,24 +58,26 @@ export interface DescriptionEditorProps {
   title?: string;
   /** The parenthetical after a `boxed` heading. */
   hint?: string;
-  /** Sits after the mode toggle — the detail panel's Save. */
+  /** Sits after the mode toggle — the detail panel's Edit, or its Cancel/Save. */
   action?: React.ReactNode;
   /** Empty-textarea prompt. Override it to name what is being written; compose
    *  it with {@link MARKDOWN_CHEATSHEET} so the syntax reminder comes along. */
   placeholder?: string;
-  /** Ticking a `- [ ]` box in the preview. Separate from {@link onChange}
-   *  because the two are not the same act: a form's toggle edits the draft it is
-   *  already holding, while the detail panel's is a save on its own. Omit it and
-   *  the boxes render read-only. */
+  /** Ticking a `- [ ]` box in a rendered body. Separate from {@link onChange}
+   *  because the two are not the same act, and which one a tick is depends on
+   *  the mode: in `preview` there is an editor open and a tick is an edit to its
+   *  draft, while in `read` there is nothing to press Save in and a tick has to
+   *  save itself. The call site decides. Omit it and the boxes render read-only. */
   onTaskToggle?: (next: string) => void;
   /** The task this description belongs to, kept out of its own `#` picker. Absent
    *  on a task that does not exist yet. */
   taskId?: string;
 }
 
-/** Markdown description editor with a write/preview toggle, image paste / drop /
- *  pick, and a click-to-edit empty state. The task form and the task detail panel
- *  both edit a description; this is the one that does it. */
+/** Markdown description editor: a formatting bar and a write/preview toggle while
+ *  it is open, image paste / drop / pick, and a click-to-edit empty state. The
+ *  task form and the task detail panel both edit a description; this is the one
+ *  that does it. In `read` it is the same body with the editing furniture gone. */
 export function DescriptionEditor({
   value,
   onChange,
@@ -79,7 +95,12 @@ export function DescriptionEditor({
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
   // One ref for both variants: only one of the two textareas is ever mounted.
   const mention = useTaskMention({ value, onChange, textareaRef, selfId: taskId });
-  const format = useMarkdownFormat({ value, onChange, textareaRef });
+  const format = useMarkdownFormat({
+    value,
+    onChange,
+    textareaRef,
+    image: { onAdd: img.openFilePicker, busy: img.uploading },
+  });
   // The picker goes first and marks what it took — an open list owns Enter.
   const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     mention.props.onKeyDown(e);
@@ -91,7 +112,11 @@ export function DescriptionEditor({
   // preview is a card that sizes to its prose.
   const tall = boxed ? 'min-h-[300px] lg:min-h-[420px]' : 'min-h-[280px]';
 
-  const toggle = (
+  // The toggle belongs to an open editor: in `read` there is no draft to preview,
+  // and the header carries the way in and nothing else. Adding an image is on the
+  // formatting bar, which is up only while writing — for the same reason, plus it
+  // is an edit at the caret, like everything else on that bar.
+  const toggle = mode !== 'read' && (
     <SegmentedControl
       aria-label={`${title} mode`}
       variant={boxed ? 'raised' : 'joined'}
@@ -100,11 +125,6 @@ export function DescriptionEditor({
       value={mode}
       onChange={onModeChange}
     />
-  );
-  const addImage = (
-    <LinkButton size={boxed ? 'sm' : 'xs'} onClick={img.openFilePicker} disabled={img.uploading} className="font-medium">
-      {img.uploading ? 'Adding…' : '+ Add image'}
-    </LinkButton>
   );
 
   const body =
@@ -184,10 +204,7 @@ export function DescriptionEditor({
         <div className="border border-neutral-450 rounded-panel overflow-hidden">
           <div className="flex items-center justify-between gap-3 px-[10px] py-[7px] border-b border-neutral-450 bg-neutral-150">
             {toggle}
-            <div className="flex items-center gap-2">
-              {addImage}
-              {action}
-            </div>
+            <div className="flex items-center gap-2">{action}</div>
           </div>
           {/* Its own row rather than beside the tabs: nine buttons and two
               actions on one line is a wrap on the first narrow viewport. */}
@@ -205,7 +222,6 @@ export function DescriptionEditor({
       <div className="flex items-center justify-between gap-3 mb-[10px]">
         {title && <SectionLabel>{title}</SectionLabel>}
         <div className="flex items-center gap-2">
-          {addImage}
           {toggle}
           {action}
         </div>

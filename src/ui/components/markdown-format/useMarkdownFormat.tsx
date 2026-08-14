@@ -12,7 +12,7 @@
 // selection back once React has rendered the new text.
 
 import React from 'react';
-import { BoldIcon, CodeIcon, ItalicIcon, LinkIcon, ListIcon, ListOrderedIcon, ListTodoIcon, QuoteIcon, StrikethroughIcon } from 'lucide-react';
+import { BoldIcon, CodeIcon, ImagePlusIcon, ItalicIcon, LinkIcon, ListIcon, ListOrderedIcon, ListTodoIcon, QuoteIcon, StrikethroughIcon } from 'lucide-react';
 import { IconButton } from '../../primitives';
 import { MOD_KEY, continueList, insertLink, toggleLinePrefix, toggleWrap } from '../../utils';
 import type { MarkdownEdit } from '../../utils';
@@ -62,6 +62,10 @@ export interface MarkdownFormatOptions {
   /** The whole text, formatted. */
   onChange: (next: string) => void;
   textareaRef: React.RefObject<HTMLTextAreaElement | null>;
+  /** Adds an image button to the bar, for a field that takes them. The upload
+   *  itself stays at the call site — it needs the text and a file input, neither
+   *  of which is this hook's business, and paste and drop go through it too. */
+  image?: { onAdd: () => void; busy?: boolean };
 }
 
 export interface MarkdownFormat {
@@ -74,7 +78,7 @@ export interface MarkdownFormat {
   toolbar: React.ReactNode;
 }
 
-export function useMarkdownFormat({ value, onChange, textareaRef }: MarkdownFormatOptions): MarkdownFormat {
+export function useMarkdownFormat({ value, onChange, textareaRef, image }: MarkdownFormatOptions): MarkdownFormat {
   // Where the selection has to be put back after an edit: React owns the value,
   // so the DOM selection is only ours to set once the new text has rendered.
   const pending = React.useRef<[number, number] | null>(null);
@@ -157,13 +161,32 @@ export function useMarkdownFormat({ value, onChange, textareaRef }: MarkdownForm
     </IconButton>
   );
 
+  const divider = <span className="w-px h-[16px] mx-[5px] bg-neutral-450" aria-hidden="true" />;
+
   const toolbar = (
     // Not `role="toolbar"`: that promises arrow-key navigation between the
     // buttons, and the arrows here belong to the text.
     <div className="flex flex-wrap items-center gap-[1px]">
       {INLINE.map(button)}
-      <span className="w-px h-[16px] mx-[5px] bg-neutral-450" aria-hidden="true" />
+      {divider}
       {BLOCK.map(button)}
+      {image && (
+        <>
+          {divider}
+          <IconButton
+            size="xs"
+            aria-label="Add image"
+            // No spinner, but the button is out of action and says so: an upload
+            // that has not landed yet is not a second thing to start.
+            title={image.busy ? 'Adding image…' : 'Add image'}
+            disabled={image.busy}
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={image.onAdd}
+          >
+            <ImagePlusIcon size={14} aria-hidden="true" />
+          </IconButton>
+        </>
+      )}
     </div>
   );
 
