@@ -109,5 +109,14 @@ export function useTaskActions(tasks: Task[], selectedDate: string, ui: WorklogU
   /** Commit the detail panel's markdown draft and drop back to preview. */
   const saveDescription = () => saveDescriptionText(ui.descDraft);
 
-  return { markDone, toggleWorked, openDetail, openEdit, deleteTask, addNote, updateNote, deleteNote, saveDescription, saveDescriptionText };
+  /** Leave the description editor without keeping what was typed — the same way
+   *  out the day note has. The draft is put back rather than just hidden: the
+   *  preview renders the draft, so an abandoned one would sit there reading like
+   *  a saved description. */
+  const cancelDescription = () => {
+    ui.setDescDraft(tasks.find((t) => t.id === detailId)?.description ?? "");
+    setDescMode("preview");
+  };
+
+  return { markDone, toggleWorked, openDetail, openEdit, deleteTask, addNote, updateNote, deleteNote, saveDescription, saveDescriptionText, cancelDescription };
 }

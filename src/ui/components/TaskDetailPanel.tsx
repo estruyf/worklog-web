@@ -39,7 +39,7 @@ function useDetailData() {
  * nothing is a link to a task that has since been deleted, which is worth saying
  * rather than rendering blank. */
 export function TaskDetailPanel() {
-  const { saveDescription, saveDescriptionText } = useData();
+  const { saveDescription, saveDescriptionText, cancelDescription } = useData();
   const { descDraft, setDescDraft, descMode, setDescMode } = useUi();
   const { task, parent, subtasks, occurrences, descDirty } = useDetailData();
   if (!task) {
@@ -83,11 +83,21 @@ export function TaskDetailPanel() {
                   // Ticking a box on a saved task saves: there is no Save to press in
                   // preview, and a checkbox that needs one is a checkbox that lies.
                   onTaskToggle={saveDescriptionText}
+                  // The same pair the day note has, and for the same reason: an
+                  // editor you can only leave by saving is one that has no way
+                  // out. They stay up in preview while the draft is dirty —
+                  // switching tabs is not abandoning the edit, and hiding Save
+                  // there would strand it.
                   action={
-                    descDirty && (
-                      <Button variant="primary" size="xs" onClick={saveDescription} className="font-semibold">
-                        Save
-                      </Button>
+                    (descMode === 'edit' || descDirty) && (
+                      <>
+                        <Button variant="neutral" size="xs" onClick={cancelDescription}>
+                          Cancel
+                        </Button>
+                        <Button variant="primary" size="xs" onClick={saveDescription} disabled={!descDirty} className="font-semibold">
+                          Save
+                        </Button>
+                      </>
                     )
                   }
                 />

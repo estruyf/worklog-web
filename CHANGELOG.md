@@ -24,6 +24,10 @@ Every change to Worklog, by day, newest first.
 - Enter inside a list carries the marker onto the next line, the way it does on GitHub — the
   bullet, the next number, a fresh `- [ ]`, or the quote. On an empty item it ends the list
   instead, so there is a way out without deleting the marker by hand.
+- The note box under a task only shows that bar once you are writing in it, so an untouched
+  task doesn't carry a row of buttons it has nothing to format.
+- A task's description now has **Cancel** beside its **Save**, the same pair the day note has —
+  a description you started editing can be put back the way it was.
 - A subtask no longer offers subtasks of its own. The Subtasks section is gone from its detail
   panel, and the new-task shortcut opens a plain task there instead — the tree is one level
   deep, so there was nothing that section could ever hold.

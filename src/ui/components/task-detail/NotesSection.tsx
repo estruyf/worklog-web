@@ -18,6 +18,9 @@ export function NotesSection({ task }: { task: Task }) {
   // rather than in `useUi`: unlike the composer draft above it, an open correction
   // has nothing to say once the panel is gone.
   const [editing, setEditing] = useState<{ index: number; text: string } | null>(null);
+  // Whether the composer is in use, which is the only time its toolbar is up.
+  // The correction box needs no such flag: it exists only while one is open.
+  const [composerFocused, setComposerFocused] = useState(false);
 
   // An image upload resolves after the fact, so the splice has to apply to the
   // text as it is *then* — hence a state setter rather than a plain callback.
@@ -171,7 +174,12 @@ export function NotesSection({ task }: { task: Task }) {
         <EmptyState size="sm" className="mb-3">No notes yet. Add one below to track progress on this task.</EmptyState>
       )}
       <div className="flex flex-col gap-2">
-        {composerFormat.toolbar}
+        {/* The composer sits at the foot of every task, mostly empty and mostly
+            not being used — a bar of buttons over it is furniture until there is
+            something to format. A draft keeps it up after focus has gone, both
+            because the note is still being written and because the row of
+            buttons below must not jump while one of them is being clicked. */}
+        {(composerFocused || noteDraft.trim() !== '') && composerFormat.toolbar}
         <TextArea
           ref={composerRef}
           autoGrow
@@ -181,6 +189,14 @@ export function NotesSection({ task }: { task: Task }) {
           onDrop={composerImg.onDrop}
           onDragOver={composerImg.onDragOver}
           {...composerMention.props}
+          onFocus={(e) => {
+            composerMention.props.onFocus(e);
+            setComposerFocused(true);
+          }}
+          onBlur={() => {
+            composerMention.props.onBlur();
+            setComposerFocused(false);
+          }}
           onKeyDown={(e) => {
             composerMention.props.onKeyDown(e);
             composerFormat.props.onKeyDown(e);
@@ -199,7 +215,15 @@ export function NotesSection({ task }: { task: Task }) {
         {composerMention.panel}
         {editMention.panel}
         <div className="flex justify-between items-center gap-3">
-          <LinkButton size="xs" onClick={composerImg.openFilePicker} disabled={composerImg.uploading} className="font-medium">
+          {/* Keeps the focus — and so the toolbar above — where it is: blurring
+              on mousedown would shift this row up out from under the click. */}
+          <LinkButton
+            size="xs"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={composerImg.openFilePicker}
+            disabled={composerImg.uploading}
+            className="font-medium"
+          >
             {composerImg.uploading ? 'Adding…' : '+ Add image'}
           </LinkButton>
           <Button variant="primary" size="xs" onClick={onAddNote} disabled={!noteDraft.trim()} className="font-semibold">
