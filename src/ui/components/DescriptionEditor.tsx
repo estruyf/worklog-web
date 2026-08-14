@@ -2,6 +2,7 @@ import React from 'react';
 import { Card, LinkButton, SectionLabel, SegmentedControl, TextArea, cn } from '../primitives';
 import { useMarkdownImages } from '../hooks';
 import { MarkdownView } from './MarkdownView';
+import { useMarkdownFormat } from './markdown-format';
 import { useTaskMention } from './task-mention';
 
 /** `boxed` is the task form's editor: the tabs and the image action ride on the
@@ -78,6 +79,12 @@ export function DescriptionEditor({
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
   // One ref for both variants: only one of the two textareas is ever mounted.
   const mention = useTaskMention({ value, onChange, textareaRef, selfId: taskId });
+  const format = useMarkdownFormat({ value, onChange, textareaRef });
+  // The picker goes first and marks what it took — an open list owns Enter.
+  const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    mention.props.onKeyDown(e);
+    format.props.onKeyDown(e);
+  };
   const boxed = variant === 'boxed';
   // One height for all three bodies, so switching tabs doesn't resize the page
   // under the pointer. The inline editor sets it on the textarea only — its
@@ -113,6 +120,7 @@ export function DescriptionEditor({
           onDrop={img.onDrop}
           onDragOver={img.onDragOver}
           {...mention.props}
+          onKeyDown={onKeyDown}
           aria-label={title}
           placeholder={placeholder}
           className={cn(
@@ -131,6 +139,7 @@ export function DescriptionEditor({
           onDrop={img.onDrop}
           onDragOver={img.onDragOver}
           {...mention.props}
+          onKeyDown={onKeyDown}
           aria-label={title}
           placeholder={placeholder}
           className={cn('w-full leading-[1.6]', tall)}
@@ -180,6 +189,9 @@ export function DescriptionEditor({
               {action}
             </div>
           </div>
+          {/* Its own row rather than beside the tabs: nine buttons and two
+              actions on one line is a wrap on the first narrow viewport. */}
+          {mode === 'edit' && <div className="px-[8px] py-[5px] border-b border-neutral-450">{format.toolbar}</div>}
           <div>{body}</div>
         </div>
         {error}
@@ -199,6 +211,7 @@ export function DescriptionEditor({
         </div>
       </div>
       {fileInput}
+      {mode === 'edit' && <div className="mb-[6px]">{format.toolbar}</div>}
       {body}
       {error}
       {mention.panel}

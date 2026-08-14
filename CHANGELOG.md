@@ -17,6 +17,19 @@ Every change to Worklog, by day, newest first.
 
 ## 2026-08-14
 
+- Every Markdown field — a task's description, its notes, a day note, a client's description —
+  now has a formatting bar above it: bold, italic, strikethrough, code, link, and the four
+  block markers. The shortcuts work without it (⌘B, ⌘I, ⌘E, ⌘K, ⌘⇧X, ⌘⇧8, ⌘⇧7), and with
+  nothing selected they format the word the cursor is in.
+- Enter inside a list carries the marker onto the next line, the way it does on GitHub — the
+  bullet, the next number, a fresh `- [ ]`, or the quote. On an empty item it ends the list
+  instead, so there is a way out without deleting the marker by hand.
+- A subtask no longer offers subtasks of its own. The Subtasks section is gone from its detail
+  panel, and the new-task shortcut opens a plain task there instead — the tree is one level
+  deep, so there was nothing that section could ever hold.
+- The new task form opens with a **Task / To-do** switch beside its heading, so what you're
+  writing down can change its mind halfway through. Picking To-do files it under the general
+  list instead of a client; picking Task again puts it back on the client you had.
 - The sidebar collapses. The button beside the wordmark narrows the rail to its icons, giving the
   view the width back, and the same button puts it back — every tab, action and count is still
   there, with its name as a tooltip. How you left it is remembered on that device, so the app

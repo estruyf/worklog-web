@@ -6,10 +6,10 @@ import { DescriptionEditor } from './DescriptionEditor';
 import { LinksField } from './LinksField';
 import { ClientChipPicker, DueField, FormActionBar, PriorityField, TitleField } from './task-form';
 import { ParentPicker } from './ParentPicker';
-import { LinkButton, SidebarSection } from '../primitives';
+import { LinkButton, SegmentedControl, SidebarSection } from '../primitives';
 import { canHaveParent, clientIdOf, parentCandidates } from '../utils';
 import { formatRecurrence, type RecurrenceAnchor } from '../../model/recurrence';
-import { generalTodoClient } from '../../model/todos';
+import { GENERAL_TODO_CLIENT_ID, generalTodoClient, isGeneralTodoClientId } from '../../model/todos';
 import { NORMAL_PRIORITY_ID, priorityBucket } from '../../model/priority';
 import type { Client, Task } from '../../model/types';
 import type { TaskFormFields } from '../model';
@@ -110,11 +110,22 @@ export function TaskFormPage() {
   // A form reached by URL alone (a pasted link, a reload) carries no seed, so the
   // default client is worked out here instead — and so is a deeplink's, when what
   // it asked for isn't a client this repo has.
+  // Also the client the Task/To-do switch falls back to, for a form that opened on
+  // the to-do bucket and so has no client of its own to go back to.
+  const fallbackClientId = defaultFormClientId();
   const seed = editingId
     ? {}
-    : { ...instance.seed, clientId: resolveSeedClientId(instance.seed.clientId, allClients) || defaultFormClientId() };
+    : { ...instance.seed, clientId: resolveSeedClientId(instance.seed.clientId, allClients) || fallbackClientId };
 
-  return <TaskForm key={`${editingId ?? 'new'}:${instance.key}`} editingId={editingId} task={task} seed={seed} />;
+  return (
+    <TaskForm
+      key={`${editingId ?? 'new'}:${instance.key}`}
+      editingId={editingId}
+      task={task}
+      seed={seed}
+      fallbackClientId={fallbackClientId}
+    />
+  );
 }
 
 /** The new / edit task view (/app/new and /app/task/<id>/edit). A routed view
@@ -136,7 +147,17 @@ export function TaskFormPage() {
  * column for the same reason: a url is long, and in the 320px rail it was a
  * scrolling input you couldn't read what you'd typed into. Below lg the rail
  * unstacks and follows the description, since two columns don't fit. */
-function TaskForm({ editingId, task, seed }: { editingId: string | null; task: Task | undefined; seed: TaskFormSeed }) {
+function TaskForm({
+  editingId,
+  task,
+  seed,
+  fallbackClientId,
+}: {
+  editingId: string | null;
+  task: Task | undefined;
+  seed: TaskFormSeed;
+  fallbackClientId: string;
+}) {
   // Read once, at mount — later renders of the parent must not reach back in and
   // overwrite what has been typed since.
   const [initial] = useState(() => initialFields(task, seed));
@@ -179,8 +200,19 @@ function TaskForm({ editingId, task, seed }: { editingId: string | null; task: T
       description,
     });
 
+  // A to-do is a task in the reserved bucket, so the type switch is the client
+  // picker under another name — which is why it goes through the same setter and
+  // nothing else in here has to know a type exists.
+  const isTodo = isGeneralTodoClientId(clientId);
+  // Remembered so flipping to To-do and back returns to the client that was
+  // picked, rather than dropping the form on an unassigned one.
+  const lastClientId = useRef(isTodo ? fallbackClientId : initial.clientId);
+
   // Changing client invalidates the parent, whose options are that client's tasks.
   const onPickClient = (id: string) => {
+    if (!isGeneralTodoClientId(id)) {
+      lastClientId.current = id;
+    }
     setClientId(id);
     setParentId('');
   };
@@ -228,7 +260,25 @@ function TaskForm({ editingId, task, seed }: { editingId: string | null; task: T
     // are the footer, and on a phone the top bar carries Save.
     <div className="flex flex-1 flex-col overflow-auto bg-white">
       <div className="flex-1 max-w-[920px] xl:max-w-[1280px] mx-auto w-full px-5 py-6 md:px-8">
-        <h1 className="text-[22px] font-bold m-0 mb-6">{editingId ? 'Edit task' : 'New task'}</h1>
+        {/* The switch sits by the heading rather than in the rail: it is the first
+            thing decided about a new item, it changes what the rest of the form
+            offers, and on desktop the client chips it stands in for are off to the
+            side where nothing reads as a choice between two kinds of thing. */}
+        <div className="flex flex-wrap items-center gap-3 mb-6">
+          <h1 className="text-[22px] font-bold m-0">
+            {editingId ? 'Edit' : 'New'} {isTodo ? 'to-do' : 'task'}
+          </h1>
+          <SegmentedControl
+            aria-label="Task or to-do"
+            size="sm"
+            value={isTodo ? 'todo' : 'task'}
+            onChange={(type) => onPickClient(type === 'todo' ? GENERAL_TODO_CLIENT_ID : lastClientId.current)}
+            options={[
+              { value: 'task', label: 'Task', title: 'Filed under a client' },
+              { value: 'todo', label: 'To-do', title: 'A general to-do, not linked to any client' },
+            ]}
+          />
+        </div>
 
         {/* Below lg this is one ordered column rather than two: `contents`
             dissolves the column wrappers so their blocks become siblings, and the
@@ -276,8 +326,17 @@ function TaskForm({ editingId, task, seed }: { editingId: string | null; task: T
           </div>
 
           <aside className="contents lg:block lg:w-[320px] lg:shrink-0 lg:border-l lg:border-neutral-375 lg:pl-8">
+            {/* Kept as a block rather than dropped when the switch says to-do: the
+                rail losing a section outright reads as the picker having gone
+                missing, and this says where the client went. */}
             <div className="order-2">
-              <ClientChipPicker value={clientId} onChange={onPickClient} />
+              {isTodo ? (
+                <SidebarSection title="Client" divider={false}>
+                  <p className="m-0 text-meta text-neutral-675">Not linked to a client.</p>
+                </SidebarSection>
+              ) : (
+                <ClientChipPicker value={clientId} onChange={onPickClient} />
+              )}
             </div>
 
             <div className="order-5 mt-[22px] lg:mt-0">

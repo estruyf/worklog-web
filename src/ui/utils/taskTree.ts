@@ -46,6 +46,15 @@ export function canHaveParent(tasks: Task[], taskId?: string | null): boolean {
   return !taskId || !tasks.some((t) => t.parentId === taskId);
 }
 
+/** Whether the task may be given subtasks at all — the other half of the same
+ *  one-level-deep rule `canHaveParent` enforces, read from the child's side. A
+ *  task that already hangs off another may not: offering to add under it would
+ *  either be a control that can't work, or a grandchild the lists would render at
+ *  top level. */
+export function canHaveSubtasks(task: Task): boolean {
+  return !task.parentId;
+}
+
 /** One line the list will render, before it becomes a row. */
 export interface TaskRowPlan {
   task: Task;

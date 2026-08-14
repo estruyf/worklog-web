@@ -4,6 +4,7 @@ import { Button, Card, EmptyState, LinkButton, SectionLabel, TextArea } from '..
 import { useData, useUi } from '../../context';
 import { useMarkdownImages } from '../../hooks';
 import { MarkdownView } from '../MarkdownView';
+import { useMarkdownFormat } from '../markdown-format';
 import { useTaskMention } from '../task-mention';
 
 /** The task's progress log: timestamped Markdown notes, newest at the bottom, and
@@ -41,6 +42,8 @@ export function NotesSection({ task }: { task: Task }) {
   });
   const composerImg = useMarkdownImages(noteDraft, setNoteDraft);
   const editImg = useMarkdownImages(editing?.text ?? '', setEditText);
+  const composerFormat = useMarkdownFormat({ value: noteDraft, onChange: setNoteDraft, textareaRef: composerRef });
+  const editFormat = useMarkdownFormat({ value: editing?.text ?? '', onChange: setEditText, textareaRef: editRef });
 
   const onAddNote = () => {
     const text = noteDraft.trim();
@@ -108,6 +111,7 @@ export function NotesSection({ task }: { task: Task }) {
                 </div>
                 {edit ? (
                   <div className="flex flex-col gap-2">
+                    {editFormat.toolbar}
                     <TextArea
                       ref={editRef}
                       autoFocus
@@ -122,6 +126,9 @@ export function NotesSection({ task }: { task: Task }) {
                         // The open task list owns Escape, Enter and the arrows;
                         // what it took is marked handled.
                         editMention.props.onKeyDown(e);
+                        // Then the formatting shortcuts, which take ⌘B and a
+                        // plain ↵ inside a list; both bail on a handled event.
+                        editFormat.props.onKeyDown(e);
                         if (e.defaultPrevented) {
                           return;
                         }
@@ -164,6 +171,7 @@ export function NotesSection({ task }: { task: Task }) {
         <EmptyState size="sm" className="mb-3">No notes yet. Add one below to track progress on this task.</EmptyState>
       )}
       <div className="flex flex-col gap-2">
+        {composerFormat.toolbar}
         <TextArea
           ref={composerRef}
           autoGrow
@@ -175,6 +183,7 @@ export function NotesSection({ task }: { task: Task }) {
           {...composerMention.props}
           onKeyDown={(e) => {
             composerMention.props.onKeyDown(e);
+            composerFormat.props.onKeyDown(e);
             if (e.defaultPrevented) {
               return;
             }
