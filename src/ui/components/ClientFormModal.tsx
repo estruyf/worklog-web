@@ -73,10 +73,10 @@ export function ClientFormModal() {
       </div>
 
       <Field label="Description" hint="optional" className="mt-[22px]">
-        <div className="mb-[6px]">{format.toolbar}</div>
         <TextArea
           ref={descRef}
           size="lg"
+          header={format.toolbar}
           value={desc}
           onChange={(e) => setDesc(e.target.value)}
           onKeyDown={format.props.onKeyDown}

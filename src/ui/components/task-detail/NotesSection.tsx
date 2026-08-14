@@ -18,9 +18,6 @@ export function NotesSection({ task }: { task: Task }) {
   // rather than in `useUi`: unlike the composer draft above it, an open correction
   // has nothing to say once the panel is gone.
   const [editing, setEditing] = useState<{ index: number; text: string } | null>(null);
-  // Whether the composer is in use, which is the only time its toolbar is up.
-  // The correction box needs no such flag: it exists only while one is open.
-  const [composerFocused, setComposerFocused] = useState(false);
 
   // An image upload resolves after the fact, so the splice has to apply to the
   // text as it is *then* — hence a state setter rather than a plain callback.
@@ -124,9 +121,9 @@ export function NotesSection({ task }: { task: Task }) {
                 </div>
                 {edit ? (
                   <div className="flex flex-col gap-2">
-                    {editFormat.toolbar}
                     <TextArea
                       ref={editRef}
+                      header={editFormat.toolbar}
                       autoFocus
                       autoGrow
                       value={edit.text}
@@ -156,7 +153,8 @@ export function NotesSection({ task }: { task: Task }) {
                         }
                       }}
                       aria-label={`Edit note from ${n.timestamp}`}
-                      className="w-full min-h-[68px] max-h-[60vh] leading-[1.55]"
+                      className="w-full"
+                      textareaClassName="min-h-[68px] max-h-[60vh] leading-[1.55]"
                     />
                     {/* Adding an image is on the formatting bar above now, so
                         this row is only the two ways out of the correction. */}
@@ -181,14 +179,9 @@ export function NotesSection({ task }: { task: Task }) {
         <EmptyState size="sm" className="mb-3">No notes yet. Add one below to track progress on this task.</EmptyState>
       )}
       <div className="flex flex-col gap-2">
-        {/* The composer sits at the foot of every task, mostly empty and mostly
-            not being used — a bar of buttons over it is furniture until there is
-            something to format. A draft keeps it up after focus has gone, both
-            because the note is still being written and because the row of
-            buttons below must not jump while one of them is being clicked. */}
-        {(composerFocused || noteDraft.trim() !== '') && composerFormat.toolbar}
         <TextArea
           ref={composerRef}
+          header={composerFormat.toolbar}
           autoGrow
           value={noteDraft}
           onChange={(e) => setNoteDraft(e.target.value)}
@@ -196,14 +189,6 @@ export function NotesSection({ task }: { task: Task }) {
           onDrop={composerImg.onDrop}
           onDragOver={composerImg.onDragOver}
           {...composerMention.props}
-          onFocus={(e) => {
-            composerMention.props.onFocus(e);
-            setComposerFocused(true);
-          }}
-          onBlur={() => {
-            composerMention.props.onBlur();
-            setComposerFocused(false);
-          }}
           onKeyDown={(e) => {
             composerMention.props.onKeyDown(e);
             composerFormat.props.onKeyDown(e);
@@ -217,7 +202,8 @@ export function NotesSection({ task }: { task: Task }) {
           }}
           aria-label="New note"
           placeholder="Add a note… (⌘/Ctrl+Enter to save). Supports Markdown, # to link a task, and pasted or dropped images."
-          className="w-full min-h-[68px] max-h-[60vh] leading-[1.55]"
+          className="w-full"
+          textareaClassName="min-h-[68px] max-h-[60vh] leading-[1.55]"
         />
         {composerMention.panel}
         {editMention.panel}

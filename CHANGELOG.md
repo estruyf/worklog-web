@@ -18,21 +18,22 @@ Every change to Worklog, by day, newest first.
 ## 2026-08-14
 
 - Every Markdown field — a task's description, its notes, a day note, a client's description —
-  now has a formatting bar above it: bold, italic, strikethrough, code, link, and the four
-  block markers. The shortcuts work without it (⌘B, ⌘I, ⌘E, ⌘K, ⌘⇧X, ⌘⇧8, ⌘⇧7), and with
-  nothing selected they format the word the cursor is in.
+  now has a formatting bar along the top of the box, the way GitHub's comment field does: bold,
+  italic, strikethrough, code, link, and the four block markers. The shortcuts work without it
+  (⌘B, ⌘I, ⌘E, ⌘K, ⌘⇧X, ⌘⇧8, ⌘⇧7), and with nothing selected they format the word the cursor
+  is in.
 - Enter inside a list carries the marker onto the next line, the way it does on GitHub — the
   bullet, the next number, a fresh `- [ ]`, or the quote. On an empty item it ends the list
   instead, so there is a way out without deleting the marker by hand.
-- The note box under a task only shows that bar once you are writing in it, so an untouched
-  task doesn't carry a row of buttons it has nothing to format.
+- A note box is one box: the bar sits inside its frame rather than floating above it, and it
+  stays put — nothing appears or disappears as you click into the field.
 - A task's description is now something you open rather than something that is always half
   open. It sits there as written, with an **Edit** button; once you're in, **Write** and
   **Preview** are two looks at the same unsaved draft — switching to Preview no longer means
   giving anything up — and **Cancel** or **Save** are the two ways out. Cancel puts the
   description back the way it was.
 - "+ Add image" has moved onto the formatting bar as a button, in notes and descriptions alike.
-  It belongs with the other things that write at the cursor — and it now appears only while you
+  It belongs with the other things that write at the cursor — and it is now only there while you
   are actually writing, rather than in Preview, where it edited text you weren't looking at.
 - A subtask no longer offers subtasks of its own. The Subtasks section is gone from its detail
   panel, and the new-task shortcut opens a plain task there instead — the tree is one level

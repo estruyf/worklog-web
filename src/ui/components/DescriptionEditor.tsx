@@ -153,6 +153,7 @@ export function DescriptionEditor({
         <TextArea
           ref={textareaRef}
           size="lg"
+          header={format.toolbar}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           onPaste={img.onPaste}
@@ -162,7 +163,8 @@ export function DescriptionEditor({
           onKeyDown={onKeyDown}
           aria-label={title}
           placeholder={placeholder}
-          className={cn('w-full leading-[1.6]', tall)}
+          className="w-full"
+          textareaClassName={cn('leading-[1.6]', tall)}
           style={MONO}
         />
       )
@@ -206,9 +208,13 @@ export function DescriptionEditor({
             {toggle}
             <div className="flex items-center gap-2">{action}</div>
           </div>
-          {/* Its own row rather than beside the tabs: nine buttons and two
-              actions on one line is a wrap on the first narrow viewport. */}
-          {mode === 'edit' && <div className="px-[8px] py-[5px] border-b border-neutral-450">{format.toolbar}</div>}
+          {/* Its own row rather than beside the tabs: ten buttons and two actions
+              on one line is a wrap on the first narrow viewport. Same fill as the
+              row above it, so the two read as one header band — and as the one
+              `TextArea` draws for the fields that have no tabs. */}
+          {mode === 'edit' && (
+            <div className="px-[8px] py-[5px] border-b border-neutral-450 bg-neutral-150">{format.toolbar}</div>
+          )}
           <div>{body}</div>
         </div>
         {error}
@@ -227,7 +233,6 @@ export function DescriptionEditor({
         </div>
       </div>
       {fileInput}
-      {mode === 'edit' && <div className="mb-[6px]">{format.toolbar}</div>}
       {body}
       {error}
       {mention.panel}

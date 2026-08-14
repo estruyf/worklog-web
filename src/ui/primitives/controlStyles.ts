@@ -13,13 +13,30 @@ export type ControlSize = 'xs' | 'sm' | 'md' | 'lg';
  *  is said without a caret being visible. */
 export type ControlVariant = 'default' | 'accent';
 
+/** The two halves of the geometry, apart as well as together: a shell whose rows
+ *  carry their own padding — a textarea with a toolbar above it — takes the
+ *  radius only, and hands the padding to the control inside. */
+export const CONTROL_PADDING: Record<ControlSize, string> = {
+  xs: 'px-2 py-[5px]',
+  sm: 'px-3 py-[8px]',
+  md: 'px-[12px] py-[9px]',
+  lg: 'px-[14px] py-[11px]',
+};
+
+export const CONTROL_RADIUS: Record<ControlSize, string> = {
+  xs: 'rounded-control',
+  sm: 'rounded-control-md',
+  md: 'rounded-control-lg',
+  lg: 'rounded-control-lg',
+};
+
 /** Padding and radius. Kept apart from the font size so a shell can take the
  *  geometry while the bare input inside it takes only the text. */
 export const CONTROL_GEOMETRY: Record<ControlSize, string> = {
-  xs: 'px-2 py-[5px] rounded-control',
-  sm: 'px-3 py-[8px] rounded-control-md',
-  md: 'px-[12px] py-[9px] rounded-control-lg',
-  lg: 'px-[14px] py-[11px] rounded-control-lg',
+  xs: `${CONTROL_PADDING.xs} ${CONTROL_RADIUS.xs}`,
+  sm: `${CONTROL_PADDING.sm} ${CONTROL_RADIUS.sm}`,
+  md: `${CONTROL_PADDING.md} ${CONTROL_RADIUS.md}`,
+  lg: `${CONTROL_PADDING.lg} ${CONTROL_RADIUS.lg}`,
 };
 
 /** What a `Select` adds on top of `CONTROL_GEOMETRY`: room on the right for the
