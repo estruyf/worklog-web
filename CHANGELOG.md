@@ -15,6 +15,16 @@ Every change to Worklog, by day, newest first.
      both). Links must be absolute — a relative path resolves against /changelog and
      404s. -->
 
+## 2026-08-14
+
+- The sidebar collapses. The button beside the wordmark narrows the rail to its icons, giving the
+  view the width back, and the same button puts it back — every tab, action and count is still
+  there, with its name as a tooltip. How you left it is remembered on that device, so the app
+  opens the way you work.
+- **Report an issue** is now in the sidebar, under the actions: it opens a new issue on Worklog's
+  own repo in a fresh tab, so a bug or a request goes straight where it can be picked up without
+  leaving the app or losing anything you haven't synced yet.
+
 ## 2026-08-12
 
 - A task can now be handed to an AI agent. Switch on GitHub Copilot or Claude Code under

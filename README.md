@@ -230,6 +230,13 @@ A tag chip is also a filter wherever it appears — click one on a task, in the 
 search hit to see every task carrying it, open and archived. Search (`⌘/Ctrl+F`) has a tag row of
 its own: pick one or more tags (a task must carry all of them) with or without a query.
 
+**The sidebar:** the view tabs sit above the things you reach for from anywhere — Search, Git sync,
+Shortcuts, Settings, the browser extension, What's new, and **Report an issue**, which opens a new
+issue on Worklog's own repo in a new tab. The button beside the wordmark collapses the rail to its
+icons and expands it again; collapsed, every row keeps its name as a tooltip and the To-dos and
+Overdue counts move to the corner of their icon. The choice is remembered per device. On a phone the
+rail is a drawer behind the hamburger instead, so there is nothing to collapse.
+
 **Keyboard shortcuts:** `⌘/Ctrl+N` new task · `⌘/Ctrl+F` or `⌘/Ctrl+S` search · `⌘/Ctrl+L` log time
 (Day view) · `⌘/Ctrl+R` reload from GitHub · `Esc` close the top dialog.
 

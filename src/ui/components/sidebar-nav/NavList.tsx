@@ -30,8 +30,10 @@ const NAV_ITEMS: { view: AppView; icon: React.ReactNode }[] = [
   { view: 'archive', icon: <NavArchiveIcon /> },
 ];
 
-/** The seven view tabs, with counts on the two that would otherwise go unnoticed. */
-export function NavList({ onGo }: { onGo: (view: AppView) => void }) {
+/** The seven view tabs, with counts on the two that would otherwise go unnoticed.
+ *  Collapsed, a tab is its glyph and its count rides the corner of it — the point
+ *  of the badge is that you notice it without reading the row. */
+export function NavList({ onGo, collapsed = false }: { onGo: (view: AppView) => void; collapsed?: boolean }) {
   const { view } = useUi();
   const { tasks, today } = useData();
 
@@ -48,16 +50,21 @@ export function NavList({ onGo }: { onGo: (view: AppView) => void }) {
   return (
     <nav className="flex flex-col gap-[3px] px-[10px]">
       {NAV_ITEMS.map((item) => (
-        <button key={item.view} onClick={() => onGo(item.view)} className={navItemClass(view === item.view)}>
+        <button
+          key={item.view}
+          onClick={() => onGo(item.view)}
+          className={navItemClass(view === item.view, collapsed)}
+          title={collapsed ? VIEW_LABELS[item.view] : undefined}
+        >
           <span className="shrink-0">{item.icon}</span>
-          {VIEW_LABELS[item.view]}
+          {!collapsed && VIEW_LABELS[item.view]}
           {item.view === 'todos' && todoCount > 0 && (
-            <Badge size="sm" className="ml-auto">
+            <Badge size="sm" className={collapsed ? 'absolute -top-1 -right-1' : 'ml-auto'}>
               {todoCount}
             </Badge>
           )}
           {item.view === 'overdue' && overdueCount > 0 && (
-            <Badge size="sm" tone="danger" className="ml-auto">
+            <Badge size="sm" tone="danger" className={collapsed ? 'absolute -top-1 -right-1' : 'ml-auto'}>
               {overdueCount}
             </Badge>
           )}

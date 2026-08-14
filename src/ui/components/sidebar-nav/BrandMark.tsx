@@ -9,8 +9,9 @@ export function BrandGlyph() {
 
 /** Logo + wordmark, which is also the way back to today. Picking it snaps the
  *  Day view back to today: a date left over from browsing the calendar isn't
- *  what "Worklog" means when you deliberately click it. */
-export function BrandMark({ className, onNavigate }: { className?: string; onNavigate?: () => void }) {
+ *  what "Worklog" means when you deliberately click it. `collapsed` drops the
+ *  wordmark — the glyph alone still reads as the way home. */
+export function BrandMark({ className, onNavigate, collapsed = false }: { className?: string; onNavigate?: () => void; collapsed?: boolean }) {
   const { today } = useData();
   const { setSelectedDate } = useUi();
   return (
@@ -26,7 +27,7 @@ export function BrandMark({ className, onNavigate }: { className?: string; onNav
       title="Go to Day view"
     >
       <BrandGlyph />
-      Worklog
+      {!collapsed && 'Worklog'}
     </button>
   );
 }

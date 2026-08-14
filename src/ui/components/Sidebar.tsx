@@ -1,6 +1,7 @@
 import React from 'react';
 import { XIcon } from 'lucide-react';
 import { MobileTopBar, SidebarContent, type SidebarRepoProps } from './sidebar-nav';
+import { useSidebarCollapsed } from '../hooks';
 
 export type { SidebarRepoProps };
 
@@ -8,9 +9,14 @@ export type { SidebarRepoProps };
  * Left navigation rail. On md+ it's a static column in the app's flex-row shell;
  * below md it collapses to a top bar with a hamburger that slides the same
  * content in as an overlay drawer.
+ *
+ * The desktop rail can also be narrowed to icons only (remembered per device).
+ * That is a desktop-only state: the drawer is already hidden until you ask for
+ * it, so a narrow version of it would only take labels away for nothing.
  */
 export function Sidebar(repoProps: SidebarRepoProps = {}) {
   const [open, setOpen] = React.useState(false);
+  const [collapsed, toggleCollapsed] = useSidebarCollapsed();
 
   // Close the drawer on Escape.
   React.useEffect(() => {
@@ -33,9 +39,14 @@ export function Sidebar(repoProps: SidebarRepoProps = {}) {
       {/* Desktop static rail. The shell is one screen tall, so this stretches to
           the full height and scrolls its own overflow — it never moves with the
           view's content. */}
-      <aside className="hidden md:flex overflow-y-auto w-[228px] shrink-0 border-r border-neutral-400 bg-white">
+      <aside
+        className={
+          'hidden md:flex overflow-y-auto shrink-0 border-r border-neutral-400 bg-white ' +
+          (collapsed ? 'w-[60px]' : 'w-[228px]')
+        }
+      >
         <div className="w-full">
-          <SidebarContent repoProps={repoProps} />
+          <SidebarContent repoProps={repoProps} collapsed={collapsed} onToggleCollapsed={toggleCollapsed} />
         </div>
       </aside>
 

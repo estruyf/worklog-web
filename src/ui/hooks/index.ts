@@ -12,4 +12,5 @@ export { useConfirmDialog } from "./useConfirmDialog";
 export type { ConfirmRequest, ConfirmDialogApi } from "./useConfirmDialog";
 export { useAppBadge } from "./useAppBadge";
 export { useCollapsedTasks } from "./useCollapsedTasks";
+export { useSidebarCollapsed } from "./useSidebarCollapsed";
 export type { CollapsedTasks } from "./useCollapsedTasks";
