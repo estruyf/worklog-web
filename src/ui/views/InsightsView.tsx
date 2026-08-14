@@ -1,6 +1,10 @@
 import React, { useMemo } from 'react';
 import type { MonthlyRow } from '../model';
-import { useData, useUi } from '../context';
+// Past the barrel on purpose, unlike every other view: this one is a lazy chunk
+// (see views/routes), and ../context/index re-exports from a module that depends on
+// it in turn — a cycle Rollup can only split across chunks by guessing at the
+// evaluation order. Importing the definition directly leaves nothing to guess.
+import { useData, useUi } from '../context/WorklogContext';
 import { navigateToView } from '../router';
 import { EVENT_COLOR, num } from '../utils';
 import { ViewHeader } from '../primitives';

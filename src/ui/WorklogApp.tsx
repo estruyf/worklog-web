@@ -9,7 +9,7 @@ import { useSearchData } from './hooks';
 import { ClientFormModal, ConfirmDialog, Toast, SearchOverlay, Sidebar, SyncStatusBar, TaskDetailPanel, TaskFormPage } from './components';
 import type { SidebarRepoProps } from './components/Sidebar';
 import { EmptyClientsView } from './views/EmptyClientsView';
-import { ROUTES } from './views/routes';
+import { ROUTES, warmLazyRoutes } from './views/routes';
 import { navigateToView, useRoute } from './router';
 
 /** Lightweight top-of-page progress bar shown while the store is loading. */
@@ -147,6 +147,10 @@ export function WorklogApp({ repoProps }: { repoProps?: SidebarRepoProps } = {})
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [setSearchOpen, setDetailId, setSearchSel, setSelectedDate]);
 
+  // After the first paint, not during it: the point of splitting these out is that
+  // they are off the critical path. See warmLazyRoutes for why they're fetched at all.
+  React.useEffect(warmLazyRoutes, []);
+
   if (!snap) {
     return <div className="min-h-screen bg-white" />;
   }
@@ -171,7 +175,12 @@ export function WorklogApp({ repoProps }: { repoProps?: SidebarRepoProps } = {})
         {/* Above the view rather than inside it: every view scrolls its own
             content, and this has to stay put in all of them. */}
         <SyncStatusBar />
-        {noClients ? <EmptyClientsView /> : formOpen ? <TaskFormPage /> : taskOpen ? <TaskDetailPanel /> : <ActiveView />}
+        {/* Only the lazy routes ever suspend, and only on the first visit to one —
+            the same progress bar the store's own load uses, so it reads as the app
+            fetching rather than as a broken tab. */}
+        <React.Suspense fallback={<Loader />}>
+          {noClients ? <EmptyClientsView /> : formOpen ? <TaskFormPage /> : taskOpen ? <TaskDetailPanel /> : <ActiveView />}
+        </React.Suspense>
       </main>
 
       {searchOpen && <SearchOverlay />}

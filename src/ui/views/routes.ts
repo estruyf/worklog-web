@@ -9,10 +9,23 @@ import { OverdueView } from './OverdueView';
 import { TodosView } from './TodosView';
 import { CalendarView } from './CalendarView';
 import { ClientsView } from './ClientsView';
-import { InsightsView } from './InsightsView';
 import { ArchiveView } from './ArchiveView';
 import { ShortcutsView } from './ShortcutsView';
 import { SettingsView } from './SettingsView';
+
+// Insights is the only view that reaches recharts, and it is the one most sessions
+// never open — bundled in, the chart library is over half the JavaScript every other
+// view pays for at first paint. Lazy, it is a chunk fetched on the way into the tab.
+// That fetch is the catch: /_astro/* is cache-first but never precached (see
+// public/sw.js), so a chunk nobody has loaded yet is a chunk that isn't there
+// offline. `warmLazyRoutes()` pulls it in once the app is up, which is what puts it
+// in the cache while there is still a network to get it from.
+const InsightsView = React.lazy(() => import('./InsightsView').then((m) => ({ default: m.InsightsView })));
+
+/** Fetch the split-out view chunks now, so going offline later doesn't strand a tab. */
+export function warmLazyRoutes(): void {
+  void import('./InsightsView');
+}
 
 export const ROUTES: Record<AppView, React.ComponentType> = {
   day: DayView,

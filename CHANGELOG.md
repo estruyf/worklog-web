@@ -24,6 +24,10 @@ Every change to Worklog, by day, newest first.
 - **Report an issue** is now in the sidebar, under the actions: it opens a new issue on Worklog's
   own repo in a fresh tab, so a bug or a request goes straight where it can be picked up without
   leaving the app or losing anything you haven't synced yet.
+- The app starts on roughly half the JavaScript it used to. Insights brings its own charting
+  library, and now that weight loads with Insights instead of ahead of every other tab — fetched
+  quietly in the background once the app is up, so the tab still opens instantly and still works
+  offline.
 
 ## 2026-08-12
 
