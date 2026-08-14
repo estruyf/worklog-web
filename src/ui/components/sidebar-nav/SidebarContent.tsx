@@ -58,41 +58,50 @@ export function SidebarContent({
         )}
       </div>
 
-      {!noClients && (
-        <>
-          <div className={collapsed ? 'px-[10px] pt-3 pb-3' : 'px-[10px] pb-3'}>
-            <button
-              onClick={() => {
-                openTaskForm();
-                onNavigate?.();
-              }}
-              className={
-                'flex items-center justify-center gap-[7px] w-full rounded-control-md text-control font-semibold cursor-pointer border border-brand-500 bg-brand-450 text-brand-800 hover:bg-brand-475 ' +
-                (collapsed ? 'px-0 py-[9px]' : 'px-[14px] py-[9px]')
-              }
-              title="New task (⇧N)"
-            >
-              <PlusIcon size={15} />
-              {!collapsed && (
-                <>
-                  New task
-                  <kbd className="inline-flex items-center justify-center h-[18px] px-[5px] rounded-chip border border-brand-500 bg-brand-225 text-brand-800 text-eyebrow font-medium leading-none">
-                    ⇧N
-                  </kbd>
-                </>
-              )}
-            </button>
-          </div>
+      {/* Everything below the header scrolls together. The rail is taller than a
+          phone's drawer — nav, actions and repo footer come to ~17 rows — and
+          without this the tail of it is simply clipped off the bottom. `min-h-full`
+          on the inner column is what keeps the spacer meaningful: when the content
+          does fit, it still pushes the actions and footer to the bottom edge. */}
+      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
+        <div className="flex flex-col min-h-full">
+          {!noClients && (
+            <>
+              <div className={collapsed ? 'px-[10px] pt-3 pb-3' : 'px-[10px] pb-3'}>
+                <button
+                  onClick={() => {
+                    openTaskForm();
+                    onNavigate?.();
+                  }}
+                  className={
+                    'flex items-center justify-center gap-[7px] w-full rounded-control-md text-control font-semibold cursor-pointer border border-brand-500 bg-brand-450 text-brand-800 hover:bg-brand-475 ' +
+                    (collapsed ? 'px-0 py-[9px]' : 'px-[14px] py-[9px]')
+                  }
+                  title="New task (⇧N)"
+                >
+                  <PlusIcon size={15} />
+                  {!collapsed && (
+                    <>
+                      New task
+                      <kbd className="inline-flex items-center justify-center h-[18px] px-[5px] rounded-chip border border-brand-500 bg-brand-225 text-brand-800 text-eyebrow font-medium leading-none">
+                        ⇧N
+                      </kbd>
+                    </>
+                  )}
+                </button>
+              </div>
 
-          <NavList onGo={go} collapsed={collapsed} />
-        </>
-      )}
+              <NavList onGo={go} collapsed={collapsed} />
+            </>
+          )}
 
-      <div className="flex-1" />
+          <div className="flex-1" />
 
-      <SidebarActions onGo={go} onNavigate={onNavigate} collapsed={collapsed} />
+          <SidebarActions onGo={go} onNavigate={onNavigate} collapsed={collapsed} />
 
-      <RepoFooter {...repoProps} collapsed={collapsed} />
+          <RepoFooter {...repoProps} collapsed={collapsed} />
+        </div>
+      </div>
     </div>
   );
 }

@@ -17,6 +17,8 @@ Every change to Worklog, by day, newest first.
 
 ## 2026-08-14
 
+- The navigation drawer on a phone now scrolls, so Settings, the repository and the rest of
+  the bottom of the rail are reachable instead of being cut off the bottom of the screen.
 - The task form's client picker is now only about clients: the To-do chip is gone — the
   Task/To-do switch above already picks that — and switching to To-do hides the client
   section entirely instead of leaving an empty one behind.

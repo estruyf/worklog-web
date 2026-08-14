@@ -37,11 +37,11 @@ export function Sidebar(repoProps: SidebarRepoProps = {}) {
       <MobileTopBar onOpenDrawer={() => setOpen(true)} />
 
       {/* Desktop static rail. The shell is one screen tall, so this stretches to
-          the full height and scrolls its own overflow — it never moves with the
-          view's content. */}
+          the full height — it never moves with the view's content. The overflow
+          is `SidebarContent`'s to scroll, below its pinned header. */}
       <aside
         className={
-          'hidden md:flex overflow-y-auto shrink-0 border-r border-neutral-400 bg-white ' +
+          'hidden md:flex shrink-0 border-r border-neutral-400 bg-white ' +
           (collapsed ? 'w-[60px]' : 'w-[228px]')
         }
       >

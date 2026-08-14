@@ -340,12 +340,15 @@ function TaskForm({
                   outright when the task is already a parent — see
                   `canHaveParent` — rather than shown empty. */}
               {canParent && (
-                <SidebarSection title="Parent" hint="optional">
+                <SidebarSection title="Parent" hint="optional" divider={!isTodo}>
                   <ParentPicker value={parentId} options={parentOptions} onSelect={setParentId} />
                 </SidebarSection>
               )}
 
-              <PriorityField value={priority} onChange={setPriority} />
+              {/* Whichever of these opens the rail carries no rule — with the client
+                  picker gone, a to-do's first block has nothing above it to separate
+                  it from. */}
+              <PriorityField value={priority} onChange={setPriority} divider={!isTodo || canParent} />
 
               {!repeat.trim() && <DueField value={due} onChange={setDue} />}
 
