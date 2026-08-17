@@ -1,10 +1,12 @@
 // Barrel for UI utilities.
-export { PALETTE, MONTHS, WEEKDAYS, STATUS_COLORS, STATUS_PALETTE } from "./constants";
+export { MOD_KEY, PALETTE, MONTHS, WEEKDAYS, STATUS_COLORS, STATUS_PALETTE } from "./constants";
 export { fmtLong, fmtShort, monthLabel, shiftDate, shiftMonth, weekdayShort, num } from "./date";
 export { clientIdOf, isDone, workedLabels, workedOnDate, dueOn, linksOf } from "./task";
 export { resolveStatusMeta } from "./status";
 export { renderMarkdown, makeImageResolver, toggleTaskLine } from "./markdown";
 export type { ImageResolver, MarkdownOptions, TaskRefResolver } from "./markdown";
+export { continueList, insertLink, toggleLinePrefix, toggleWrap } from "./markdownEdit";
+export type { LinePrefix, MarkdownEdit, WrapMarker } from "./markdownEdit";
 export { TASK_REF, applyMention, matchTaskRefs, mentionAt } from "./taskRefs";
 export type { TaskMentionQuery } from "./taskRefs";
 export { splitMatch, deriveSearch, deriveNoteGroup, appendGroup, snippetAround, NOTE_COLOR, NOTE_GROUP_NAME } from "./search";
@@ -21,6 +23,7 @@ export {
 } from "./taskFilter";
 export {
   canHaveParent,
+  canHaveSubtasks,
   deriveSubtaskList,
   parentCandidates,
   parseCollapsedStore,

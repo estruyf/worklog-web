@@ -4,6 +4,7 @@ import { Button, Card, EmptyState, LinkButton, SectionLabel, TextArea } from '..
 import { useData, useUi } from '../../context';
 import { useMarkdownImages } from '../../hooks';
 import { MarkdownView } from '../MarkdownView';
+import { useMarkdownFormat } from '../markdown-format';
 import { useTaskMention } from '../task-mention';
 
 /** The task's progress log: timestamped Markdown notes, newest at the bottom, and
@@ -41,6 +42,18 @@ export function NotesSection({ task }: { task: Task }) {
   });
   const composerImg = useMarkdownImages(noteDraft, setNoteDraft);
   const editImg = useMarkdownImages(editing?.text ?? '', setEditText);
+  const composerFormat = useMarkdownFormat({
+    value: noteDraft,
+    onChange: setNoteDraft,
+    textareaRef: composerRef,
+    image: { onAdd: composerImg.openFilePicker, busy: composerImg.uploading },
+  });
+  const editFormat = useMarkdownFormat({
+    value: editing?.text ?? '',
+    onChange: setEditText,
+    textareaRef: editRef,
+    image: { onAdd: editImg.openFilePicker, busy: editImg.uploading },
+  });
 
   const onAddNote = () => {
     const text = noteDraft.trim();
@@ -110,6 +123,7 @@ export function NotesSection({ task }: { task: Task }) {
                   <div className="flex flex-col gap-2">
                     <TextArea
                       ref={editRef}
+                      header={editFormat.toolbar}
                       autoFocus
                       autoGrow
                       value={edit.text}
@@ -122,6 +136,9 @@ export function NotesSection({ task }: { task: Task }) {
                         // The open task list owns Escape, Enter and the arrows;
                         // what it took is marked handled.
                         editMention.props.onKeyDown(e);
+                        // Then the formatting shortcuts, which take ⌘B and a
+                        // plain ↵ inside a list; both bail on a handled event.
+                        editFormat.props.onKeyDown(e);
                         if (e.defaultPrevented) {
                           return;
                         }
@@ -136,20 +153,18 @@ export function NotesSection({ task }: { task: Task }) {
                         }
                       }}
                       aria-label={`Edit note from ${n.timestamp}`}
-                      className="w-full min-h-[68px] max-h-[60vh] leading-[1.55]"
+                      className="w-full"
+                      textareaClassName="min-h-[68px] max-h-[60vh] leading-[1.55]"
                     />
-                    <div className="flex justify-between items-center gap-3">
-                      <LinkButton size="xs" onClick={editImg.openFilePicker} disabled={editImg.uploading} className="font-medium">
-                        {editImg.uploading ? 'Adding…' : '+ Add image'}
+                    {/* Adding an image is on the formatting bar above now, so
+                        this row is only the two ways out of the correction. */}
+                    <div className="flex justify-end items-center gap-3">
+                      <LinkButton size="xs" tone="muted" onClick={() => setEditing(null)}>
+                        Cancel
                       </LinkButton>
-                      <div className="flex items-center gap-3">
-                        <LinkButton size="xs" tone="muted" onClick={() => setEditing(null)}>
-                          Cancel
-                        </LinkButton>
-                        <Button variant="primary" size="xs" onClick={onSaveEdit} disabled={!edit.text.trim()} className="font-semibold">
-                          Save note
-                        </Button>
-                      </div>
+                      <Button variant="primary" size="xs" onClick={onSaveEdit} disabled={!edit.text.trim()} className="font-semibold">
+                        Save note
+                      </Button>
                     </div>
                     {editImg.error && <div className="text-chip text-danger-675">{editImg.error}</div>}
                   </div>
@@ -166,6 +181,7 @@ export function NotesSection({ task }: { task: Task }) {
       <div className="flex flex-col gap-2">
         <TextArea
           ref={composerRef}
+          header={composerFormat.toolbar}
           autoGrow
           value={noteDraft}
           onChange={(e) => setNoteDraft(e.target.value)}
@@ -175,6 +191,7 @@ export function NotesSection({ task }: { task: Task }) {
           {...composerMention.props}
           onKeyDown={(e) => {
             composerMention.props.onKeyDown(e);
+            composerFormat.props.onKeyDown(e);
             if (e.defaultPrevented) {
               return;
             }
@@ -185,14 +202,12 @@ export function NotesSection({ task }: { task: Task }) {
           }}
           aria-label="New note"
           placeholder="Add a note… (⌘/Ctrl+Enter to save). Supports Markdown, # to link a task, and pasted or dropped images."
-          className="w-full min-h-[68px] max-h-[60vh] leading-[1.55]"
+          className="w-full"
+          textareaClassName="min-h-[68px] max-h-[60vh] leading-[1.55]"
         />
         {composerMention.panel}
         {editMention.panel}
-        <div className="flex justify-between items-center gap-3">
-          <LinkButton size="xs" onClick={composerImg.openFilePicker} disabled={composerImg.uploading} className="font-medium">
-            {composerImg.uploading ? 'Adding…' : '+ Add image'}
-          </LinkButton>
+        <div className="flex justify-end items-center gap-3">
           <Button variant="primary" size="xs" onClick={onAddNote} disabled={!noteDraft.trim()} className="font-semibold">
             Add note
           </Button>

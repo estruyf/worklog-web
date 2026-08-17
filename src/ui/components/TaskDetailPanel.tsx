@@ -39,7 +39,7 @@ function useDetailData() {
  * nothing is a link to a task that has since been deleted, which is worth saying
  * rather than rendering blank. */
 export function TaskDetailPanel() {
-  const { saveDescription, saveDescriptionText } = useData();
+  const { saveDescription, saveDescriptionText, editDescription, cancelDescription } = useData();
   const { descDraft, setDescDraft, descMode, setDescMode } = useUi();
   const { task, parent, subtasks, occurrences, descDirty } = useDetailData();
   if (!task) {
@@ -80,14 +80,34 @@ export function TaskDetailPanel() {
                   mode={descMode}
                   onModeChange={setDescMode}
                   taskId={task.id}
-                  // Ticking a box on a saved task saves: there is no Save to press in
-                  // preview, and a checkbox that needs one is a checkbox that lies.
-                  onTaskToggle={saveDescriptionText}
+                  // Reading, a tick is the whole edit and saves itself — there is
+                  // no Save to press, and a checkbox that needs one is a checkbox
+                  // that lies. Mid-edit it is an edit like any other, and Save
+                  // still decides.
+                  onTaskToggle={descMode === 'read' ? saveDescriptionText : setDescDraft}
+                  // Edit opens the editor; Cancel and Save are the two ways out
+                  // of it, and both are on screen the whole time it is open —
+                  // including in Preview, which is a look at the draft rather
+                  // than a way of leaving it. Nothing to edit yet needs no
+                  // button: the empty state is itself the way in.
                   action={
-                    descDirty && (
-                      <Button variant="primary" size="xs" onClick={saveDescription} className="font-semibold">
-                        Save
-                      </Button>
+                    descMode === 'read' ? (
+                      // Measured against what is on screen, which is the draft —
+                      // in `read` that is the stored description either way.
+                      descDraft.trim() !== '' && (
+                        <Button variant="neutral" size="xs" onClick={editDescription}>
+                          Edit
+                        </Button>
+                      )
+                    ) : (
+                      <>
+                        <Button variant="neutral" size="xs" onClick={cancelDescription}>
+                          Cancel
+                        </Button>
+                        <Button variant="primary" size="xs" onClick={saveDescription} disabled={!descDirty} className="font-semibold">
+                          Save
+                        </Button>
+                      </>
                     )
                   }
                 />

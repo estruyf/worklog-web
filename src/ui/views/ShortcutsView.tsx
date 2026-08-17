@@ -8,6 +8,7 @@ import React from 'react';
 import { KeyboardIcon } from 'lucide-react';
 import { Kbd } from '../components';
 import { Card, SectionLabel, ViewHeader } from '../primitives';
+import { MOD_KEY } from '../utils';
 
 /** One binding: the chords that trigger it, what it does, and any caveat about
  *  where or when it applies. Multiple combos read as "A or B" — the handlers
@@ -24,11 +25,8 @@ interface ShortcutGroup {
   items: Shortcut[];
 }
 
-/** ⌘ on Apple keyboards, Ctrl everywhere else. Every handler accepts both, so the
- *  page shows only the key the reader actually has. `client:only` hydration means
- *  there's no server render to disagree with. */
-const MOD =
-  typeof navigator !== 'undefined' && /Mac|iPhone|iPad|iPod/i.test(navigator.userAgent) ? '⌘' : 'Ctrl';
+/** Shared with the Markdown toolbar's tooltips, which name the same chords. */
+const MOD = MOD_KEY;
 
 const GROUPS: ShortcutGroup[] = [
   {
@@ -87,6 +85,24 @@ const GROUPS: ShortcutGroup[] = [
     items: [
       { combos: [[MOD, '↵']], label: 'Save the note you are writing' },
       { combos: [['Esc']], label: 'Close the panel', note: 'The browser’s Back button does the same thing.' },
+    ],
+  },
+  {
+    title: 'Markdown fields',
+    hint: 'Any description or note. The toolbar above the field runs the same edits, and names its chord in every button’s tooltip.',
+    items: [
+      { combos: [[MOD, 'B']], label: 'Bold', note: 'With nothing selected, formats the word the cursor is in.' },
+      { combos: [[MOD, 'I']], label: 'Italic' },
+      { combos: [[MOD, '⇧', 'X']], label: 'Strikethrough' },
+      { combos: [[MOD, 'E']], label: 'Code', note: 'A selection spanning lines becomes a fenced block instead.' },
+      { combos: [[MOD, 'K']], label: 'Link', note: 'Selected text becomes the label; a selected URL becomes the target.' },
+      { combos: [[MOD, '⇧', '8']], label: 'Bulleted list' },
+      { combos: [[MOD, '⇧', '7']], label: 'Numbered list' },
+      {
+        combos: [['↵']],
+        label: 'Continue the list',
+        note: 'Inside a bullet, number, task item or quote. On an empty item it ends the list instead.',
+      },
     ],
   },
   {

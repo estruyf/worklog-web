@@ -18,7 +18,7 @@ import { parseRecurrence } from "../../../model/recurrence";
 import { worklogStore } from "../../../data/worklogStore";
 import { closeTaskForm, closeTaskFormOnto, navigateToTaskForm } from "../../router";
 import type { TaskFormFields } from "../../model";
-import { clientIdOf, defaultTaskClientId, isDone } from "../../utils";
+import { canHaveSubtasks, clientIdOf, defaultTaskClientId, isDone } from "../../utils";
 import type { WorklogUiState } from "../useWorklogUiState";
 
 interface TaskFormDeps {
@@ -51,10 +51,11 @@ export function useTaskFormActions(deps: TaskFormDeps, ui: WorklogUiState) {
     navigateToTaskForm(null, { clientId: clientIdOf(parent), parentId: parent.id });
 
   /** The keyboard shortcut's "new task": a subtask of whatever is open, else a
-   *  plain new one. */
+   *  plain new one. A subtask is open — the tree is one level deep, so there is
+   *  no subtask to start under it — falls to the plain one. */
   const openTaskFormFromShortcut = () => {
     const detailTask = ui.detailId ? tasks.find((t) => t.id === ui.detailId) : undefined;
-    if (detailTask && !isDone(detailTask)) {
+    if (detailTask && !isDone(detailTask) && canHaveSubtasks(detailTask)) {
       openSubtaskForm(detailTask);
       return;
     }

@@ -141,6 +141,8 @@ of wrapping to whatever width their longest option asks for.
 <Input size="xs|sm|md|lg" variant="default|accent" invalid
        leading={…} trailing={…} clearable onClear={…} />
 <TextArea size="…" variant="…" resizable autoGrow /> // autoGrow drops the resize grip
+<TextArea header={toolbar} textareaClassName="min-h-[…]" /> // shell + bare textarea, as Input's
+                                                           // adornments do; className styles the shell
 <Select size="…" variant="…" />
 <DateInput size="…" variant="…" />
 ```

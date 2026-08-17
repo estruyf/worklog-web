@@ -4,7 +4,7 @@ import { CheckIcon, PlusIcon } from 'lucide-react';
 import { isGeneralTodoClientId } from '../../../model/todos';
 import { Button, Card, EmptyState, LinkButton, SectionLabel } from '../../primitives';
 import { useData, useUi } from '../../context';
-import { clientIdOf, deriveSubtaskList, isDone, workedLabels, workedOnDate } from '../../utils';
+import { canHaveSubtasks, clientIdOf, deriveSubtaskList, isDone, workedLabels, workedOnDate } from '../../utils';
 import { StatusPicker } from '../StatusPicker';
 import { WorkedToggle } from '../WorkedToggle';
 
@@ -45,6 +45,12 @@ export function SubtaskList({
     [subtasks, showDone],
   );
   const parentDone = isDone(task);
+  // A subtask gets no section of its own: the tree is one level deep, so there is
+  // nothing it could ever list and nothing it could add. The mirror of
+  // `ParentEditor` dropping the parent field on a task that already has children.
+  if (!canHaveSubtasks(task)) {
+    return null;
+  }
   // Nothing to list and nothing to add: an empty section on a closed task is a
   // heading over a heading.
   if (parentDone && subtasks.length === 0) {

@@ -2,10 +2,13 @@ import React from 'react';
 import { cn } from './cn';
 import {
   CONTROL_BASE,
-  CONTROL_GEOMETRY,
   CONTROL_INVALID,
+  CONTROL_PADDING,
+  CONTROL_RADIUS,
   CONTROL_TEXT,
   CONTROL_VARIANTS,
+  SHELL_INVALID,
+  SHELL_VARIANTS,
   type ControlSize,
   type ControlVariant,
 } from './controlStyles';
@@ -24,6 +27,15 @@ export interface TextAreaProps extends React.TextareaHTMLAttributes<HTMLTextArea
    *  seeing what you wrote. The `min-h-[…]` at the call site stays the floor;
    *  cap the growth with `max-h-[…]` if it needs one. */
   autoGrow?: boolean;
+  /** A row above the text, inside the field's frame — a formatting bar. Given
+   *  one, this becomes a bordered shell around a transparent textarea, the same
+   *  spelling `Input` uses for its adornments and for the same reason: a row of
+   *  buttons cannot sit inside a `<textarea>`'s own box. */
+  header?: React.ReactNode;
+  /** Extra classes for the `<textarea>` itself when a `header` has moved it
+   *  inside a shell — the outer `className` styles the shell in that case, so
+   *  height (`min-h-[…]`, `max-h-[…]`) belongs here. */
+  textareaClassName?: string;
 }
 
 /** A multi-line field. Height is layout, so `min-h-[…]` belongs in `className`
@@ -34,7 +46,9 @@ export function TextArea({
   invalid,
   resizable = true,
   autoGrow = false,
+  header,
   className,
+  textareaClassName,
   id,
   'aria-describedby': describedBy,
   ref,
@@ -69,7 +83,7 @@ export function TextArea({
     el.style.height = `${el.scrollHeight + (el.offsetHeight - el.clientHeight)}px`;
   }, [autoGrow, value]);
 
-  return (
+  const field = (
     <textarea
       ref={setRef}
       value={value}
@@ -77,16 +91,39 @@ export function TextArea({
       aria-describedby={aria.describedBy}
       aria-invalid={aria.invalid || undefined}
       className={cn(
-        CONTROL_BASE,
-        CONTROL_GEOMETRY[size],
         CONTROL_TEXT[size],
-        aria.invalid ? CONTROL_INVALID : CONTROL_VARIANTS[variant],
+        CONTROL_PADDING[size],
+        header
+          ? // The shell's border is the focus affordance, so the app-wide
+            // `*:focus-visible` outline is suppressed rather than drawn inside it.
+            'bg-transparent outline-none focus-visible:outline-none!'
+          : cn(CONTROL_BASE, CONTROL_RADIUS[size], aria.invalid ? CONTROL_INVALID : CONTROL_VARIANTS[variant]),
         // A drag handle on a box that re-measures itself on the next keystroke
         // only ever undoes the drag, so `autoGrow` takes the grip away.
         resizable && !autoGrow ? 'resize-y' : 'resize-none',
-        className,
+        header ? textareaClassName : className,
       )}
       {...rest}
     />
+  );
+
+  if (!header) {
+    return field;
+  }
+
+  return (
+    <div
+      className={cn(
+        // `overflow-hidden` so the header's fill stops at the rounded corner.
+        'flex flex-col overflow-hidden',
+        CONTROL_BASE,
+        CONTROL_RADIUS[size],
+        aria.invalid ? SHELL_INVALID : SHELL_VARIANTS[variant],
+        className,
+      )}
+    >
+      <div className="flex items-center gap-2 px-[8px] py-[5px] border-b border-neutral-450 bg-neutral-150">{header}</div>
+      {field}
+    </div>
   );
 }

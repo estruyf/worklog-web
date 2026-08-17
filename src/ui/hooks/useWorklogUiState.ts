@@ -73,7 +73,9 @@ export function useWorklogUiState() {
     }
   }, []);
   const [descDraft, setDescDraft] = useState("");
-  const [descMode, setDescMode] = useState<"preview" | "edit">("preview");
+  // A task opens on its description as stored; `edit`/`preview` are the two
+  // halves of an editor that has been opened deliberately (see DescriptionMode).
+  const [descMode, setDescMode] = useState<"read" | "preview" | "edit">("read");
   const [noteDraft, setNoteDraft] = useState("");
 
   // The day view's freeform Markdown for `selectedDate`. Distinct from

@@ -2,6 +2,7 @@ import React from 'react';
 import { PALETTE } from '../utils';
 import { Button, Field, Input, Modal, SectionLabel, TextArea } from '../primitives';
 import { LinksField } from './LinksField';
+import { useMarkdownFormat } from './markdown-format';
 import { useData, useUi } from '../context';
 
 /** Add / edit client modal (name, color, notes and reference links), plus the two
@@ -21,6 +22,11 @@ export function ClientFormModal() {
     setClientModalOpen,
   } = useUi();
   const { saveClient: onSave, allClients, clientUsage, setClientArchived, deleteClient } = useData();
+  // The description is rendered as Markdown on the client page, so it gets the
+  // same bar as every other Markdown field. No `#` picker or images here: this
+  // is a paragraph about who the client is, not a place work gets written down.
+  const descRef = React.useRef<HTMLTextAreaElement>(null);
+  const format = useMarkdownFormat({ value: desc, onChange: setDesc, textareaRef: descRef });
   const onClose = () => setClientModalOpen(false);
   const editing = editingClientId ? allClients.find((c) => c.id === editingClientId) : undefined;
   const usage = editingClientId ? clientUsage(editingClientId) : { tasks: 0, worklog: 0 };
@@ -68,9 +74,12 @@ export function ClientFormModal() {
 
       <Field label="Description" hint="optional" className="mt-[22px]">
         <TextArea
+          ref={descRef}
           size="lg"
+          header={format.toolbar}
           value={desc}
           onChange={(e) => setDesc(e.target.value)}
+          onKeyDown={format.props.onKeyDown}
           rows={4}
           placeholder={'Who they are, the contact, the agreed rate…\nSupports **bold**, *italic*, `code`, [links](https://example.com) and lists.'}
           className="w-full"

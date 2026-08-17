@@ -92,9 +92,9 @@ export function useTaskActions(tasks: Task[], selectedDate: string, ui: WorklogU
   }, []);
 
   /**
-   * Write `text` to the open task's description and leave the panel in preview.
-   * Takes the text rather than reading the draft because a checkbox ticked in
-   * the preview has to save the text it just produced — the draft state it also
+   * Write `text` to the open task's description and close the editor. Takes the
+   * text rather than reading the draft because a checkbox ticked in the stored
+   * description has to save the text it just produced — the draft state it also
    * sets is a render away.
    */
   const saveDescriptionText = (text: string) => {
@@ -103,11 +103,22 @@ export function useTaskActions(tasks: Task[], selectedDate: string, ui: WorklogU
     }
     ui.setDescDraft(text);
     worklogStore.updateTask(detailId, { description: text });
-    setDescMode("preview");
+    setDescMode("read");
   };
 
-  /** Commit the detail panel's markdown draft and drop back to preview. */
+  /** Commit the detail panel's markdown draft and close the editor. */
   const saveDescription = () => saveDescriptionText(ui.descDraft);
 
-  return { markDone, toggleWorked, openDetail, openEdit, deleteTask, addNote, updateNote, deleteNote, saveDescription, saveDescriptionText };
+  /** Open the editor on the stored description. */
+  const editDescription = () => setDescMode("edit");
+
+  /** Leave the editor without keeping what was typed. The draft is put back
+   *  rather than just hidden: what stays on screen is that draft rendered, so an
+   *  abandoned one would sit there reading like a saved description. */
+  const cancelDescription = () => {
+    ui.setDescDraft(tasks.find((t) => t.id === detailId)?.description ?? "");
+    setDescMode("read");
+  };
+
+  return { markDone, toggleWorked, openDetail, openEdit, deleteTask, addNote, updateNote, deleteNote, saveDescription, saveDescriptionText, editDescription, cancelDescription };
 }

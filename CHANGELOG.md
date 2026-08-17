@@ -24,6 +24,35 @@ Every change to Worklog, by day, newest first.
 
 ## 2026-08-14
 
+- The navigation drawer on a phone now scrolls, so Settings, the repository and the rest of
+  the bottom of the rail are reachable instead of being cut off the bottom of the screen.
+- The task form's client picker is now only about clients: the To-do chip is gone — the
+  Task/To-do switch above already picks that — and switching to To-do hides the client
+  section entirely instead of leaving an empty one behind.
+- Every Markdown field — a task's description, its notes, a day note, a client's description —
+  now has a formatting bar along the top of the box, the way GitHub's comment field does: bold,
+  italic, strikethrough, code, link, and the four block markers. The shortcuts work without it
+  (⌘B, ⌘I, ⌘E, ⌘K, ⌘⇧X, ⌘⇧8, ⌘⇧7), and with nothing selected they format the word the cursor
+  is in.
+- Enter inside a list carries the marker onto the next line, the way it does on GitHub — the
+  bullet, the next number, a fresh `- [ ]`, or the quote. On an empty item it ends the list
+  instead, so there is a way out without deleting the marker by hand.
+- A note box is one box: the bar sits inside its frame rather than floating above it, and it
+  stays put — nothing appears or disappears as you click into the field.
+- A task's description is now something you open rather than something that is always half
+  open. It sits there as written, with an **Edit** button; once you're in, **Write** and
+  **Preview** are two looks at the same unsaved draft — switching to Preview no longer means
+  giving anything up — and **Cancel** or **Save** are the two ways out. Cancel puts the
+  description back the way it was.
+- "+ Add image" has moved onto the formatting bar as a button, in notes and descriptions alike.
+  It belongs with the other things that write at the cursor — and it is now only there while you
+  are actually writing, rather than in Preview, where it edited text you weren't looking at.
+- A subtask no longer offers subtasks of its own. The Subtasks section is gone from its detail
+  panel, and the new-task shortcut opens a plain task there instead — the tree is one level
+  deep, so there was nothing that section could ever hold.
+- The new task form opens with a **Task / To-do** switch beside its heading, so what you're
+  writing down can change its mind halfway through. Picking To-do files it under the general
+  list instead of a client; picking Task again puts it back on the client you had.
 - The sidebar collapses. The button beside the wordmark narrows the rail to its icons, giving the
   view the width back, and the same button puts it back — every tab, action and count is still
   there, with its name as a tooltip. How you left it is remembered on that device, so the app

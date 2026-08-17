@@ -13,9 +13,17 @@ import { PriorityPicker } from '../PriorityPicker';
  *
  *  Defaults to Normal, which writes no `- priority:` line at all — so a form
  *  submitted without touching this leaves the Markdown exactly as it was. */
-export function PriorityField({ value, onChange }: { value: string; onChange: (priority: string) => void }) {
+export function PriorityField({
+  value,
+  onChange,
+  divider,
+}: {
+  value: string;
+  onChange: (priority: string) => void;
+  divider?: boolean;
+}) {
   return (
-    <SidebarSection title="Priority" hint="optional">
+    <SidebarSection title="Priority" hint="optional" divider={divider}>
       <PriorityPicker value={value} onSelect={onChange} />
     </SidebarSection>
   );

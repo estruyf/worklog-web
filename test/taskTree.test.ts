@@ -4,6 +4,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   canHaveParent,
+  canHaveSubtasks,
   deriveSubtaskList,
   parentCandidates,
   parseCollapsedStore,
@@ -154,6 +155,17 @@ describe('canHaveParent', () => {
   it('says yes to a childless task, and to one that does not exist yet', () => {
     expect(canHaveParent(all, 'p2')).toBe(true);
     expect(canHaveParent(all, null)).toBe(true);
+  });
+});
+
+describe('canHaveSubtasks', () => {
+  it('says no to a task that is already a subtask', () => {
+    expect(canHaveSubtasks(kidA)).toBe(false);
+  });
+
+  it('says yes to a top-level task, parent or not', () => {
+    expect(canHaveSubtasks(parent)).toBe(true);
+    expect(canHaveSubtasks(lone)).toBe(true);
   });
 });
 
