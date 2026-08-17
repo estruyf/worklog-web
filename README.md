@@ -40,7 +40,7 @@ insights. Every edit is committed straight back to your repo.
 
 ## Prerequisites
 
-- **Node.js 20+** and npm.
+- **Node.js 22.12+** and npm (required by Astro 7).
 - A **GitHub account** with a repository that holds (or will hold) your Worklog files
   (see [Expected repository layout](#expected-repository-layout)).
 - For deployment only: a **Cloudflare account** and the `wrangler` CLI (bundled as a dev dependency).

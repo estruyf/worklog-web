@@ -3,6 +3,7 @@
 // proxied through the api/* routes which read it here.
 
 import type { APIContext } from 'astro';
+import { env as workerEnv } from 'cloudflare:workers';
 
 export const TOKEN_COOKIE = 'wl_gh_token';
 export const OAUTH_STATE_COOKIE = 'wl_oauth_state';
@@ -14,14 +15,18 @@ export interface Env {
   APP_BASE_URL?: string;
 }
 
-/** Read env from the Cloudflare runtime (prod / `wrangler`) or Vite (`import.meta.env`). */
-export function getEnv(context: APIContext): Env {
-  const runtimeEnv = (context.locals as { runtime?: { env?: Record<string, string> } })?.runtime?.env;
-  const source = runtimeEnv ?? (import.meta.env as unknown as Record<string, string>);
+/** Read env from the Workers runtime.
+ *
+ *  One source, not two: `@astrojs/cloudflare` v14 runs the real workerd in dev as well
+ *  as production, so `.dev.vars` and `wrangler secret put` both arrive here. The old
+ *  `context.locals.runtime.env` path was removed in Astro 6 — its getter now *throws*,
+ *  and the `import.meta.env` fallback that used to cover dev would have quietly caught
+ *  that and served a build-time-inlined (in production, empty) value instead. */
+export function getEnv(): Env {
   return {
-    GITHUB_CLIENT_ID: source.GITHUB_CLIENT_ID,
-    GITHUB_CLIENT_SECRET: source.GITHUB_CLIENT_SECRET,
-    APP_BASE_URL: source.APP_BASE_URL,
+    GITHUB_CLIENT_ID: workerEnv.GITHUB_CLIENT_ID,
+    GITHUB_CLIENT_SECRET: workerEnv.GITHUB_CLIENT_SECRET,
+    APP_BASE_URL: workerEnv.APP_BASE_URL,
   };
 }
 
@@ -56,7 +61,7 @@ export function clearToken(context: APIContext): void {
 
 /** The app's own origin, from APP_BASE_URL if set, else the request URL. */
 export function appOrigin(context: APIContext): string {
-  const env = getEnv(context);
+  const env = getEnv();
   if (env.APP_BASE_URL) {
     return env.APP_BASE_URL.replace(/\/$/, '');
   }

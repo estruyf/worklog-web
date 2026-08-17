@@ -1,18 +1,20 @@
 {
-  "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "worklog-web",
-  "main": "./dist/_worker.js/index.js",
-  "compatibility_date": "2025-05-05",
-  "compatibility_flags": ["nodejs_compat"],
-  "assets": {
-    "directory": "./dist",
-    "binding": "ASSETS"
-  },
-  "observability": {
-    "enabled": true
-  }
-  // Secrets (do NOT commit): set with `wrangler secret put`:
-  //   wrangler secret put GITHUB_CLIENT_ID
-  //   wrangler secret put GITHUB_CLIENT_SECRET
-  //   wrangler secret put APP_BASE_URL   (optional; e.g. https://worklog.example.com)
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "worklog-web",
+	"compatibility_date": "2025-05-05",
+	"compatibility_flags": [
+		"nodejs_compat"
+	],
+	// `main` and `assets` are deliberately absent: since @astrojs/cloudflare v14 the
+	// adapter runs the Cloudflare Vite plugin and supplies both itself (its own
+	// `entrypoints/server` and the ASSETS binding pointed at the real client dir).
+	// Setting them here wins over the adapter and points the deploy at a path the
+	// new build layout no longer produces.
+	"observability": {
+		"enabled": true
+	}
+	// Secrets (do NOT commit): set with `wrangler secret put`:
+	//   wrangler secret put GITHUB_CLIENT_ID
+	//   wrangler secret put GITHUB_CLIENT_SECRET
+	//   wrangler secret put APP_BASE_URL   (optional; e.g. https://worklog.example.com)
 }

@@ -28,48 +28,41 @@ const stampServiceWorker = () => ({
   },
 });
 
-// Dev only: the React 19 client island needs the browser entry resolved. In Vite 6
-// `resolve.conditions` also drives SSR resolution, so applying it during `build`
-// would pull in `react-dom/server.browser` (which references `MessageChannel`,
-// undefined in the Workers runtime) instead of the worker/edge build. Scope it to dev.
-const isDev = process.argv.includes("dev");
-
 // SSR on Cloudflare so the OAuth token-exchange endpoints (api/auth/*) can keep
 // the GitHub client secret server-side. The dashboard itself is a React island.
 export default defineConfig({
   output: "server",
-  adapter: cloudflare({
-    platformProxy: { enabled: true },
-  }),
+  adapter: cloudflare(),
   integrations: [react(), stampServiceWorker()],
-  experimental: {
-    fonts: [
-      {
-        provider: fontProviders.google(),
-        name: "Inter",
-        cssVariable: "--font-inter",
-        weights: [400, 500, 600, 700],
-        styles: ["normal"],
-        fallbacks: ["-apple-system", "system-ui", "Segoe UI", "sans-serif"],
-      },
-      {
-        provider: fontProviders.google(),
-        name: "JetBrains Mono",
-        cssVariable: "--font-jetbrains-mono",
-        weights: [400, 500],
-        styles: ["normal"],
-        fallbacks: ["ui-monospace", "monospace"],
-      },
-    ],
-  },
+  fonts: [
+    {
+      provider: fontProviders.google(),
+      name: "Inter",
+      cssVariable: "--font-inter",
+      weights: [400, 500, 600, 700],
+      styles: ["normal"],
+      fallbacks: ["-apple-system", "system-ui", "Segoe UI", "sans-serif"],
+    },
+    {
+      provider: fontProviders.google(),
+      name: "JetBrains Mono",
+      cssVariable: "--font-jetbrains-mono",
+      weights: [400, 500],
+      styles: ["normal"],
+      fallbacks: ["ui-monospace", "monospace"],
+    },
+  ],
   vite: {
     plugins: [tailwindcss()],
-    resolve: isDev
-      ? // Dev runs the SSR in Node, so the browser entry is fine there.
-        { conditions: ["browser"] }
-      : // Build for the Workers runtime: pin react-dom to its edge server build.
-        // `react-dom/server` otherwise resolves to `server.browser`, which uses
-        // `MessageChannel` (undefined in Workers). `server.edge` uses streaming APIs.
-        { alias: { "react-dom/server": "react-dom/server.edge" } },
+    // Pin react-dom to its edge server build, in dev as well as build. `react-dom/server`
+    // otherwise resolves to `server.browser`, which uses `MessageChannel` — undefined in
+    // the Workers runtime — and `server.edge` uses streaming APIs instead.
+    //
+    // This used to be build-only, paired with `conditions: ["browser"]` in dev, because
+    // dev ran the SSR in Node where the browser entry was harmless. @astrojs/cloudflare
+    // v14 runs the real workerd in dev too, so that split inverted: the dev branch was
+    // the one that would break, and a top-level `conditions` is the wrong tool now that
+    // Vite resolves the client and SSR environments separately.
+    resolve: { alias: { "react-dom/server": "react-dom/server.edge" } },
   },
 });

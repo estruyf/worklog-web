@@ -8,7 +8,7 @@ import { appOrigin, getEnv, isSecureRequest, OAUTH_STATE_COOKIE } from '../../..
 export const prerender = false;
 
 export const GET: APIRoute = (context) => {
-  const env = getEnv(context);
+  const env = getEnv();
   if (!env.GITHUB_CLIENT_ID) {
     return new Response('GITHUB_CLIENT_ID is not configured.', { status: 500 });
   }

@@ -15,6 +15,13 @@ Every change to Worklog, by day, newest first.
      both). Links must be absolute — a relative path resolves against /changelog and
      404s. -->
 
+## 2026-08-17
+
+- Upgraded to Astro 7 and the Cloudflare adapter v14, clearing every outstanding `npm audit`
+  advisory (12 down to 0). Nothing changes for you in the app, but local development now runs
+  on the real Workers runtime instead of Node, so what you see in `npm run dev` matches what
+  ships. Requires Node 22.12+.
+
 ## 2026-08-14
 
 - The sidebar collapses. The button beside the wordmark narrows the rail to its icons, giving the

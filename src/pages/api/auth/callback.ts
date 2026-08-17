@@ -18,7 +18,7 @@ export const GET: APIRoute = async (context) => {
     return new Response('Invalid OAuth state.', { status: 400 });
   }
 
-  const env = getEnv(context);
+  const env = getEnv();
   const res = await fetch('https://github.com/login/oauth/access_token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Accept: 'application/json' },

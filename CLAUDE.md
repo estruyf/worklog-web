@@ -39,7 +39,7 @@ npm run dev      # http://localhost:4321 (needs .dev.vars — see README step 2)
 npm test         # vitest, 538 tests / 34 files — must stay green
 npm run lint     # eslint, 0 errors AND 0 warnings expected
 npx tsc --noEmit # must be clean
-npm run build    # astro build → dist/_worker.js (Cloudflare)
+npm run build    # astro build → dist/server (worker) + dist/client (assets)
 ```
 
 **Run all four before calling work done.** `npm run build` is not optional for UI changes:
@@ -182,9 +182,20 @@ errors.** See the comment at the top of `eslint.config.js`.
 
 ### 5. Cloudflare Workers is the runtime, not Node
 
-- `react-dom/server` must resolve to `server.edge` in builds. `server.browser` uses
+- `react-dom/server` must resolve to `server.edge` — in dev as well as builds, since
+  `@astrojs/cloudflare` v14 runs the real workerd in dev too. `server.browser` uses
   `MessageChannel`, which does not exist in Workers, and it fails **at deploy**, not at build.
   See the comment in `astro.config.mjs` before touching `vite.resolve`.
+- **One Vite copy, matching Astro's.** `@cloudflare/vite-plugin` binds whichever `vite` it
+  resolves; if that is not the one Astro runs, its module runner talks the wrong protocol to
+  the dev server and workerd dies at startup with `Missing field \`moduleType\`` — before any
+  of your code runs. That is why `vite` is a direct devDependency pinned to Astro's major:
+  a transitive dep pulling in an older Vite (vitest 3 did) silently re-splits it. `npm ls vite`
+  must show one deduped version.
+- Env and bindings come from `import { env } from 'cloudflare:workers'` (see
+  `src/server/session.ts`); `Astro.locals.runtime.env` was removed in Astro 6 and its getter
+  now throws. Types for it are hand-declared in `src/env.d.ts` — and `skipLibCheck` means
+  mistakes there are invisible to `tsc`.
 - Subrequests are capped per request (50 free / 1000 paid). `loadRepo` and `commitFiles` fan out
   one request per file — bound any new fan-out.
 - No Node APIs, no disk. `src/db/memoryDb.ts` and `src/workspace/paths.ts` exist because of this.
