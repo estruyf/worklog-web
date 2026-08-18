@@ -1,6 +1,6 @@
 import React from 'react';
 import type { Task } from '../../../model/types';
-import { Chip, SidebarSection } from '../../primitives';
+import { SidebarSection } from '../../primitives';
 import { useData, useUi } from '../../context';
 import { clientIdOf, isDone } from '../../utils';
 import { isOverdue } from '../../../model/overdue';
@@ -9,6 +9,7 @@ import { DueEditor } from './DueEditor';
 import { ParentEditor } from './ParentEditor';
 import { TaskActions } from './TaskActions';
 import { PriorityEditor } from './PriorityEditor';
+import { TagsEditor } from './TagsEditor';
 import { RepeatSummary } from './RepeatSummary';
 
 export interface TaskSidebarProps {
@@ -29,11 +30,10 @@ export interface TaskSidebarProps {
  *  The status is the picker, not a label: the rail is where you are already
  *  looking when you decide the task has moved on. */
 export function TaskSidebar({ task, parent, isTodo, occurrences, onOpenTask }: TaskSidebarProps) {
-  const { statusMeta, statusChoices, setTaskStatus, colorOf, clientName, openTagSearch } = useData();
+  const { statusMeta, statusChoices, setTaskStatus, colorOf, clientName } = useData();
   const { selectedDate } = useUi();
   const done = isDone(task);
   const status = statusMeta(task.status, done);
-  const tags = task.tags ?? [];
   return (
     <>
       <SidebarSection title="Client" divider={false}>
@@ -71,20 +71,7 @@ export function TaskSidebar({ task, parent, isTodo, occurrences, onOpenTask }: T
       <DueEditor task={task} />
       {!done && <RepeatSummary task={task} occurrences={occurrences} overdue={isOverdue(task, selectedDate)} />}
 
-      {tags.length > 0 && (
-        <SidebarSection title="Tags">
-          {/* Tags jump to the tag-filtered search. They stayed inert while the task
-              had a page of its own, which didn't mount the overlay; the task route
-              lives in the dashboard now, so they lead somewhere again. */}
-          <div className="flex flex-wrap items-center gap-[6px]">
-            {tags.map((tag) => (
-              <Chip key={tag} variant="tag" onClick={() => openTagSearch(tag)} title={`Show everything tagged "${tag}"`}>
-                {tag}
-              </Chip>
-            ))}
-          </div>
-        </SidebarSection>
-      )}
+      <TagsEditor task={task} />
 
       {/* Last, under the dates and whatever else the task carries: the rail
           describes the task from the top down and then says what you can do

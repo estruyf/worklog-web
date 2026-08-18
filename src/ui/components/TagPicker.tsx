@@ -12,11 +12,15 @@ export function TagPicker({
   value,
   onChange,
   known,
+  autoFocus,
 }: {
   value: string[];
   onChange: (next: string[]) => void;
   /** Every tag already in use, usage-ranked. */
   known: string[];
+  /** For the callers that open the picker on a click — the detail panel's rail —
+   *  so changing tags is the one click it looks like. */
+  autoFocus?: boolean;
 }) {
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
@@ -114,6 +118,7 @@ export function TagPicker({
             global *:focus-visible ring is suppressed rather than drawn inside it. */}
         <input
           ref={inputRef}
+          autoFocus={autoFocus}
           value={query}
           onChange={(e) => {
             const raw = e.target.value;
