@@ -17,6 +17,9 @@ Every change to Worklog, by day, newest first.
 
 ## 2026-08-18
 
+- Opening a repo is faster: images no longer download with the timesheet, but each one
+  fetches the moment it first appears on screen — and stays in the browser's cache, so it
+  won't download again until it changes.
 - Tags can now be changed straight from a task's details: the rail's Tags block has an Edit
   link that opens the same tag picker the form uses, and shows an "Add tags" link on a task
   that has none — no need to open the whole task for a one-tag change.

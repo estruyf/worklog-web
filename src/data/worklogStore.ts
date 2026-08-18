@@ -45,7 +45,7 @@ import { syncsOnChange } from '../model/syncEvents';
 import { DEFAULT_AUTO_SYNC } from '../workspace/paths';
 import { clearPending, clearSnapshot, loadPending, repoKeyOf, savePending, type PendingSnapshot } from './pendingStore';
 import { AssetUrlCache } from './assetUrls';
-import { commitFiles, fetchHead, fetchRepo, type LoadResponse, type RepoContext } from './repoApi';
+import { commitFiles, fetchAsset, fetchHead, fetchRepo, type LoadResponse, type RepoContext } from './repoApi';
 import { fileMapOf, markPushed, mergeRemoteInto, outgoingFiles } from './fileSync';
 import { applySnapshot, snapshotOf } from './recovery';
 import { loadResponseOf, loadTree, saveTree } from './repoCache';
@@ -121,6 +121,8 @@ class WorklogStore {
   // A recovered snapshot loaded on open, held until the user restores or discards it.
   private recovered?: PendingSnapshot;
   private assetUrls = new AssetUrlCache();
+  /** Asset paths with a download in flight, so a re-render doesn't start a second. */
+  private assetFetches = new Set<string>();
   /** A sync was wanted while there was no connection. It says the user (or a
    *  trigger they configured) already asked for this work to reach GitHub, which
    *  is what makes it right to push on reconnect without asking again — and what
@@ -652,10 +654,45 @@ class WorklogStore {
     return ref;
   }
 
-  /** Displayable URL for an `assets/<file>` markdown ref, or null when the file
-   *  map doesn't hold it. See data/assetUrls for why these aren't raw GitHub URLs. */
+  /** Displayable URL for an `assets/<file>` markdown ref, or null when the bytes
+   *  aren't in memory (yet). Loads ship asset paths + shas without bytes, so a
+   *  null here also starts the download; when it lands, subscribers are notified
+   *  and the re-render finds the bytes. See data/assetUrls for why these aren't
+   *  raw GitHub URLs. */
   assetUrl(ref: string): string | null {
-    return this.assetUrls.urlFor(ref, this.fm.binary.get(ref));
+    const bytes = this.fm.binary.get(ref);
+    if (!bytes) {
+      this.fetchMissingAsset(ref);
+    }
+    return this.assetUrls.urlFor(ref, bytes);
+  }
+
+  /** Start downloading an asset the branch holds but the map has no bytes for.
+   *  Quietly does nothing for refs the branch doesn't know (a just-pasted image
+   *  already has bytes; a dangling ref has nothing to fetch) and for locally
+   *  deleted assets — refetching one of those would visibly resurrect it. A
+   *  failed download (offline, say) just leaves the alt-text fallback standing;
+   *  a later render retries. */
+  private fetchMissingAsset(ref: string): void {
+    const sha = this.fm.baseSha.get(ref);
+    if (!sha || !this.repo || this.fm.deleted.has(ref) || this.assetFetches.has(ref)) {
+      return;
+    }
+    this.assetFetches.add(ref);
+    const fm = this.fm;
+    fetchAsset(this.repo, ref, sha)
+      .then((bytes) => {
+        // A reload swapped the map while this was in flight: drop the bytes and
+        // let the next render fetch against the new map (the HTTP cache makes
+        // that cheap).
+        if (this.fm !== fm || fm.deleted.has(ref)) {
+          return;
+        }
+        fm.binary.set(ref, bytes);
+        this.updateSnapshot({});
+      })
+      .catch(() => undefined)
+      .finally(() => this.assetFetches.delete(ref));
   }
 
   // ---- internals ------------------------------------------------------------

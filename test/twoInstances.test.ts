@@ -43,7 +43,6 @@ function fakeFetch(input: string, init?: RequestInit): Promise<Response> {
         branch: 'main',
         baseCommitSha: github.head,
         text: { ...github.files },
-        binary: {},
         sha: {},
       }),
     );

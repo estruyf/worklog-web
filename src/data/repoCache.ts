@@ -13,8 +13,9 @@
 // are most of a repo's bytes and none of its meaning, and IndexedDB quota is the
 // one budget that decides whether an offline open works at all. Offline, a
 // markdown image ref resolves to nothing and renders as its alt text, the same
-// fallback `ClientInfoCard` already has; the bytes come back on the next online
-// load. Their *paths* are kept, so the map still knows the branch holds them.
+// fallback `ClientInfoCard` already has; online, the bytes are fetched per image
+// when one is rendered (the store's `assetUrl`), the same way they are after a
+// fresh load. Their *paths* are kept, so the map still knows the branch holds them.
 
 import type { FileMap } from '../workspace/paths';
 import { TREE_STORE, openDb, withStore } from './idb';
@@ -102,8 +103,7 @@ export async function clearTrees(): Promise<void> {
 }
 
 /** A cached tree in the shape `/api/load` would have returned, so the offline
- *  open path can go through the same `applyLoad` as the online one. `binary` is
- *  empty by design — see the note at the top of this file. */
+ *  open path can go through the same `applyLoad` as the online one. */
 export function loadResponseOf(tree: CachedTree): LoadResponse {
   return {
     owner: tree.owner,
@@ -111,7 +111,6 @@ export function loadResponseOf(tree: CachedTree): LoadResponse {
     branch: tree.branch,
     baseCommitSha: tree.baseCommitSha,
     text: tree.text,
-    binary: {},
     sha: tree.sha,
   };
 }

@@ -29,9 +29,9 @@ export interface LoadedRepo {
   baseCommitSha: string;
   /** UTF-8 text files (markdown / json), keyed by repo-relative path. */
   text: Record<string, string>;
-  /** Binary files (assets), base64-encoded, keyed by repo-relative path. */
-  binary: Record<string, string>;
-  /** Blob sha per path, so the client can skip re-committing unchanged files. */
+  /** Blob sha per path — every Worklog path on the branch, assets included.
+   *  Assets travel as paths + shas only; their bytes come through /api/asset
+   *  when the UI actually renders one (see {@link loadAssetBlob}). */
   sha: Record<string, string>;
 }
 
@@ -159,23 +159,45 @@ export async function loadRepo(token: string, owner: string, repo: string, branc
 
   const blobs = tree.tree.filter((e) => e.type === 'blob' && isWorklogPath(e.path));
   const text: Record<string, string> = {};
-  const binary: Record<string, string> = {};
   const sha: Record<string, string> = {};
+  for (const e of blobs) {
+    sha[e.path] = e.sha;
+  }
 
+  // Only the text files are fetched eagerly. Assets are most of a repo's bytes
+  // and none of its meaning; shipping them here made the first load wait on
+  // every screenshot ever pasted. The client fetches them by sha on first
+  // render instead.
   await Promise.all(
-    blobs.map(async (e) => {
-      const blob = await gh<{ content: string; encoding: string }>(token, `/repos/${owner}/${repo}/git/blobs/${e.sha}`);
-      sha[e.path] = e.sha;
-      const raw = blob.encoding === 'base64' ? blob.content.replace(/\n/g, '') : blob.content;
-      if (TEXT_PATH.test(e.path)) {
+    blobs
+      .filter((e) => TEXT_PATH.test(e.path))
+      .map(async (e) => {
+        const blob = await gh<{ content: string; encoding: string }>(token, `/repos/${owner}/${repo}/git/blobs/${e.sha}`);
+        const raw = blob.encoding === 'base64' ? blob.content.replace(/\n/g, '') : blob.content;
         text[e.path] = blob.encoding === 'base64' ? decodeBase64Utf8(raw) : raw;
-      } else {
-        binary[e.path] = raw; // keep base64 for assets
-      }
-    }),
+      }),
   );
 
-  return { owner, repo, branch, baseCommitSha, text, binary, sha };
+  return { owner, repo, branch, baseCommitSha, text, sha };
+}
+
+/** Raw bytes of one blob, for /api/asset. Sha-addressed rather than
+ *  path-addressed so the response is immutable and the browser can cache it
+ *  forever; the route layout-gates the accompanying path. */
+export async function loadAssetBlob(token: string, owner: string, repo: string, blobSha: string): Promise<ArrayBuffer> {
+  const res = await fetch(`${API}/repos/${owner}/${repo}/git/blobs/${blobSha}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: 'application/vnd.github.raw+json',
+      'X-GitHub-Api-Version': '2022-11-28',
+      'User-Agent': 'worklog-web',
+    },
+  });
+  if (!res.ok) {
+    const body = await res.text().catch(() => '');
+    throw new GitHubError(`GitHub GET blob ${blobSha} → ${res.status}: ${body.slice(0, 300)}`, res.status);
+  }
+  return res.arrayBuffer();
 }
 
 export interface CommitResult {

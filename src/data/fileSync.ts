@@ -3,11 +3,14 @@
 // them fetch, re-parse or notify — that sequencing is the store's job.
 
 import { FileMap } from '../workspace/paths';
-import { base64ToBytes, bytesToBase64 } from './bytes';
+import { bytesToBase64 } from './bytes';
 import { mergeFile } from './merge';
 import type { LoadResponse, OutgoingFile } from './repoApi';
 
-/** Build the in-memory tree for a freshly-loaded branch. */
+/** Build the in-memory tree for a freshly-loaded branch. Asset bytes are not
+ *  part of a load — they arrive path-by-path when an image is rendered — so
+ *  `remote` is derived from the sha listing, which names every blob the branch
+ *  holds, not from which contents happen to be in memory. */
 export function fileMapOf(data: LoadResponse): FileMap {
   const fm = new FileMap();
   for (const [path, text] of Object.entries(data.text)) {
@@ -15,14 +18,11 @@ export function fileMapOf(data: LoadResponse): FileMap {
     // The version every later edit is a change *from*, for the sync merge.
     fm.baseText.set(path, text);
   }
-  for (const [path, base64] of Object.entries(data.binary)) {
-    fm.binary.set(path, base64ToBytes(base64));
-  }
   for (const [path, sha] of Object.entries(data.sha)) {
     fm.baseSha.set(path, sha);
+    fm.remote.add(path);
   }
-  // Everything that came back from the branch exists there — see FileMap.remote.
-  for (const path of [...fm.text.keys(), ...fm.binary.keys()]) {
+  for (const path of fm.text.keys()) {
     fm.remote.add(path);
   }
   return fm;

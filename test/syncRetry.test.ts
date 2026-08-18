@@ -37,7 +37,7 @@ function fakeFetch(input: string, init?: RequestInit): Promise<Response> {
   }
   if (url.pathname === '/api/load') {
     return Promise.resolve(
-      Response.json({ owner: 'o', repo: 'r', branch: 'main', baseCommitSha: head, text: { ...files }, binary: {}, sha: {} }),
+      Response.json({ owner: 'o', repo: 'r', branch: 'main', baseCommitSha: head, text: { ...files }, sha: {} }),
     );
   }
   if (url.pathname === '/api/commit') {

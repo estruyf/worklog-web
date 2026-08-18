@@ -10,14 +10,15 @@ export interface RepoContext {
   baseCommitSha: string;
 }
 
-/** A branch's Worklog files as /api/load returns them. */
+/** A branch's Worklog files as /api/load returns them. Text only — assets
+ *  appear in `sha` but their bytes come through {@link fetchAsset} when an
+ *  image is first rendered, so the first paint never waits on them. */
 export interface LoadResponse {
   owner: string;
   repo: string;
   branch: string;
   baseCommitSha: string;
   text: Record<string, string>;
-  binary: Record<string, string>;
   sha: Record<string, string>;
 }
 
@@ -45,6 +46,18 @@ export async function fetchRepo(owner: string, repo: string, branch?: string): P
     throw new Error(await res.text());
   }
   return (await res.json()) as LoadResponse;
+}
+
+/** One asset's bytes, fetched on first render. Sha-addressed so the browser's
+ *  HTTP cache can keep it across sessions — the same image never downloads
+ *  twice while its blob is unchanged. */
+export async function fetchAsset(repo: { owner: string; repo: string }, path: string, sha: string): Promise<Uint8Array> {
+  const params = new URLSearchParams({ owner: repo.owner, repo: repo.repo, path, sha });
+  const res = await fetch(`/api/asset?${params}`);
+  if (!res.ok) {
+    throw new Error(await res.text());
+  }
+  return new Uint8Array(await res.arrayBuffer());
 }
 
 /** The branch's head commit on GitHub right now. Throws when the check fails —
