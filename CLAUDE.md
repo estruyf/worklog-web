@@ -56,6 +56,13 @@ Finishing a change includes a one-liner in [CHANGELOG.md](CHANGELOG.md) under to
 (`YYYY-MM-DD`, newest day on top) — what it means for someone using the app, not a restated
 commit message. Add the heading if the day has none; add to it if it's already there.
 
+### Publishing
+
+When the user asks to publish the site, run `npm run publish` (build + `wrangler deploy` to
+Cloudflare Workers) and report back once the deploy has finished, including the deployed URL
+from wrangler's output. **Only on an explicit request** — never publish as part of finishing
+a change, and finishing work never implies publishing.
+
 ---
 
 ## Architecture — the layering is the point
