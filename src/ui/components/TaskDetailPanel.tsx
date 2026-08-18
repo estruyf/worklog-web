@@ -1,7 +1,9 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { InfoIcon, MessageSquareIcon } from 'lucide-react';
 import { clientIdOf, isDone } from '../utils';
 import { isGeneralTodoClientId } from '../../model/todos';
-import { Button, LinkButton } from '../primitives';
+import { Button, IconButton, LinkButton, Modal } from '../primitives';
+import { CopyButton } from './CopyButton';
 import { LinkList } from './LinkList';
 import { DescriptionEditor } from './DescriptionEditor';
 import { NotesSection, SubtaskList, TaskDetailHeader, TaskSidebar } from './task-detail';
@@ -31,7 +33,8 @@ function useDetailData() {
 /** The task at /app/task/<id>: breadcrumb and the two actions you came to press,
  * then the task's own content — title, links, description, subtasks, notes — with
  * everything that classifies it in a rail on the right, the same way the task form
- * is laid out.
+ * is laid out. On a phone the rail and the notes leave the page and sit behind two
+ * floating buttons as bottom sheets, so the content is what you land on.
  *
  * Fills the dashboard's main column rather than covering it, for the reason the
  * task form does (see TaskFormPage): the nav stays put and this reads as a view.
@@ -42,6 +45,14 @@ export function TaskDetailPanel() {
   const { saveDescription, saveDescriptionText, editDescription, cancelDescription } = useData();
   const { descDraft, setDescDraft, descMode, setDescMode } = useUi();
   const { task, parent, subtasks, occurrences, descDirty } = useDetailData();
+  // Which phone sheet is up. A link inside one (the parent, an occurrence, a
+  // mentioned task) navigates to another task under the sheet — close it, or it
+  // stays up showing the new task's data as if nothing happened.
+  const [sheet, setSheet] = useState<'details' | 'notes' | null>(null);
+  const taskId = task?.id;
+  useEffect(() => {
+    setSheet(null);
+  }, [taskId]);
   if (!task) {
     return <MissingTask />;
   }
@@ -55,26 +66,23 @@ export function TaskDetailPanel() {
     <div className="flex flex-1 flex-col min-h-0 bg-white">
       <TaskDetailHeader task={task} parent={parent} isTodo={isTodo} />
 
-      <div className="flex-1 overflow-auto px-6 pt-6 pb-8">
+      {/* The extra bottom padding below lg keeps the last of the content clear of
+          the floating buttons. */}
+      <div className="flex-1 overflow-auto px-6 pt-6 pb-24 lg:pb-8">
         <div className="max-w-[920px] xl:max-w-[1280px] mx-auto w-full">
-          {/* Below lg this is one ordered column rather than two, by the same trick
-              the task form uses: `contents` dissolves the column wrappers so their
-              blocks become siblings, and the rail can sit under the title and its
-              links — what the task is, then where it stands — with the long content
-              below. At lg the wrappers become real columns and the order utilities
-              go inert, since the blocks are no longer flex items. */}
-          <div className="flex flex-col lg:flex-row lg:gap-8">
-            <div className="contents lg:block lg:flex-1 lg:min-w-0">
-              <div className="order-1">
-                <h1 className={'text-[26px] font-bold m-0 mb-5 tracking-[-0.01em] ' + (isDone(task) ? 'line-through decoration-neutral-550 text-neutral-700' : '')}>
-                  {task.title}
-                </h1>
+          {/* Two columns at lg. Below that the rail and the notes are not in the
+              page at all — they open as bottom sheets from the floating buttons,
+              so a phone lands on the content instead of scrolling the whole
+              metadata rail to reach it. */}
+          <div className="lg:flex lg:gap-8">
+            <div className="lg:flex-1 lg:min-w-0">
+              <h1 className={'text-[26px] font-bold m-0 mb-5 tracking-[-0.01em] ' + (isDone(task) ? 'line-through decoration-neutral-550 text-neutral-700' : '')}>
+                {task.title}
+              </h1>
 
-                <LinkList links={task.links} className="mb-6" />
-              </div>
+              <LinkList links={task.links} className="mb-6" />
 
-              <div className="order-3">
-                <DescriptionEditor
+              <DescriptionEditor
                   value={descDraft}
                   onChange={setDescDraft}
                   mode={descMode}
@@ -95,9 +103,12 @@ export function TaskDetailPanel() {
                       // Measured against what is on screen, which is the draft —
                       // in `read` that is the stored description either way.
                       descDraft.trim() !== '' && (
-                        <Button variant="neutral" size="xs" onClick={editDescription}>
-                          Edit
-                        </Button>
+                        <>
+                          <CopyButton value={descDraft} label="Copy description" />
+                          <Button variant="neutral" size="xs" onClick={editDescription}>
+                            Edit
+                          </Button>
+                        </>
                       )
                     ) : (
                       <>
@@ -112,20 +123,60 @@ export function TaskDetailPanel() {
                   }
                 />
 
-                <SubtaskList task={task} subtasks={subtasks} onOpenTask={navigateToTask} />
+              <SubtaskList task={task} subtasks={subtasks} onOpenTask={navigateToTask} />
 
+              <div className="hidden lg:block">
                 <NotesSection task={task} />
               </div>
             </div>
 
-            <aside className="contents lg:block lg:w-[320px] lg:shrink-0 lg:border-l lg:border-neutral-375 lg:pl-8">
-              <div className="order-2 mb-4 lg:mb-0">
-                <TaskSidebar task={task} parent={parent} isTodo={isTodo} occurrences={occurrences} onOpenTask={navigateToTask} />
-              </div>
+            <aside className="hidden lg:block w-[320px] shrink-0 border-l border-neutral-375 pl-8">
+              <TaskSidebar task={task} parent={parent} isTodo={isTodo} occurrences={occurrences} onOpenTask={navigateToTask} />
             </aside>
           </div>
         </div>
       </div>
+
+      {/* The phone's way into what the page set aside, bottom-right where the
+          thumb is: notes — the action you repeat — as the labelled pill, the
+          rail behind the ⓘ. Under the sheets' backdrop (z-40 vs z-50), so an
+          open sheet covers them. */}
+      <div className="lg:hidden fixed right-4 bottom-[calc(16px+env(safe-area-inset-bottom))] z-40 flex items-center gap-2.5">
+        <Button variant="secondary" size="md" onClick={() => setSheet('notes')} className="h-10 shadow-[0_6px_20px_rgba(0,0,0,0.18)]">
+          <MessageSquareIcon size={16} />
+          Notes{task.notes && task.notes.length > 0 ? ` · ${task.notes.length}` : ''}
+        </Button>
+        <IconButton
+          variant="outline"
+          onClick={() => setSheet('details')}
+          aria-label="Task details"
+          title="Task details"
+          className="w-10 h-10 shadow-[0_6px_20px_rgba(0,0,0,0.18)]"
+        >
+          <InfoIcon size={18} />
+        </IconButton>
+      </div>
+
+      {sheet === 'details' && (
+        <Modal placement="sheet" onClose={() => setSheet(null)} title="Details" titleSize="sm" showClose>
+          <div className="mt-4">
+            <TaskSidebar task={task} parent={parent} isTodo={isTodo} occurrences={occurrences} onOpenTask={navigateToTask} />
+          </div>
+        </Modal>
+      )}
+      {sheet === 'notes' && (
+        <Modal
+          placement="sheet"
+          onClose={() => setSheet(null)}
+          title={`Notes${task.notes && task.notes.length > 0 ? ` · ${task.notes.length}` : ''}`}
+          titleSize="sm"
+          showClose
+        >
+          <div className="mt-4">
+            <NotesSection task={task} bare />
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

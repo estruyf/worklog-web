@@ -12,6 +12,11 @@ export type ModalSize = 'sm' | 'md' | 'lg';
 export type ModalOffset = 'xs' | 'sm' | 'md' | 'lg';
 /** `base` is a dialog over the app; `top` is a dialog over another dialog. */
 export type ModalLayer = 'base' | 'top';
+/** `center` hangs the panel from the top of the viewport; `sheet` docks it to the
+ *  bottom edge at full width — the phone presentation for secondary content the
+ *  page has set aside (the task rail, notes), where a floating panel would cover
+ *  the very words it is about. `size` and `offset` are center-only. */
+export type ModalPlacement = 'center' | 'sheet';
 export type ModalTitleSize = 'sm' | 'md';
 
 const SIZES: Record<ModalSize, string> = {
@@ -68,6 +73,7 @@ export interface ModalProps {
   size?: ModalSize;
   offset?: ModalOffset;
   layer?: ModalLayer;
+  placement?: ModalPlacement;
   /** `none` for a panel that lays out its own sections — a scrolling body under a
    *  fixed header, say, where one padding box around the lot would be wrong. */
   padding?: 'md' | 'none';
@@ -97,6 +103,7 @@ export function Modal({
   size = 'md',
   offset = 'md',
   layer = 'base',
+  placement = 'center',
   padding = 'md',
   captureKeys = false,
   className,
@@ -193,7 +200,11 @@ export function Modal({
   return (
     <div
       onClick={onClose}
-      className={cn('fixed inset-0 bg-overlay flex items-start justify-center', OFFSETS[offset], LAYERS[layer])}
+      className={cn(
+        'fixed inset-0 bg-overlay flex',
+        placement === 'center' ? cn('items-start justify-center', OFFSETS[offset]) : 'items-end',
+        LAYERS[layer],
+      )}
     >
       <div
         ref={panelRef}
@@ -207,9 +218,21 @@ export function Modal({
         tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
         className={cn(
-          'bg-white rounded-card shadow-[0_20px_60px_rgba(0,0,0,0.3)] outline-none',
-          SIZES[size],
-          padding === 'md' && 'px-7.5 pt-6.5 pb-6',
+          'bg-white outline-none',
+          placement === 'center'
+            ? cn(
+              'rounded-card shadow-[0_20px_60px_rgba(0,0,0,0.3)]',
+              SIZES[size],
+              padding === 'md' && 'px-7.5 pt-6.5 pb-6',
+            )
+            : cn(
+              // The sheet scrolls itself: its content is a page section that can
+              // be any length, and the cap is what keeps the backdrop — the way
+              // out under a thumb — on screen. The bottom padding rides above
+              // the phone's home-indicator inset.
+              'w-full rounded-t-card shadow-[0_-16px_48px_rgba(0,0,0,0.3)] max-h-[85dvh] overflow-y-auto overscroll-contain',
+              padding === 'md' && 'px-5 pt-5 pb-[calc(24px+env(safe-area-inset-bottom))]',
+            ),
           className,
         )}
       >

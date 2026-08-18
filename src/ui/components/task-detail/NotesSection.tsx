@@ -9,8 +9,11 @@ import { useTaskMention } from '../task-mention';
 
 /** The task's progress log: timestamped Markdown notes, newest at the bottom, and
  *  the box that adds one. Separate from the description — that says what the task
- *  is, these say what has happened to it. */
-export function NotesSection({ task }: { task: Task }) {
+ *  is, these say what has happened to it.
+ *
+ *  `bare` drops the section's own heading and top margin, for the phone sheet
+ *  where the dialog's title bar already says "Notes" and owns the spacing. */
+export function NotesSection({ task, bare = false }: { task: Task; bare?: boolean }) {
   const { addNote, updateNote, deleteNote } = useData();
   const { noteDraft, setNoteDraft, confirm } = useUi();
   const notes = task.notes ?? [];
@@ -86,8 +89,8 @@ export function NotesSection({ task }: { task: Task }) {
   };
 
   return (
-    <div className="mt-9">
-      <SectionLabel className="mb-[10px]">Notes{notes.length > 0 ? ` · ${notes.length}` : ''}</SectionLabel>
+    <div className={bare ? undefined : 'mt-9'}>
+      {!bare && <SectionLabel className="mb-[10px]">Notes{notes.length > 0 ? ` · ${notes.length}` : ''}</SectionLabel>}
       {notes.length > 0 ? (
         <div className="flex flex-col gap-[10px] mb-3">
           {notes.map((n, i) => {
@@ -97,7 +100,9 @@ export function NotesSection({ task }: { task: Task }) {
                 <div className="flex items-center justify-between gap-3 mb-[5px]">
                   <span className="text-count font-semibold text-neutral-650">{n.timestamp}</span>
                   {!edit && (
-                    <div className="flex items-center gap-[10px] opacity-0 group-hover:opacity-100 focus-within:opacity-100">
+                    // Hover-revealed only where there is a hover: on a phone —
+                    // where these live in the notes sheet — they stay visible.
+                    <div className="flex items-center gap-[10px] lg:opacity-0 lg:group-hover:opacity-100 lg:focus-within:opacity-100">
                       <LinkButton
                         size="inherit"
                         tone="muted"

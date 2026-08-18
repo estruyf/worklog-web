@@ -20,7 +20,7 @@ export type { DateInputProps } from './DateInput';
 export { Menu } from './Menu';
 export type { MenuOption, MenuProps } from './Menu';
 export { Modal } from './Modal';
-export type { ModalLayer, ModalOffset, ModalProps, ModalSize, ModalTitleSize } from './Modal';
+export type { ModalLayer, ModalOffset, ModalPlacement, ModalProps, ModalSize, ModalTitleSize } from './Modal';
 export { Card } from './Card';
 export type { CardPadding, CardProps, CardRadius, CardTone } from './Card';
 export { SidebarSection } from './SidebarSection';

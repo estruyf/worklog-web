@@ -17,6 +17,10 @@ Every change to Worklog, by day, newest first.
 
 ## 2026-08-18
 
+- A task's description now has a copy button next to Edit, putting the raw Markdown on the clipboard.
+- On a phone, a task opens straight onto its description and subtasks: the details rail
+  and the notes moved into bottom sheets behind two floating buttons — a Notes button
+  with the note count, and an ⓘ for status, priority, due date, tags and actions.
 - Opening a repo is faster: images no longer download with the timesheet, but each one
   fetches the moment it first appears on screen — and stays in the browser's cache, so it
   won't download again until it changes.
