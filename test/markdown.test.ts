@@ -143,6 +143,53 @@ describe('renderMarkdown task lists', () => {
   });
 });
 
+// An indented item belongs *inside* the item above it. Before nesting existed
+// the line fell through to a paragraph, so a two-level list rendered as prose
+// with stray dashes in it.
+describe('renderMarkdown nested lists', () => {
+  it('nests a deeper item inside the item above it', () => {
+    expect(renderMarkdown('- Global params\n  - Copy from an existing site\n- Apps')).toBe(
+      [
+        '<ul class="wl-md-list">',
+        '<li>Global params',
+        '<ul class="wl-md-list">',
+        '<li>Copy from an existing site</li>',
+        '</ul></li>',
+        '<li>Apps</li>',
+        '</ul>',
+      ].join('\n'),
+    );
+  });
+
+  it('switches list type per level and closes back out in order', () => {
+    expect(renderMarkdown('- a\n  1. one\n- b')).toBe(
+      [
+        '<ul class="wl-md-list">',
+        '<li>a',
+        '<ol class="wl-md-list">',
+        '<li>one</li>',
+        '</ol></li>',
+        '<li>b</li>',
+        '</ul>',
+      ].join('\n'),
+    );
+  });
+
+  it('counts a tab as four spaces of depth', () => {
+    expect(renderMarkdown('- a\n\t- deep')).toContain('<li>a\n<ul class="wl-md-list">\n<li>deep</li>');
+  });
+
+  it('leaves a flat list on one item per line', () => {
+    expect(renderMarkdown('- a\n- b')).toBe('<ul class="wl-md-list">\n<li>a</li>\n<li>b</li>\n</ul>');
+  });
+
+  it('gives a nested task item its own live checkbox', () => {
+    const html = renderMarkdown('- [ ] top\n  - [x] nested', undefined, { interactiveTasks: true });
+    expect(html).toContain('data-md-line="1"');
+    expect(toggleTaskLine('- [ ] top\n  - [x] nested', 1)).toBe('- [ ] top\n  - [ ] nested');
+  });
+});
+
 describe('toggleTaskLine', () => {
   const DOC = '# Plan\n\n- [ ] first\n- [x] second\n\nSome prose.';
 

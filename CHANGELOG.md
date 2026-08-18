@@ -15,6 +15,14 @@ Every change to Worklog, by day, newest first.
      both). Links must be absolute — a relative path resolves against /changelog and
      404s. -->
 
+## 2026-08-18
+
+- Fixed the parent picker snapping shut the moment you tapped it on a phone: opening its
+  search box raises the on-screen keyboard, and the menu was treating that as a reason to
+  close. Menus now follow their button when the page moves instead of closing.
+- Indented list items in descriptions and notes now render as nested lists instead of
+  falling out of the list as plain text with a stray dash in front of them.
+
 ## 2026-08-17
 
 - Upgraded to Astro 7 and the Cloudflare adapter v14, clearing every outstanding `npm audit`

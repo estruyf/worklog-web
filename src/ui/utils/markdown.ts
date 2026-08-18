@@ -201,8 +201,12 @@ function inline(
  */
 const TASK_ITEM = /^\[([ xX]?)\]\s+(.*)$/;
 
-/** The same marker on a whole source line — what {@link toggleTaskLine} edits. */
-const TASK_LINE = /^([-*]\s+\[)([ xX]?)\]/;
+/**
+ * The same marker on a whole source line — what {@link toggleTaskLine} edits.
+ * Indentation is part of the captured prefix: a nested item renders as a live
+ * checkbox like any other, so it has to be togglable like any other.
+ */
+const TASK_LINE = /^(\s*[-*]\s+\[)([ xX]?)\]/;
 
 /**
  * Flip the `[ ]`/`[x]` on one line of `md`, identified by its zero-based line
@@ -287,15 +291,49 @@ export function renderMarkdown(
   const lines = md.replace(/\r\n/g, "\n").split("\n");
   const refs = options?.resolveTaskRef;
   const html: string[] = [];
-  let listType: "ul" | "ol" | null = null;
+  // One entry per open list, outermost first. An item is emitted *unclosed*
+  // because a deeper-indented line nests its list inside that same `<li>`, so
+  // the `</li>` can only be written once the next line says where it belongs.
+  const stack: { type: "ul" | "ol"; indent: number; itemOpen: boolean }[] = [];
   let paragraph: string[] = [];
   let codeFence: string[] | null = null;
 
-  const closeList = () => {
-    if (listType) {
-      html.push(`</${listType}>`);
-      listType = null;
+  // Appended rather than pushed, so a flat list still renders one item per line.
+  const closeItem = () => {
+    const top = stack[stack.length - 1];
+    if (top.itemOpen) {
+      html[html.length - 1] += "</li>";
+      top.itemOpen = false;
     }
+  };
+  const popList = () => {
+    closeItem();
+    html.push(`</${stack.pop()!.type}>`);
+  };
+  const closeList = () => {
+    while (stack.length) {
+      popList();
+    }
+  };
+  /**
+   * Makes the innermost open list the one an item at `indent` belongs to:
+   * shallower closes lists, deeper opens one inside the item still open, and a
+   * different marker at the same depth starts a sibling list.
+   */
+  const openListLevel = (indent: number, want: "ul" | "ol") => {
+    while (stack.length && indent < stack[stack.length - 1].indent) {
+      popList();
+    }
+    const top = stack[stack.length - 1];
+    if (top && indent === top.indent && top.type === want) {
+      closeItem();
+      return;
+    }
+    if (top && indent === top.indent) {
+      popList();
+    }
+    stack.push({ type: want, indent, itemOpen: false });
+    html.push(`<${want} class="wl-md-list">`);
   };
   const flushParagraph = () => {
     if (paragraph.length) {
@@ -366,25 +404,24 @@ export function renderMarkdown(
       continue;
     }
 
-    const ul = /^[-*]\s+(.*)$/.exec(line);
-    const ol = /^\d+\.\s+(.*)$/.exec(line);
-    if (ul || ol) {
+    const listItem = /^([ \t]*)(?:([-*])|\d+\.)\s+(.*)$/.exec(line);
+    if (listItem) {
       flushParagraph();
-      const want: "ul" | "ol" = ul ? "ul" : "ol";
-      if (listType !== want) {
-        closeList();
-        listType = want;
-        html.push(`<${want} class="wl-md-list">`);
-      }
-      const item = ul ? ul[1] : ol![1];
-      const task = ul ? TASK_ITEM.exec(item) : null;
+      // Depth is the leading whitespace, with a tab worth the four spaces
+      // CommonMark gives it — the two are mixed freely in hand-written lists.
+      const indent = listItem[1].replace(/\t/g, "    ").length;
+      const want: "ul" | "ol" = listItem[2] ? "ul" : "ol";
+      openListLevel(indent, want);
+      const item = listItem[3];
+      const task = want === "ul" ? TASK_ITEM.exec(item) : null;
       if (task) {
         html.push(
-          `<li class="wl-md-task">${checkbox(task[1], i, options?.interactiveTasks, task[2], refs)}<span>${inline(task[2], resolveImage, refs)}</span></li>`,
+          `<li class="wl-md-task">${checkbox(task[1], i, options?.interactiveTasks, task[2], refs)}<span>${inline(task[2], resolveImage, refs)}</span>`,
         );
       } else {
-        html.push(`<li>${inline(item, resolveImage, refs)}</li>`);
+        html.push(`<li>${inline(item, resolveImage, refs)}`);
       }
+      stack[stack.length - 1].itemOpen = true;
       continue;
     }
 

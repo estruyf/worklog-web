@@ -296,6 +296,11 @@ body {
   margin: 3px 0;
   list-style: inherit;
 }
+/* A nested list sits inside its parent item, where the list's own bottom margin
+   would double the gap before the next sibling item. */
+.wl-md .wl-md-list .wl-md-list {
+  margin-bottom: 0;
+}
 /* Task list items. The box replaces the bullet rather than sitting beside it, so
    the item is pulled back over the list's own indent. */
 .wl-md .wl-md-list li.wl-md-task {

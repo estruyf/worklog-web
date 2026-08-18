@@ -49,7 +49,8 @@ const EDGE = 8;
  *  absolutely inside the trigger: every list that uses this sits in a scrolling
  *  container, and an in-flow panel would be clipped by it — the menu on the last
  *  visible row is exactly the one you can't read. The flip side is that the panel
- *  doesn't travel with its trigger, so a scroll closes it.
+ *  doesn't travel with its trigger on its own, so a scroll or a resize re-anchors
+ *  it to wherever the trigger now is.
  *
  *  Two keyboard models, because a menu and a filtered list are different widgets:
  *  a plain menu moves DOM focus onto the option the arrows are on, while a
@@ -97,13 +98,10 @@ export function Menu({
     }
   }, []);
 
-  // Measured after mount rather than estimated: the panel's height depends on
-  // how many options there are and whether they carry hints, and that decides
-  // whether it can hang below the trigger at all.
-  React.useLayoutEffect(() => {
-    if (!open) {
-      return;
-    }
+  // Measured rather than estimated: the panel's height depends on how many
+  // options there are and whether they carry hints, and that decides whether it
+  // can hang below the trigger at all.
+  const place = React.useCallback(() => {
     const trigger = triggerRef.current?.getBoundingClientRect();
     const panel = panelRef.current?.getBoundingClientRect();
     if (!trigger || !panel) {
@@ -114,7 +112,13 @@ export function Menu({
     const wanted = align === 'end' ? trigger.right - panel.width : trigger.left;
     const left = Math.max(EDGE, Math.min(wanted, window.innerWidth - EDGE - panel.width));
     setPos({ top, left });
-  }, [open, align, visible.length]);
+  }, [align]);
+
+  React.useLayoutEffect(() => {
+    if (open) {
+      place();
+    }
+  }, [open, place, visible.length]);
 
   // Focus the option the keyboard is on, so the menu answers to arrows without
   // needing aria-activedescendant bookkeeping. Waits for `pos`, and that is not
@@ -151,25 +155,37 @@ export function Menu({
         close(false);
       }
     };
-    // The panel is positioned once, in viewport coordinates: anything that moves
-    // the trigger underneath it would leave it pointing at nothing. Its own list
-    // scrolls, though, and that moves nothing — the capture listener sees those
-    // events too, and closing on them would make a long list unscrollable.
+    // The panel is positioned in viewport coordinates, so anything that moves the
+    // trigger re-anchors it. Closing on those events was the older answer, and it
+    // made the searchable variant unopenable on a phone: focusing the filter box
+    // raises the virtual keyboard, which scrolls the document on iOS and resizes
+    // the window on Android — so the menu shut itself the instant it opened. It
+    // still closes once the trigger has left the viewport, where re-anchoring
+    // would leave it pointing at nothing.
+    const reanchor = () => {
+      const trigger = triggerRef.current?.getBoundingClientRect();
+      if (!trigger || trigger.bottom < 0 || trigger.top > window.innerHeight) {
+        close(false);
+        return;
+      }
+      place();
+    };
+    // Its own list scrolls, and that moves neither trigger nor panel — the capture
+    // listener sees those events too, and there is nothing to re-anchor to.
     const onScroll = (e: Event) => {
       if (!panelRef.current?.contains(e.target as Node)) {
-        close(false);
+        reanchor();
       }
     };
-    const onReflow = () => close(false);
     document.addEventListener('pointerdown', onPointerDown, true);
     window.addEventListener('scroll', onScroll, true);
-    window.addEventListener('resize', onReflow);
+    window.addEventListener('resize', reanchor);
     return () => {
       document.removeEventListener('pointerdown', onPointerDown, true);
       window.removeEventListener('scroll', onScroll, true);
-      window.removeEventListener('resize', onReflow);
+      window.removeEventListener('resize', reanchor);
     };
-  }, [open, close]);
+  }, [open, close, place]);
 
   const openMenu = () => {
     setActive(selectedIndex >= 0 ? selectedIndex : 0);
