@@ -82,8 +82,6 @@ export function TaskDetailPanel() {
 
               <LinkList links={task.links} className="mb-6" />
 
-              <AttachmentsSection task={task} />
-
               <DescriptionEditor
                   value={descDraft}
                   onChange={setDescDraft}
@@ -124,6 +122,8 @@ export function TaskDetailPanel() {
                     )
                   }
                 />
+
+              <AttachmentsSection task={task} />
 
               <SubtaskList task={task} subtasks={subtasks} onOpenTask={navigateToTask} />
 
