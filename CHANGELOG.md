@@ -17,7 +17,15 @@ Every change to Worklog, by day, newest first.
 
 ## 2026-08-19
 
-- Tasks can carry file attachments: "Attach" a file up to 10 MB and it is stored in your repo's `assets/` folder and recorded on the task as a `- attachment:` line. The list sits under the description with a drop zone for the next one; clicking a name downloads the file, and deleting one removes the record and the file together.
+- A prompt in a task's queue can go straight to an AI agent. Whichever you switched on under
+  **Settings → AI agents**, **Run in GitHub Copilot** and **Run in Claude Code** now sit next to
+  **Copy & mark ran** when you open a queued prompt: they hand VS Code the prompt's body as it
+  stands — nothing of the task added — and tick it off in the same click, exactly as copying it
+  does.
+- A task's header shows its id in light grey next to the way out, so you can read off the `#…` reference you type to link it from another task.
+- **Settings → Task content** switches attachments and prompts on or off — both on by default. Off hides the action and the section from every task; what's already written stays in your Markdown and comes back when you switch it on again. Images pasted into a description or a note are Markdown, not attachments, so they keep working either way.
+- Tasks can hold prompts: the ones you already know you'll want to run, written when you think of them instead of when you get to them. Each is a title and a body, stored on the task as a `### Prompts` checkbox list, and starts from "Prompt" next to Description and Attach. A prompt is one row until you open it; "Copy & mark ran" copies the body and ticks it off in the same click, and ticked prompts fold away into a "Ran" list so the queue is what you see first. On a repeating task the queued ones carry to the next occurrence; the ones that ran stay with the occurrence that ran them.
+- Tasks can carry file attachments: "Attach" a file up to 10 MB and it is stored in your repo's `assets/` folder and recorded on the task as a `- attachment:` line. Each file sits under the description as a card with its type badge (PDF, DOCX, PNG…) and name — click either the name or the download button to save it, or the bin to remove the record and the file together — followed by a button-sized “Attach” you can click *or* drop the next file onto.
 - A task now offers what it hasn't got instead of showing empty sections: "+ Description", "Attach" and "+ Subtask" sit in one row under the description, and each drops out as soon as that block exists.
 - The notes log is the other way round: the composer is at the top — one line until you click into it, then a full editor that stays open — with the notes under it newest first, each a row headed by the day it was written rather than a card.
 - Ticking a task done (or reopening one) now shows a toast with an Undo that puts everything back — the task's status, the subtasks a close took down with it, and the original completion date on a reopen.

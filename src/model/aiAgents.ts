@@ -84,7 +84,16 @@ const MAX_PROMPT = 6000;
 export function taskPrompt(title: string, description?: string): string {
   const body = (description ?? '').trim();
   const heading = title.trim();
-  return (body ? `${heading}\n\n${body}` : heading).slice(0, MAX_PROMPT);
+  return agentPrompt(body ? `${heading}\n\n${body}` : heading);
+}
+
+/** A prompt from the task's queue, handed over as it stands. Nothing is added to
+ *  it — not the task's title, not its description: the body of a queued prompt is
+ *  already the text you meant to send, which is why copying it counts as running
+ *  it. So the clipboard and the agent link carry the same characters, and this is
+ *  the one place the cap is applied to them. */
+export function agentPrompt(text: string): string {
+  return text.trim().slice(0, MAX_PROMPT);
 }
 
 /** The `vscode://` link that opens `prompt` in `agent`.

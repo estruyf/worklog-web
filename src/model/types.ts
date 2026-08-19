@@ -59,6 +59,10 @@ export interface Task {
   workedOn?: string[];
   /** Freeform labels for cross-client grouping/filtering. */
   tags?: string[];
+  /** Prompts written to be run against this task later, in the order they were
+   *  written. Queued until ticked off; a ticked one stays as the record of what
+   *  was already run. */
+  prompts?: TaskPrompt[];
   /** Chronological progress notes/comments, oldest first. */
   notes?: TaskNote[];
   /** Absolute path of the file this task was parsed from (for open-on-click). */
@@ -70,6 +74,21 @@ export interface Task {
 export interface TaskLink {
   url: string;
   label?: string;
+}
+
+/** One prompt parked on a task: written now, run later, then ticked off. The
+ *  title is what the queue is scanned by; the text is what gets copied out. */
+export interface TaskPrompt {
+  /** One-line title. */
+  title: string;
+  /** The prompt itself, verbatim — it is copied, not rendered. May be empty on
+   *  one that is still only an idea. */
+  text: string;
+  /** Ticked off: it has been run. */
+  ran?: boolean;
+  /** Local timestamp of the tick, "YYYY-MM-DD HH:mm". Separate from `ran` because
+   *  a hand-written `- [x]` has no stamp and is still a prompt that was run. */
+  ranAt?: string;
 }
 
 /** A single timestamped progress note attached to a task. */
@@ -117,6 +136,21 @@ export interface Client {
   archived?: boolean;
 }
 
+/** Which of the optional task blocks the app offers. Both are on by default and
+ *  absent reads as on, so a repo written before these existed is unchanged.
+ *
+ *  Switching one off is a display decision, not a data one: the actions and the
+ *  section go, and whatever is already written in the Markdown stays exactly
+ *  where it is and comes back when the switch does. Turning attachments off does
+ *  not touch images pasted into a description or a note — those are Markdown in
+ *  the body, not `- attachment:` records. */
+export interface FeatureConfig {
+  /** Files attached to a task (`- attachment:` + the drop zone). */
+  attachments: boolean;
+  /** The task's prompt queue (`### Prompts`). */
+  prompts: boolean;
+}
+
 /** Automatic Git sync after logging time, so a timesheet doesn't sit unpushed. */
 export interface AutoSyncConfig {
   /** When on, changes are committed and pushed automatically in the background. */
@@ -140,6 +174,8 @@ export interface DaylogConfig {
   clients: Client[];
   statuses: StatusDef[];
   autoSync: AutoSyncConfig;
+  /** The optional task blocks that are switched on. */
+  features: FeatureConfig;
   /** AI agents a task can be handed to, by id — the ones switched on in Settings.
    *  Empty is the shipped state: nothing is offered until it is asked for. */
   aiAgents: AiAgent[];

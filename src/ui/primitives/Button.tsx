@@ -51,10 +51,18 @@ const VARIANTS: Record<ButtonVariant, string> = {
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
   size?: ButtonSize;
+  /** Renders the same face as an `<a>`. For an action that is a navigation rather
+   *  than something this app does — a `vscode://` handoff is handled by the OS, so
+   *  it wants a real link, and the browser's "open VS Code?" prompt with it. */
+  href?: string;
 }
 
 /** A text (optionally icon + text) button. `className` is for layout only —
  *  margins, `w-full`, `flex-1`, `shrink-0`; see the note on `cn`. */
-export function Button({ variant = 'secondary', size = 'sm', className, type = 'button', ...rest }: ButtonProps) {
-  return <button type={type} className={cn(BASE, SIZES[size], VARIANTS[variant], className)} {...rest} />;
+export function Button({ variant = 'secondary', size = 'sm', className, type = 'button', href, ...rest }: ButtonProps) {
+  const face = cn(BASE, SIZES[size], VARIANTS[variant], className);
+  if (href !== undefined) {
+    return <a href={href} className={cn(face, 'no-underline')} {...(rest as React.AnchorHTMLAttributes<HTMLAnchorElement>)} />;
+  }
+  return <button type={type} className={face} {...rest} />;
 }

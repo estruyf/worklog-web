@@ -44,6 +44,11 @@ function config(): Promise<DaylogConfig> {
   return store.ws.loadConfig();
 }
 
+/** The `features` block as it lands in the user's repo. */
+function writtenFeatures(): unknown {
+  return JSON.parse(fm.text.get('.worklog/config.json') ?? '{}').features;
+}
+
 /** The value as it actually lands in the user's repo, not as the loader
  *  normalizes it back — a setting that never reaches the file would still read
  *  correctly through `loadConfig`. */
@@ -125,5 +130,46 @@ describe('updateSettings', () => {
     expect(raw.defaultTaskSort).toEqual({ key: 'due', dir: 'asc' });
     expect(raw.clients).toEqual(CONFIG.clients);
     expect(raw.autoSync.delayMinutes).toBe(5);
+  });
+});
+
+// Both blocks are on by default, and a repo written before the switches existed
+// has no `features` key at all — so absence has to keep meaning "on", the same
+// way an absent `defaultTaskSort` has to keep meaning the original order.
+describe('feature switches', () => {
+  it('reads a config that predates them as both on', async () => {
+    expect((await config()).features).toEqual({ attachments: true, prompts: true });
+  });
+
+  it('reads a repo with no config.json at all as both on', async () => {
+    await mount();
+    fm.text.delete('.worklog/config.json');
+    expect((await config()).features).toEqual({ attachments: true, prompts: true });
+  });
+
+  it('switches one off only on an explicit false', async () => {
+    await mount({ ...CONFIG, features: { attachments: false, prompts: true } });
+    expect((await config()).features).toEqual({ attachments: false, prompts: true });
+
+    // Anything else — a hand-typed string, a half-written block — reads as on
+    // rather than quietly hiding a block the user has content in.
+    await mount({ ...CONFIG, features: { attachments: 'no' } });
+    expect((await config()).features).toEqual({ attachments: true, prompts: true });
+  });
+
+  it('writes the switches into config.json', async () => {
+    await updateSettings(store, { features: { attachments: false, prompts: false } });
+
+    expect(writtenFeatures()).toEqual({ attachments: false, prompts: false });
+    expect(store.getConfig().features).toEqual({ attachments: false, prompts: false });
+  });
+
+  it('changes only the keys it is given', async () => {
+    await updateSettings(store, { features: { prompts: false } });
+    expect(writtenFeatures()).toEqual({ attachments: true, prompts: false });
+
+    await updateSettings(store, { hoursPerDay: 7 });
+    expect(writtenFeatures()).toEqual({ attachments: true, prompts: false });
+    expect(store.getConfig().hoursPerDay).toBe(7);
   });
 });

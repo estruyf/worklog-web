@@ -23,6 +23,16 @@
 The current export runs synchronously and times out on large date ranges.
 Move it behind a queue and stream the CSV back.
 
+### Prompts
+- [ ] Draft the queue migration checklist
+  Read src/export/*.ts and list every synchronous call that has to move behind
+  the queue, with the order they can be moved in.
+
+  Call out anything that writes to the response stream.
+
+- [x] 2026-07-16 09:10 — Summarise the timeout reports for the client
+  Summarise the three timeout reports in one paragraph a non-engineer can read.
+
 ### Notes
 - 2026-07-14 — Reproduced the timeout with a 3-year range.
 - 2026-07-16 09:30 — Queue prototype works end to end.

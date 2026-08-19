@@ -2,7 +2,7 @@
 // markdown string -> structured Task records, and back. No I/O dependencies, so
 // it is trivially unit-testable and reusable by both full and incremental paths.
 
-import type { Task, TaskLink, TaskNote } from "../model/types";
+import type { Task, TaskLink, TaskNote, TaskPrompt } from "../model/types";
 import { isTaskHeading } from "./taskHeading";
 import {
   formatRecurrence,
@@ -36,6 +36,15 @@ const META = /^-\s+([A-Za-z][\w-]*)\s*:\s*(.*)$/;
 const NOTES_HEADING = /^###\s+Notes\s*$/;
 const NOTE_ENTRY =
   /^-\s+(\d{4}-\d{2}-\d{2}(?:[ T]\d{2}:\d{2})?)\s+—\s+(.*)$/;
+// The other reserved sub-section: the prompts queued against the task. Each entry
+// is a checkbox item, so the queue is still a to-do list in a plain Markdown
+// viewer — and ticking one there is the same act as ticking it in the app.
+const PROMPTS_HEADING = /^###\s+Prompts\s*$/;
+const PROMPT_ENTRY = /^-\s+\[([ xX])\]\s*(.*)$/;
+// A ticked entry carries when it ran ahead of its title, in the shape a note
+// entry uses. Only read on `[x]`, so a queued prompt whose title happens to start
+// with a date keeps that date as part of its title.
+const PROMPT_RAN = /^(\d{4}-\d{2}-\d{2}(?:[ T]\d{2}:\d{2})?)\s+—\s+(.*)$/;
 
 /**
  * Parse a client/archive markdown file into tasks.
@@ -65,7 +74,7 @@ export function parseTaskFile(
       return;
     }
     const t = current.task;
-    const { description, notes } = splitBody(current.descLines);
+    const { description, prompts, notes } = splitBody(current.descLines);
     result.tasks.push({
       id: t.id ?? "",
       title: (t.title ?? "").trim(),
@@ -84,6 +93,7 @@ export function parseTaskFile(
       repeatOf: t.repeatOf,
       workedOn: t.workedOn,
       tags: t.tags,
+      prompts,
       notes,
       sourceFile,
       sourceLine: current.line,
@@ -282,24 +292,88 @@ function parseLink(value: string): TaskLink | undefined {
 
 /**
  * Split a task's body (everything after the metadata block) into its freeform
- * description and its `### Notes` section. Lines before the notes heading are the
- * description; lines after are parsed into chronological note entries.
+ * description and its reserved `### Prompts` / `### Notes` sections. Everything
+ * before the first of those headings is the description; each heading owns the
+ * lines up to the next one.
+ *
+ * The sections are collected rather than looked up once, so a file that repeats a
+ * heading — or writes the two in the other order — keeps every entry. What comes
+ * back out is always the canonical order (see serializeTask).
  */
 function splitBody(lines: string[]): {
   description?: string;
+  prompts?: TaskPrompt[];
   notes?: TaskNote[];
 } {
-  const notesStart = lines.findIndex((l) => NOTES_HEADING.test(l));
-  if (notesStart === -1) {
+  const marks: { at: number; kind: "prompts" | "notes" }[] = [];
+  lines.forEach((line, at) => {
+    if (PROMPTS_HEADING.test(line)) {
+      marks.push({ at, kind: "prompts" });
+    } else if (NOTES_HEADING.test(line)) {
+      marks.push({ at, kind: "notes" });
+    }
+  });
+  if (marks.length === 0) {
     const description = lines.join("\n").trim();
     return { description: description || undefined };
   }
-  const description = lines.slice(0, notesStart).join("\n").trim();
-  const notes = parseNotes(lines.slice(notesStart + 1));
+  const description = lines.slice(0, marks[0].at).join("\n").trim();
+  const prompts: TaskPrompt[] = [];
+  const notes: TaskNote[] = [];
+  marks.forEach((mark, i) => {
+    const body = lines.slice(mark.at + 1, marks[i + 1]?.at ?? lines.length);
+    if (mark.kind === "prompts") {
+      prompts.push(...parsePrompts(body));
+    } else {
+      notes.push(...parseNotes(body));
+    }
+  });
   return {
     description: description || undefined,
+    prompts: prompts.length ? prompts : undefined,
     notes: notes.length ? notes : undefined,
   };
+}
+
+/** Parse the lines of a `### Prompts` section into entries. A new entry begins on
+ *  each `- [ ]` / `- [x]` line, whose remainder is the title; the indented lines
+ *  under it are the prompt body, the same shape a multi-line note uses. */
+function parsePrompts(lines: string[]): TaskPrompt[] {
+  const prompts: TaskPrompt[] = [];
+  let current:
+    | { title: string; ran: boolean; ranAt?: string; text: string[] }
+    | undefined;
+  const flush = () => {
+    if (current) {
+      prompts.push({
+        title: current.title.trim(),
+        text: current.text.join("\n").trim(),
+        ran: current.ran || undefined,
+        ranAt: current.ranAt,
+      });
+      current = undefined;
+    }
+  };
+  for (const line of lines) {
+    const m = PROMPT_ENTRY.exec(line);
+    if (m) {
+      flush();
+      const ran = m[1].toLowerCase() === "x";
+      const stamped = ran ? PROMPT_RAN.exec(m[2]) : null;
+      current = {
+        title: stamped ? stamped[2] : m[2],
+        ran,
+        ranAt: stamped ? stamped[1].replace("T", " ") : undefined,
+        text: [],
+      };
+    } else if (current) {
+      // Continuation line of the current prompt; drop one list-indent level.
+      current.text.push(line.replace(/^ {1,2}/, ""));
+    }
+    // Lines before the first entry (e.g. a blank separator) are ignored.
+  }
+  flush();
+  return prompts;
 }
 
 /** Parse the lines of a `### Notes` section into timestamped entries. A new
@@ -330,6 +404,20 @@ function parseNotes(lines: string[]): TaskNote[] {
   }
   flush();
   return notes;
+}
+
+/** Serialize one prompt as a markdown checkbox item, with its body indented
+ *  under it. A prompt that has been run carries when it was, ahead of the title. */
+function serializePrompt(prompt: TaskPrompt): string {
+  const stamp = prompt.ran && prompt.ranAt ? `${prompt.ranAt} — ` : "";
+  const head = `- [${prompt.ran ? "x" : " "}] ${stamp}${prompt.title}`;
+  if (!prompt.text.trim()) {
+    return head;
+  }
+  const body = prompt.text
+    .split(/\r?\n/)
+    .map((l) => (l.trim() ? `  ${l}` : ""));
+  return [head, ...body].join("\n");
 }
 
 /** Serialize one note as a markdown list item, indenting continuation lines. */
@@ -407,6 +495,12 @@ export function serializeTask(task: Task, clientId?: string): string {
   const body: string[] = [];
   if (task.description && task.description.trim()) {
     body.push(task.description.trim());
+  }
+  // Above the notes, and below the description: the queue is what you are about
+  // to do, the log is what already happened. A blank line between entries because
+  // a prompt body is many lines and an unseparated stack of them is unreadable.
+  if (task.prompts && task.prompts.length) {
+    body.push(`### Prompts\n${task.prompts.map(serializePrompt).join("\n\n")}`);
   }
   if (task.notes && task.notes.length) {
     body.push(["### Notes", ...task.notes.map(serializeNote)].join("\n"));

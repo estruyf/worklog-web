@@ -52,18 +52,23 @@ export function TaskDetailHeader({ task, parent, isTodo }: TaskDetailHeaderProps
     // In the band above the task's scroll area: the way out and "mark done" are
     // what you reach for after reading a long description or a list of notes.
     <ViewHeader className="max-w-[920px] xl:max-w-[1280px] flex flex-wrap items-center justify-between gap-3">
-      {backToParent ? (
-        <Button size="xs" onClick={() => navigateBackToTask(backToParent.id)} title={`Back to “${backToParent.title}”`}>
-          <span className="text-[15px] leading-none">‹</span>
-          {/* Truncated rather than wrapped: a task title is as long as its author
-              felt like, and the row has two actions to its right. */}
-          <span className="min-w-0 max-w-[min(60vw,320px)] truncate">Back to {backToParent.title}</span>
-        </Button>
-      ) : (
-        <Button size="xs" onClick={() => navigateToView(view)}>
-          <span className="text-[15px] leading-none">‹</span> Back to {VIEW_LABELS[view]}
-        </Button>
-      )}
+      <div className="flex min-w-0 items-center gap-[8px]">
+        {backToParent ? (
+          <Button size="xs" onClick={() => navigateBackToTask(backToParent.id)} title={`Back to “${backToParent.title}”`}>
+            <span className="text-[15px] leading-none">‹</span>
+            {/* Truncated rather than wrapped: a task title is as long as its author
+                felt like, and the row has two actions to its right. */}
+            <span className="min-w-0 max-w-[min(60vw,320px)] truncate">Back to {backToParent.title}</span>
+          </Button>
+        ) : (
+          <Button size="xs" onClick={() => navigateToView(view)}>
+            <span className="text-[15px] leading-none">‹</span> Back to {VIEW_LABELS[view]}
+          </Button>
+        )}
+        {/* The id in the same form `#…` takes in a note, so what you read here is
+            what you type to link this task from another one. */}
+        <span className="shrink-0 font-mono text-count text-neutral-600" title="Task id">#{task.id}</span>
+      </div>
       <div className="flex flex-wrap gap-[8px]">
         {!isTodo && (
           <WorkedToggle

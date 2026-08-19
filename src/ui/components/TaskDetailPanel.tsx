@@ -6,7 +6,7 @@ import { Button, IconButton, LinkButton, Modal } from '../primitives';
 import { CopyButton } from './CopyButton';
 import { LinkList } from './LinkList';
 import { DescriptionEditor } from './DescriptionEditor';
-import { AttachmentsSection, NotesSection, SubtaskList, TaskContentActions, TaskDetailHeader, TaskSidebar } from './task-detail';
+import { AttachmentsSection, NotesSection, PromptsSection, SubtaskList, TaskContentActions, TaskDetailHeader, TaskSidebar } from './task-detail';
 import { useData, useUi } from '../context';
 import { navigateToDashboard, navigateToTask } from '../router';
 
@@ -43,7 +43,7 @@ function useDetailData() {
  * rather than rendering blank. */
 export function TaskDetailPanel() {
   const { saveDescription, saveDescriptionText, editDescription, cancelDescription } = useData();
-  const { descDraft, setDescDraft, descMode, setDescMode } = useUi();
+  const { descDraft, setDescDraft, descMode, setDescMode, setPromptComposing } = useUi();
   const { task, parent, subtasks, occurrences, descDirty } = useDetailData();
   // Which phone sheet is up. A link inside one (the parent, an occurrence, a
   // mentioned task) navigates to another task under the sheet — close it, or it
@@ -52,7 +52,10 @@ export function TaskDetailPanel() {
   const taskId = task?.id;
   useEffect(() => {
     setSheet(null);
-  }, [taskId]);
+    // A prompt composer opened on the task you left is not open on the one you
+    // arrived at — same reasoning as the sheet above.
+    setPromptComposing(false);
+  }, [taskId, setPromptComposing]);
   if (!task) {
     return <MissingTask />;
   }
@@ -135,6 +138,10 @@ export function TaskDetailPanel() {
               <AttachmentsSection task={task} />
 
               <SubtaskList task={task} subtasks={subtasks} onOpenTask={navigateToTask} />
+
+              {/* Keyed by the task so an expanded prompt, an open edit or a
+                  half-written draft doesn't follow you to the next one. */}
+              <PromptsSection key={task.id} task={task} />
 
               <div className="hidden lg:block">
                 <NotesSection task={task} />

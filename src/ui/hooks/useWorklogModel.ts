@@ -12,7 +12,7 @@
 import { useCallback, useMemo } from "react";
 import { repoKeyOf } from "../../data/pendingStore";
 import { worklogStore, type ToastMessage } from "../../data/worklogStore";
-import type { AiAgent, AutoSyncConfig, AutoSyncEvent, TaskSortPref } from "../../model/types";
+import type { AiAgent, AutoSyncConfig, AutoSyncEvent, FeatureConfig, TaskSortPref } from "../../model/types";
 import { DEFAULT_TASK_SORT } from "../../model/taskSort";
 import type { WorklogState } from "../state";
 import { useCollapsedTasks } from "./useCollapsedTasks";
@@ -29,6 +29,10 @@ import type { WorklogUiState } from "./useWorklogUiState";
 /** What `autoSync` reads as before a repo is loaded. A module constant so the
  *  reference is stable across renders, like the memoized collections below. */
 const NO_AUTO_SYNC: AutoSyncConfig = { enabled: false, delayMinutes: 5, events: [] };
+
+/** Same reason as `NO_AUTO_SYNC`, and the same answer a repo with no config.json
+ *  gives: both blocks are on until a setting says otherwise. */
+const ALL_FEATURES: FeatureConfig = { attachments: true, prompts: true };
 
 /** Same reason as `NO_AUTO_SYNC`: `useTaskListFilter` seeds its state from this
  *  and resets to it, so a fresh object per render would re-seed every list. */
@@ -67,6 +71,7 @@ export function useWorklogModel(
   const todosPerPage = snap?.todosPerPage ?? 5;
   const defaultTaskSort = snap?.defaultTaskSort ?? NO_TASK_SORT;
   const autoSync = snap?.autoSync ?? NO_AUTO_SYNC;
+  const features = snap?.features ?? ALL_FEATURES;
   const { selectedDate, selectedClient } = ui;
 
   // Markdown image refs resolve against the store's in-memory asset bytes, so a
@@ -117,6 +122,7 @@ export function useWorklogModel(
     todosPerPage?: number;
     defaultTaskSort?: TaskSortPref;
     autoSync?: { enabled?: boolean; delayMinutes?: number; events?: AutoSyncEvent[] };
+    features?: { attachments?: boolean; prompts?: boolean };
     aiAgents?: AiAgent[];
   }) => worklogStore.updateSettings(fields);
 
@@ -138,6 +144,7 @@ export function useWorklogModel(
     todosPerPage,
     defaultTaskSort,
     autoSync,
+    features,
     aiAgents,
     assetUrl,
     // Archived clients still count as clients — otherwise archiving the last one

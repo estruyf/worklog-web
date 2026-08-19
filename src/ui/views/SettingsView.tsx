@@ -42,7 +42,7 @@ function SettingRow({
  *  settings not managed elsewhere (clients live in the Clients view), plus the
  *  task-status list, which manages itself — see `StatusSettings`. */
 export function SettingsView() {
-  const { hoursPerDay, weekStart, todosPerPage, defaultTaskSort, autoSync, aiAgents, saveSettings } = useData();
+  const { hoursPerDay, weekStart, todosPerPage, defaultTaskSort, autoSync, features, aiAgents, saveSettings } = useData();
   const { ask } = useUi().confirm;
 
   const [hours, setHours] = useState(String(hoursPerDay));
@@ -50,6 +50,8 @@ export function SettingsView() {
   const [todoPage, setTodoPage] = useState(String(todosPerPage));
   const [sortKey, setSortKey] = useState<TaskSortKey>(defaultTaskSort.key);
   const [sortDir, setSortDir] = useState<TaskSortDirection>(defaultTaskSort.dir);
+  const [attachmentsOn, setAttachmentsOn] = useState(features.attachments);
+  const [promptsOn, setPromptsOn] = useState(features.prompts);
   const [syncEnabled, setSyncEnabled] = useState(autoSync.enabled);
   const [syncDelay, setSyncDelay] = useState(String(autoSync.delayMinutes));
   const [syncEvents, setSyncEvents] = useState<AutoSyncEvent[]>(autoSync.events);
@@ -86,6 +88,14 @@ export function SettingsView() {
   useEffect(() => {
     setSortDir(defaultTaskSort.dir);
   }, [defaultTaskSort.dir]);
+  // On the two booleans rather than on `features`, for the reason the sort pair
+  // is split above: the block is rebuilt on every derive.
+  useEffect(() => {
+    setAttachmentsOn(features.attachments);
+  }, [features.attachments]);
+  useEffect(() => {
+    setPromptsOn(features.prompts);
+  }, [features.prompts]);
   useEffect(() => {
     setSyncEnabled(autoSync.enabled);
   }, [autoSync.enabled]);
@@ -114,6 +124,8 @@ export function SettingsView() {
     (todoPageValid && parsedTodoPage !== todosPerPage) ||
     sortKey !== defaultTaskSort.key ||
     sortDir !== defaultTaskSort.dir ||
+    attachmentsOn !== features.attachments ||
+    promptsOn !== features.prompts ||
     syncEnabled !== autoSync.enabled ||
     (delayValid && parsedDelay !== autoSync.delayMinutes) ||
     syncEvents.join(',') !== savedEvents ||
@@ -188,6 +200,7 @@ export function SettingsView() {
       weekStart: week,
       todosPerPage: parsedTodoPage,
       defaultTaskSort: { key: sortKey, dir: sortDir },
+      features: { attachments: attachmentsOn, prompts: promptsOn },
       autoSync: { enabled: syncEnabled, delayMinutes: parsedDelay, events: syncEvents },
       aiAgents: agents,
     });
@@ -204,6 +217,8 @@ export function SettingsView() {
     setTodoPage(String(todosPerPage));
     setSortKey(defaultTaskSort.key);
     setSortDir(defaultTaskSort.dir);
+    setAttachmentsOn(features.attachments);
+    setPromptsOn(features.prompts);
     setSyncEnabled(autoSync.enabled);
     setSyncDelay(String(autoSync.delayMinutes));
     setSyncEvents(savedEvents ? (savedEvents.split(',') as AutoSyncEvent[]) : []);
@@ -311,6 +326,37 @@ export function SettingsView() {
                 </Select>
               </div>
             </SettingRow>
+          </Card>
+
+          {/* The blocks a task can carry beyond its description. Switching one
+              off is about what this repo is for — a timesheet that never takes
+              files, a workflow with no prompts in it — so it sits on its own
+              rather than among the numbers above. */}
+          <SectionLabel className="mt-6 mb-[10px]">Task content</SectionLabel>
+          <Card className="divide-y divide-neutral-250">
+            {/* Same shape as the sync switch below, and not a `<label htmlFor>`,
+                for the same reason: a switch that flips because you clicked its
+                explanation is not what a reader means. */}
+            <div className="flex items-start justify-between gap-6 px-[18px] py-[18px]">
+              <div>
+                <div className="text-row font-semibold">Attachments</div>
+                <div className="text-control text-neutral-675 mt-[3px]">
+                  Files stored in <code className="text-meta bg-neutral-250 rounded-chip px-[5px] py-[1px]">assets/</code> and recorded on a task. Off hides the action and the list;
+                  files already attached stay in your Markdown. Images pasted into a description or a note are unaffected — those are Markdown, not attachments.
+                </div>
+              </div>
+              <Toggle checked={attachmentsOn} onChange={setAttachmentsOn} aria-label="Attachments" />
+            </div>
+
+            <div className="flex items-start justify-between gap-6 px-[18px] py-[18px]">
+              <div>
+                <div className="text-row font-semibold">Prompts</div>
+                <div className="text-control text-neutral-675 mt-[3px]">
+                  The queue of prompts to run against a task later, ticked off once you have. Off hides the action and the queue; the prompts already written stay in your Markdown.
+                </div>
+              </div>
+              <Toggle checked={promptsOn} onChange={setPromptsOn} aria-label="Prompts" />
+            </div>
           </Card>
 
           <SectionLabel className="mt-6 mb-[10px]">Sync</SectionLabel>

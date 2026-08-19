@@ -126,6 +126,28 @@ export function useTaskActions(tasks: Task[], selectedDate: string, ui: WorklogU
     worklogStore.deleteNote(taskId, index);
   }, []);
 
+  const addPrompt = useCallback((taskId: string, title: string, text: string) => {
+    if (!title.trim()) {
+      return;
+    }
+    worklogStore.addPrompt(taskId, title, text);
+  }, []);
+
+  const updatePrompt = useCallback((taskId: string, index: number, title: string, text: string) => {
+    if (!title.trim()) {
+      return;
+    }
+    worklogStore.updatePrompt(taskId, index, title, text);
+  }, []);
+
+  const setPromptRan = useCallback((taskId: string, index: number, ran: boolean) => {
+    worklogStore.setPromptRan(taskId, index, ran);
+  }, []);
+
+  const deletePrompt = useCallback((taskId: string, index: number) => {
+    worklogStore.deletePrompt(taskId, index);
+  }, []);
+
   /** Read a picked/dropped file and record it on the task. Resolves once the
    *  attachment is saved (or its failure is on screen as a toast), so callers
    *  can hold an uploading state across it. */
@@ -197,5 +219,5 @@ export function useTaskActions(tasks: Task[], selectedDate: string, ui: WorklogU
     setDescMode("read");
   };
 
-  return { markDone, toggleWorked, openDetail, openEdit, deleteTask, addNote, updateNote, deleteNote, addAttachment, deleteAttachment, downloadAttachment, saveDescription, saveDescriptionText, editDescription, cancelDescription };
+  return { markDone, toggleWorked, openDetail, openEdit, deleteTask, addNote, updateNote, deleteNote, addPrompt, updatePrompt, setPromptRan, deletePrompt, addAttachment, deleteAttachment, downloadAttachment, saveDescription, saveDescriptionText, editDescription, cancelDescription };
 }

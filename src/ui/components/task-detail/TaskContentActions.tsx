@@ -1,7 +1,7 @@
 import React from 'react';
-import { PaperclipIcon, PlusIcon } from 'lucide-react';
+import { PaperclipIcon, PlusIcon, SparklesIcon } from 'lucide-react';
 import type { Task } from '../../../model/types';
-import { useData } from '../../context';
+import { useData, useUi } from '../../context';
 import { canHaveSubtasks, isDone } from '../../utils';
 import { useAttachmentUpload } from './useAttachmentUpload';
 
@@ -38,13 +38,14 @@ function ContentAction({
 }
 
 /** The ways to start a block the task doesn't have yet, as one row sitting where
- *  those blocks would be: under the description, above the attachments and the
- *  subtask list.
+ *  those blocks would be: under the description, above the attachments, the
+ *  prompts and the subtask list.
  *
  *  Each entry drops out once its block exists, because the block then carries its
  *  own way of adding to it — the description's Edit, the attachments' drop zone,
- *  the subtask header's button. A task with all three renders nothing here, which
- *  is the point: the row is an empty state, not a toolbar. */
+ *  the prompt queue's "+ Prompt", the subtask header's button. A task with all
+ *  four renders nothing here, which is the point: the row is an empty state, not
+ *  a toolbar. */
 export function TaskContentActions({
   task,
   hasDescription,
@@ -54,13 +55,20 @@ export function TaskContentActions({
   hasDescription: boolean;
   hasSubtasks: boolean;
 }) {
-  const { editDescription, openSubtaskForm } = useData();
+  const { editDescription, openSubtaskForm, features } = useData();
+  const { promptComposing, setPromptComposing } = useUi();
   const { openFilePicker, uploading, fileInput } = useAttachmentUpload(task.id);
-  const showAttach = (task.attachments ?? []).length === 0;
+  // Switched off in Settings, the block is not offered at all. What a task
+  // already holds stays in its Markdown — see `FeatureConfig`.
+  const showAttach = features.attachments && (task.attachments ?? []).length === 0;
+  // The composer it opens lives in `PromptsSection` below, which renders itself
+  // as soon as the flag is set — so the offer goes away exactly when the queue
+  // appears.
+  const showPrompt = features.prompts && (task.prompts ?? []).length === 0 && !promptComposing;
   // The two rules the subtask list's own button already follows: the tree is one
   // level deep, and a closed task keeps its list as a record rather than growing.
   const showSubtask = !hasSubtasks && canHaveSubtasks(task) && !isDone(task);
-  if (hasDescription && !showAttach && !showSubtask) {
+  if (hasDescription && !showAttach && !showPrompt && !showSubtask) {
     return null;
   }
   return (
@@ -83,6 +91,14 @@ export function TaskContentActions({
           title="Attach a file to this task"
           onClick={openFilePicker}
           disabled={uploading}
+        />
+      )}
+      {showPrompt && (
+        <ContentAction
+          icon={<SparklesIcon size={15} />}
+          label="Prompt"
+          title="Write a prompt to run against this task later"
+          onClick={() => setPromptComposing(true)}
         />
       )}
       {showSubtask && (

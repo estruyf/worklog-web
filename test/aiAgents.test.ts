@@ -9,7 +9,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { Store } from '../src/store';
 import { FileMap, mountFileMap } from '../src/workspace/paths';
 import { updateSettings } from '../src/services/settings';
-import { AI_AGENTS, COMMAND_EXECUTOR_ID, agentUrl, parseAiAgents, taskPrompt } from '../src/model/aiAgents';
+import { AI_AGENTS, COMMAND_EXECUTOR_ID, agentPrompt, agentUrl, parseAiAgents, taskPrompt } from '../src/model/aiAgents';
 import type { AiAgent, DaylogConfig } from '../src/model/types';
 
 const CONFIG = {
@@ -106,6 +106,18 @@ describe('taskPrompt', () => {
 
   it('caps a long description rather than handing the OS an unbounded url', () => {
     expect(taskPrompt('Title', 'x'.repeat(10_000)).length).toBe(6000);
+  });
+});
+
+describe('agentPrompt', () => {
+  it('is a queued prompt as it stands — nothing of the task added to it', () => {
+    expect(agentPrompt('  List every control under 44px.\n\nGroup them by view.  ')).toBe(
+      'List every control under 44px.\n\nGroup them by view.',
+    );
+  });
+
+  it('caps a long one the same way a task does', () => {
+    expect(agentPrompt('x'.repeat(10_000)).length).toBe(6000);
   });
 });
 

@@ -77,6 +77,10 @@ export function useWorklogUiState() {
   // halves of an editor that has been opened deliberately (see DescriptionMode).
   const [descMode, setDescMode] = useState<"read" | "preview" | "edit">("read");
   const [noteDraft, setNoteDraft] = useState("");
+  // Whether the open task's prompt composer is up. Here rather than inside the
+  // section because the way *in* to the first prompt is the content-action row
+  // next to "+ Description" — a different component, one block above it.
+  const [promptComposing, setPromptComposing] = useState(false);
 
   // The day view's freeform Markdown for `selectedDate`. Distinct from
   // `noteDraft` above, which is the *task* note composer — the two sit side by
@@ -151,6 +155,8 @@ export function useWorklogUiState() {
     setDescMode,
     noteDraft,
     setNoteDraft,
+    promptComposing,
+    setPromptComposing,
     dayNoteDraft,
     setDayNoteDraft,
     dayNoteMode,

@@ -20,6 +20,8 @@ export interface SettingsFields {
   /** Automatic Git sync after logging time. Only the provided keys are changed;
    *  `events` is the change kinds that sync right away instead of on the delay. */
   autoSync?: { enabled?: boolean; delayMinutes?: number; events?: AutoSyncEvent[] };
+  /** Which optional task blocks are offered. Only the provided keys are changed. */
+  features?: { attachments?: boolean; prompts?: boolean };
   /** The AI agents a task can be handed to, by id. The whole list, not a delta. */
   aiAgents?: AiAgent[];
 }
@@ -66,6 +68,15 @@ export async function updateSettings(store: Store, fields: SettingsFields): Prom
     // save the rest of the settings.
     const events = fields.autoSync.events === undefined ? config.autoSync.events : parseAutoSyncEvents(fields.autoSync.events);
     config.autoSync = { enabled, delayMinutes, events };
+  }
+
+  // A display switch, so there is nothing to validate: off hides the block, and
+  // what is already written in the Markdown is left where it is.
+  if (fields.features !== undefined) {
+    config.features = {
+      attachments: fields.features.attachments ?? config.features.attachments,
+      prompts: fields.features.prompts ?? config.features.prompts,
+    };
   }
 
   // Normalized for the same reason as `autoSync.events`, and to the same effect:

@@ -4,7 +4,7 @@
 // go through the `readText / writeText / ensureDir` free functions and the
 // `Workspace` path helpers; a path is always a plain repo-relative string.
 
-import type { AutoSyncConfig, Client, DaylogConfig, TaskLink } from '../model/types';
+import type { AutoSyncConfig, Client, DaylogConfig, FeatureConfig, TaskLink } from '../model/types';
 import { DEFAULT_STATUSES, normalizeStatuses } from '../model/status';
 import { parseAiAgents } from '../model/aiAgents';
 import { parseAutoSyncEvents } from '../model/syncEvents';
@@ -14,6 +14,15 @@ export const DEFAULT_HOURS_PER_DAY = 8;
 export const DEFAULT_WEEK_START = 0; // Sunday
 export const DEFAULT_TODOS_PER_PAGE = 5;
 export const DEFAULT_AUTO_SYNC: AutoSyncConfig = { enabled: false, delayMinutes: 5, events: [] };
+export const DEFAULT_FEATURES: FeatureConfig = { attachments: true, prompts: true };
+
+/** Normalize a config `features` block. Only an explicit `false` switches one
+ *  off: every config written before these settings existed omits the block, and
+ *  those repos must keep offering what they always did. */
+export function parseFeatures(value: unknown): FeatureConfig {
+  const raw = (value ?? {}) as Partial<FeatureConfig>;
+  return { attachments: raw.attachments !== false, prompts: raw.prompts !== false };
+}
 
 /** Normalize a config `todosPerPage` to a whole number of at least 1, falling
  *  back to the default for missing/invalid values. */
@@ -194,6 +203,7 @@ function defaultConfig(): DaylogConfig {
     // splices this very array when config.json is missing.
     statuses: DEFAULT_STATUSES.map((s) => ({ ...s })),
     autoSync: parseAutoSync(undefined),
+    features: { ...DEFAULT_FEATURES },
     aiAgents: [],
   };
 }
@@ -269,6 +279,9 @@ export class Workspace {
         // every caller assumes exactly one terminal status sitting last.
         statuses: normalizeStatuses(parsed.statuses),
         autoSync: parseAutoSync(parsed.autoSync),
+        // Absent means both on, which is what every repo written before these
+        // switches existed expects.
+        features: parseFeatures(parsed.features),
         // Absent in every repo written before this setting existed, and absent is
         // the same answer as "none switched on" — no agent is offered by default.
         aiAgents: parseAiAgents(parsed.aiAgents),

@@ -3,7 +3,7 @@
 // refreshes the cache + app state afterwards.
 
 import { Store } from "../store";
-import type { Recurrence, Task, TaskLink, TaskNote } from "../model/types";
+import type { Recurrence, Task, TaskLink, TaskNote, TaskPrompt } from "../model/types";
 import {
   inProgressStatusId,
   isTerminalStatus,
@@ -190,6 +190,113 @@ export async function deleteTaskNote(
   });
   await store.rebuild("deleteNote");
   return store.db.getTask(taskId) ?? task;
+}
+
+/** Queue a prompt on a task: a one-line title and the prompt itself, to be run
+ *  later. The body may be empty — an idea you have the name for and not yet the
+ *  wording — but a prompt with no title is a row nobody can scan, so that is
+ *  refused. */
+export async function addTaskPrompt(
+  store: Store,
+  taskId: string,
+  title: string,
+  text: string,
+): Promise<Task> {
+  const task = store.db.getTask(taskId);
+  if (!task) {
+    throw new Error(`Task ${taskId} not found.`);
+  }
+  const prompt: TaskPrompt = { title: promptTitle(title), text: text.trim() };
+  await updateInPlace(store, task, (t) => ({
+    ...t,
+    prompts: [...(t.prompts ?? []), prompt],
+  }));
+  await store.rebuild("addPrompt");
+  return store.db.getTask(taskId) ?? task;
+}
+
+/** Rewrite a prompt by its 0-based index, keeping whether it has been run: an
+ *  edit is a correction to the wording, not a claim about having run it. */
+export async function updateTaskPrompt(
+  store: Store,
+  taskId: string,
+  index: number,
+  title: string,
+  text: string,
+): Promise<Task> {
+  const task = store.db.getTask(taskId);
+  if (!task) {
+    throw new Error(`Task ${taskId} not found.`);
+  }
+  const clean = promptTitle(title);
+  if (index < 0 || index >= (task.prompts ?? []).length) {
+    throw new Error(`Task ${taskId} has no prompt at index ${index}.`);
+  }
+  await updateInPlace(store, task, (t) => {
+    const next = [...(t.prompts ?? [])];
+    next[index] = { ...next[index], title: clean, text: text.trim() };
+    return { ...t, prompts: next };
+  });
+  await store.rebuild("updatePrompt");
+  return store.db.getTask(taskId) ?? task;
+}
+
+/** Tick a prompt off, or put it back in the queue. Ticking stamps when it ran;
+ *  un-ticking drops the stamp, since it turns out it hasn't. */
+export async function setTaskPromptRan(
+  store: Store,
+  taskId: string,
+  index: number,
+  ran: boolean,
+): Promise<Task> {
+  const task = store.db.getTask(taskId);
+  if (!task) {
+    throw new Error(`Task ${taskId} not found.`);
+  }
+  if (index < 0 || index >= (task.prompts ?? []).length) {
+    throw new Error(`Task ${taskId} has no prompt at index ${index}.`);
+  }
+  const stamp = nowStamp();
+  await updateInPlace(store, task, (t) => {
+    const next = [...(t.prompts ?? [])];
+    next[index] = ran
+      ? { ...next[index], ran: true, ranAt: stamp }
+      : { ...next[index], ran: undefined, ranAt: undefined };
+    return { ...t, prompts: next };
+  });
+  await store.rebuild("setPromptRan");
+  return store.db.getTask(taskId) ?? task;
+}
+
+/** Remove a prompt by its 0-based index in the task's prompt list. */
+export async function deleteTaskPrompt(
+  store: Store,
+  taskId: string,
+  index: number,
+): Promise<Task> {
+  const task = store.db.getTask(taskId);
+  if (!task) {
+    throw new Error(`Task ${taskId} not found.`);
+  }
+  await updateInPlace(store, task, (t) => {
+    const prompts = [...(t.prompts ?? [])];
+    if (index >= 0 && index < prompts.length) {
+      prompts.splice(index, 1);
+    }
+    return { ...t, prompts };
+  });
+  await store.rebuild("deletePrompt");
+  return store.db.getTask(taskId) ?? task;
+}
+
+/** A title is one line: the entry line is where it is written, so a newline in it
+ *  would serialize as a second prompt. */
+function promptTitle(title: string): string {
+  const clean = title.replace(/\s+/g, " ").trim();
+  if (!clean) {
+    throw new Error("A prompt needs a title.");
+  }
+  return clean;
 }
 
 /** Store a picked file under `assets/` and record it on the task. The bytes are
@@ -401,6 +508,10 @@ async function rollOccurrence(store: Store, args: RollArgs): Promise<Task> {
     lastDone: args.completedDate,
     completed: undefined,
     notes: undefined,
+    // The queue is the plan and comes along; the prompts that ran belong to the
+    // occurrence that ran them and stay on its snapshot, or a weekly task would
+    // carry every prompt it ever ran into every future week.
+    prompts: queuedPrompts(source.prompts),
     workedOn: undefined,
   };
 
@@ -421,6 +532,13 @@ async function rollOccurrence(store: Store, args: RollArgs): Promise<Task> {
     serializeTask(snapshot, clientId),
   );
   return live;
+}
+
+/** The still-queued prompts, or nothing at all — an empty list would serialize
+ *  as a `### Prompts` heading with no entries under it. */
+function queuedPrompts(prompts: TaskPrompt[] | undefined): TaskPrompt[] | undefined {
+  const queued = (prompts ?? []).filter((p) => !p.ran);
+  return queued.length ? queued : undefined;
 }
 
 /** Move a closed task back out of the archive into its client file. An archived
@@ -502,6 +620,7 @@ async function undoOccurrence(
     due: snapshot.due,
     lastDone: previous?.completed,
     notes: snapshot.notes,
+    prompts: snapshot.prompts,
     workedOn: snapshot.workedOn,
   }));
   await store.rebuild("undoOccurrence");

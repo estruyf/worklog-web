@@ -39,6 +39,12 @@ const TODOS_MD = `# To-dos
 
 The big fern needs more than the rest.
 
+### Prompts
+- [ ] Ask which plants need repotting
+  List the ones that have outgrown their pots.
+- [x] 2026-07-27 10:05 — Draft this week's plant report
+  Two lines, per plant.
+
 ### Notes
 - 2026-07-27 10:00 — The fern is looking rough.
 
@@ -154,6 +160,20 @@ describe('completing a recurring task', () => {
     expect(archivedOccurrences('t_water')[0].description).toContain('The big fern');
   });
 
+  it('carries the queued prompts onto the next occurrence and leaves the ran ones behind', async () => {
+    await closeTaskById(store, 't_water', '2026-07-30');
+
+    // The queue is the plan for the series; what already ran is this
+    // occurrence's record and belongs with its snapshot.
+    expect(fromFile('t_water')!.prompts).toEqual([
+      { title: 'Ask which plants need repotting', text: 'List the ones that have outgrown their pots.', ran: undefined, ranAt: undefined },
+    ]);
+    expect(archivedOccurrences('t_water')[0].prompts?.map((p) => [p.title, p.ran])).toEqual([
+      ['Ask which plants need repotting', undefined],
+      ["Draft this week's plant report", true],
+    ]);
+  });
+
   it('catches up one occurrence at a time when the series is behind', async () => {
     // Two Mon/Thu slots were missed; each completion advances a single step
     // rather than jumping to today, so the backlog stays visible.
@@ -261,6 +281,8 @@ describe('reopening an archived occurrence', () => {
     expect(live!.due).toBe('2026-07-30');
     expect(live!.status).toBe('open');
     expect(live!.notes).toHaveLength(1);
+    // Including the prompt that ran during the occurrence being undone.
+    expect(live!.prompts).toHaveLength(2);
     expect(
       parseTaskFile(todosFile(), 'clients/todos.md', 'todos').tasks.filter(
         (t) => t.title === 'Water the office plants',

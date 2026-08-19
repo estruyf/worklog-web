@@ -10,7 +10,7 @@ import { getToken } from '../../server/session';
 import { createRepo, scaffoldRepo, GitHubError, type CommitFile } from '../../server/github';
 import { DEFAULT_STATUSES } from '../../model/status';
 import { DEFAULT_TASK_SORT } from '../../model/taskSort';
-import { DEFAULT_AUTO_SYNC, DEFAULT_HOURS_PER_DAY, DEFAULT_TODOS_PER_PAGE, DEFAULT_WEEK_START } from '../../workspace/paths';
+import { DEFAULT_AUTO_SYNC, DEFAULT_FEATURES, DEFAULT_HOURS_PER_DAY, DEFAULT_TODOS_PER_PAGE, DEFAULT_WEEK_START } from '../../workspace/paths';
 import type { DaylogConfig } from '../../model/types';
 
 export const prerender = false;
@@ -82,6 +82,7 @@ function scaffoldFiles(): CommitFile[] {
     clients: [],
     statuses: DEFAULT_STATUSES,
     autoSync: { ...DEFAULT_AUTO_SYNC },
+    features: { ...DEFAULT_FEATURES },
     aiAgents: [],
   };
   return [

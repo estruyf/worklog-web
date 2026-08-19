@@ -25,16 +25,20 @@ import { isGeneralTodoClientId } from '../model/todos';
 import {
   addTaskAttachment,
   addTaskNote,
+  addTaskPrompt,
   closeTaskById,
   deleteTaskAttachment,
   deleteTaskCascade,
   deleteTaskNote,
+  deleteTaskPrompt,
   endTaskSeries,
   setTaskCompletedDate,
+  setTaskPromptRan,
   setTaskStatus,
   toggleTaskWorkedOn,
   updateTask,
   updateTaskNote,
+  updateTaskPrompt,
   type TaskFields,
 } from '../services/taskOps';
 import { removeWorklog, setEventWorklog, setWorklog } from '../services/worklog';
@@ -667,6 +671,24 @@ class WorklogStore {
     return this.run(() => deleteTaskNote(this.store, taskId, index));
   }
 
+  /** Queue a prompt to run against the task later. */
+  addPrompt(taskId: string, title: string, text: string): Promise<void> {
+    return this.run(() => addTaskPrompt(this.store, taskId, title, text));
+  }
+
+  updatePrompt(taskId: string, index: number, title: string, text: string): Promise<void> {
+    return this.run(() => updateTaskPrompt(this.store, taskId, index, title, text));
+  }
+
+  /** Tick a prompt off as run, or put it back in the queue. */
+  setPromptRan(taskId: string, index: number, ran: boolean): Promise<void> {
+    return this.run(() => setTaskPromptRan(this.store, taskId, index, ran));
+  }
+
+  deletePrompt(taskId: string, index: number): Promise<void> {
+    return this.run(() => deleteTaskPrompt(this.store, taskId, index));
+  }
+
   /** Store a picked/dropped file under `assets/` and record it on the task. */
   addAttachment(taskId: string, fileName: string, dataBase64: string): Promise<void> {
     return this.run(() => addTaskAttachment(this.store, taskId, fileName, dataBase64));
@@ -798,6 +820,7 @@ class WorklogStore {
       todosPerPage: config.todosPerPage,
       defaultTaskSort: config.defaultTaskSort,
       autoSync: config.autoSync,
+      features: config.features,
       aiAgents: config.aiAgents,
       statuses: config.statuses,
       // The general to-do bucket is a task-only concept; keep it out of the

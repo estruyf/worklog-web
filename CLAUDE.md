@@ -36,7 +36,7 @@ These come before the project-specific rules below. Adapted from
 
 ```bash
 npm run dev      # http://localhost:4321 (needs .dev.vars — see README step 2)
-npm test         # vitest, 538 tests / 34 files — must stay green
+npm test         # vitest, 675 tests / 42 files — must stay green
 npm run lint     # eslint, 0 errors AND 0 warnings expected
 npx tsc --noEmit # must be clean
 npm run build    # astro build → dist/server (worker) + dist/client (assets)

@@ -409,6 +409,10 @@ The prompt is the task's **title and description**, nothing else. Like a deeplin
 direction, the link fills something in and never submits it: you read it, change it and send it
 yourself.
 
+The same rows appear on a task's [prompts](#prompts): open a queued prompt and, next to
+**Copy & mark ran**, there is a **Run in …** for each agent you switched on. That one hands over the
+prompt's body verbatim — the text the clipboard would get — and ticks it off on its way out.
+
 Worth knowing:
 
 - **It lands in the focused VS Code window.** The link carries no repo, so open the project first —
@@ -488,6 +492,7 @@ in the order the picker offers them — the app writes it, and it is safe to han
   "hoursPerDay": 8,
   "weekStart": "monday",
   "defaultTaskSort": { "key": "created", "dir": "desc" },
+  "features": { "attachments": true, "prompts": true },
   "clients": [{ "id": "acme", "name": "Acme Corp", "color": "#2D6CDF" }],
   "statuses": [
     { "id": "open", "label": "Open" },
@@ -497,6 +502,11 @@ in the order the picker offers them — the app writes it, and it is safe to han
   ]
 }
 ```
+
+`features` switches the optional task blocks on and off — see **Settings → Task content**. Both are
+on, and an absent key reads as on, so a config written before they existed is unchanged. Switching
+one off only hides it: the `- attachment:` lines and `### Prompts` sections already in your Markdown
+stay put and come back when you switch it on again.
 
 `defaultTaskSort` is the order task lists open in, and what their **Reset** returns to. `key` is one
 of `created`, `due`, `priority`, `title` or `status`; `dir` is `asc` or `desc` — so newest-first is
@@ -526,6 +536,12 @@ A task block looks like:
 
 Free-form description in Markdown.
 
+### Prompts
+- [ ] Draft the tap-target audit
+  List every control under 44px, grouped by view.
+- [x] 2026-06-30 15:40 — Summarise the crash reports
+  One paragraph, no jargon.
+
 ### Notes
 - 2026-06-30 14:12 — Reproduced on iOS Safari.
 ```
@@ -534,7 +550,8 @@ Free-form description in Markdown.
 10 MB, added from the task's Actions rail (or dropped onto its Attachments list) and downloaded by
 clicking its name. The line is the record: deleting an attachment in the app removes the line and
 the file together, and a hand-written line pointing at a file the repo doesn't hold simply won't
-download.
+download. **Settings → Task content** can switch attachments off entirely, which hides the action
+and the list — pasted images in a description or a note are Markdown and are unaffected either way.
 
 A new task starts at a `## ` heading that has an `- id:` line directly under it.
 That means a description can use `## ` headings of its own — they stay part of the
@@ -591,6 +608,44 @@ offers parents from the client you're already on.
 Nesting is recursive in the format, but the app's parent picker only lists open
 top-level tasks, so what it creates is one level deep. In the app, open a task and
 use **Add subtask** in the header or at the bottom of its subtask list.
+
+### Prompts
+
+A prompt you already know you'll want to run — against an AI, or against yourself — written when
+you think of it rather than when you get to it. Each one is a title and a body: the title is what
+the queue is scanned by, the body is what gets copied out.
+
+They live in a `### Prompts` section on the task, above its notes, as a plain checkbox list:
+
+```markdown
+### Prompts
+- [ ] Draft the queue migration checklist
+  Read the export module and list every synchronous call that has to move
+  behind the queue, with the order they can be moved in.
+
+- [x] 2026-07-16 09:10 — Summarise the timeout reports for the client
+  One paragraph a non-engineer can read.
+```
+
+Unticked is queued, ticked is ran — so the queue is still a to-do list in any Markdown viewer, and
+ticking one there means the same thing it means in the app. A tick made in the app stamps the time
+ahead of the title; a hand-written `- [x]` with no stamp is read as run all the same.
+
+In a task, **+ Prompt** starts the first one and the section's own **+ Prompt** adds the next.
+Each prompt is one row until you open it, and **Copy & mark ran** puts the body on your clipboard
+and ticks it off in the same click — copying it is running it. With an
+[AI agent](#hand-a-task-to-an-ai-agent) switched on, **Run in GitHub Copilot** / **Run in Claude
+Code** sit beside it and do the same thing through VS Code instead of the clipboard. Ticked prompts
+leave the queue for a folded **Ran** list underneath, so the section shrinks as you work rather than
+growing; untick one there to put it back. The body is never rendered as Markdown, in the app, on the
+clipboard or in an agent's input box: a prompt is text you hand to something else, verbatim.
+
+Prompts can be switched off entirely under **Settings → Task content**, which hides the action and
+the queue; anything already written stays in your Markdown.
+
+On a repeating task, completing an occurrence carries the still-queued prompts onto the next one —
+they are the plan for the series — while the ones that ran stay on the archived snapshot of the
+occurrence that ran them.
 
 ### Day notes
 
