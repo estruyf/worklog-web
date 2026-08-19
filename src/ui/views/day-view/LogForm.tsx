@@ -22,6 +22,20 @@ export function LogForm({ logState, setLogState, saveLog, removeLog, close, clie
   const [clientPickerOpen, setClientPickerOpen] = useState(false);
   const [clientQuery, setClientQuery] = useState('');
   const clientPickerRef = useRef<HTMLDivElement | null>(null);
+  const hoursRef = useRef<HTMLInputElement | null>(null);
+  const noteRef = useRef<HTMLInputElement | null>(null);
+
+  // Mounted only while open (the day view keys it off `logState.open`), so mount
+  // *is* the form opening — this is what lands ⌘L and a day-bar click on a field
+  // instead of stranding the keyboard. Hours when that field is up (the gap-click
+  // prefilled it, so the number is what you'd correct), the note otherwise.
+  useEffect(() => {
+    (hoursRef.current ?? noteRef.current)?.focus();
+  }, []);
+
+  // Save needs a target to write a ledger line under; with every client archived
+  // there is none, and a Log button that silently does nothing reads as broken.
+  const canSave = logState.isEvent || !!logState.client;
 
   const selectedClient = useMemo(() => clients.find((c) => c.id === logState.client), [clients, logState.client]);
   const filteredClients = useMemo(() => {
@@ -55,11 +69,34 @@ export function LogForm({ logState, setLogState, saveLog, removeLog, close, clie
   return (
     // A panel inside the day card, not a section of its own: `rounded-panel` is
     // the corner for a box whose outer one has already been paid for.
-    <div className="px-5 py-[18px] mt-4 bg-neutral-75 border border-neutral-400 rounded-panel">
+    //
+    // A real <form>, so Enter in any field logs the entry. Escape closes — the
+    // picker first when it's up, then the form — and stops there, so the app's
+    // window handler doesn't also close the task panel behind it.
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        saveLog();
+      }}
+      onKeyDown={(e) => {
+        if (e.key !== 'Escape') {
+          return;
+        }
+        e.stopPropagation();
+        if (clientPickerOpen) {
+          setClientPickerOpen(false);
+        } else {
+          close();
+        }
+      }}
+      className="px-5 py-[18px] mt-4 bg-neutral-75 border border-neutral-400 rounded-panel"
+    >
       <div className="flex items-center justify-between mb-4">
         <div className="text-control font-semibold">{editing ? 'Edit logged time' : 'Log time'}</div>
         <button
+          type="button"
           onClick={close}
+          aria-label="Close log form"
           className="bg-none border-none text-[17px] text-neutral-625 cursor-pointer leading-none"
         >
           ×
@@ -70,6 +107,7 @@ export function LogForm({ logState, setLogState, saveLog, removeLog, close, clie
           <div className="text-eyebrow text-neutral-675 mb-[6px]">Type</div>
           <div className="flex gap-[6px]">
             <button
+              type="button"
               onClick={() => setLogState({ ...logState, isEvent: false })}
               className={
                 'px-3 py-[7px] rounded-control text-control cursor-pointer border ' +
@@ -79,6 +117,7 @@ export function LogForm({ logState, setLogState, saveLog, removeLog, close, clie
               Client
             </button>
             <button
+              type="button"
               onClick={() => setLogState({ ...logState, isEvent: true })}
               className={
                 'px-3 py-[7px] rounded-control text-control cursor-pointer border ' +
@@ -111,6 +150,7 @@ export function LogForm({ logState, setLogState, saveLog, removeLog, close, clie
               <div className="text-eyebrow text-neutral-675 mb-[6px]">Client</div>
               <div ref={clientPickerRef} className="relative min-w-[220px]">
                 <button
+                  type="button"
                   onClick={() => setClientPickerOpen((v) => !v)}
                   className="w-full flex items-center justify-between gap-3 px-3 py-[9px] border border-neutral-525 rounded-control-md bg-white text-control cursor-pointer"
                 >
@@ -128,6 +168,21 @@ export function LogForm({ logState, setLogState, saveLog, removeLog, close, clie
                       size="sm"
                       value={clientQuery}
                       onChange={(e) => setClientQuery(e.target.value)}
+                      // Enter picks the top match rather than submitting the form
+                      // around it — logging the day because you were choosing a
+                      // client is the wrong surprise.
+                      onKeyDown={(e) => {
+                        if (e.key !== 'Enter') {
+                          return;
+                        }
+                        e.preventDefault();
+                        const first = filteredClients[0];
+                        if (first) {
+                          setLogState({ ...logState, client: first.id });
+                          setClientPickerOpen(false);
+                          setClientQuery('');
+                        }
+                      }}
                       aria-label="Search client"
                       placeholder="Search client"
                       className="w-full mb-2"
@@ -137,6 +192,7 @@ export function LogForm({ logState, setLogState, saveLog, removeLog, close, clie
                         const active = c.id === logState.client;
                         return (
                           <button
+                            type="button"
                             key={c.id}
                             onClick={() => {
                               setLogState({ ...logState, client: c.id });
@@ -172,6 +228,7 @@ export function LogForm({ logState, setLogState, saveLog, removeLog, close, clie
               const active = logState.type === t;
               return (
                 <button
+                  type="button"
                   key={t}
                   onClick={() => setLogState({ ...logState, type: t })}
                   className={
@@ -188,6 +245,7 @@ export function LogForm({ logState, setLogState, saveLog, removeLog, close, clie
         {logState.type === 'hours' && (
           <Field label="Hours" labelSize="xs" className="w-24">
             <Input
+              ref={hoursRef}
               size="sm"
               value={logState.hours}
               onChange={(e) => setLogState({ ...logState, hours: e.target.value })}
@@ -200,6 +258,7 @@ export function LogForm({ logState, setLogState, saveLog, removeLog, close, clie
         )}
         <Field label="Note" hint="optional" labelSize="xs" className="flex-1 min-w-[180px]">
           <Input
+            ref={noteRef}
             size="sm"
             value={logState.note}
             onChange={(e) => setLogState({ ...logState, note: e.target.value })}
@@ -207,15 +266,21 @@ export function LogForm({ logState, setLogState, saveLog, removeLog, close, clie
             className="w-full"
           />
         </Field>
-        <Button variant="primary" size="md" onClick={saveLog}>
+        <Button
+          variant="primary"
+          size="md"
+          type="submit"
+          disabled={!canSave}
+          title={canSave ? undefined : 'Pick a client first — every entry needs one'}
+        >
           {editing ? 'Save' : 'Log'}
         </Button>
         {editing && (
-          <Button variant="danger" size="md" onClick={removeLog} title="Remove this entry">
+          <Button variant="danger" size="md" type="button" onClick={removeLog} title="Remove this entry">
             Remove
           </Button>
         )}
       </div>
-    </div>
+    </form>
   );
 }

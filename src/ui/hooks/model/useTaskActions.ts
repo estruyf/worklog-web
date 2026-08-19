@@ -13,7 +13,42 @@ export function useTaskActions(tasks: Task[], selectedDate: string, ui: WorklogU
   const { ask } = ui.confirm;
   const route = useRoute();
 
-  const markDone = useCallback((t: Task) => worklogStore.closeTask(t.id, selectedDate), [selectedDate]);
+  // The tick fires with no confirmation, so the toast it raises carries the way
+  // back: Undo restores the task's status — and each open subtask's, since
+  // closing a parent cascades to them. A repeating task gets no Undo: completing
+  // one rolls it onto its next occurrence rather than closing it, and the Done
+  // list's reopen is the path that unwinds an occurrence.
+  const markDone = useCallback(
+    async (t: Task) => {
+      const restore = [t, ...tasks.filter((c) => c.parentId === t.id && !isDone(c))].map((x) => ({
+        id: x.id,
+        status: x.status,
+      }));
+      const closed = await worklogStore.closeTask(t.id, selectedDate);
+      if (!closed) {
+        return;
+      }
+      worklogStore.notify({
+        message: `Completed “${t.title}”`,
+        tone: "success",
+        action: t.repeat
+          ? undefined
+          : {
+              label: "Undo",
+              run: () =>
+                void (async () => {
+                  // Parent first — that pulls it back out of the archive — then
+                  // the subtasks it took down with it. Sequential: each write
+                  // reads and rewrites the same client file.
+                  for (const r of restore) {
+                    await worklogStore.setStatus(r.id, r.status);
+                  }
+                })(),
+            },
+      });
+    },
+    [tasks, selectedDate],
+  );
   const toggleWorked = useCallback((t: Task) => worklogStore.toggleWorked(t.id, selectedDate), [selectedDate]);
   const openDetail = useCallback((t: Task) => setDetailId(t.id), [setDetailId]);
   const openEdit = useCallback((t: Task) => navigateToTaskForm(t.id), []);

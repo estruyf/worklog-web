@@ -38,7 +38,7 @@ function isEditableTarget(target: EventTarget | null): boolean {
 }
 
 export function WorklogApp({ repoProps }: { repoProps?: SidebarRepoProps } = {}) {
-  const { snap, toast, loading, noClients, today, openTaskFormFromShortcut, openLogForm } = useData();
+  const { snap, toast, dismissToast, loading, noClients, today, openTaskFormFromShortcut, openLogForm } = useData();
   const { view, searchOpen, detailId, clientModalOpen, setSearchOpen, setDetailId, searchSel, setSearchSel, setSelectedDate } = useUi();
   const searchData = useSearchData();
   // The task form and the open task are routes, but both live in the dashboard's
@@ -190,7 +190,7 @@ export function WorklogApp({ repoProps }: { repoProps?: SidebarRepoProps } = {})
           while it's up — see ConfirmDialog. */}
       <ConfirmDialog />
 
-      <Toast toast={toast} />
+      <Toast toast={toast} onDismiss={dismissToast} />
     </div>
   );
 }

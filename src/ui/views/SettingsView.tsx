@@ -2,6 +2,7 @@ import React, { useEffect, useId, useState } from 'react';
 import { Button, Card, Input, SectionLabel, Select, Toggle, ViewHeader } from '../primitives';
 import { AGENT_ICONS, StatusSettings } from '../components';
 import { useData } from '../context';
+import { worklogStore } from '../../data/worklogStore';
 import { AI_AGENTS, COMMAND_EXECUTOR_MIN_VERSION, COMMAND_EXECUTOR_URL, type AiAgent } from '../../model/aiAgents';
 import { AUTO_SYNC_EVENTS, type AutoSyncEvent } from '../../model/syncEvents';
 import { sortDirectionLabels, TASK_SORTS, type TaskSortDirection, type TaskSortKey } from '../utils';
@@ -51,7 +52,6 @@ export function SettingsView() {
   const [syncDelay, setSyncDelay] = useState(String(autoSync.delayMinutes));
   const [syncEvents, setSyncEvents] = useState<AutoSyncEvent[]>(autoSync.events);
   const [agents, setAgents] = useState<AiAgent[]>(aiAgents);
-  const [saved, setSaved] = useState(false);
   const ids = useId();
 
   // The saved event list as a value, not a reference: `autoSync` is rebuilt from
@@ -117,7 +117,8 @@ export function SettingsView() {
     syncEvents.join(',') !== savedEvents ||
     agents.join(',') !== savedAgents;
 
-  const canSave = dirty && hoursValid && todoPageValid && (!syncEnabled || delayValid);
+  const invalid = !hoursValid || !todoPageValid || (syncEnabled && !delayValid);
+  const canSave = dirty && !invalid;
 
   /** Tick an event on or off, keeping the list in the canonical order so saving
    *  the same set twice writes the same config.json. */
@@ -153,8 +154,23 @@ export function SettingsView() {
       autoSync: { enabled: syncEnabled, delayMinutes: parsedDelay, events: syncEvents },
       aiAgents: agents,
     });
-    setSaved(true);
-    window.setTimeout(() => setSaved(false), 2000);
+    // Saving empties the draft, so the footer that held the confirmation is about
+    // to disappear — the toast is what says the click landed.
+    worklogStore.notify({ message: 'Settings saved', tone: 'success' });
+  };
+
+  /** Back to what config.json holds — the same re-seed the snapshot effects do,
+   *  taken up on purpose instead of by navigating away. */
+  const onDiscard = () => {
+    setHours(String(hoursPerDay));
+    setWeek(weekStart);
+    setTodoPage(String(todosPerPage));
+    setSortKey(defaultTaskSort.key);
+    setSortDir(defaultTaskSort.dir);
+    setSyncEnabled(autoSync.enabled);
+    setSyncDelay(String(autoSync.delayMinutes));
+    setSyncEvents(savedEvents ? (savedEvents.split(',') as AutoSyncEvent[]) : []);
+    setAgents(savedAgents ? (savedAgents.split(',') as AiAgent[]) : []);
   };
 
   return (
@@ -171,6 +187,10 @@ export function SettingsView() {
             App configuration, stored in <code className="text-meta bg-neutral-250 rounded-chip px-[5px] py-[1px]">.worklog/config.json</code> in this repository.
           </p>
 
+          {/* Two labelled cards rather than one long one: "Settings → Sync" is
+              how the README (and a person) refers to the second half, and a flat
+              list of unrelated levers is what made it unfindable. */}
+          <SectionLabel className="mb-[10px]">General</SectionLabel>
           <Card className="divide-y divide-neutral-250">
             <SettingRow
               id={`${ids}-hours`}
@@ -254,7 +274,10 @@ export function SettingsView() {
                 </Select>
               </div>
             </SettingRow>
+          </Card>
 
+          <SectionLabel className="mt-6 mb-[10px]">Sync</SectionLabel>
+          <Card className="divide-y divide-neutral-250">
             <div className="flex items-start justify-between gap-6 px-[18px] py-[18px]">
               <div>
                 {/* Not a `<label htmlFor>` like the rows above: clicking a label
@@ -376,28 +399,39 @@ export function SettingsView() {
             </Card>
           </div>
 
-          {!hoursValid && (
-            <div className="text-control text-danger-675 mt-3">Hours per day must be greater than 0.</div>
-          )}
-          {!todoPageValid && (
-            <div className="text-control text-danger-675 mt-3">To-dos per page must be a whole number of at least 1.</div>
-          )}
-          {syncEnabled && !delayValid && (
-            <div className="text-control text-danger-675 mt-3">Sync delay must be a whole number of at least 1 minute.</div>
-          )}
-
-          <div className="flex items-center gap-3 mt-6">
-            <Button variant="primary" size="md" onClick={onSave} disabled={!canSave}>
-              Save changes
-            </Button>
-            {saved && <span className="text-control text-success-500 font-medium">Saved</span>}
-          </div>
-
-          {/* Below the Save button, not inside the card above it: the status editor
-              writes as you go and has no part in that draft. */}
+          {/* Last, after the drafted settings: the status editor writes as you
+              go and has no part in the draft the footer bar saves. */}
           <StatusSettings />
         </div>
       </div>
+
+      {/* Outside the scroll area, so the way to keep (or drop) a half-made draft
+          is on screen wherever the edit happened — the old Save sat at the bottom
+          of a page long enough to scroll it out of sight, and navigating away
+          discarded everything without a word. */}
+      {(dirty || invalid) && (
+        <div className="border-t border-neutral-250 bg-white px-6 py-3">
+          <div className="max-w-[920px] xl:max-w-[1280px] mx-auto flex flex-wrap items-center gap-3">
+            <div className="flex-1 min-w-[200px] text-control">
+              {!hoursValid ? (
+                <span className="text-danger-675">Hours per day must be greater than 0.</span>
+              ) : !todoPageValid ? (
+                <span className="text-danger-675">To-dos per page must be a whole number of at least 1.</span>
+              ) : syncEnabled && !delayValid ? (
+                <span className="text-danger-675">Sync delay must be a whole number of at least 1 minute.</span>
+              ) : (
+                <span className="text-neutral-675">Unsaved changes</span>
+              )}
+            </div>
+            <Button variant="secondary" size="md" onClick={onDiscard}>
+              Discard
+            </Button>
+            <Button variant="primary" size="md" onClick={onSave} disabled={!canSave}>
+              Save changes
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

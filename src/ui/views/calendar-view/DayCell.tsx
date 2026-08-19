@@ -2,7 +2,7 @@ import React from 'react';
 import { NotebookPenIcon } from 'lucide-react';
 import type { WorklogEntry } from '../../../model/types';
 import { useData } from '../../context';
-import { NOTE_COLOR } from '../../utils';
+import { NOTE_COLOR, roundHours } from '../../utils';
 import { colorFor, labelFor } from './entryLabels';
 
 export interface DayCellProps {
@@ -30,6 +30,9 @@ export function DayCell({ date, logs, hasNote, isToday, isSelected, isOtherMonth
   if (hasNote) {
     lines.push('Has notes');
   }
+  // The day's total, in the cell itself: `title` is hover-only, which on touch
+  // means never, and "did I log a full day?" is the question the grid is for.
+  const totalHours = roundHours(logs.reduce((sum, l) => sum + l.hours, 0));
   return (
     <button
       onClick={onOpen}
@@ -53,7 +56,12 @@ export function DayCell({ date, logs, hasNote, isToday, isSelected, isOtherMonth
         >
           {day}
         </span>
-        {hasNote && <NotebookPenIcon size={12} className="shrink-0 mr-[2px]" style={{ color: NOTE_COLOR }} aria-hidden="true" />}
+        <span className="flex items-center gap-[4px]">
+          {totalHours > 0 && (
+            <span className="text-eyebrow font-medium text-neutral-675 tabular-nums leading-none">{totalHours}h</span>
+          )}
+          {hasNote && <NotebookPenIcon size={12} className="shrink-0 mr-[2px]" style={{ color: NOTE_COLOR }} aria-hidden="true" />}
+        </span>
       </span>
       {logs.length > 0 && (
         <span className="flex md:hidden flex-wrap gap-[3px] w-full">
@@ -68,6 +76,7 @@ export function DayCell({ date, logs, hasNote, isToday, isSelected, isOtherMonth
             <span key={j} className="flex items-center gap-[5px] min-w-0">
               <span className="w-[7px] h-[7px] rounded-full shrink-0" style={{ background: colorFor(l.clientId, colorOf) }} />
               <span className="text-eyebrow text-neutral-750 truncate">{labelFor(l.clientId, clientName)}</span>
+              <span className="text-eyebrow text-neutral-650 tabular-nums shrink-0">{roundHours(l.hours)}h</span>
             </span>
           ))}
           {logs.length > maxPerCell && <span className="text-status text-neutral-650 pl-[12px]">+{logs.length - maxPerCell} more</span>}

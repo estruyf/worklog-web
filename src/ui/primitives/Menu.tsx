@@ -30,6 +30,11 @@ export interface MenuProps {
   style?: React.CSSProperties;
   /** Which edge of the trigger the panel lines up with. */
   align?: 'start' | 'end';
+  /** What picking does. A `choice` menu (the default) stands for a value: the
+   *  current one is ticked and the options are `menuitemradio`s. An `action` menu
+   *  is a list of commands — no tick column, plain `menuitem`s — for the row
+   *  overflow ("⋯") case where nothing is "selected". */
+  kind?: 'choice' | 'action';
   /** Puts a filter box above the list, for option sets long enough that reading
    *  them is worse than typing. Changes the keyboard model — see below. */
   searchable?: boolean;
@@ -69,10 +74,12 @@ export function Menu({
   className,
   style,
   align = 'start',
+  kind = 'choice',
   searchable = false,
   searchPlaceholder = 'Search…',
   emptyText = 'No matches',
 }: MenuProps) {
+  const isAction = kind === 'action';
   const [open, setOpen] = React.useState(false);
   const [pos, setPos] = React.useState<{ top: number; left: number } | null>(null);
   const [query, setQuery] = React.useState('');
@@ -308,8 +315,8 @@ export function Menu({
                       itemRefs.current[i] = el;
                     }}
                     type="button"
-                    role={searchable ? 'option' : 'menuitemradio'}
-                    {...(searchable ? { 'aria-selected': checked } : { 'aria-checked': checked })}
+                    role={searchable ? 'option' : isAction ? 'menuitem' : 'menuitemradio'}
+                    {...(searchable ? { 'aria-selected': checked } : isAction ? {} : { 'aria-checked': checked })}
                     // Nothing in a searchable list is tabbable: focus belongs to
                     // the input, and Tab is what closes the menu.
                     tabIndex={searchable ? -1 : i === active ? 0 : -1}
@@ -340,9 +347,11 @@ export function Menu({
                       <span className="block text-control text-neutral-825">{option.label}</span>
                       {option.hint && <span className="block text-meta text-neutral-650 mt-[1px]">{option.hint}</span>}
                     </span>
-                    <span className="w-[13px] shrink-0 mt-[3px] text-brand-575" aria-hidden="true">
-                      {checked && <CheckIcon size={13} strokeWidth={2.5} />}
-                    </span>
+                    {!isAction && (
+                      <span className="w-[13px] shrink-0 mt-[3px] text-brand-575" aria-hidden="true">
+                        {checked && <CheckIcon size={13} strokeWidth={2.5} />}
+                      </span>
+                    )}
                   </button>
                 );
               })}

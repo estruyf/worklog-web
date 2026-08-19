@@ -101,6 +101,9 @@ export type ToastTone = 'loading' | 'success' | 'info' | 'error';
 export interface ToastMessage {
   message: string;
   tone: ToastTone;
+  /** An inline follow-up on the toast itself — "Undo", mostly. `run` fires once,
+   *  on click; the toast is dismissed by the UI right after. */
+  action?: { label: string; run: () => void };
 }
 
 type Subscriber = () => void;
@@ -217,6 +220,15 @@ class WorklogStore {
   onToast(listener: ToastListener): () => void {
     this.toastListeners.add(listener);
     return () => this.toastListeners.delete(listener);
+  }
+
+  /** Raise a toast from the UI layer — action confirmations, with an optional
+   *  Undo. Same channel the store's own sync/error toasts go out on, so there is
+   *  exactly one toast on screen at a time whoever raised it. */
+  notify(toast: ToastMessage): void {
+    for (const l of this.toastListeners) {
+      l(toast);
+    }
   }
 
   // ---- app-shell API --------------------------------------------------------
@@ -612,8 +624,11 @@ class WorklogStore {
     return this.run(() => deleteStatus(this.store, id));
   }
 
-  closeTask(taskId: string, date?: string): Promise<void> {
-    return this.run(() => closeTaskById(this.store, taskId, date));
+  /** Resolves to the closed task, or undefined when the write failed (the error
+   *  is already on screen as a toast) — callers offering Undo need to know the
+   *  close actually happened before promising to reverse it. */
+  closeTask(taskId: string, date?: string): Promise<Task | undefined> {
+    return this.runFor(() => closeTaskById(this.store, taskId, date));
   }
 
   /** Archive a recurring task instead of rolling it forward — the series ends. */
@@ -629,8 +644,9 @@ class WorklogStore {
     return this.run(() => toggleTaskWorkedOn(this.store, taskId, date));
   }
 
-  setStatus(taskId: string, statusId: string): Promise<void> {
-    return this.run(() => setTaskStatus(this.store, taskId, statusId));
+  /** Same contract as `closeTask`: the resulting task, or undefined on failure. */
+  setStatus(taskId: string, statusId: string): Promise<Task | undefined> {
+    return this.runFor(() => setTaskStatus(this.store, taskId, statusId));
   }
 
   deleteTask(taskId: string): Promise<void> {

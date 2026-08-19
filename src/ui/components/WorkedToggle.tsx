@@ -69,8 +69,11 @@ export function WorkedToggle({ worked, onToggle, title, label, ariaLabel, varian
       title={title}
       aria-pressed={worked}
       aria-label={ariaLabel ?? label}
+      // The halo mirrors the done circle's in `WorklogTaskRow`: ±8px vertically,
+      // ±5px sideways — half the 11px gap between them, so the two targets grow
+      // without overlapping each other.
       className={
-        'shrink-0 rounded-full cursor-pointer p-0 flex items-center justify-center ' +
+        'relative before:absolute before:-inset-y-2 before:-inset-x-[5px] shrink-0 rounded-full cursor-pointer p-0 flex items-center justify-center ' +
         SIZES[size] +
         ' ' +
         (worked ? ICON_TONES.on : ICON_TONES.off)

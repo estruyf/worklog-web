@@ -20,7 +20,7 @@ function Spinner() {
  *  and dialogs (z-50/60). A sync finishing or failing while a task is open is
  *  exactly when the state matters, and the layer below it covers the whole
  *  viewport, so anything lower is simply never seen. */
-export function Toast({ toast }: { toast: ToastMessage | null }) {
+export function Toast({ toast, onDismiss }: { toast: ToastMessage | null; onDismiss?: () => void }) {
   if (!toast) {
     return null;
   }
@@ -29,13 +29,27 @@ export function Toast({ toast }: { toast: ToastMessage | null }) {
       role="status"
       aria-live="polite"
       className={
-        'fixed bottom-4 left-1/2 -translate-x-1/2 z-70 flex items-center gap-2 rounded-control-md border text-control px-4 py-2 shadow-[0_8px_24px_rgba(0,0,0,0.12)] ' +
+        'fixed bottom-4 left-1/2 -translate-x-1/2 z-70 flex items-center gap-2 max-w-[min(480px,90vw)] rounded-control-md border text-control px-4 py-2 shadow-[0_8px_24px_rgba(0,0,0,0.12)] ' +
         TONE_CLASS[toast.tone]
       }
     >
       {toast.tone === 'loading' && <Spinner />}
       {toast.tone === 'success' && <CheckIcon size={14} className="shrink-0" />}
-      {toast.message}
+      <span className="min-w-0">{toast.message}</span>
+      {toast.action && (
+        <button
+          type="button"
+          onClick={() => {
+            // Dismiss first, so the offer can't be taken up twice while the
+            // (async) undo it triggers is still in flight.
+            onDismiss?.();
+            toast.action?.run();
+          }}
+          className="shrink-0 ml-1 bg-transparent border-none p-0 cursor-pointer font-semibold underline underline-offset-2 text-inherit hover:opacity-75"
+        >
+          {toast.action.label}
+        </button>
+      )}
     </div>
   );
 }

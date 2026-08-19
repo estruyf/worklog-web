@@ -51,7 +51,36 @@ export function useStatusModel(statuses: StatusDef[], tasks: Task[], ui: Worklog
     worklogStore.setStatus(taskId, statusId);
   }, []);
 
-  const reopen = useCallback((t: Task) => worklogStore.setStatus(t.id, firstStatusId), [firstStatusId]);
+  // Undo re-closes the task and puts its original completion date back — a
+  // restore-then-undo must not restamp last year's task as completed today. An
+  // archived occurrence of a recurring task gets no Undo: reopening one winds it
+  // back into the live task, so the id the undo would close no longer exists.
+  const reopen = useCallback(
+    async (t: Task) => {
+      const prior = { status: t.status, completed: t.completed };
+      const reopened = await worklogStore.setStatus(t.id, firstStatusId);
+      if (!reopened) {
+        return;
+      }
+      worklogStore.notify({
+        message: `Reopened “${t.title}”`,
+        tone: "success",
+        action: t.repeatOf
+          ? undefined
+          : {
+              label: "Undo",
+              run: () =>
+                void (async () => {
+                  await worklogStore.setStatus(t.id, prior.status);
+                  if (prior.completed) {
+                    await worklogStore.setCompletedDate(t.id, prior.completed);
+                  }
+                })(),
+            },
+      });
+    },
+    [firstStatusId],
+  );
 
   // ---- settings editor ------------------------------------------------------
 

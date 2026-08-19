@@ -17,6 +17,12 @@ Every change to Worklog, by day, newest first.
 
 ## 2026-08-19
 
+- Ticking a task done (or reopening one) now shows a toast with an Undo that puts everything back — the task's status, the subtasks a close took down with it, and the original completion date on a reopen.
+- On phones and in the day view's to-do rail, every task row has a "⋯" menu with View, Edit and Delete — actions that used to exist only as desktop hover buttons — and the done/worked circles are easier to hit without being easier to mix up.
+- The Overdue view has the same search/status/priority/tag toolbar as the other lists; clients stay ranked longest-overdue first while the sort applies within each card.
+- Calendar cells now show the day's total hours next to the date, and each client line carries its hours — no more hovering to find out whether a day was full.
+- The log-time form is a real form: it opens with the keyboard in the right field, Enter logs the entry, Escape closes it, and Log is disabled (with a hint) when there is no client to log against.
+- Settings is split into labelled General and Sync sections, and an unsaved draft now raises a bar at the bottom of the screen with Save and Discard — with any validation problem named right there instead of at the end of the page.
 - A failing sync now stays on screen: a persistent "Sync failed" bar with a Retry button replaces the four-second toast, even when auto-sync is on, and the sidebar's repository footer shows when your hours last reached GitHub ("Synced 4 min ago").
 - Insights' month picker captions and trend chart no longer count event hours, so they match the "Total hours" tile.
 

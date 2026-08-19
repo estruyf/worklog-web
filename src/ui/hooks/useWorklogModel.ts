@@ -44,6 +44,7 @@ export function useWorklogModel(
   pendingCount = 0,
   syncError: string | null = null,
   lastSyncedAt: number | null = null,
+  dismissToast: () => void = () => undefined,
 ) {
   // The snapshot's collections, memoized on the snapshot itself: `?? []` would
   // hand out a fresh array on every render and re-run every memo built on it.
@@ -122,6 +123,7 @@ export function useWorklogModel(
   return {
     snap,
     toast,
+    dismissToast,
     loading,
     today,
     tasks,

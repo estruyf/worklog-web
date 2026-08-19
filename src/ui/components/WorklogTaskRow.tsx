@@ -1,8 +1,8 @@
 import React from 'react';
 import type { WorklogRow } from '../model';
-import { CalendarIcon, CheckIcon, EyeIcon, GlobeIcon, Pencil, RefreshCwIcon, Trash } from 'lucide-react';
+import { CalendarIcon, CheckIcon, EllipsisIcon, EyeIcon, GlobeIcon, Pencil, RefreshCwIcon, Trash } from 'lucide-react';
 import { formatDaysLate } from '../../model/overdue';
-import { Button, Chip } from '../primitives';
+import { Button, Chip, Menu } from '../primitives';
 import { fmtShort } from '../utils';
 import { DisclosureIcon } from './icons';
 import { PriorityChip } from './PriorityChip';
@@ -153,7 +153,11 @@ export const WorklogTaskRow = React.memo(function WorklogTaskRow({ row }: { row:
     >
       <div className="flex items-center gap-[11px]">
         <FoldToggle slot={row.foldSlot} collapsed={row.collapsed} onToggle={row.onToggleCollapse} />
-        <button onClick={row.onDone} title="Mark done" className="w-[17px] h-[17px] shrink-0 border-[1.5px] border-neutral-575 rounded-full bg-white cursor-pointer p-0 text-neutral-500 hover:border-success-500 hover:text-success-500 flex items-center justify-center">
+        {/* The visible circle stays 17px, but the tap target doesn't: the halo
+            extends 8px up/down and 5px sideways — half the 11px gap to the worked
+            toggle, so the two ticks meet at the midline rather than stealing each
+            other's taps. Same treatment on `WorkedToggle`. */}
+        <button onClick={row.onDone} title="Mark done" className="relative before:absolute before:-inset-y-2 before:-inset-x-[5px] w-[17px] h-[17px] shrink-0 border-[1.5px] border-neutral-575 rounded-full bg-white cursor-pointer p-0 text-neutral-500 hover:border-success-500 hover:text-success-500 flex items-center justify-center">
           <CheckIcon size={11} strokeWidth={2.5} />
         </button>
         {/* Worked toggle — absent for rows with no worked-on state (to-dos). */}
@@ -222,6 +226,25 @@ export const WorklogTaskRow = React.memo(function WorklogTaskRow({ row }: { row:
             <LinkChip link={row.link} size={14} />
           </span>
         )}
+        {/* Narrow rows have no room for the hover actions above, and hover
+            doesn't exist on the touch screens most of them are on — so the same
+            three actions live behind one overflow trigger instead of vanishing. */}
+        <span className="@lg:hidden shrink-0">
+          <Menu
+            kind="action"
+            align="end"
+            label={`Actions for “${row.title}”`}
+            options={[
+              { id: 'view', label: 'View task', icon: <EyeIcon size={13} /> },
+              { id: 'edit', label: 'Edit task', icon: <Pencil size={13} /> },
+              { id: 'delete', label: 'Delete task', icon: <Trash size={13} /> },
+            ]}
+            onSelect={(id) => (id === 'view' ? row.onView() : id === 'edit' ? row.onEdit() : row.onDelete())}
+            className="w-7 h-7 -my-1 flex items-center justify-center rounded-lg text-neutral-625 hover:text-neutral-825 hover:bg-neutral-250"
+          >
+            <EllipsisIcon size={16} />
+          </Menu>
+        </span>
       </div>
 
       {/* Narrow-row meta — status + progress + due + tags + link, indented under
