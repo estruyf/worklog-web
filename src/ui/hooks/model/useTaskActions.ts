@@ -126,6 +126,48 @@ export function useTaskActions(tasks: Task[], selectedDate: string, ui: WorklogU
     worklogStore.deleteNote(taskId, index);
   }, []);
 
+  /** Read a picked/dropped file and record it on the task. Resolves once the
+   *  attachment is saved (or its failure is on screen as a toast), so callers
+   *  can hold an uploading state across it. */
+  const addAttachment = useCallback((taskId: string, file: File) => {
+    return new Promise<void>((resolve) => {
+      const reader = new FileReader();
+      reader.onerror = () => {
+        worklogStore.notify({ message: `Could not read “${file.name}”.`, tone: "error" });
+        resolve();
+      };
+      reader.onload = () => {
+        const dataUrl = String(reader.result);
+        const base64 = dataUrl.slice(dataUrl.indexOf(",") + 1);
+        worklogStore.addAttachment(taskId, file.name, base64).then(resolve);
+      };
+      reader.readAsDataURL(file);
+    });
+  }, []);
+
+  const deleteAttachment = useCallback((taskId: string, ref: string) => {
+    worklogStore.deleteAttachment(taskId, ref);
+  }, []);
+
+  /** Hand the attachment's bytes to the browser as a download. */
+  const downloadAttachment = useCallback(async (ref: string) => {
+    const bytes = await worklogStore.assetBytes(ref);
+    if (!bytes) {
+      worklogStore.notify({ message: "This attachment isn't on this device yet — reconnect and try again.", tone: "error" });
+      return;
+    }
+    const url = URL.createObjectURL(new Blob([bytes as BlobPart], { type: "application/octet-stream" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = ref.split("/").pop() ?? "file";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    // On a delay: revoking synchronously can cancel the navigation the click
+    // just started.
+    setTimeout(() => URL.revokeObjectURL(url), 10_000);
+  }, []);
+
   /**
    * Write `text` to the open task's description and close the editor. Takes the
    * text rather than reading the draft because a checkbox ticked in the stored
@@ -155,5 +197,5 @@ export function useTaskActions(tasks: Task[], selectedDate: string, ui: WorklogU
     setDescMode("read");
   };
 
-  return { markDone, toggleWorked, openDetail, openEdit, deleteTask, addNote, updateNote, deleteNote, saveDescription, saveDescriptionText, editDescription, cancelDescription };
+  return { markDone, toggleWorked, openDetail, openEdit, deleteTask, addNote, updateNote, deleteNote, addAttachment, deleteAttachment, downloadAttachment, saveDescription, saveDescriptionText, editDescription, cancelDescription };
 }

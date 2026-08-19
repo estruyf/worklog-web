@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import type { Task } from '../../../model/types';
-import { PencilIcon, Trash2Icon } from 'lucide-react';
+import { PaperclipIcon, PencilIcon, Trash2Icon } from 'lucide-react';
 import { SidebarSection } from '../../primitives';
 import { useData } from '../../context';
 import { isDone } from '../../utils';
@@ -62,8 +62,9 @@ function Action({
  *  header, because those are the two you came to press; this list is what you go
  *  looking for. */
 export function TaskActions({ task }: { task: Task }) {
-  const { openEdit, deleteTask, aiAgents } = useData();
+  const { openEdit, deleteTask, addAttachment, aiAgents } = useData();
   const done = isDone(task);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   // Nothing at all until an agent is switched on in Settings, which is also why
   // this needs no empty state: the list is the app's own actions, and the agents
   // are rows the user asked for.
@@ -89,6 +90,11 @@ export function TaskActions({ task }: { task: Task }) {
             />
           );
         })}
+        <Action
+          icon={<PaperclipIcon size={15} />}
+          label="Add attachment"
+          onClick={() => fileInputRef.current?.click()}
+        />
         <Action icon={<PencilIcon size={15} />} label="Edit details" onClick={() => openEdit(task)} />
         <Action
           icon={<Trash2Icon size={15} />}
@@ -97,6 +103,21 @@ export function TaskActions({ task }: { task: Task }) {
           onClick={() => deleteTask(task.id, { permanent: done })}
         />
       </div>
+      <input
+        ref={fileInputRef}
+        type="file"
+        multiple
+        onChange={(e) => {
+          void (async (files: File[]) => {
+            // Sequential: each write reads and rewrites the same client file.
+            for (const file of files) {
+              await addAttachment(task.id, file);
+            }
+          })(Array.from(e.target.files ?? []));
+          e.target.value = '';
+        }}
+        className="hidden"
+      />
     </SidebarSection>
   );
 }

@@ -23,8 +23,10 @@ import { createClient, createTask, deleteClient, setClientArchived, updateClient
 import { saveImageAsset } from '../services/assets';
 import { isGeneralTodoClientId } from '../model/todos';
 import {
+  addTaskAttachment,
   addTaskNote,
   closeTaskById,
+  deleteTaskAttachment,
   deleteTaskCascade,
   deleteTaskNote,
   endTaskSeries,
@@ -665,6 +667,16 @@ class WorklogStore {
     return this.run(() => deleteTaskNote(this.store, taskId, index));
   }
 
+  /** Store a picked/dropped file under `assets/` and record it on the task. */
+  addAttachment(taskId: string, fileName: string, dataBase64: string): Promise<void> {
+    return this.run(() => addTaskAttachment(this.store, taskId, fileName, dataBase64));
+  }
+
+  /** Remove an attachment from the task and delete its file. */
+  deleteAttachment(taskId: string, ref: string): Promise<void> {
+    return this.run(() => deleteTaskAttachment(this.store, taskId, ref));
+  }
+
   setWorklog(date: string, clientId: string, hours: number, note?: string): Promise<void> {
     return this.run(() => setWorklog(this.store, date, clientId, hours, note));
   }
@@ -702,6 +714,33 @@ class WorklogStore {
       this.fetchMissingAsset(ref);
     }
     return this.assetUrls.urlFor(ref, bytes);
+  }
+
+  /** An asset's bytes for a download click, fetching them from the branch when
+   *  the map holds only the sha (loads ship assets lazily). A `.md`/`.json`
+   *  attachment arrives in the text map instead of the binary one — encode it
+   *  back rather than reporting it missing. Null when the bytes can't be had
+   *  (offline, or a dangling ref). */
+  async assetBytes(ref: string): Promise<Uint8Array | null> {
+    const bytes = this.fm.binary.get(ref);
+    if (bytes) {
+      return bytes;
+    }
+    const text = this.fm.text.get(ref);
+    if (text !== undefined) {
+      return new TextEncoder().encode(text);
+    }
+    const sha = this.fm.baseSha.get(ref);
+    if (!sha || !this.repo || this.fm.deleted.has(ref)) {
+      return null;
+    }
+    try {
+      const fetched = await fetchAsset(this.repo, ref, sha);
+      this.fm.binary.set(ref, fetched);
+      return fetched;
+    } catch {
+      return null;
+    }
   }
 
   /** Start downloading an asset the branch holds but the map has no bytes for.

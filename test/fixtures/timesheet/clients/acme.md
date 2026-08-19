@@ -12,6 +12,8 @@
 - priority: high
 - link: https://example.com/issues/263 Tracking issue
 - link: https://example.com/design/export
+- attachment: assets/export-spec.pdf
+- attachment: assets/timeout trace.txt
 - created: 2026-07-14
 - due: 2026-08-07
 - worked: 2026-07-14

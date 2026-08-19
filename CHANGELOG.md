@@ -17,6 +17,7 @@ Every change to Worklog, by day, newest first.
 
 ## 2026-08-19
 
+- Tasks can carry file attachments: "Add attachment" in the task's Actions rail (or drag & drop onto the Attachments list) stores any file up to 10 MB in your repo's `assets/` folder and records it on the task as a `- attachment:` line. Clicking a name downloads the file; deleting one removes the record and the file together.
 - Ticking a task done (or reopening one) now shows a toast with an Undo that puts everything back — the task's status, the subtasks a close took down with it, and the original completion date on a reopen.
 - On phones and in the day view's to-do rail, every task row has a "⋯" menu with View, Edit and Delete — actions that used to exist only as desktop hover buttons — and the done/worked circles are easier to hit without being easier to mix up.
 - The Overdue view has the same search/status/priority/tag toolbar as the other lists; clients stay ranked longest-overdue first while the sort applies within each card.

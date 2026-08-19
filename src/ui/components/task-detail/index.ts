@@ -9,3 +9,4 @@ export { TagsEditor } from './TagsEditor';
 export { SubtaskList } from './SubtaskList';
 export { TaskActions } from './TaskActions';
 export { NotesSection } from './NotesSection';
+export { AttachmentsSection } from './AttachmentsSection';

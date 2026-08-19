@@ -17,7 +17,8 @@ import { withSeededDue } from "../model/recurringTask";
 import { parseTaskFile, serializeTask } from "../parser/taskParser";
 import { extractBlock, replaceBlock } from "../parser/blocks";
 import { newTaskId } from "../parser/ids";
-import { parseLinks, readText, writeText } from "../workspace/paths";
+import { deleteFile, parseLinks, readText, writeText } from "../workspace/paths";
+import { saveFileAsset } from "./assets";
 import { today, monthOf, nowStamp } from "../util/date";
 import { appendArchiveBlock, appendTaskBlock } from "../commands/shared";
 
@@ -188,6 +189,51 @@ export async function deleteTaskNote(
     return { ...t, notes };
   });
   await store.rebuild("deleteNote");
+  return store.db.getTask(taskId) ?? task;
+}
+
+/** Store a picked file under `assets/` and record it on the task. The bytes are
+ *  written first, so a failed task update leaves at worst an orphaned file —
+ *  never an `- attachment:` line pointing at bytes that don't exist. */
+export async function addTaskAttachment(
+  store: Store,
+  taskId: string,
+  fileName: string,
+  dataBase64: string,
+): Promise<Task> {
+  const task = store.db.getTask(taskId);
+  if (!task) {
+    throw new Error(`Task ${taskId} not found.`);
+  }
+  const ref = await saveFileAsset(store, fileName, dataBase64);
+  await updateInPlace(store, task, (t) => ({
+    ...t,
+    attachments: [...(t.attachments ?? []), ref],
+  }));
+  await store.rebuild("addAttachment");
+  return store.db.getTask(taskId) ?? task;
+}
+
+/** Remove an attachment record and its file. Only a flat `assets/<file>` ref
+ *  takes the file with it — a hand-written ref pointing anywhere else is
+ *  dropped from the task but never followed to a deletion. */
+export async function deleteTaskAttachment(
+  store: Store,
+  taskId: string,
+  ref: string,
+): Promise<Task> {
+  const task = store.db.getTask(taskId);
+  if (!task) {
+    throw new Error(`Task ${taskId} not found.`);
+  }
+  await updateInPlace(store, task, (t) => ({
+    ...t,
+    attachments: (t.attachments ?? []).filter((a) => a !== ref),
+  }));
+  if (/^assets\/[^/]+$/.test(ref)) {
+    await deleteFile(ref);
+  }
+  await store.rebuild("deleteAttachment");
   return store.db.getTask(taskId) ?? task;
 }
 

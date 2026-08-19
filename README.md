@@ -477,7 +477,7 @@ clients/<id>.md                # open tasks
 archive/<client>/<YYYY-MM>.md  # closed tasks
 worklog/<YYYY-MM>.md           # time entries: - <YYYY-MM-DD> <clientId|event:type> <hours>
 notes/<YYYY-MM>.md             # freeform notes per day (optional)
-assets/                        # images pasted into task notes (optional)
+assets/                        # images pasted into notes + files attached to tasks (optional)
 ```
 
 `.worklog/config.json` holds the app's own settings. `statuses` is the list a task moves through,
@@ -518,6 +518,7 @@ A task block looks like:
 - status: in-progress
 - priority: high
 - link: https://example.com/task/123
+- attachment: assets/picker-crash.log
 - created: 2026-06-30
 - due: 2026-07-05
 - worked: 2026-06-30
@@ -528,6 +529,12 @@ Free-form description in Markdown.
 ### Notes
 - 2026-06-30 14:12 — Reproduced on iOS Safari.
 ```
+
+`- attachment:` names a file stored beside the Markdown under `assets/` — any file type, up to
+10 MB, added from the task's Actions rail (or dropped onto its Attachments list) and downloaded by
+clicking its name. The line is the record: deleting an attachment in the app removes the line and
+the file together, and a hand-written line pointing at a file the repo doesn't hold simply won't
+download.
 
 A new task starts at a `## ` heading that has an `- id:` line directly under it.
 That means a description can use `## ` headings of its own — they stay part of the
@@ -723,7 +730,8 @@ test/roundtrip.test.ts   # golden round-trip tests
   private repos work the same as public ones — but an image is only visible on a device that has
   the repo's bytes, which is why an offline open falls back to alt text.
 - Images added to a task or a note are never cleaned up: deleting the task or note leaves the file
-  in `assets/`, to be removed by hand if you want the space back.
+  in `assets/`, to be removed by hand if you want the space back. (Attachments are the exception —
+  deleting one removes its file too, though Git history still holds the bytes.)
 - Scaffolding writes the Worklog layout only where it is missing: files that already exist in the
   target repo are left as they are.
 - A task deeplink opened without a session is dropped rather than resumed after signing in — the

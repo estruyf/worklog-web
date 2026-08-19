@@ -6,7 +6,7 @@ import { Button, IconButton, LinkButton, Modal } from '../primitives';
 import { CopyButton } from './CopyButton';
 import { LinkList } from './LinkList';
 import { DescriptionEditor } from './DescriptionEditor';
-import { NotesSection, SubtaskList, TaskDetailHeader, TaskSidebar } from './task-detail';
+import { AttachmentsSection, NotesSection, SubtaskList, TaskDetailHeader, TaskSidebar } from './task-detail';
 import { useData, useUi } from '../context';
 import { navigateToDashboard, navigateToTask } from '../router';
 
@@ -81,6 +81,8 @@ export function TaskDetailPanel() {
               </h1>
 
               <LinkList links={task.links} className="mb-6" />
+
+              <AttachmentsSection task={task} />
 
               <DescriptionEditor
                   value={descDraft}

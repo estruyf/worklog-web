@@ -75,6 +75,7 @@ export function parseTaskFile(
       parentId: t.parentId,
       clientIds: t.clientIds && t.clientIds.length ? t.clientIds : [clientId],
       links: t.links,
+      attachments: t.attachments,
       created: t.created,
       due: t.due,
       completed: t.completed,
@@ -200,6 +201,13 @@ function applyMeta(task: TaskDraft, key: string, value: string): void {
       }
       break;
     }
+    case "attachment":
+      // The whole value is the ref — attachment filenames may contain spaces,
+      // so there is no label half to split off the way `link:` does.
+      if (value) {
+        (task.attachments ??= []).push(value);
+      }
+      break;
     case "created":
       task.created = value || undefined;
       break;
@@ -361,6 +369,9 @@ export function serializeTask(task: Task, clientId?: string): string {
   }
   for (const link of task.links) {
     out.push(`- link: ${link.label ? `${link.url} ${link.label}` : link.url}`);
+  }
+  for (const ref of task.attachments ?? []) {
+    out.push(`- attachment: ${ref}`);
   }
   if (task.created) {
     out.push(`- created: ${task.created}`);

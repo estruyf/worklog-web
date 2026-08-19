@@ -40,6 +40,9 @@ export interface Task {
   /** Client ids this task is tagged to. Usually exactly one. */
   clientIds: string[];
   links: TaskLink[];
+  /** Files that belong to this task, as repo-relative refs (`assets/<file>`).
+   *  The Markdown line is the record; the bytes live beside it in the repo. */
+  attachments?: string[];
   created?: string; // YYYY-MM-DD
   /** Optional due date (YYYY-MM-DD); drives overdue highlighting. For a recurring
    *  task this is the next occurrence, and it rolls forward on each completion. */
