@@ -42,6 +42,8 @@ export function useWorklogModel(
   loading = false,
   offline = false,
   pendingCount = 0,
+  syncError: string | null = null,
+  lastSyncedAt: number | null = null,
 ) {
   // The snapshot's collections, memoized on the snapshot itself: `?? []` would
   // hand out a fresh array on every render and re-run every memo built on it.
@@ -152,5 +154,7 @@ export function useWorklogModel(
     gitPending,
     pendingCount,
     offline,
+    syncError,
+    lastSyncedAt,
   };
 }

@@ -60,7 +60,7 @@ export function WorklogProvider({ children }: { children: React.ReactNode }) {
   const ui = useWorklogUiState();
 
   // Live app state read straight from the store.
-  const { snap, toast, gitPending, pendingCount, loading, offline } = useWorklogState();
+  const { snap, toast, gitPending, pendingCount, loading, offline, syncError, lastSyncedAt } = useWorklogState();
 
   // The URL owns the active dashboard view; mirror it into UI state so the sidebar
   // highlight and view rendering follow navigation and browser back/forward.
@@ -130,7 +130,7 @@ export function WorklogProvider({ children }: { children: React.ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ui.selectedDate]);
 
-  const data = useWorklogModel(snap, ui, toast, gitPending, loading, offline, pendingCount);
+  const data = useWorklogModel(snap, ui, toast, gitPending, loading, offline, pendingCount, syncError, lastSyncedAt);
 
   // The installed app's icon badge. Here rather than in the dashboard because it
   // outlives the route: the single-task page is just as much "the app is open",

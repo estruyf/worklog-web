@@ -85,6 +85,15 @@ export interface WorklogSnapshot {
    *  indicator — the store emits no toast for it, because going offline is a
    *  state to show, not an event to announce once and lose. */
   offline: boolean;
+  /** The message of the last sync attempt that failed while online. Standing
+   *  state, unlike the toast that announced it once: a sync that has been failing
+   *  all day must stay visible all day. Cleared only when GitHub is reached again
+   *  (a sync lands, a load succeeds, or the watcher confirms a clean tree). */
+  syncError: string | null;
+  /** Epoch millis of the last time this device confirmed it agrees with the
+   *  branch — a sync landed, a load finished, or a head check found nothing new
+   *  with nothing pending. Null until the first such moment this session. */
+  lastSyncedAt: number | null;
 }
 
 export type ToastTone = 'loading' | 'success' | 'info' | 'error';
@@ -137,7 +146,7 @@ class WorklogStore {
   private toastListeners = new Set<ToastListener>();
   // Cached immutable snapshot: `getSnapshot` must return a stable reference between
   // changes so `useSyncExternalStore` doesn't loop. Rebuilt only on transitions.
-  private snapshot: WorklogSnapshot = { data: null, loading: false, gitPending: false, pendingCount: 0, offline: isOffline() };
+  private snapshot: WorklogSnapshot = { data: null, loading: false, gitPending: false, pendingCount: 0, offline: isOffline(), syncError: null, lastSyncedAt: null };
 
   constructor() {
     // Every persisted edit re-derives the state, flags the tree dirty, and arms
@@ -242,7 +251,7 @@ class WorklogStore {
     this.applyLoad(data);
     await this.store.rebuild('open');
     this.loaded = true;
-    this.updateSnapshot({ data: this.deriveState(), loading: false, ...this.dirtyPatch(), offline: false });
+    this.updateSnapshot({ data: this.deriveState(), loading: false, ...this.dirtyPatch(), offline: false, syncError: null, lastSyncedAt: Date.now() });
     this.scheduleDateRollover();
     this.watcher.start();
     void this.saveTreeCache();
@@ -412,6 +421,7 @@ class WorklogStore {
         } else if (!silent) {
           this.emitToast('Everything is up to date', 'info');
         }
+        this.markSynced();
         return;
       }
       // Commit on top of what the branch holds now. A file only this instance
@@ -428,6 +438,7 @@ class WorklogStore {
         await this.pull();
       }
       this.emitToast('Changes synced', 'success');
+      this.markSynced();
     } catch (err) {
       // The connection can drop mid-sync as easily as before one. That reads as a
       // failed request here, but it is the offline case, and it gets the offline
@@ -436,7 +447,11 @@ class WorklogStore {
         this.deferredSync = true;
         this.updateSnapshot({ offline: true });
       } else {
-        // Failures surface even for background syncs.
+        // Failures surface even for background syncs — as the toast that announces
+        // this one, and as the standing `syncError` the status bar holds up until
+        // an attempt lands. The toast alone was the whole story once, and a sync
+        // that failed all day looked like four seconds of trouble.
+        this.updateSnapshot({ syncError: err instanceof Error ? err.message : String(err) });
         this.emitToast(`Sync failed: ${err instanceof Error ? err.message : String(err)}`, 'error');
       }
     } finally {
@@ -527,10 +542,16 @@ class WorklogStore {
     try {
       const head = await fetchHead(this.repo!);
       // Re-check the guards: an edit or a sync may have started in flight.
-      if (head === this.repo!.baseCommitSha || this.committing || this.fm.dirty.size > 0) {
+      if (this.committing || this.fm.dirty.size > 0) {
+        return;
+      }
+      if (head === this.repo!.baseCommitSha) {
+        // Nothing pending, nothing new: agreement, freshly confirmed.
+        this.markSynced();
         return;
       }
       await this.pull();
+      this.markSynced();
       this.emitToast('Pulled changes from GitHub', 'success');
     } catch {
       // Offline or a transient GitHub failure. A background check has no reason
@@ -764,6 +785,12 @@ class WorklogStore {
     for (const l of this.subscribers) {
       l();
     }
+  }
+
+  /** A round trip just confirmed this device and the branch agree (or resolved
+   *  the disagreement). Stamps "last synced" and stands down the failure state. */
+  private markSynced(): void {
+    this.updateSnapshot({ syncError: null, lastSyncedAt: Date.now() });
   }
 
   private emitToast(message: string, tone: ToastTone): void {

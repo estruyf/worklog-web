@@ -151,6 +151,61 @@ describe('sync retry after a failure', () => {
   });
 });
 
+describe('sync failure visibility', () => {
+  // The toast that announces a failure lives four seconds; the snapshot is what
+  // lets the UI keep saying it until an attempt actually lands.
+  beforeEach(() => {
+    files = { '.worklog/config.json': CONFIG, 'clients/acme.md': '# Acme Corp\n' };
+    head = 'c0';
+    commits = 0;
+    commitFails = false;
+    commitAttempts = 0;
+    vi.stubGlobal('fetch', fakeFetch as unknown as typeof fetch);
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  it('holds the failure in the snapshot until an attempt lands', async () => {
+    const store = await openStore();
+    expect(store.getSnapshot().syncError).toBeNull();
+
+    commitFails = true;
+    await store.createTask({ title: 'Stranded task', clientId: 'acme' });
+    await store.sync();
+    expect(store.getSnapshot().syncError).toContain('Failed to fetch');
+
+    // A retry that fails again keeps the state up, it doesn't reset it.
+    await vi.advanceTimersByTimeAsync(AUTO_SYNC_MS);
+    expect(store.getSnapshot().syncError).toContain('Failed to fetch');
+
+    // The one that lands stands it down.
+    commitFails = false;
+    await vi.advanceTimersByTimeAsync(AUTO_SYNC_MS);
+    expect(store.hasPending()).toBe(false);
+    expect(store.getSnapshot().syncError).toBeNull();
+  });
+
+  it('stamps lastSyncedAt on open and again when a sync lands, but not on a failure', async () => {
+    const store = await openStore();
+    const opened = store.getSnapshot().lastSyncedAt;
+    expect(opened).not.toBeNull();
+
+    commitFails = true;
+    await store.createTask({ title: 'Stranded task', clientId: 'acme' });
+    await store.sync();
+    expect(store.getSnapshot().lastSyncedAt).toBe(opened);
+
+    commitFails = false;
+    await vi.advanceTimersByTimeAsync(AUTO_SYNC_MS);
+    expect(store.hasPending()).toBe(false);
+    expect(store.getSnapshot().lastSyncedAt!).toBeGreaterThan(opened!);
+  });
+});
+
 describe('an edit made while a sync is in flight', () => {
   beforeEach(() => {
     files = { '.worklog/config.json': CONFIG, 'clients/acme.md': '# Acme Corp\n' };

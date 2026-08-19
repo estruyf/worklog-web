@@ -17,6 +17,7 @@ Every change to Worklog, by day, newest first.
 
 ## 2026-08-19
 
+- A failing sync now stays on screen: a persistent "Sync failed" bar with a Retry button replaces the four-second toast, even when auto-sync is on, and the sidebar's repository footer shows when your hours last reached GitHub ("Synced 4 min ago").
 - Insights' month picker captions and trend chart no longer count event hours, so they match the "Total hours" tile.
 
 ## 2026-08-18
