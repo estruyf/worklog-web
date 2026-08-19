@@ -19,10 +19,12 @@ function useInsightsData() {
   const { month } = useUi();
 
   // Hours per YYYY-MM: the month picker's captions and the trend chart's points
-  // are the same rollup, so it is derived once.
+  // are the same rollup, so it is derived once. Events are excluded so these
+  // figures agree with the "Total hours" tile below.
   const hoursByMonth = useMemo(() => {
     const byMonth: Record<string, number> = {};
     worklog.forEach((w) => {
+      if (isEventWorklogClientId(w.clientId)) return;
       const m = w.date.slice(0, 7);
       byMonth[m] = (byMonth[m] ?? 0) + w.hours;
     });

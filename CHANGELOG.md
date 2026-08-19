@@ -15,6 +15,10 @@ Every change to Worklog, by day, newest first.
      both). Links must be absolute — a relative path resolves against /changelog and
      404s. -->
 
+## 2026-08-19
+
+- Insights' month picker captions and trend chart no longer count event hours, so they match the "Total hours" tile.
+
 ## 2026-08-18
 
 - A task's description now has a copy button next to Edit, putting the raw Markdown on the clipboard.
