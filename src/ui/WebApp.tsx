@@ -17,7 +17,7 @@ import { UpdatePrompt } from './components';
 import { useUnsavedGuard } from './hooks';
 import { worklogStore, type RecoveryInfo } from '../data/worklogStore';
 import { clearTrees } from '../data/repoCache';
-import { navigateToDashboard, useRoute } from './router';
+import { confirmNavGuard, navigateToDashboard, useRoute } from './router';
 import { consumeLaunches } from './launchHandler';
 import { RepoPicker } from './RepoPicker';
 import './styles.css';
@@ -78,20 +78,33 @@ export default function WebApp() {
     }
   }, [initialRepo, open]);
 
+  // Both leave paths unmount the dashboard — and with it any view holding an
+  // unsaved draft — without going through the router, so they consult the same
+  // navigation guard a route change would.
   const switchRepo = React.useCallback(() => {
-    setRepo(undefined);
-    setPhase({ kind: 'picker' });
+    void confirmNavGuard().then((ok) => {
+      if (!ok) {
+        return;
+      }
+      setRepo(undefined);
+      setPhase({ kind: 'picker' });
+    });
   }, []);
 
   const signOut = React.useCallback(() => {
-    localStorage.removeItem(LAST_REPO_KEY);
-    // The cached branch contents go with the session: it is a redundant copy of a
-    // private repo, and leaving it readable after someone signs out on a shared
-    // machine would be a decision nobody made. Unsynced edits are *not* cleared —
-    // that snapshot is the only copy of work GitHub has never seen.
-    void clearTrees();
-    fetch('/api/auth/logout', { method: 'POST' }).finally(() => {
-      window.location.href = '/';
+    void confirmNavGuard().then((ok) => {
+      if (!ok) {
+        return;
+      }
+      localStorage.removeItem(LAST_REPO_KEY);
+      // The cached branch contents go with the session: it is a redundant copy of a
+      // private repo, and leaving it readable after someone signs out on a shared
+      // machine would be a decision nobody made. Unsynced edits are *not* cleared —
+      // that snapshot is the only copy of work GitHub has never seen.
+      void clearTrees();
+      fetch('/api/auth/logout', { method: 'POST' }).finally(() => {
+        window.location.href = '/';
+      });
     });
   }, []);
 

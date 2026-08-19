@@ -23,6 +23,7 @@ Every change to Worklog, by day, newest first.
 - Calendar cells now show the day's total hours next to the date, and each client line carries its hours — no more hovering to find out whether a day was full.
 - The log-time form is a real form: it opens with the keyboard in the right field, Enter logs the entry, Escape closes it, and Log is disabled (with a hint) when there is no client to log against.
 - Settings is split into labelled General and Sync sections, and an unsaved draft now raises a bar at the bottom of the screen with Save and Discard — with any validation problem named right there instead of at the end of the page.
+- Leaving Settings with unsaved changes — via the nav rail, a shortcut, browser Back, switching repository, signing out, or closing the tab — now asks before the draft is lost.
 - A failing sync now stays on screen: a persistent "Sync failed" bar with a Retry button replaces the four-second toast, even when auto-sync is on, and the sidebar's repository footer shows when your hours last reached GitHub ("Synced 4 min ago").
 - Insights' month picker captions and trend chart no longer count event hours, so they match the "Total hours" tile.
 

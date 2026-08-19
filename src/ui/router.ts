@@ -247,14 +247,72 @@ function refresh(): void {
   }
 }
 
+// ---- navigation guard -------------------------------------------------------
+// A view holding an unsaved draft (Settings) registers a guard: a callback that
+// asks the user and resolves true when leaving is allowed. Every route change
+// consults it — the nav rail, the shortcuts, back/forward — so the draft can't
+// be discarded by a navigation the guard never saw. One slot, not a set: only
+// one view is on screen to have a draft.
+
+type NavGuard = () => Promise<boolean>;
+let navGuard: NavGuard | null = null;
+// Set just before the guard itself walks history back, so the popstate that
+// lands isn't intercepted again by the very guard that approved it.
+let leaveApproved = false;
+
+/** Register (or clear, with null) the current view's leave guard. */
+export function setNavGuard(guard: NavGuard | null): void {
+  navGuard = guard;
+}
+
+/** Whether navigation may proceed. Exported for the leave paths that bypass the
+ *  router entirely — switching repo, signing out — which unmount the view and
+ *  its draft just as surely as a route change does. */
+export function confirmNavGuard(): Promise<boolean> {
+  return navGuard ? navGuard() : Promise.resolve(true);
+}
+
+/** Run `go` now, or after the guard allows it. Same-path navigation skips the
+ *  guard: re-entering the view you are on abandons nothing. */
+function guarded(destinationPath: string, go: () => void): void {
+  if (!navGuard || destinationPath === window.location.pathname) {
+    go();
+    return;
+  }
+  void confirmNavGuard().then((ok) => {
+    if (ok) {
+      go();
+    }
+  });
+}
+
 if (typeof window !== 'undefined') {
-  window.addEventListener('popstate', refresh);
+  window.addEventListener('popstate', () => {
+    // Back/forward has already moved the location by the time this fires, so a
+    // held navigation is undone rather than prevented: put the guarded view's
+    // entry back on top, ask, and only walk off it again on approval. Guards are
+    // only ever registered on view routes; anything else passes through.
+    if (navGuard && !leaveApproved && current.name === 'view') {
+      window.history.pushState({}, '', viewPath(current.view) + window.location.search);
+      void navGuard().then((ok) => {
+        if (ok) {
+          leaveApproved = true;
+          window.history.back();
+        }
+      });
+      return;
+    }
+    leaveApproved = false;
+    refresh();
+  });
 }
 
 /** Push a new path (keeping the current query string) and re-render routed views. */
 function navigate(path: string): void {
-  window.history.pushState({}, '', path + window.location.search);
-  refresh();
+  guarded(path, () => {
+    window.history.pushState({}, '', path + window.location.search);
+    refresh();
+  });
 }
 
 /** Path for a dashboard view (day is the base path). */
@@ -271,19 +329,21 @@ export function navigateToView(view: AppView): void {
  *  than stacking a second one Back would have to step over twice. */
 export function navigateToTask(taskId: string): void {
   const path = `${APP_BASE}/task/${encodeURIComponent(taskId)}`;
-  const url = path + window.location.search;
-  const previous = window.history.state as Record<string, unknown> | null;
-  // Where this entry was opened from, when that was another task. A re-open in
-  // place is not a move, so it keeps whatever the entry already recorded rather
-  // than naming the task as its own origin.
-  const from = current.name === 'task' && current.taskId !== taskId ? current.taskId : previous?.[FROM_KEY];
-  const state = from ? { [TASK_KEY]: true, [FROM_KEY]: from } : { [TASK_KEY]: true };
-  if (window.location.pathname === path) {
-    window.history.replaceState(state, '', url);
-  } else {
-    window.history.pushState(state, '', url);
-  }
-  refresh();
+  guarded(path, () => {
+    const url = path + window.location.search;
+    const previous = window.history.state as Record<string, unknown> | null;
+    // Where this entry was opened from, when that was another task. A re-open in
+    // place is not a move, so it keeps whatever the entry already recorded rather
+    // than naming the task as its own origin.
+    const from = current.name === 'task' && current.taskId !== taskId ? current.taskId : previous?.[FROM_KEY];
+    const state = from ? { [TASK_KEY]: true, [FROM_KEY]: from } : { [TASK_KEY]: true };
+    if (window.location.pathname === path) {
+      window.history.replaceState(state, '', url);
+    } else {
+      window.history.pushState(state, '', url);
+    }
+    refresh();
+  });
 }
 
 /** Go to a task as the way *back* — the parent of the subtask on screen.
@@ -340,18 +400,20 @@ export function navigateToDashboard(): void {
  *  mount and owns its fields from there. */
 export function navigateToTaskForm(taskId?: string | null, seed: TaskFormSeed = {}): void {
   const path = taskId ? `${APP_BASE}/task/${encodeURIComponent(taskId)}/edit` : `${APP_BASE}/new`;
-  const url = path + window.location.search;
-  const state = { [FORM_KEY]: true, [FORM_SEED_KEY]: seed, [FORM_SEQ_KEY]: ++formSeq };
-  // Re-opening the form you're already on (the sidebar's New task button stays
-  // clickable) reseeds it in place rather than stacking a second entry that Back
-  // would have to walk off twice. The new seq is what makes it *re*-seed: same
-  // path, new instance, so the form starts over instead of keeping what was typed.
-  if (window.location.pathname === path) {
-    window.history.replaceState(state, '', url);
-  } else {
-    window.history.pushState(state, '', url);
-  }
-  refresh();
+  guarded(path, () => {
+    const url = path + window.location.search;
+    const state = { [FORM_KEY]: true, [FORM_SEED_KEY]: seed, [FORM_SEQ_KEY]: ++formSeq };
+    // Re-opening the form you're already on (the sidebar's New task button stays
+    // clickable) reseeds it in place rather than stacking a second entry that Back
+    // would have to walk off twice. The new seq is what makes it *re*-seed: same
+    // path, new instance, so the form starts over instead of keeping what was typed.
+    if (window.location.pathname === path) {
+      window.history.replaceState(state, '', url);
+    } else {
+      window.history.pushState(state, '', url);
+    }
+    refresh();
+  });
 }
 
 /** Enter a URL an installed-app launch handed over: a manifest shortcut, a

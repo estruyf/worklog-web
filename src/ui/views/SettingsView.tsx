@@ -1,7 +1,8 @@
 import React, { useEffect, useId, useState } from 'react';
 import { Button, Card, Input, SectionLabel, Select, Toggle, ViewHeader } from '../primitives';
 import { AGENT_ICONS, StatusSettings } from '../components';
-import { useData } from '../context';
+import { useData, useUi } from '../context';
+import { setNavGuard } from '../router';
 import { worklogStore } from '../../data/worklogStore';
 import { AI_AGENTS, COMMAND_EXECUTOR_MIN_VERSION, COMMAND_EXECUTOR_URL, type AiAgent } from '../../model/aiAgents';
 import { AUTO_SYNC_EVENTS, type AutoSyncEvent } from '../../model/syncEvents';
@@ -42,6 +43,7 @@ function SettingRow({
  *  task-status list, which manages itself — see `StatusSettings`. */
 export function SettingsView() {
   const { hoursPerDay, weekStart, todosPerPage, defaultTaskSort, autoSync, aiAgents, saveSettings } = useData();
+  const { ask } = useUi().confirm;
 
   const [hours, setHours] = useState(String(hoursPerDay));
   const [week, setWeek] = useState(weekStart);
@@ -119,6 +121,41 @@ export function SettingsView() {
 
   const invalid = !hoursValid || !todoPageValid || (syncEnabled && !delayValid);
   const canSave = dirty && !invalid;
+
+  // While the draft deviates from config.json, every way off this view — the nav
+  // rail, a shortcut, browser Back, even switching repo or signing out — goes
+  // through this question first. Registered on `dirty` alone: an invalid value
+  // with nothing else changed holds nothing worth keeping. Saving or discarding
+  // flips `dirty` back and the cleanup stands the guard down.
+  useEffect(() => {
+    if (!dirty) {
+      return;
+    }
+    setNavGuard(() =>
+      ask({
+        title: 'Leave Settings without saving?',
+        message: 'Your changes here haven’t been saved and will be lost.',
+        confirmLabel: 'Discard and leave',
+        tone: 'danger',
+      }),
+    );
+    return () => setNavGuard(null);
+  }, [dirty, ask]);
+
+  // The browser-level counterpart, for reload and tab close, where the router
+  // never gets a say. Same shape as `useUnsavedGuard`, which covers saved-but-
+  // unsynced edits; this draft exists only in component state, so it gets its own.
+  useEffect(() => {
+    if (!dirty) {
+      return;
+    }
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [dirty]);
 
   /** Tick an event on or off, keeping the list in the canonical order so saving
    *  the same set twice writes the same config.json. */
