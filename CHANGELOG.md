@@ -17,7 +17,9 @@ Every change to Worklog, by day, newest first.
 
 ## 2026-08-19
 
-- Tasks can carry file attachments: the Attachments block sits under the task's description with a drop zone you can drag files onto or click to browse, and stores any file up to 10 MB in your repo's `assets/` folder, recorded on the task as a `- attachment:` line. Clicking a name downloads the file; deleting one removes the record and the file together.
+- Tasks can carry file attachments: "Attach" a file up to 10 MB and it is stored in your repo's `assets/` folder and recorded on the task as a `- attachment:` line. The list sits under the description with a drop zone for the next one; clicking a name downloads the file, and deleting one removes the record and the file together.
+- A task now offers what it hasn't got instead of showing empty sections: "+ Description", "Attach" and "+ Subtask" sit in one row under the description, and each drops out as soon as that block exists.
+- The notes log is the other way round: the composer is at the top — one line until you click into it, then a full editor that stays open — with the notes under it newest first, each a row headed by the day it was written rather than a card.
 - Ticking a task done (or reopening one) now shows a toast with an Undo that puts everything back — the task's status, the subtasks a close took down with it, and the original completion date on a reopen.
 - On phones and in the day view's to-do rail, every task row has a "⋯" menu with View, Edit and Delete — actions that used to exist only as desktop hover buttons — and the done/worked circles are easier to hit without being easier to mix up.
 - The Overdue view has the same search/status/priority/tag toolbar as the other lists; clients stay ranked longest-overdue first while the sort applies within each card.

@@ -1,22 +1,37 @@
 import React, { useCallback, useRef, useState } from 'react';
 import type { Task } from '../../../model/types';
-import { Button, Card, EmptyState, LinkButton, SectionLabel, TextArea } from '../../primitives';
+import { isValidISODate } from '../../../util/date';
+import { Button, LinkButton, TextArea } from '../../primitives';
 import { useData, useUi } from '../../context';
 import { useMarkdownImages } from '../../hooks';
+import { MOD_KEY, weekdayShort } from '../../utils';
 import { MarkdownView } from '../MarkdownView';
 import { useMarkdownFormat } from '../markdown-format';
 import { useTaskMention } from '../task-mention';
 
-/** The task's progress log: timestamped Markdown notes, newest at the bottom, and
- *  the box that adds one. Separate from the description — that says what the task
- *  is, these say what has happened to it.
+/** "Mon 3" — the weekday and day a note was written, which is what someone
+ *  scanning the log is reading for. The stored stamp keeps the year and the time,
+ *  so it stays on the row as its title rather than being thrown away. */
+function stampLabel(stamp: string): string {
+  const date = stamp.slice(0, 10);
+  return isValidISODate(date) ? `${weekdayShort(date)} ${Number(date.slice(8))}` : stamp;
+}
+
+/** The task's progress log: the box that adds a note, then the notes themselves
+ *  newest first, so what you just wrote lands directly under the box you wrote it
+ *  in. Separate from the description — that says what the task is, these say what
+ *  has happened to it.
  *
- *  `bare` drops the section's own heading and top margin, for the phone sheet
- *  where the dialog's title bar already says "Notes" and owns the spacing. */
+ *  `bare` drops the section's top rule and margin, for the phone sheet where the
+ *  dialog's title bar already says "Notes" and owns the spacing. */
 export function NotesSection({ task, bare = false }: { task: Task; bare?: boolean }) {
   const { addNote, updateNote, deleteNote } = useData();
   const { noteDraft, setNoteDraft, confirm } = useUi();
   const notes = task.notes ?? [];
+  // Whether the composer is open. Starts open on a draft carried over from
+  // another task — `noteDraft` outlives the panel, and a draft behind a collapsed
+  // box is a draft nobody knows is there.
+  const [composing, setComposing] = useState(() => noteDraft.trim() !== '');
   // The note being corrected, by its index in `notes`, and the text so far. Local
   // rather than in `useUi`: unlike the composer draft above it, an open correction
   // has nothing to say once the panel is gone.
@@ -89,20 +104,131 @@ export function NotesSection({ task, bare = false }: { task: Task; bare?: boolea
   };
 
   return (
-    <div className={bare ? undefined : 'mt-9'}>
-      {!bare && <SectionLabel className="mb-[10px]">Notes{notes.length > 0 ? ` · ${notes.length}` : ''}</SectionLabel>}
-      {notes.length > 0 ? (
-        <div className="flex flex-col gap-[10px] mb-3">
-          {notes.map((n, i) => {
-            const edit = editing?.index === i ? editing : null;
-            return (
-              <Card key={i} tone="muted" radius="panel" className="group px-[16px] py-[11px]">
-                <div className="flex items-center justify-between gap-3 mb-[5px]">
-                  <span className="text-count font-semibold text-neutral-650">{n.timestamp}</span>
+    <div className={bare ? undefined : 'mt-8 pt-5 border-t border-neutral-375'}>
+      {/* Collapsed until it is clicked: most visits to a task read the log rather
+          than add to it, and an editor sitting open at the top of it says
+          otherwise. Once opened it stays open — the box you are typing in must
+          not resize under you, and the draft outlives the panel anyway. */}
+      {composing ? (
+        <div className="flex flex-col gap-2">
+          <TextArea
+            ref={composerRef}
+            header={composerFormat.toolbar}
+            autoFocus
+            autoGrow
+            value={noteDraft}
+            onChange={(e) => setNoteDraft(e.target.value)}
+            onPaste={composerImg.onPaste}
+            onDrop={composerImg.onDrop}
+            onDragOver={composerImg.onDragOver}
+            {...composerMention.props}
+            onKeyDown={(e) => {
+              composerMention.props.onKeyDown(e);
+              composerFormat.props.onKeyDown(e);
+              if (e.defaultPrevented) {
+                return;
+              }
+              if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+                e.preventDefault();
+                onAddNote();
+              }
+            }}
+            aria-label="New note"
+            placeholder="What happened on this task? Markdown, # to link a task, and pasted or dropped images."
+            className="w-full"
+            textareaClassName="min-h-[96px] max-h-[60vh] leading-[1.55]"
+          />
+          <div className="flex justify-end items-center gap-3">
+            <Button variant="primary" size="xs" onClick={onAddNote} disabled={!noteDraft.trim()} className="font-semibold">
+              Add note
+            </Button>
+          </div>
+          {composerImg.error && <div className="text-chip text-danger-675">{composerImg.error}</div>}
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setComposing(true)}
+          className="w-full flex items-center justify-between gap-3 px-[14px] py-[11px] rounded-control-md border border-neutral-450 bg-neutral-100 text-left text-control-lg cursor-text hover:bg-white hover:border-neutral-500"
+        >
+          <span className="truncate text-neutral-675">
+            What happened on this task? <span className="text-neutral-625">Markdown, # to link a task</span>
+          </span>
+          <span className="shrink-0 text-count text-neutral-625">{MOD_KEY}↵</span>
+        </button>
+      )}
+      {/* Newest first, over the stored order — the index each row carries is its
+          place in the file, which is what an edit or a delete is addressed by. */}
+      {notes.length > 0 && (
+        <div className="flex flex-col mt-2">
+          {notes
+            .map((n, i) => ({ n, i }))
+            .reverse()
+            .map(({ n, i }) => {
+              const edit = editing?.index === i ? editing : null;
+              return (
+                <div key={i} className="group flex items-start gap-4 py-[11px] border-t border-neutral-375 first:border-t-0">
+                  <span title={n.timestamp} className="shrink-0 w-[52px] pt-[3px] text-count text-neutral-650">
+                    {stampLabel(n.timestamp)}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    {edit ? (
+                      <div className="flex flex-col gap-2">
+                        <TextArea
+                          ref={editRef}
+                          header={editFormat.toolbar}
+                          autoFocus
+                          autoGrow
+                          value={edit.text}
+                          onChange={(e) => setEditing({ index: i, text: e.target.value })}
+                          onPaste={editImg.onPaste}
+                          onDrop={editImg.onDrop}
+                          onDragOver={editImg.onDragOver}
+                          {...editMention.props}
+                          onKeyDown={(e) => {
+                            // The open task list owns Escape, Enter and the arrows;
+                            // what it took is marked handled.
+                            editMention.props.onKeyDown(e);
+                            // Then the formatting shortcuts, which take ⌘B and a
+                            // plain ↵ inside a list; both bail on a handled event.
+                            editFormat.props.onKeyDown(e);
+                            if (e.defaultPrevented) {
+                              return;
+                            }
+                            if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+                              e.preventDefault();
+                              onSaveEdit();
+                            } else if (e.key === 'Escape') {
+                              // Cancel the edit, not the whole detail panel — that
+                              // listener sits on window (see ../../WorklogApp).
+                              e.stopPropagation();
+                              setEditing(null);
+                            }
+                          }}
+                          aria-label={`Edit note from ${n.timestamp}`}
+                          className="w-full"
+                          textareaClassName="min-h-[68px] max-h-[60vh] leading-[1.55]"
+                        />
+                        {/* Adding an image is on the formatting bar above now, so
+                            this row is only the two ways out of the correction. */}
+                        <div className="flex justify-end items-center gap-3">
+                          <LinkButton size="xs" tone="muted" onClick={() => setEditing(null)}>
+                            Cancel
+                          </LinkButton>
+                          <Button variant="primary" size="xs" onClick={onSaveEdit} disabled={!edit.text.trim()} className="font-semibold">
+                            Save note
+                          </Button>
+                        </div>
+                        {editImg.error && <div className="text-chip text-danger-675">{editImg.error}</div>}
+                      </div>
+                    ) : (
+                      <MarkdownView text={n.text} className="text-control-lg leading-[1.6]" />
+                    )}
+                  </div>
                   {!edit && (
-                    // Hover-revealed only where there is a hover: on a phone —
-                    // where these live in the notes sheet — they stay visible.
-                    <div className="flex items-center gap-[10px] lg:opacity-0 lg:group-hover:opacity-100 lg:focus-within:opacity-100">
+                    // Hover-revealed only where there is a hover: on a phone — where
+                    // these live in the notes sheet — they stay visible.
+                    <div className="shrink-0 flex items-center gap-[10px] pt-[3px] lg:opacity-0 lg:group-hover:opacity-100 lg:focus-within:opacity-100">
                       <LinkButton
                         size="inherit"
                         tone="muted"
@@ -124,101 +250,12 @@ export function NotesSection({ task, bare = false }: { task: Task; bare?: boolea
                     </div>
                   )}
                 </div>
-                {edit ? (
-                  <div className="flex flex-col gap-2">
-                    <TextArea
-                      ref={editRef}
-                      header={editFormat.toolbar}
-                      autoFocus
-                      autoGrow
-                      value={edit.text}
-                      onChange={(e) => setEditing({ index: i, text: e.target.value })}
-                      onPaste={editImg.onPaste}
-                      onDrop={editImg.onDrop}
-                      onDragOver={editImg.onDragOver}
-                      {...editMention.props}
-                      onKeyDown={(e) => {
-                        // The open task list owns Escape, Enter and the arrows;
-                        // what it took is marked handled.
-                        editMention.props.onKeyDown(e);
-                        // Then the formatting shortcuts, which take ⌘B and a
-                        // plain ↵ inside a list; both bail on a handled event.
-                        editFormat.props.onKeyDown(e);
-                        if (e.defaultPrevented) {
-                          return;
-                        }
-                        if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-                          e.preventDefault();
-                          onSaveEdit();
-                        } else if (e.key === 'Escape') {
-                          // Cancel the edit, not the whole detail panel — that
-                          // listener sits on window (see ../../WorklogApp).
-                          e.stopPropagation();
-                          setEditing(null);
-                        }
-                      }}
-                      aria-label={`Edit note from ${n.timestamp}`}
-                      className="w-full"
-                      textareaClassName="min-h-[68px] max-h-[60vh] leading-[1.55]"
-                    />
-                    {/* Adding an image is on the formatting bar above now, so
-                        this row is only the two ways out of the correction. */}
-                    <div className="flex justify-end items-center gap-3">
-                      <LinkButton size="xs" tone="muted" onClick={() => setEditing(null)}>
-                        Cancel
-                      </LinkButton>
-                      <Button variant="primary" size="xs" onClick={onSaveEdit} disabled={!edit.text.trim()} className="font-semibold">
-                        Save note
-                      </Button>
-                    </div>
-                    {editImg.error && <div className="text-chip text-danger-675">{editImg.error}</div>}
-                  </div>
-                ) : (
-                  <MarkdownView text={n.text} className="text-control-lg leading-[1.6]" />
-                )}
-              </Card>
-            );
-          })}
+              );
+            })}
         </div>
-      ) : (
-        <EmptyState size="sm" className="mb-3">No notes yet. Add one below to track progress on this task.</EmptyState>
       )}
-      <div className="flex flex-col gap-2">
-        <TextArea
-          ref={composerRef}
-          header={composerFormat.toolbar}
-          autoGrow
-          value={noteDraft}
-          onChange={(e) => setNoteDraft(e.target.value)}
-          onPaste={composerImg.onPaste}
-          onDrop={composerImg.onDrop}
-          onDragOver={composerImg.onDragOver}
-          {...composerMention.props}
-          onKeyDown={(e) => {
-            composerMention.props.onKeyDown(e);
-            composerFormat.props.onKeyDown(e);
-            if (e.defaultPrevented) {
-              return;
-            }
-            if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-              e.preventDefault();
-              onAddNote();
-            }
-          }}
-          aria-label="New note"
-          placeholder="Add a note… (⌘/Ctrl+Enter to save). Supports Markdown, # to link a task, and pasted or dropped images."
-          className="w-full"
-          textareaClassName="min-h-[68px] max-h-[60vh] leading-[1.55]"
-        />
-        {composerMention.panel}
-        {editMention.panel}
-        <div className="flex justify-end items-center gap-3">
-          <Button variant="primary" size="xs" onClick={onAddNote} disabled={!noteDraft.trim()} className="font-semibold">
-            Add note
-          </Button>
-        </div>
-        {composerImg.error && <div className="text-chip text-danger-675">{composerImg.error}</div>}
-      </div>
+      {composerMention.panel}
+      {editMention.panel}
       {/* One input per box: a single shared one would be pointed at whichever
           picker opened it last, and the two can be open at the same time. */}
       <input ref={composerImg.fileInputRef} type="file" accept="image/*" multiple onChange={composerImg.onFileChange} className="hidden" />

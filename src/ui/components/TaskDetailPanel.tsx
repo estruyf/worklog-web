@@ -6,7 +6,7 @@ import { Button, IconButton, LinkButton, Modal } from '../primitives';
 import { CopyButton } from './CopyButton';
 import { LinkList } from './LinkList';
 import { DescriptionEditor } from './DescriptionEditor';
-import { AttachmentsSection, NotesSection, SubtaskList, TaskDetailHeader, TaskSidebar } from './task-detail';
+import { AttachmentsSection, NotesSection, SubtaskList, TaskContentActions, TaskDetailHeader, TaskSidebar } from './task-detail';
 import { useData, useUi } from '../context';
 import { navigateToDashboard, navigateToTask } from '../router';
 
@@ -58,6 +58,10 @@ export function TaskDetailPanel() {
   }
   // General to-dos are open or closed only — no worked-on marking.
   const isTodo = isGeneralTodoClientId(clientIdOf(task));
+  // Measured on the draft rather than the task: it is what the editor shows, and
+  // in `read` the two are the same text. Nothing written and nothing being
+  // written means no section at all — "+ Description" below is the way in.
+  const hasDescription = descMode !== 'read' || descDraft.trim() !== '';
   return (
     // The header is the band; the rest scrolls under it. The gutter sits outside
     // the centering box, the way every view under src/ui/views does it — inside,
@@ -82,7 +86,10 @@ export function TaskDetailPanel() {
 
               <LinkList links={task.links} className="mb-6" />
 
-              <DescriptionEditor
+              {/* Nothing to show and nothing being written: the way in is the
+                  "+ Description" offer below, not an empty editor. */}
+              {hasDescription && (
+                <DescriptionEditor
                   value={descDraft}
                   onChange={setDescDraft}
                   mode={descMode}
@@ -96,8 +103,7 @@ export function TaskDetailPanel() {
                   // Edit opens the editor; Cancel and Save are the two ways out
                   // of it, and both are on screen the whole time it is open —
                   // including in Preview, which is a look at the draft rather
-                  // than a way of leaving it. Nothing to edit yet needs no
-                  // button: the empty state is itself the way in.
+                  // than a way of leaving it.
                   action={
                     descMode === 'read' ? (
                       // Measured against what is on screen, which is the draft —
@@ -121,7 +127,10 @@ export function TaskDetailPanel() {
                       </>
                     )
                   }
-                />
+                  />
+              )}
+
+              <TaskContentActions task={task} hasDescription={hasDescription} hasSubtasks={subtasks.length > 0} />
 
               <AttachmentsSection task={task} />
 

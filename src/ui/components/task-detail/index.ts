@@ -10,3 +10,4 @@ export { SubtaskList } from './SubtaskList';
 export { TaskActions } from './TaskActions';
 export { NotesSection } from './NotesSection';
 export { AttachmentsSection } from './AttachmentsSection';
+export { TaskContentActions } from './TaskContentActions';
