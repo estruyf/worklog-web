@@ -11,7 +11,14 @@
 // renders `AUTO_SYNC_EVENTS`.
 
 /** A user-facing change kind that can trigger an immediate sync. */
-export type AutoSyncEvent = 'taskCreated' | 'taskStatus' | 'taskEdited' | 'timeLogged' | 'settings' | 'dayNote';
+export type AutoSyncEvent =
+  | 'taskCreated'
+  | 'taskStatus'
+  | 'taskEdited'
+  | 'timeLogged'
+  | 'settings'
+  | 'dayNote'
+  | 'prompt';
 
 export interface AutoSyncEventDef {
   id: AutoSyncEvent;
@@ -55,6 +62,14 @@ export const AUTO_SYNC_EVENTS: AutoSyncEventDef[] = [
     label: 'A day note is saved',
     description: 'The freeform Markdown written on a day, saved or cleared from the day view.',
   },
+  // Its own event rather than part of `taskEdited`: a prompt queue is an optional
+  // block (`features.prompts`), and someone who writes prompts for an agent
+  // running elsewhere wants them on the branch sooner than the rest of the task.
+  {
+    id: 'prompt',
+    label: 'A prompt is written or run',
+    description: 'A prompt in a task’s queue is added, edited, ticked off as run, or removed.',
+  },
 ];
 
 /** Rebuild reason → the event it counts as. A reason absent here never triggers a
@@ -82,6 +97,11 @@ const REASON_EVENT: Record<string, AutoSyncEvent> = {
   removeWorklog: 'timeLogged',
 
   setDayNote: 'dayNote',
+
+  addPrompt: 'prompt',
+  updatePrompt: 'prompt',
+  setPromptRan: 'prompt',
+  deletePrompt: 'prompt',
 
   addClient: 'settings',
   updateClient: 'settings',

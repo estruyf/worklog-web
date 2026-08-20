@@ -79,6 +79,8 @@ describe('the event map', () => {
     expect(autoSyncEventFor('setWorklog')).toBe('timeLogged');
     expect(autoSyncEventFor('updateSettings')).toBe('settings');
     expect(autoSyncEventFor('setDayNote')).toBe('dayNote');
+    expect(autoSyncEventFor('addPrompt')).toBe('prompt');
+    expect(autoSyncEventFor('setPromptRan')).toBe('prompt');
   });
 
   it('maps the sync machinery to nothing, so a pull can never trigger a sync', () => {
@@ -187,6 +189,32 @@ describe('syncing on an event', () => {
     const store = await openStore({ enabled: false, delayMinutes: DELAY_MINUTES, events: ['taskCreated'] });
 
     await store.setDayNote('2026-08-03', 'Standup ran long.');
+    await vi.advanceTimersByTimeAsync(DELAY_MS * 2);
+
+    expect(commitAttempts).toBe(0);
+    expect(store.hasPending()).toBe(true);
+  });
+
+  it('pushes a prompt within seconds when that is the ticked event', async () => {
+    const store = await openStore({ enabled: false, delayMinutes: DELAY_MINUTES, events: ['prompt'] });
+    const task = await store.createTask({ title: 'Write the release notes', clientId: 'acme' });
+    // The task itself is not a ticked event, so nothing has been pushed yet: the
+    // prompt is what puts both on the branch.
+    await vi.advanceTimersByTimeAsync(EVENT_MS);
+    expect(commitAttempts).toBe(0);
+
+    await store.addPrompt(task!.id, 'Draft', 'Summarise the changelog since the last tag.');
+    await vi.advanceTimersByTimeAsync(EVENT_MS);
+
+    expect(store.hasPending()).toBe(false);
+    expect(files['clients/acme.md']).toContain('Summarise the changelog since the last tag.');
+  });
+
+  it('leaves a prompt alone when the ticked event is a different kind', async () => {
+    const store = await openStore({ enabled: false, delayMinutes: DELAY_MINUTES, events: ['taskEdited'] });
+    const task = await store.createTask({ title: 'Write the release notes', clientId: 'acme' });
+
+    await store.addPrompt(task!.id, 'Draft', 'Summarise the changelog since the last tag.');
     await vi.advanceTimersByTimeAsync(DELAY_MS * 2);
 
     expect(commitAttempts).toBe(0);

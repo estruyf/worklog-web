@@ -15,6 +15,14 @@ Every change to Worklog, by day, newest first.
      both). Links must be absolute — a relative path resolves against /changelog and
      404s. -->
 
+## 2026-08-20
+
+- A long link pasted into a note, a description or a day note now wraps instead of running
+  past the edge of the card — on a phone it used to spill over the note's Edit and Delete.
+- **Sync right away after** has a new kind to tick: a prompt written, edited, ticked off as run or
+  removed in a task's queue. Prompts used to wait for the sync delay or the sync button, since no
+  event covered them.
+
 ## 2026-08-19
 
 - A prompt in a task's queue can go straight to an AI agent. Whichever you switched on under

@@ -248,6 +248,11 @@ body {
   font-size: 14.5px;
   line-height: 1.65;
   color: #2a2f36;
+  /* A pasted tracker URL is one unbreakable word, and on a phone it is wider
+     than the column it lands in — it would paint over the row's Edit/Delete.
+     `anywhere` rather than `break-word` because it also shrinks the min-content
+     width, which is what lets a task item's flex `<span>` give way. */
+  overflow-wrap: anywhere;
 }
 .wl-md > :first-child {
   margin-top: 0;
