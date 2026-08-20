@@ -791,3 +791,7 @@ test/roundtrip.test.ts   # golden round-trip tests
   target repo are left as they are.
 - A task deeplink opened without a session is dropped rather than resumed after signing in — the
   app redirects to the sign-in page and the query goes with it.
+
+## License
+
+[MIT](LICENSE) © Elio Struyf.

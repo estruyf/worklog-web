@@ -17,6 +17,7 @@ Every change to Worklog, by day, newest first.
 
 ## 2026-08-20
 
+- Worklog is MIT licensed: the repo now carries a [LICENSE](https://github.com/estruyf/worklog-web/blob/main/LICENSE) file and `package.json` declares it, so tools that scan dependencies no longer report the license as unknown.
 - A long link pasted into a note, a description or a day note now wraps instead of running
   past the edge of the card — on a phone it used to spill over the note's Edit and Delete.
 - **Sync right away after** has a new kind to tick: a prompt written, edited, ticked off as run or
