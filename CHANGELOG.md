@@ -20,6 +20,7 @@ Every change to Worklog, by day, newest first.
 - Fenced code blocks in descriptions, notes and previews are syntax highlighted, using the [Demo Time](https://marketplace.visualstudio.com/items?itemName=eliostruyf.vscode-demotime-theme) VS Code theme. Name the language on the opening fence and TypeScript, JavaScript, JSX/TSX, JSON, HTML, CSS, Markdown, shell, YAML, TOML, INI and Dockerfile get colour; anything else stays plain text.
 - Code blocks wrap their long lines instead of scrolling sideways, keep their text readable on both themes when no language is named, and carry a copy button that appears when you point at the block.
 - **Settings → Code block theme** picks the light or the dark Demo Time theme for those blocks, or follows your operating system, which is what a repo that has never set it does.
+- The tag suggestion list opens upwards when the field sits near the bottom of the window, instead of hanging off the end of the page and leaving you to scroll to see what you can pick.
 
 ## 2026-08-20
 

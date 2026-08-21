@@ -1,7 +1,12 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { addTag, isNewTag, matchExistingTag, normalizeTag, removeTag, suggestTags } from '../utils';
 
 const SUGGESTION_LIMIT = 8;
+/** Gap between the field and the list, the margin the list keeps from the
+ *  viewport edge, and how tall it gets when there is room for all of it. */
+const GAP = 4;
+const EDGE = 8;
+const MAX_HEIGHT = 210;
 
 /** Tag entry as a combobox rather than a free-text field: selected tags are
  * chips, and typing filters the tags already in use so an existing one is one
@@ -26,6 +31,9 @@ export function TagPicker({
   const [open, setOpen] = useState(false);
   const [cursor, setCursor] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  const fieldRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+  const [drop, setDrop] = useState<{ up: boolean; maxHeight: number }>({ up: false, maxHeight: MAX_HEIGHT });
 
   const suggestions = useMemo(() => suggestTags(query, known, value, SUGGESTION_LIMIT), [query, known, value]);
   const canCreate = isNewTag(query, known, value);
@@ -33,6 +41,49 @@ export function TagPicker({
   // space — so "existing tag" is always what Enter reaches first.
   const optionCount = suggestions.length + (canCreate ? 1 : 0);
   const at = Math.min(cursor, Math.max(optionCount - 1, 0));
+
+  // The list hangs below the field by default, but this picker sits at the
+  // bottom of a rail inside the scrolling column — an in-flow list that doesn't
+  // fit there grows that column's scroll height instead of overlaying it, so the
+  // options you opened it for end up below the fold. Whichever side has more
+  // room wins, and the list is capped to what that side actually has.
+  const place = useCallback(() => {
+    const rect = fieldRef.current?.getBoundingClientRect();
+    const list = listRef.current;
+    if (!rect || !list) {
+      return;
+    }
+    // The list's own content decides this, not the cap: a two-option list that
+    // fits below has no reason to jump to the other side.
+    const wanted = Math.min(MAX_HEIGHT, list.scrollHeight);
+    const below = window.innerHeight - EDGE - (rect.bottom + GAP);
+    const above = rect.top - GAP - EDGE;
+    const up = below < wanted && above > below;
+    setDrop({ up, maxHeight: Math.max(0, Math.min(wanted, up ? above : below)) });
+  }, []);
+
+  // Measured after the list renders rather than estimated: its height follows the
+  // number of suggestions, which changes with every keystroke.
+  useLayoutEffect(() => {
+    if (open && optionCount > 0) {
+      place();
+    }
+  }, [open, optionCount, place]);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+    // Capture, because the column that scrolls this field is not the window and
+    // scroll events don't bubble.
+    const onScroll = () => place();
+    window.addEventListener('scroll', onScroll, true);
+    window.addEventListener('resize', place);
+    return () => {
+      window.removeEventListener('scroll', onScroll, true);
+      window.removeEventListener('resize', place);
+    };
+  }, [open, place]);
 
   const commit = (raw: string) => {
     const next = addTag(value, raw, known);
@@ -97,6 +148,7 @@ export function TagPicker({
       }}
     >
       <div
+        ref={fieldRef}
         onClick={() => inputRef.current?.focus()}
         className="flex flex-wrap items-center gap-[6px] w-full px-[10px] py-[7px] border border-neutral-525 rounded-control-lg bg-white cursor-text focus-within:border-brand-500"
       >
@@ -146,7 +198,14 @@ export function TagPicker({
       </div>
 
       {open && optionCount > 0 && (
-        <div className="absolute left-0 right-0 top-[calc(100%+4px)] z-30 max-h-[210px] overflow-auto border border-neutral-400 rounded-[10px] bg-white shadow-lg py-[5px]">
+        <div
+          ref={listRef}
+          style={{ maxHeight: drop.maxHeight }}
+          className={
+            'absolute left-0 right-0 z-30 overflow-auto border border-neutral-400 rounded-[10px] bg-white shadow-lg py-[5px] ' +
+            (drop.up ? 'bottom-[calc(100%+4px)]' : 'top-[calc(100%+4px)]')
+          }
+        >
           {suggestions.map((tag, i) => (
             <button
               key={tag}
