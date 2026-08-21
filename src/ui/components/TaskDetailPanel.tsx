@@ -84,8 +84,12 @@ export function TaskDetailPanel() {
           <div className="lg:flex lg:gap-8">
             <div className="lg:flex-1 lg:min-w-0">
               {/* Keyed by the task so a rename left open doesn't follow you to
-                  the next one, the same as the prompt composer below. */}
-              <TitleEditor key={task.id} task={task} />
+                  the next one, the same as the prompt composer below. The key is
+                  prefixed because two siblings may not share one: React maps the
+                  old children by key, so the second occurrence hides the first and
+                  only one of them is ever unmounted — the other's DOM node stays
+                  behind, and every navigation stacks another title on the page. */}
+              <TitleEditor key={`title-${task.id}`} task={task} />
 
               <LinkList links={task.links} className="mb-6" />
 
@@ -145,7 +149,7 @@ export function TaskDetailPanel() {
 
               {/* Keyed by the task so an expanded prompt, an open edit or a
                   half-written draft doesn't follow you to the next one. */}
-              <PromptsSection key={task.id} task={task} />
+              <PromptsSection key={`prompts-${task.id}`} task={task} />
 
               <div className="hidden lg:block">
                 <NotesSection task={task} />

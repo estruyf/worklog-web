@@ -25,6 +25,7 @@ Every change to Worklog, by day, newest first.
 - Code blocks wrap their long lines instead of scrolling sideways, keep their text readable on both themes when no language is named, and carry a copy button that appears when you point at the block.
 - **Settings → Code block theme** picks the light or the dark Demo Time theme for those blocks, or follows your operating system, which is what a repo that has never set it does.
 - The tag suggestion list opens upwards when the field sits near the bottom of the window, instead of hanging off the end of the page and leaving you to scroll to see what you can pick.
+- Opening one task after another no longer leaves the previous task's title stacked on the page — the title of the task you are looking at is the only one there, however many tasks and subtasks you walk through.
 
 ## 2026-08-20
 
