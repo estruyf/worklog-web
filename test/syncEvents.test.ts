@@ -47,12 +47,16 @@ function fakeFetch(input: string, init?: RequestInit): Promise<Response> {
     if (commitFails) {
       return Promise.reject(new TypeError('Failed to fetch'));
     }
-    const body = JSON.parse(String(init?.body)) as { files: { path: string; content?: string; deleted?: boolean }[] };
+    const body = JSON.parse(String(init?.body)) as {
+      files: { path: string; content?: string; base64?: string; deleted?: boolean }[];
+    };
     for (const f of body.files) {
       if (f.deleted) {
         delete files[f.path];
       } else {
-        files[f.path] = f.content ?? '';
+        // An attachment travels as `base64`; keeping it verbatim is enough here,
+        // where all a test asks is whether the bytes reached the branch at all.
+        files[f.path] = f.content ?? f.base64 ?? '';
       }
     }
     head = `c${++commits}`;
@@ -208,6 +212,20 @@ describe('syncing on an event', () => {
 
     expect(store.hasPending()).toBe(false);
     expect(files['clients/acme.md']).toContain('Summarise the changelog since the last tag.');
+  });
+
+  it('pushes an attachment with the task that carries it, on the edit event', async () => {
+    const store = await openStore({ enabled: false, delayMinutes: DELAY_MINUTES, events: ['taskEdited'] });
+    const task = await store.createTask({ title: 'Rebuild the reporting export', clientId: 'acme' });
+    await vi.advanceTimersByTimeAsync(EVENT_MS);
+    expect(commitAttempts).toBe(0);
+
+    await store.addAttachment(task!.id, 'export-spec.pdf', Buffer.from('spec bytes').toString('base64'));
+    await vi.advanceTimersByTimeAsync(EVENT_MS);
+
+    expect(store.hasPending()).toBe(false);
+    expect(files['clients/acme.md']).toContain('- attachment: assets/export-spec.pdf');
+    expect(files['assets/export-spec.pdf']).toBeDefined();
   });
 
   it('leaves a prompt alone when the ticked event is a different kind', async () => {

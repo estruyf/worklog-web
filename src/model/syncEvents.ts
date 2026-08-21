@@ -41,7 +41,8 @@ export const AUTO_SYNC_EVENTS: AutoSyncEventDef[] = [
   {
     id: 'taskEdited',
     label: 'A task is edited or deleted',
-    description: 'Title, due date, links, tags, description, task notes, recurrence, parent — or a deletion.',
+    description:
+      'Title, due date, links, tags, description, task notes, attachments, recurrence, parent — or a deletion.',
   },
   {
     id: 'timeLogged',
@@ -90,6 +91,8 @@ const REASON_EVENT: Record<string, AutoSyncEvent> = {
   addNote: 'taskEdited',
   updateNote: 'taskEdited',
   deleteNote: 'taskEdited',
+  addAttachment: 'taskEdited',
+  deleteAttachment: 'taskEdited',
   setRecurrence: 'taskEdited',
   setParent: 'taskEdited',
 

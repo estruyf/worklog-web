@@ -17,6 +17,7 @@ Every change to Worklog, by day, newest first.
 
 ## 2026-08-21
 
+- Adding or removing a task attachment now counts as a task edit for automatic sync, so with “A task is edited or deleted” ticked the file reaches GitHub within seconds instead of waiting for the timer or the Sync button.
 - Fenced code blocks in descriptions, notes and previews are syntax highlighted, using the [Demo Time](https://marketplace.visualstudio.com/items?itemName=eliostruyf.vscode-demotime-theme) VS Code theme. Name the language on the opening fence and TypeScript, JavaScript, JSX/TSX, JSON, HTML, CSS, Markdown, shell, YAML, TOML, INI and Dockerfile get colour; anything else stays plain text.
 - Code blocks wrap their long lines instead of scrolling sideways, keep their text readable on both themes when no language is named, and carry a copy button that appears when you point at the block.
 - **Settings → Code block theme** picks the light or the dark Demo Time theme for those blocks, or follows your operating system, which is what a repo that has never set it does.
