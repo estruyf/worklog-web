@@ -5,6 +5,7 @@
 import { Store } from '../store';
 import { parseAiAgents, type AiAgent } from '../model/aiAgents';
 import { parseAutoSyncEvents, type AutoSyncEvent } from '../model/syncEvents';
+import { normalizeCodeTheme, type CodeTheme } from '../model/codeTheme';
 import { normalizeTaskSort, type TaskSortPref } from '../model/taskSort';
 import { parseWeekStart } from '../workspace/paths';
 
@@ -17,6 +18,8 @@ export interface SettingsFields {
   todosPerPage?: number;
   /** The order open-task lists start in. */
   defaultTaskSort?: TaskSortPref;
+  /** Which Demo Time theme paints fenced code blocks. */
+  codeTheme?: CodeTheme;
   /** Automatic Git sync after logging time. Only the provided keys are changed;
    *  `events` is the change kinds that sync right away instead of on the delay. */
   autoSync?: { enabled?: boolean; delayMinutes?: number; events?: AutoSyncEvent[] };
@@ -55,6 +58,11 @@ export async function updateSettings(store: Store, fields: SettingsFields): Prom
   // a sort key this version doesn't know means a config written by a newer one.
   if (fields.defaultTaskSort !== undefined) {
     config.defaultTaskSort = normalizeTaskSort(fields.defaultTaskSort);
+  }
+
+  // Normalized rather than validated, for the same reason as `defaultTaskSort`.
+  if (fields.codeTheme !== undefined) {
+    config.codeTheme = normalizeCodeTheme(fields.codeTheme);
   }
 
   if (fields.autoSync !== undefined) {

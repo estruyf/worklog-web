@@ -9,6 +9,7 @@ import { DEFAULT_STATUSES, normalizeStatuses } from '../model/status';
 import { parseAiAgents } from '../model/aiAgents';
 import { parseAutoSyncEvents } from '../model/syncEvents';
 import { DEFAULT_TASK_SORT, normalizeTaskSort } from '../model/taskSort';
+import { DEFAULT_CODE_THEME, normalizeCodeTheme } from '../model/codeTheme';
 
 export const DEFAULT_HOURS_PER_DAY = 8;
 export const DEFAULT_WEEK_START = 0; // Sunday
@@ -198,6 +199,7 @@ function defaultConfig(): DaylogConfig {
     weekStart: DEFAULT_WEEK_START,
     todosPerPage: DEFAULT_TODOS_PER_PAGE,
     defaultTaskSort: { ...DEFAULT_TASK_SORT },
+    codeTheme: DEFAULT_CODE_THEME,
     clients: [],
     // Copied, not shared: the caller may edit the result, and the status editor
     // splices this very array when config.json is missing.
@@ -261,6 +263,9 @@ export class Workspace {
         // Absent in every repo written before this setting existed, so the
         // fallback is the order those repos have always been shown in.
         defaultTaskSort: normalizeTaskSort(parsed.defaultTaskSort),
+        // Absent in every repo written before this setting existed, and absent
+        // reads as "follow the OS" — see normalizeCodeTheme.
+        codeTheme: normalizeCodeTheme(parsed.codeTheme),
         // `archived`, `description` and `links` are normalized to value-or-absent
         // so they never round-trip a stray value into config.json (JSON.stringify
         // drops the undefined).

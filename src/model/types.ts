@@ -6,12 +6,14 @@ import type { AutoSyncEvent } from './syncEvents';
 import type { AiAgent } from './aiAgents';
 import type { TaskPriority } from './priority';
 import type { TaskSortPref } from './taskSort';
+import type { CodeTheme } from './codeTheme';
 
 export type { Recurrence } from './recurrence';
 export type { AutoSyncEvent } from './syncEvents';
 export type { AiAgent } from './aiAgents';
 export type { TaskPriority } from './priority';
 export type { TaskSortPref } from './taskSort';
+export type { CodeTheme } from './codeTheme';
 
 // Statuses are configurable (see StatusDef / config.json). The type is a plain
 // string id; the configured StatusDef list supplies labels, colors and which id
@@ -171,6 +173,8 @@ export interface DaylogConfig {
   todosPerPage: number;
   /** The order open-task lists start in, and what their Reset returns to. */
   defaultTaskSort: TaskSortPref;
+  /** Which Demo Time theme paints fenced code blocks in rendered Markdown. */
+  codeTheme: CodeTheme;
   clients: Client[];
   statuses: StatusDef[];
   autoSync: AutoSyncConfig;

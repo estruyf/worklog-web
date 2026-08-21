@@ -5,10 +5,18 @@ import { useData, useUi } from '../context';
 import { setNavGuard } from '../router';
 import { worklogStore } from '../../data/worklogStore';
 import { AI_AGENTS, COMMAND_EXECUTOR_MIN_VERSION, COMMAND_EXECUTOR_URL, type AiAgent } from '../../model/aiAgents';
+import { CODE_THEMES, type CodeTheme } from '../../model/codeTheme';
 import { AUTO_SYNC_EVENTS, type AutoSyncEvent } from '../../model/syncEvents';
 import { sortDirectionLabels, TASK_SORTS, type TaskSortDirection, type TaskSortKey } from '../utils';
 
 const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+/** Named after what they do, not after the theme they pick: both are Demo Time. */
+const CODE_THEME_LABELS: Record<CodeTheme, string> = {
+  system: 'Match the system',
+  light: 'Light',
+  dark: 'Dark',
+};
 
 /** One setting per row: what it is and what it does on the left, the control on
  *  the right. Not a `Field` — that stacks label over control, and here the
@@ -42,7 +50,7 @@ function SettingRow({
  *  settings not managed elsewhere (clients live in the Clients view), plus the
  *  task-status list, which manages itself — see `StatusSettings`. */
 export function SettingsView() {
-  const { hoursPerDay, weekStart, todosPerPage, defaultTaskSort, autoSync, features, aiAgents, saveSettings } = useData();
+  const { hoursPerDay, weekStart, todosPerPage, defaultTaskSort, codeTheme, autoSync, features, aiAgents, saveSettings } = useData();
   const { ask } = useUi().confirm;
 
   const [hours, setHours] = useState(String(hoursPerDay));
@@ -50,6 +58,7 @@ export function SettingsView() {
   const [todoPage, setTodoPage] = useState(String(todosPerPage));
   const [sortKey, setSortKey] = useState<TaskSortKey>(defaultTaskSort.key);
   const [sortDir, setSortDir] = useState<TaskSortDirection>(defaultTaskSort.dir);
+  const [code, setCode] = useState<CodeTheme>(codeTheme);
   const [attachmentsOn, setAttachmentsOn] = useState(features.attachments);
   const [promptsOn, setPromptsOn] = useState(features.prompts);
   const [syncEnabled, setSyncEnabled] = useState(autoSync.enabled);
@@ -88,6 +97,9 @@ export function SettingsView() {
   useEffect(() => {
     setSortDir(defaultTaskSort.dir);
   }, [defaultTaskSort.dir]);
+  useEffect(() => {
+    setCode(codeTheme);
+  }, [codeTheme]);
   // On the two booleans rather than on `features`, for the reason the sort pair
   // is split above: the block is rebuilt on every derive.
   useEffect(() => {
@@ -124,6 +136,7 @@ export function SettingsView() {
     (todoPageValid && parsedTodoPage !== todosPerPage) ||
     sortKey !== defaultTaskSort.key ||
     sortDir !== defaultTaskSort.dir ||
+    code !== codeTheme ||
     attachmentsOn !== features.attachments ||
     promptsOn !== features.prompts ||
     syncEnabled !== autoSync.enabled ||
@@ -200,6 +213,7 @@ export function SettingsView() {
       weekStart: week,
       todosPerPage: parsedTodoPage,
       defaultTaskSort: { key: sortKey, dir: sortDir },
+      codeTheme: code,
       features: { attachments: attachmentsOn, prompts: promptsOn },
       autoSync: { enabled: syncEnabled, delayMinutes: parsedDelay, events: syncEvents },
       aiAgents: agents,
@@ -217,6 +231,7 @@ export function SettingsView() {
     setTodoPage(String(todosPerPage));
     setSortKey(defaultTaskSort.key);
     setSortDir(defaultTaskSort.dir);
+    setCode(codeTheme);
     setAttachmentsOn(features.attachments);
     setPromptsOn(features.prompts);
     setSyncEnabled(autoSync.enabled);
@@ -325,6 +340,25 @@ export function SettingsView() {
                   <option value="desc">{sortDirLabels.desc}</option>
                 </Select>
               </div>
+            </SettingRow>
+
+            <SettingRow
+              id={`${ids}-code-theme`}
+              title="Code block theme"
+              description="Which Demo Time theme paints fenced code blocks in descriptions and notes. The rest of the app is light either way."
+            >
+              <Select
+                id={`${ids}-code-theme`}
+                value={code}
+                onChange={(e) => setCode(e.target.value as CodeTheme)}
+                className="w-[170px] shrink-0"
+              >
+                {CODE_THEMES.map((t) => (
+                  <option key={t} value={t}>
+                    {CODE_THEME_LABELS[t]}
+                  </option>
+                ))}
+              </Select>
             </SettingRow>
           </Card>
 

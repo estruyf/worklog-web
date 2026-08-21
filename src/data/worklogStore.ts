@@ -819,6 +819,7 @@ class WorklogStore {
       weekStart: config.weekStart,
       todosPerPage: config.todosPerPage,
       defaultTaskSort: config.defaultTaskSort,
+      codeTheme: config.codeTheme,
       autoSync: config.autoSync,
       features: config.features,
       aiAgents: config.aiAgents,

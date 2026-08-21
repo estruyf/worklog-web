@@ -6,12 +6,16 @@
 // a backstop, not a licence. Anything that needs to show Markdown goes through
 // here rather than repeating the pair — a second copy is a second thing to
 // remember when the renderer changes.
+//
+// It is also the only caller that highlights fenced code: the grammars are
+// fetched lazily (see ../utils/highlight), so the view has to re-render when one
+// lands, and that is what the subscription below is for.
 
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useSyncExternalStore } from 'react';
 import { useData } from '../context';
 import { cn } from '../primitives';
 import { navigateToTask } from '../router';
-import { isDone, makeImageResolver, renderMarkdown, toggleTaskLine } from '../utils';
+import { highlightCode, highlightVersion, isDone, makeImageResolver, renderMarkdown, subscribeHighlight, toggleTaskLine } from '../utils';
 
 export interface MarkdownViewProps {
   text: string;
@@ -24,8 +28,26 @@ export interface MarkdownViewProps {
 }
 
 export function MarkdownView({ text, className, onTextChange }: MarkdownViewProps) {
-  const { assetUrl, tasks } = useData();
+  const { assetUrl, codeTheme, tasks } = useData();
   const resolveImage = useMemo(() => makeImageResolver(assetUrl), [assetUrl]);
+
+  // Clears the copy button's confirmation. Held here rather than in the button
+  // because the button is markup inside `dangerouslySetInnerHTML`, not a
+  // component — see `copyCode` below.
+  const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(
+    () => () => {
+      if (copyTimer.current) {
+        clearTimeout(copyTimer.current);
+      }
+    },
+    [],
+  );
+
+  // A fenced block renders plain the first time its grammar is asked for, and
+  // the grammar arrives a chunk-load later. Subscribing to that is what turns
+  // the plain block into a highlighted one; the counter is the whole state.
+  useSyncExternalStore(subscribeHighlight, highlightVersion, () => 0);
 
   const byId = useMemo(() => new Map(tasks.map((t) => [t.id, t])), [tasks]);
   const resolveTaskRef = useCallback(
@@ -41,7 +63,45 @@ export function MarkdownView({ text, className, onTextChange }: MarkdownViewProp
   // re-render decides what the box shows. A toggle the caller drops therefore
   // visibly does nothing, rather than showing a tick that was never written to
   // Markdown.
+  /** The block's own text to the clipboard, confirmed on the button itself.
+   *
+   *  Written straight into the DOM, which the rest of this file is careful not
+   *  to do — but the Markdown is still the source of truth here: what this
+   *  touches is a `data-` flag on a button that exists only in the rendered
+   *  output. The alternative, a React `CopyButton` portalled into markup React
+   *  replaces wholesale, breaks the moment the two disagree about that node. */
+  const copyCode = (button: HTMLElement) => {
+    const code = button.parentElement?.querySelector('code')?.textContent ?? '';
+    void (async () => {
+      try {
+        await navigator.clipboard.writeText(code);
+      } catch {
+        // Denied permission or an insecure context: nothing to report, and the
+        // button stays as it was.
+        return;
+      }
+      button.dataset.copied = 'true';
+      button.title = 'Copied';
+      if (copyTimer.current) {
+        clearTimeout(copyTimer.current);
+      }
+      copyTimer.current = setTimeout(() => {
+        delete button.dataset.copied;
+        button.title = 'Copy code';
+      }, 1500);
+    })();
+  };
+
   const onClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const copy = (e.target as HTMLElement).closest?.('[data-md-copy]');
+    if (copy instanceof HTMLElement) {
+      e.preventDefault();
+      // Stopped, unlike the two below: a description can sit inside a row that
+      // opens something on click, and copying a snippet is not asking for that.
+      e.stopPropagation();
+      copyCode(copy);
+      return;
+    }
     const ref = (e.target as HTMLElement).closest?.('[data-task-ref]');
     if (ref instanceof HTMLElement) {
       // A modified click is the browser's: the ref carries the task's own route
@@ -70,9 +130,18 @@ export function MarkdownView({ text, className, onTextChange }: MarkdownViewProp
   return (
     <div
       className={cn('wl-md', className)}
+      // Which of the two themes the code blocks below paint with. An attribute
+      // rather than a prop on the renderer: both are in the markup, so the
+      // switch is CSS and costs no re-highlighting.
+      data-code-theme={codeTheme}
       onClick={onClick}
       dangerouslySetInnerHTML={{
-        __html: renderMarkdown(text, resolveImage, { interactiveTasks: !!onTextChange, resolveTaskRef }),
+        __html: renderMarkdown(text, resolveImage, {
+          interactiveTasks: !!onTextChange,
+          resolveTaskRef,
+          highlight: highlightCode,
+          copyableCode: true,
+        }),
       }}
     />
   );

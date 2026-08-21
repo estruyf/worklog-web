@@ -386,19 +386,140 @@ body {
   border-radius: 5px;
   padding: 1px 5px;
 }
-.wl-md .wl-md-pre {
+/* A code block is a `<pre>` inside a positioned wrapper, so the copy button can
+   sit over it without scrolling with the code (see markdown.ts). The two Demo
+   Time themes are these four properties plus the token colours further down;
+   everything else about the block is the same either way.
+
+   Light keeps the app's own #f6f8fa rather than the theme's flat white: the
+   block should still read as a block on a white card. Dark is the theme's own
+   editor background, since nothing else on the page is dark to match. */
+.wl-md .wl-md-code-block {
+  --wl-code-bg: #f6f8fa;
+  --wl-code-fg: #202736;
+  --wl-code-border: #eceef1;
+  --wl-code-chrome: var(--color-neutral-600);
+  position: relative;
   margin: 0 0 12px;
+}
+.wl-md .wl-md-pre {
+  margin: 0;
   padding: 10px 12px;
-  background: #f6f8fa;
-  border: 1px solid #eceef1;
+  background: var(--wl-code-bg);
+  border: 1px solid var(--wl-code-border);
   border-radius: 8px;
+  /* Lines wrap rather than run off the side: a pasted URL or a long command is
+     the common case here, and a horizontal scrollbar under every block of them
+     is worse than a wrapped line. What still cannot wrap scrolls, so the
+     overflow stays. */
   overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--wl-code-chrome) transparent;
+}
+.wl-md .wl-md-pre::-webkit-scrollbar {
+  height: 8px;
+}
+.wl-md .wl-md-pre::-webkit-scrollbar-track {
+  background: transparent;
+}
+.wl-md .wl-md-pre::-webkit-scrollbar-thumb {
+  background: var(--wl-code-chrome);
+  border-radius: 999px;
 }
 .wl-md .wl-md-codeblock {
   font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
   font-size: 12.5px;
   line-height: 1.55;
-  white-space: pre;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  /* The block's own colour, not the page's: a fence with no language has no
+     token spans to colour, and on the dark theme it would otherwise be dark
+     text on a dark background. */
+  color: var(--wl-code-fg);
+}
+/* Out of the way until the block is pointed at: a button parked on every code
+   block reads as chrome. Where there is no hover to reveal it with, it stays. */
+.wl-md .wl-md-copy {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid var(--wl-code-border);
+  border-radius: var(--radius-control);
+  background: var(--wl-code-bg);
+  color: var(--wl-code-fg);
+  opacity: 0;
+  cursor: pointer;
+  transition: opacity 0.12s ease;
+}
+.wl-md .wl-md-code-block:hover .wl-md-copy,
+.wl-md .wl-md-copy:focus-visible {
+  opacity: 1;
+}
+@media (hover: none) {
+  .wl-md .wl-md-copy {
+    opacity: 1;
+  }
+}
+.wl-md .wl-md-copy:hover {
+  border-color: var(--wl-code-chrome);
+}
+.wl-md .wl-md-copy[data-copied] {
+  opacity: 1;
+  color: var(--color-success-600);
+  border-color: var(--color-success-600);
+}
+.wl-md .wl-md-copy .wl-md-copy-done {
+  display: none;
+}
+.wl-md .wl-md-copy[data-copied] .wl-md-copy-idle {
+  display: none;
+}
+.wl-md .wl-md-copy[data-copied] .wl-md-copy-done {
+  display: inline;
+}
+/* Syntax highlighting. Every token in a highlighted block carries both Demo Time
+   themes as custom properties (see utils/highlight), and these rules pick the
+   half the `codeTheme` setting asks for — which is why switching it re-paints
+   without re-highlighting anything. A block with no language, or one whose
+   grammar hasn't loaded, has no token spans at all, and reads in the block's
+   own `--wl-code-fg`. */
+.wl-md .wl-md-codeblock span {
+  color: var(--shiki-light);
+  font-style: var(--shiki-light-font-style, normal);
+  font-weight: var(--shiki-light-font-weight, inherit);
+  text-decoration: var(--shiki-light-text-decoration, none);
+}
+.wl-md[data-code-theme='dark'] .wl-md-code-block {
+  --wl-code-bg: #15181f;
+  --wl-code-fg: #d9dbe1;
+  --wl-code-border: #262c38;
+  --wl-code-chrome: #3c4553;
+}
+.wl-md[data-code-theme='dark'] .wl-md-codeblock span {
+  color: var(--shiki-dark);
+  font-style: var(--shiki-dark-font-style, normal);
+  font-weight: var(--shiki-dark-font-weight, inherit);
+  text-decoration: var(--shiki-dark-text-decoration, none);
+}
+@media (prefers-color-scheme: dark) {
+  .wl-md[data-code-theme='system'] .wl-md-code-block {
+    --wl-code-bg: #15181f;
+    --wl-code-fg: #d9dbe1;
+    --wl-code-border: #262c38;
+    --wl-code-chrome: #3c4553;
+  }
+  .wl-md[data-code-theme='system'] .wl-md-codeblock span {
+    color: var(--shiki-dark);
+    font-style: var(--shiki-dark-font-style, normal);
+    font-weight: var(--shiki-dark-font-weight, inherit);
+    text-decoration: var(--shiki-dark-text-decoration, none);
+  }
 }
 .wl-md .wl-md-link {
   color: #2d6cdf;

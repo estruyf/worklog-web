@@ -492,6 +492,7 @@ in the order the picker offers them — the app writes it, and it is safe to han
   "hoursPerDay": 8,
   "weekStart": "monday",
   "defaultTaskSort": { "key": "created", "dir": "desc" },
+  "codeTheme": "system",
   "features": { "attachments": true, "prompts": true },
   "clients": [{ "id": "acme", "name": "Acme Corp", "color": "#2D6CDF" }],
   "statuses": [
@@ -513,6 +514,15 @@ of `created`, `due`, `priority`, `title` or `status`; `dir` is `asc` or `desc` �
 `{ "key": "created", "dir": "desc" }`. Set it in Settings, or from **Save as default** in any list's
 filter bar. A list's own sort picker overrides it for that session without changing the setting.
 Leaving the key out reads as created / ascending, which is how lists have always been ordered.
+
+`codeTheme` is the theme fenced code blocks are painted with in descriptions, notes and previews —
+`system` (the default: follow your OS), `light` or `dark`, both of them the
+[Demo Time](https://marketplace.visualstudio.com/items?itemName=eliostruyf.vscode-demotime-theme)
+VS Code theme. Set it in **Settings → General**. Only the code blocks change; the rest of the app is
+light either way. Highlighting covers the languages you are most likely to paste — TypeScript,
+JavaScript, JSX/TSX, JSON, HTML, CSS, Markdown, shell, YAML, TOML, INI and Dockerfile. A fence that
+names anything else, or names nothing at all, renders as plain text — readable either way. Long
+lines wrap rather than scrolling sideways, and pointing at a block reveals a copy button.
 
 `id` is what a task's `- status:` line carries; `label` is what you see; `color` is an optional
 `#rrggbb` accent. Exactly one status is `terminal` — the closing one, which archives a task — and

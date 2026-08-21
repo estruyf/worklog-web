@@ -79,7 +79,7 @@ describe('renderMarkdown bare URLs', () => {
   it('leaves URLs inside code spans and fences alone', () => {
     expect(renderMarkdown('`https://example.com/a`')).toBe('<p><code class="wl-md-code">https://example.com/a</code></p>');
     expect(renderMarkdown('```\nhttps://example.com/a\n```')).toBe(
-      '<pre class="wl-md-pre"><code class="wl-md-codeblock">https://example.com/a</code></pre>',
+      '<div class="wl-md-code-block"><pre class="wl-md-pre"><code class="wl-md-codeblock">https://example.com/a</code></pre></div>',
     );
   });
 

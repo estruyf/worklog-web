@@ -9,6 +9,7 @@ import type { APIRoute } from 'astro';
 import { getToken } from '../../server/session';
 import { createRepo, scaffoldRepo, GitHubError, type CommitFile } from '../../server/github';
 import { DEFAULT_STATUSES } from '../../model/status';
+import { DEFAULT_CODE_THEME } from '../../model/codeTheme';
 import { DEFAULT_TASK_SORT } from '../../model/taskSort';
 import { DEFAULT_AUTO_SYNC, DEFAULT_FEATURES, DEFAULT_HOURS_PER_DAY, DEFAULT_TODOS_PER_PAGE, DEFAULT_WEEK_START } from '../../workspace/paths';
 import type { DaylogConfig } from '../../model/types';
@@ -79,6 +80,7 @@ function scaffoldFiles(): CommitFile[] {
     weekStart: DEFAULT_WEEK_START,
     todosPerPage: DEFAULT_TODOS_PER_PAGE,
     defaultTaskSort: { ...DEFAULT_TASK_SORT },
+    codeTheme: DEFAULT_CODE_THEME,
     clients: [],
     statuses: DEFAULT_STATUSES,
     autoSync: { ...DEFAULT_AUTO_SYNC },

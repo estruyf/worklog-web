@@ -4,7 +4,9 @@ export { fmtLong, fmtShort, monthLabel, shiftDate, shiftMonth, weekdayShort, num
 export { clientIdOf, isDone, workedLabels, workedOnDate, dueOn, linksOf } from "./task";
 export { resolveStatusMeta } from "./status";
 export { renderMarkdown, makeImageResolver, toggleTaskLine } from "./markdown";
-export type { ImageResolver, MarkdownOptions, TaskRefResolver } from "./markdown";
+export type { CodeHighlighter, ImageResolver, MarkdownOptions, TaskRefResolver } from "./markdown";
+export { highlightCode, highlightVersion, subscribeHighlight } from "./highlight";
+export type { CodeToken } from "./highlight";
 export { continueList, insertLink, toggleLinePrefix, toggleWrap } from "./markdownEdit";
 export type { LinePrefix, MarkdownEdit, WrapMarker } from "./markdownEdit";
 export { TASK_REF, applyMention, matchTaskRefs, mentionAt } from "./taskRefs";

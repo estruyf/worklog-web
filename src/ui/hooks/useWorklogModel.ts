@@ -12,7 +12,8 @@
 import { useCallback, useMemo } from "react";
 import { repoKeyOf } from "../../data/pendingStore";
 import { worklogStore, type ToastMessage } from "../../data/worklogStore";
-import type { AiAgent, AutoSyncConfig, AutoSyncEvent, FeatureConfig, TaskSortPref } from "../../model/types";
+import type { AiAgent, AutoSyncConfig, AutoSyncEvent, CodeTheme, FeatureConfig, TaskSortPref } from "../../model/types";
+import { DEFAULT_CODE_THEME } from "../../model/codeTheme";
 import { DEFAULT_TASK_SORT } from "../../model/taskSort";
 import type { WorklogState } from "../state";
 import { useCollapsedTasks } from "./useCollapsedTasks";
@@ -70,6 +71,7 @@ export function useWorklogModel(
   const weekStart = snap?.weekStart ?? 0;
   const todosPerPage = snap?.todosPerPage ?? 5;
   const defaultTaskSort = snap?.defaultTaskSort ?? NO_TASK_SORT;
+  const codeTheme = snap?.codeTheme ?? DEFAULT_CODE_THEME;
   const autoSync = snap?.autoSync ?? NO_AUTO_SYNC;
   const features = snap?.features ?? ALL_FEATURES;
   const { selectedDate, selectedClient } = ui;
@@ -121,6 +123,7 @@ export function useWorklogModel(
     weekStart?: number;
     todosPerPage?: number;
     defaultTaskSort?: TaskSortPref;
+    codeTheme?: CodeTheme;
     autoSync?: { enabled?: boolean; delayMinutes?: number; events?: AutoSyncEvent[] };
     features?: { attachments?: boolean; prompts?: boolean };
     aiAgents?: AiAgent[];
@@ -143,6 +146,7 @@ export function useWorklogModel(
     weekStart,
     todosPerPage,
     defaultTaskSort,
+    codeTheme,
     autoSync,
     features,
     aiAgents,

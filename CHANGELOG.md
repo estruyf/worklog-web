@@ -15,6 +15,12 @@ Every change to Worklog, by day, newest first.
      both). Links must be absolute — a relative path resolves against /changelog and
      404s. -->
 
+## 2026-08-21
+
+- Fenced code blocks in descriptions, notes and previews are syntax highlighted, using the [Demo Time](https://marketplace.visualstudio.com/items?itemName=eliostruyf.vscode-demotime-theme) VS Code theme. Name the language on the opening fence and TypeScript, JavaScript, JSX/TSX, JSON, HTML, CSS, Markdown, shell, YAML, TOML, INI and Dockerfile get colour; anything else stays plain text.
+- Code blocks wrap their long lines instead of scrolling sideways, keep their text readable on both themes when no language is named, and carry a copy button that appears when you point at the block.
+- **Settings → Code block theme** picks the light or the dark Demo Time theme for those blocks, or follows your operating system, which is what a repo that has never set it does.
+
 ## 2026-08-20
 
 - Worklog is MIT licensed: the repo now carries a [LICENSE](https://github.com/estruyf/worklog-web/blob/main/LICENSE) file and `package.json` declares it, so tools that scan dependencies no longer report the license as unknown.

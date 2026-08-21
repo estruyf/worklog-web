@@ -11,6 +11,7 @@ import { Store } from '../src/store';
 import { FileMap, mountFileMap } from '../src/workspace/paths';
 import { updateSettings } from '../src/services/settings';
 import { DEFAULT_TASK_SORT, normalizeTaskSort } from '../src/model/taskSort';
+import { normalizeCodeTheme } from '../src/model/codeTheme';
 import type { DaylogConfig } from '../src/model/types';
 
 const CONFIG = {
@@ -171,5 +172,44 @@ describe('feature switches', () => {
     await updateSettings(store, { hoursPerDay: 7 });
     expect(writtenFeatures()).toEqual({ attachments: true, prompts: false });
     expect(store.getConfig().hoursPerDay).toBe(7);
+  });
+});
+
+// The theme fenced code blocks are painted with. Absent means "follow the OS",
+// which is what every repo written before the setting existed gets.
+describe('code block theme', () => {
+  it('reads a config that predates the setting as following the system', async () => {
+    expect((await config()).codeTheme).toBe('system');
+  });
+
+  it('reads a saved choice back', async () => {
+    await mount({ ...CONFIG, codeTheme: 'dark' });
+    expect((await config()).codeTheme).toBe('dark');
+  });
+
+  it('survives a hand-edited value rather than failing the whole config', async () => {
+    await mount({ ...CONFIG, codeTheme: 'demo-time-dark' });
+    const loaded = await config();
+    expect(loaded.codeTheme).toBe('system');
+    expect(loaded.hoursPerDay).toBe(8);
+  });
+
+  it('normalizes anything else to the default', () => {
+    expect(normalizeCodeTheme(undefined)).toBe('system');
+    expect(normalizeCodeTheme('Dark')).toBe('system');
+    expect(normalizeCodeTheme('light')).toBe('light');
+  });
+
+  it('writes the choice into config.json and leaves it alone on other saves', async () => {
+    await updateSettings(store, { codeTheme: 'light' });
+    expect(JSON.parse(fm.text.get('.worklog/config.json') ?? '{}').codeTheme).toBe('light');
+
+    await updateSettings(store, { hoursPerDay: 7 });
+    expect(store.getConfig().codeTheme).toBe('light');
+  });
+
+  it('normalizes on the way out, so config.json can never hold an unreadable theme', async () => {
+    await updateSettings(store, { codeTheme: 'solarized' as never });
+    expect(JSON.parse(fm.text.get('.worklog/config.json') ?? '{}').codeTheme).toBe('system');
   });
 });

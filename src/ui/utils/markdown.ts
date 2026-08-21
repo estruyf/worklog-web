@@ -14,6 +14,7 @@
 // Markdown stores, and the title comes from whoever passes `resolveTaskRef`. The
 // syntax itself lives in ./taskRefs, shared with the picker that writes them.
 
+import type { CodeToken } from "./highlight";
 import { TASK_REF } from "./taskRefs";
 
 function escapeHtml(s: string): string {
@@ -281,7 +282,41 @@ export interface MarkdownOptions {
    * asked for.
    */
   resolveTaskRef?: TaskRefResolver;
+  /**
+   * Syntax-highlights a fenced block that named its language. Returns the lines
+   * of tokens rather than markup, so the escaping stays in this file; null (and
+   * the default) renders the block as plain text.
+   */
+  highlight?: CodeHighlighter;
+  /**
+   * Put a copy button on every fenced block. Off by default, for the reason
+   * `interactiveTasks` is: the click is delegated, so a caller that does not
+   * handle it would render a button that does nothing.
+   */
+  copyableCode?: boolean;
 }
+
+/** See {@link MarkdownOptions.highlight}. `ui/utils/highlight` is the one this
+ *  app passes; `lang` is the fence's info word, verbatim. */
+export type CodeHighlighter = (code: string, lang: string) => CodeToken[][] | null;
+
+/**
+ * The copy button, markup and all. Hand-drawn rather than lucide (which the rest
+ * of the app draws from) because this is a string, not React — the two glyphs
+ * are Lucide's own `copy` and `check`, and CSS swaps them on `data-copied`.
+ *
+ * `data-md-copy` is what the click delegation looks for; the code it copies is
+ * the `<pre>` beside it, which is why it sits outside rather than inside. Inside,
+ * it would scroll away with the code and land in the text a copy returns.
+ */
+const COPY_BUTTON =
+  '<button type="button" class="wl-md-copy" data-md-copy aria-label="Copy code" title="Copy code">' +
+  '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" ' +
+  'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+  '<g class="wl-md-copy-idle"><rect x="8" y="8" width="14" height="14" rx="2" />' +
+  '<path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" /></g>' +
+  '<path class="wl-md-copy-done" d="M20 6 9 17l-5-5" />' +
+  "</svg></button>";
 
 export function renderMarkdown(
   md: string,
@@ -297,6 +332,7 @@ export function renderMarkdown(
   const stack: { type: "ul" | "ol"; indent: number; itemOpen: boolean }[] = [];
   let paragraph: string[] = [];
   let codeFence: string[] | null = null;
+  let codeLang = "";
 
   // Appended rather than pushed, so a flat list still renders one item per line.
   const closeItem = () => {
@@ -343,10 +379,25 @@ export function renderMarkdown(
   };
   const flushCodeFence = () => {
     if (codeFence) {
+      const code = codeFence.join("\n");
+      // Highlighted or not, the text is escaped here, and so is the style the
+      // highlighter asks for — this is the markup that goes to innerHTML.
+      const tokens = codeLang && options?.highlight ? options.highlight(code, codeLang) : null;
+      const body = tokens
+        ? tokens
+            .map((line) =>
+              line
+                .map((token) => `<span style="${escapeHtml(token.style)}">${escapeHtml(token.text)}</span>`)
+                .join(""),
+            )
+            .join("\n")
+        : escapeHtml(code);
+      const copy = options?.copyableCode ? COPY_BUTTON : "";
       html.push(
-        `<pre class="wl-md-pre"><code class="wl-md-codeblock">${escapeHtml(codeFence.join("\n"))}</code></pre>`,
+        `<div class="wl-md-code-block"><pre class="wl-md-pre"><code class="wl-md-codeblock">${body}</code></pre>${copy}</div>`,
       );
       codeFence = null;
+      codeLang = "";
     }
   };
 
@@ -363,10 +414,12 @@ export function renderMarkdown(
       continue;
     }
 
-    if (/^```(?:\s*\S+)?\s*$/.test(line)) {
+    const fence = /^```\s*(\S*)\s*$/.exec(line);
+    if (fence) {
       flushParagraph();
       closeList();
       codeFence = [];
+      codeLang = fence[1];
       continue;
     }
 
