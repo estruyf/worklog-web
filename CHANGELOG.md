@@ -17,6 +17,9 @@ Every change to Worklog, by day, newest first.
 
 ## 2026-08-21
 
+- A new **Upcoming** view in the nav lists everything you have planned but not yet reached: open tasks due after today, bucketed by how far off they are — tomorrow, later this week, next week, later this month, later — nearest first, with the same search, tag, status and sort controls the other task lists have. A recurring task shows its next occurrence rather than its whole series.
+- A task's title can now be renamed straight from the task page — the pencil beside it opens the title in place, ↵ saves and Esc throws the edit away — instead of opening the whole edit form to change one line.
+- ⌘↵ (ctrl+↵) now saves the description while you're editing it on the task page, the same keystroke that already saves a note or a new task.
 - Adding or removing a task attachment now counts as a task edit for automatic sync, so with “A task is edited or deleted” ticked the file reaches GitHub within seconds instead of waiting for the timer or the Sync button.
 - Fenced code blocks in descriptions, notes and previews are syntax highlighted, using the [Demo Time](https://marketplace.visualstudio.com/items?itemName=eliostruyf.vscode-demotime-theme) VS Code theme. Name the language on the opening fence and TypeScript, JavaScript, JSX/TSX, JSON, HTML, CSS, Markdown, shell, YAML, TOML, INI and Dockerfile get colour; anything else stays plain text.
 - Code blocks wrap their long lines instead of scrolling sideways, keep their text readable on both themes when no language is named, and carry a copy button that appears when you point at the block.

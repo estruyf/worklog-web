@@ -2,7 +2,7 @@ import React from 'react';
 
 /** The navigation rail's glyphs.
  *
- *  Everywhere else the app draws from `lucide-react`; these seven are the
+ *  Everywhere else the app draws from `lucide-react`; these eight are the
  *  exception, hand-tuned to read at 16px against the rail's weight. They live
  *  here rather than inline in `Sidebar` so that file is about navigating rather
  *  than about paths — it carried 76 lines of them.
@@ -40,6 +40,18 @@ export function NavOverdueIcon() {
       <path d="M8 2.2l6.2 10.6a.8.8 0 01-.7 1.2H2.5a.8.8 0 01-.7-1.2L8 2.2z" strokeLinejoin="round" />
       <path d="M8 6.2v3.1" strokeLinecap="round" />
       <circle cx="8" cy="11.4" r="0.5" fill="currentColor" stroke="none" />
+    </NavGlyph>
+  );
+}
+
+/** A calendar whose corner walks off to the right: the days ahead, rather than
+ *  the month `NavCalendarIcon` draws. */
+export function NavUpcomingIcon() {
+  return (
+    <NavGlyph>
+      <path d="M12.5 7.5V4.5a1.5 1.5 0 00-1.5-1.5H3.5A1.5 1.5 0 002 4.5v7A1.5 1.5 0 003.5 13H8" />
+      <path d="M2 6.5h9M4.5 1.5v2M9.5 1.5v2" />
+      <path d="M9.5 11.5h4.5M12.2 9.7l1.8 1.8-1.8 1.8" strokeLinecap="round" strokeLinejoin="round" />
     </NavGlyph>
   );
 }

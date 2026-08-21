@@ -6,6 +6,7 @@ import React from 'react';
 import type { AppView } from '../model';
 import { DayView } from './DayView';
 import { OverdueView } from './OverdueView';
+import { UpcomingView } from './UpcomingView';
 import { TodosView } from './TodosView';
 import { CalendarView } from './CalendarView';
 import { ClientsView } from './ClientsView';
@@ -30,6 +31,7 @@ export function warmLazyRoutes(): void {
 export const ROUTES: Record<AppView, React.ComponentType> = {
   day: DayView,
   overdue: OverdueView,
+  upcoming: UpcomingView,
   todos: TodosView,
   calendar: CalendarView,
   clients: ClientsView,
@@ -45,6 +47,7 @@ export const ROUTES: Record<AppView, React.ComponentType> = {
 export const VIEW_LABELS: Record<AppView, string> = {
   day: 'Day',
   overdue: 'Overdue',
+  upcoming: 'Upcoming',
   todos: 'To-dos',
   calendar: 'Calendar',
   clients: 'Clients',

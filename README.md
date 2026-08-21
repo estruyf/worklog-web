@@ -147,6 +147,10 @@ The dashboard has these views:
   clients have no links.
 - **Overdue** — everything that has slipped, across every client and the to-do list, grouped by
   client with the longest-overdue client first, plus what is due today. The nav badge counts it.
+- **Upcoming** — everything planned but not yet here: open tasks due after today, bucketed by how
+  far off they are (tomorrow, later this week, next week, later this month, later), nearest first.
+  A recurring task shows its next occurrence, not its whole series. Between this and **Overdue**,
+  every dated task has a home — overdue takes the past and today, upcoming takes the future.
 - **To-dos** — the general to-do list: tasks that belong to no client.
 - **Calendar** — a month grid of logged time; click a day to jump to it, or plan a task with a
   due date.

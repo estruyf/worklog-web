@@ -13,6 +13,7 @@ import {
   NavInsightsIcon,
   NavOverdueIcon,
   NavTodosIcon,
+  NavUpcomingIcon,
 } from '../icons';
 import { VIEW_LABELS } from '../../views/routes';
 import { navItemClass } from './styles';
@@ -22,6 +23,7 @@ import { navItemClass } from './styles';
  *  too, so a tab and the button returning to it always agree. */
 const NAV_ITEMS: { view: AppView; icon: React.ReactNode }[] = [
   { view: 'day', icon: <NavDayIcon /> },
+  { view: 'upcoming', icon: <NavUpcomingIcon /> },
   { view: 'overdue', icon: <NavOverdueIcon /> },
   { view: 'todos', icon: <NavTodosIcon /> },
   { view: 'calendar', icon: <NavCalendarIcon /> },
@@ -30,7 +32,7 @@ const NAV_ITEMS: { view: AppView; icon: React.ReactNode }[] = [
   { view: 'archive', icon: <NavArchiveIcon /> },
 ];
 
-/** The seven view tabs, with counts on the two that would otherwise go unnoticed.
+/** The eight view tabs, with counts on the two that would otherwise go unnoticed.
  *  Collapsed, a tab is its glyph and its count rides the corner of it — the point
  *  of the badge is that you notice it without reading the row. */
 export function NavList({ onGo, collapsed = false }: { onGo: (view: AppView) => void; collapsed?: boolean }) {

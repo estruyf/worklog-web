@@ -27,6 +27,11 @@ const features = [
     icon: "alert",
   },
   {
+    title: "Upcoming",
+    body: "Everything still ahead, bucketed by how far off it is — tomorrow, later this week, next week, later this month — so a deadline three weeks out stops being a surprise.",
+    icon: "clock",
+  },
+  {
     title: "Calendar",
     body: "A month grid of who you worked for each day, with per-client rollups. Click any day to jump straight into it.",
     icon: "calendar",
@@ -302,6 +307,25 @@ Export queue prototype. Renders, doesn't paginate yet.`;
                     <path d="M17 14h.01" />
                     <path d="M7 18h.01" />
                     <path d="M12 18h.01" />
+                  </svg>
+                )}
+                {f.icon === "clock" && (
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h6" />
+                    <path d="M3 10h13" />
+                    <path d="M16 2v4" />
+                    <path d="M8 2v4" />
+                    <circle cx="17.5" cy="17.5" r="4.5" />
+                    <path d="M17.5 15.5v2.2l1.4 1" />
                   </svg>
                 )}
                 {f.icon === "layers" && (

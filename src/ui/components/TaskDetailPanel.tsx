@@ -1,12 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { InfoIcon, MessageSquareIcon } from 'lucide-react';
-import { clientIdOf, isDone } from '../utils';
+import { clientIdOf } from '../utils';
 import { isGeneralTodoClientId } from '../../model/todos';
 import { Button, IconButton, LinkButton, Modal } from '../primitives';
 import { CopyButton } from './CopyButton';
 import { LinkList } from './LinkList';
 import { DescriptionEditor } from './DescriptionEditor';
-import { AttachmentsSection, NotesSection, PromptsSection, SubtaskList, TaskContentActions, TaskDetailHeader, TaskSidebar } from './task-detail';
+import { AttachmentsSection, NotesSection, PromptsSection, SubtaskList, TaskContentActions, TaskDetailHeader, TaskSidebar, TitleEditor } from './task-detail';
 import { useData, useUi } from '../context';
 import { navigateToDashboard, navigateToTask } from '../router';
 
@@ -83,9 +83,9 @@ export function TaskDetailPanel() {
               metadata rail to reach it. */}
           <div className="lg:flex lg:gap-8">
             <div className="lg:flex-1 lg:min-w-0">
-              <h1 className={'text-[26px] font-bold m-0 mb-5 tracking-[-0.01em] ' + (isDone(task) ? 'line-through decoration-neutral-550 text-neutral-700' : '')}>
-                {task.title}
-              </h1>
+              {/* Keyed by the task so a rename left open doesn't follow you to
+                  the next one, the same as the prompt composer below. */}
+              <TitleEditor key={task.id} task={task} />
 
               <LinkList links={task.links} className="mb-6" />
 
@@ -98,6 +98,10 @@ export function TaskDetailPanel() {
                   mode={descMode}
                   onModeChange={setDescMode}
                   taskId={task.id}
+                  // ⌘↵ is Save, the same keystroke that saves a note or a task
+                  // form — and only while there is something to save, which is
+                  // the condition the Save button below is disabled on.
+                  onSubmit={descDirty ? saveDescription : undefined}
                   // Reading, a tick is the whole edit and saves itself — there is
                   // no Save to press, and a checkbox that needs one is a checkbox
                   // that lies. Mid-edit it is an edit like any other, and Save

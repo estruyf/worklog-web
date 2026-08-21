@@ -9,6 +9,7 @@ import type { RecurrenceAnchor } from "../../model/recurrence";
 export type AppView =
   | "day"
   | "overdue"
+  | "upcoming"
   | "todos"
   | "calendar"
   | "clients"

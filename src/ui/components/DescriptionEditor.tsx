@@ -72,6 +72,12 @@ export interface DescriptionEditorProps {
   /** The task this description belongs to, kept out of its own `#` picker. Absent
    *  on a task that does not exist yet. */
   taskId?: string;
+  /** ⌘↵ / ctrl+↵ inside the textarea — "save what I just wrote", the keystroke a
+   *  note and the task form already answer to. Omit it where the surface has no
+   *  save of its own to run, or nothing to save right now: the task form binds
+   *  the same chord on window while it is up, and answering it here as well
+   *  saved twice. */
+  onSubmit?: () => void;
 }
 
 /** Markdown description editor: a formatting bar and a write/preview toggle while
@@ -90,6 +96,7 @@ export function DescriptionEditor({
   placeholder = PLACEHOLDER,
   onTaskToggle,
   taskId,
+  onSubmit,
 }: DescriptionEditorProps) {
   const img = useMarkdownImages(value, onChange);
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
@@ -102,9 +109,18 @@ export function DescriptionEditor({
     image: { onAdd: img.openFilePicker, busy: img.uploading },
   });
   // The picker goes first and marks what it took — an open list owns Enter.
+  // ⌘↵ comes last, after both have had their say and bailed out of a handled
+  // event: an open `#` list is completing a task ref, not saving the field.
   const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     mention.props.onKeyDown(e);
     format.props.onKeyDown(e);
+    if (e.defaultPrevented) {
+      return;
+    }
+    if (onSubmit && (e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+      e.preventDefault();
+      onSubmit();
+    }
   };
   const boxed = variant === 'boxed';
   // One height for all three bodies, so switching tabs doesn't resize the page
