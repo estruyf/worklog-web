@@ -15,6 +15,10 @@ Every change to Worklog, by day, newest first.
      both). Links must be absolute — a relative path resolves against /changelog and
      404s. -->
 
+## 2026-08-25
+
+- The day bar is more compact on phones: each logged entry now sits in a shorter box, so the whole day fits on screen with less scrolling. Nothing changes on larger screens.
+
 ## 2026-08-21
 
 - A new **Upcoming** view in the nav lists everything you have planned but not yet reached: open tasks due after today, bucketed by how far off they are — tomorrow, later this week, next week, later this month, later — nearest first, with the same search, tag, status and sort controls the other task lists have. A recurring task shows its next occurrence rather than its whole series.
