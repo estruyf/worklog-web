@@ -17,7 +17,10 @@ Every change to Worklog, by day, newest first.
 
 ## 2026-08-25
 
+- On a phone, the top bar's "New" adds straight to the to-do list while you're in the To-dos view, so that view's own "New to-do" button is now hidden there and the heading has room to fit on one line.
+- The "Today" pill next to the date in the day view is hidden on phones, where it pushed the date onto a second line and the disabled "Today" button already said the same thing.
 - The day bar is more compact on phones: each logged entry now sits in a shorter box, so the whole day fits on screen with less scrolling. Nothing changes on larger screens.
+- On a phone, the day view is ordered the way you read it: the day itself first, then the links of the clients on it, then open, worked and done tasks, with the general to-do list last. On wide screens the links and to-dos stay together in the side column, which now lines up with the top of the day instead of hanging below it once you scroll.
 
 ## 2026-08-21
 

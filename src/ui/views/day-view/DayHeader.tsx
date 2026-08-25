@@ -46,42 +46,50 @@ export function DayHeader({
         </div>
         <h1 className="text-[20px] sm:text-[24px] font-bold m-0 tracking-[-0.01em] whitespace-nowrap">{fmtLong(selectedDate)}</h1>
         {/* The date alone reads the same on any day; the pill is what says you're
-         * looking at the current one, now that the heading no longer says "Today". */}
+         * looking at the current one, now that the heading no longer says "Today".
+         * Wide screens only — on mobile the disabled "Today" button already says it,
+         * and the pill would only push the date onto a second line. */}
         {isTodaySel && (
-          <Badge tone="brand" size="sm" className="uppercase tracking-eyebrow">
-            Today
-          </Badge>
+          <span className="hidden sm:inline-flex">
+            <Badge tone="brand" size="sm" className="uppercase tracking-eyebrow">
+              Today
+            </Badge>
+          </span>
         )}
       </div>
 
       {/* Day actions. Stack full-width below the date on mobile, then push to the
        * right edge alongside the date from `sm:` up. */}
-      <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
-        {!isTodaySel && (
-          <button
-            onClick={() => setEditDayOpen(!editDayOpen)}
-            className={
-              'text-meta border rounded-control cursor-pointer px-2 py-[5px] ' +
-              (editDayOpen
-                ? 'text-brand-650 border-brand-500 bg-brand-225'
-                : 'text-info border-neutral-525 bg-white')
-            }
-          >
-            {editDayOpen ? 'Hide day editor' : 'Edit day'}
-          </button>
-        )}
-        {isFuture && (
-          <Button
-            variant="primary"
-            size="md"
-            onClick={() => openTaskFormForDue(selectedDate)}
-            title="Add a task due on this day"
-            className="flex-1 sm:flex-none"
-          >
-            <span className="text-[15px] leading-none">+</span> Add task for this day
-          </Button>
-        )}
-      </div>
+      {
+        (!isTodaySel || isFuture) && (
+          <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
+            {!isTodaySel && (
+              <button
+                onClick={() => setEditDayOpen(!editDayOpen)}
+                className={
+                  'text-meta border rounded-control cursor-pointer px-2 py-[5px] ' +
+                  (editDayOpen
+                    ? 'text-brand-650 border-brand-500 bg-brand-225'
+                    : 'text-info border-neutral-525 bg-white')
+                }
+              >
+                {editDayOpen ? 'Hide day editor' : 'Edit day'}
+              </button>
+            )}
+            {isFuture && (
+              <Button
+                variant="primary"
+                size="md"
+                onClick={() => openTaskFormForDue(selectedDate)}
+                title="Add a task due on this day"
+                className="flex-1 sm:flex-none"
+              >
+                <span className="text-[15px] leading-none">+</span> Add task for this day
+              </Button>
+            )}
+          </div>
+        )
+      }
     </ViewHeader>
   );
 }

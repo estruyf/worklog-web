@@ -16,11 +16,15 @@ import { BrandMark } from './BrandMark';
  *  mounted (see `useTaskFormBar`); its fields stay its own, so typing a title no
  *  longer re-renders the nav. */
 export function MobileTopBar({ onOpenDrawer }: { onOpenDrawer: () => void }) {
-  const { openTaskForm, noClients, offline } = useData();
+  const { openTaskForm, openTodoForm, noClients, offline } = useData();
   const { setSearchOpen } = useUi();
   const route = useRoute();
   const onForm = route.name === 'taskForm';
   const isEdit = onForm && !!route.taskId;
+  // The To-dos view's own "New to-do" is hidden on a phone, so this button stands
+  // in for it — and a to-do needs no client, which is why it shows even when the
+  // repo has none configured yet.
+  const onTodos = route.name === 'view' && route.view === 'todos';
   const taskForm = useTaskFormBar();
   const canSave = taskForm?.canSave ?? false;
 
@@ -57,8 +61,8 @@ export function MobileTopBar({ onOpenDrawer }: { onOpenDrawer: () => void }) {
           {isEdit ? 'Save' : 'Add'}
         </Button>
       ) : (
-        !noClients && (
-          <Button variant="primary" size="md" onClick={openTaskForm} className="h-9">
+        (onTodos || !noClients) && (
+          <Button variant="primary" size="md" onClick={onTodos ? openTodoForm : openTaskForm} className="h-9">
             <PlusIcon size={15} />
             New
           </Button>
