@@ -41,14 +41,22 @@ export function UpdatePrompt() {
   };
 
   return (
+    // Four things in one row is more than a phone has room for: the sentence gets
+    // squeezed to a couple of words per line while the buttons keep their width.
+    // So below `sm:` the bar takes the width it is allowed and `basis-full` gives
+    // the sentence a line of its own, with the two buttons on the next one. From
+    // `sm:` up it shrinks to fit its content on a single row again, and `ml-auto`
+    // has no free space left to act on.
     <div
       role="status"
       aria-live="polite"
-      className="fixed bottom-16 left-1/2 -translate-x-1/2 z-70 flex items-center gap-3 max-w-[calc(100vw-2rem)] rounded-control-md border border-neutral-400 bg-white text-control text-neutral-750 pl-4 pr-2 py-2 shadow-[0_8px_24px_rgba(0,0,0,0.12)]"
+      className="fixed bottom-16 left-1/2 -translate-x-1/2 z-70 flex flex-wrap items-center gap-x-3 gap-y-2 w-[calc(100vw-2rem)] sm:w-auto max-w-[calc(100vw-2rem)] rounded-control-md border border-neutral-400 bg-white text-control text-neutral-750 pl-4 pr-2 py-2 shadow-[0_8px_24px_rgba(0,0,0,0.12)]"
     >
-      <RefreshCwIcon size={14} className="shrink-0 text-brand-600" aria-hidden="true" />
-      <span>A new version of Worklog is available.</span>
-      <Button variant="primary" size="xs" onClick={apply} disabled={applying} className="shrink-0">
+      <div className="flex items-center gap-3 basis-full sm:basis-auto min-w-0">
+        <RefreshCwIcon size={14} className="shrink-0 text-brand-600" aria-hidden="true" />
+        <span>A new version of Worklog is available.</span>
+      </div>
+      <Button variant="primary" size="xs" onClick={apply} disabled={applying} className="shrink-0 ml-auto">
         {applying ? 'Reloading…' : 'Reload'}
       </Button>
       <IconButton aria-label="Dismiss" size="sm" onClick={() => setReady(false)}>
