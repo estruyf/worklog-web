@@ -1,0 +1,13 @@
+node_modules/
+.DS_Store
+
+# The renders, and everything `npm run capture` and `npm run assets` produce.
+# All of it is regenerable from demo/ and scripts/, and none of it is small.
+# public/clips.json is the exception: it is a manifest rather than media, and
+# src/components/Shot.tsx imports it, so a fresh checkout has to typecheck
+# without having run a capture first.
+out/
+public/shots/
+public/clips/
+public/icon.png
+public/acme.md

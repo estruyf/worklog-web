@@ -1,0 +1,18 @@
+{
+  "newTask": {
+    "frames": 271,
+    "fps": 30
+  },
+  "closeTask": {
+    "frames": 95,
+    "fps": 30
+  },
+  "sync": {
+    "frames": 202,
+    "fps": 30
+  },
+  "logTime": {
+    "frames": 214,
+    "fps": 30
+  }
+}

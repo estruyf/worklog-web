@@ -1,0 +1,53 @@
+{
+  "hoursPerDay": 8,
+  "weekStart": 1,
+  "todosPerPage": 5,
+  "defaultTaskSort": { "key": "due", "dir": "asc" },
+  "codeTheme": "system",
+  "features": { "attachments": true, "prompts": true },
+  "clients": [
+    {
+      "id": "acme",
+      "name": "Acme Corp",
+      "color": "#2D6CDF",
+      "description": "Retainer, 3 days a week. Invoiced monthly on the last working day.\n\nAlways cc **billing@acme.example** or it sits in someone's inbox.",
+      "links": [
+        { "url": "https://example.com/acme/board", "label": "Sprint board" },
+        { "url": "https://example.com/acme/repo", "label": "Repository" }
+      ]
+    },
+    {
+      "id": "northwind",
+      "name": "Northwind Traders",
+      "color": "#1A7F37",
+      "description": "Time and materials. They want a short weekly summary on Fridays.",
+      "links": [{ "url": "https://example.com/northwind/tickets", "label": "Ticket queue" }]
+    },
+    {
+      "id": "lumen",
+      "name": "Lumen Studio",
+      "color": "#8250DF",
+      "description": "Design partner. Two days a month, booked ahead."
+    },
+    {
+      "id": "vantage",
+      "name": "Vantage Health",
+      "color": "#CF222E",
+      "archived": true,
+      "description": "Wrapped up in May. Kept for the billing history."
+    }
+  ],
+  "statuses": [
+    { "id": "open", "label": "Open" },
+    { "id": "in-progress", "label": "In progress" },
+    { "id": "waiting-for", "label": "Waiting for", "color": "#9A6700" },
+    { "id": "in-review", "label": "In review", "color": "#8250DF" },
+    { "id": "done", "label": "Closed", "terminal": true }
+  ],
+  "autoSync": {
+    "enabled": true,
+    "delayMinutes": 1,
+    "events": []
+  },
+  "aiAgents": []
+}

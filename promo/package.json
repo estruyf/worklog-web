@@ -1,0 +1,28 @@
+{
+  "name": "worklog-promo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "The Worklog promo videos, cut from a scripted capture of the real app against a demo timesheet, with Remotion.",
+  "license": "MIT",
+  "scripts": {
+    "capture": "node scripts/capture.mjs",
+    "start": "remotion studio",
+    "render": "remotion render Promo out/worklog-promo.mp4 --codec=h264 --crf=17",
+    "render:tour": "remotion render Tour out/worklog-tour.mp4 --codec=h264 --crf=17",
+    "render:all": "npm run render && npm run render:tour",
+    "still": "remotion still Promo out/poster.png --frame=690",
+    "web": "node scripts/web.mjs",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.518",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "remotion": "4.0.518"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.0",
+    "playwright": "1.62.1",
+    "typescript": "5.9.3"
+  }
+}

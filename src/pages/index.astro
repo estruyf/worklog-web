@@ -264,6 +264,36 @@ Export queue prototype. Renders, doesn't paginate yet.`;
         </div>
       </section>
 
+      {/* The two cuts from promo/. `preload="none"` and a poster mean the page
+          costs one 120 KB image until someone presses play — the hero is the
+          thing that has to load fast, and this sits directly under it. Both are
+          silent by design, so there are no controls for a volume that does not
+          exist beyond the browser's own. */}
+      <section class="demo" id="demo">
+        <div class="how-head">
+          <span class="eyebrow">See it in action</span>
+          <h2>Thirty seconds, start to commit.</h2>
+        </div>
+        <div class="demo-player">
+          <video
+            controls
+            playsinline
+            preload="none"
+            poster="/video/worklog-poster.jpg"
+            width="1920"
+            height="1080"
+          >
+            <source src="/video/worklog-promo.mp4" type="video/mp4" />
+          </video>
+        </div>
+        <p class="demo-note">
+          Recorded against a demo timesheet — every screen is the real app. Want
+          the long version?{' '}
+          <a href="/video/worklog-tour.mp4">The 90-second tour</a> walks through every
+          view, from the day bar to the commit it writes.
+        </p>
+      </section>
+
       <section class="features">
         {
           features.map((f) => (
@@ -1101,6 +1131,43 @@ Export queue prototype. Renders, doesn't paginate yet.`;
     font-size: 14.5px;
     line-height: 1.6;
     color: var(--muted);
+  }
+
+  /* ---- See it in action ---- */
+  .demo {
+    padding: 56px 0 8px;
+  }
+  /* The video is dark and the page is not, so it gets the brand ring and a
+     shadow rather than the hairline border the light cards use — against a white
+     page a 1px grey line around a black rectangle reads as a rendering artefact. */
+  .demo-player {
+    border-radius: 14px;
+    overflow: hidden;
+    background: #101319;
+    border: 1px solid var(--border-strong);
+    box-shadow:
+      0 24px 60px rgba(31, 35, 40, 0.18),
+      0 2px 8px rgba(31, 35, 40, 0.08);
+  }
+  .demo-player video {
+    display: block;
+    width: 100%;
+    height: auto;
+    /* The poster and the video share 16:9, so the box is the right height before
+       either has loaded and the page below never jumps. */
+    aspect-ratio: 16 / 9;
+  }
+  .demo-note {
+    margin: 14px 0 0;
+    text-align: center;
+    font-size: 14.5px;
+    color: var(--muted);
+  }
+  .demo-note a {
+    color: var(--ink);
+    text-decoration: underline;
+    text-decoration-color: var(--brand-strong);
+    text-underline-offset: 3px;
   }
 
   /* ---- How it works ---- */

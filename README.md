@@ -772,7 +772,12 @@ src/
   services/ commands/    # mutation services
   workspace/ data/ db/ store.ts   # in-memory file map + index + store
 test/roundtrip.test.ts   # golden round-trip tests
+promo/                   # the promo videos — its own project, no part of the app
 ```
+
+`promo/` builds the two videos on the landing page from a scripted run of the real
+app against a demo timesheet. It has its own `package.json` and dependencies and
+nothing in `src/` imports it; see [promo/README.md](promo/README.md).
 
 ## Troubleshooting
 

@@ -15,6 +15,11 @@ Every change to Worklog, by day, newest first.
      both). Links must be absolute — a relative path resolves against /changelog and
      404s. -->
 
+## 2026-08-27
+
+- The landing page has a **See it in action** section under the hero, with a 30-second video of the app being used — a day's hours logged into the gap in the bar, the Markdown that wrote, and the commit that followed. A 90-second tour of every view is linked beside it. Neither loads until you press play.
+- Both videos are built in `promo/`, from a scripted run of the real app against a demo timesheet that ships with it. Nothing in either one is a mock-up, and nothing touches a real repository.
+
 ## 2026-08-21
 
 - A new **Upcoming** view in the nav lists everything you have planned but not yet reached: open tasks due after today, bucketed by how far off they are — tomorrow, later this week, next week, later this month, later — nearest first, with the same search, tag, status and sort controls the other task lists have. A recurring task shows its next occurrence rather than its whole series.
