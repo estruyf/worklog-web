@@ -48,7 +48,7 @@ export function DayBar({
 
   return (
     <>
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 mb-[14px]">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-[6px] mb-[10px] sm:mb-[14px]">
         <SectionLabel>Your day</SectionLabel>
         <span className={'text-meta ' + (over > 0 ? 'text-brand-600 font-semibold' : 'text-neutral-675')}>
           {target > 0 ? (
@@ -68,7 +68,7 @@ export function DayBar({
         )}
       </div>
 
-      <div className="relative h-[68px] sm:h-[72px]" role="group" aria-label="Time logged on this day">
+      <div className="relative h-[56px] sm:h-[72px]" role="group" aria-label="Time logged on this day">
         {segments.map(({ entry, left, width }, i) => (
           <div key={entry.clientId} className="absolute inset-y-0" style={{ left: `${left}%`, width: `${width}%` }}>
             <SlotButton
@@ -118,7 +118,7 @@ export function DayBar({
         )}
       </div>
 
-      <div className="relative h-4 mt-[6px]" aria-hidden="true">
+      <div className="relative h-3.5 sm:h-4 mt-[4px] sm:mt-[6px]" aria-hidden="true">
         {ticks.map((tick, i) => (
           <span
             key={tick.hours}
@@ -155,8 +155,8 @@ function SlotButton({ gutter, dashed, selected, onClick, title, children }: Slot
       title={title}
       aria-pressed={selected}
       className={
-        'absolute inset-y-0 left-0 overflow-hidden px-3 py-2 text-left text-control rounded-panel border cursor-pointer ' +
-        (gutter ? 'right-[6px] ' : 'right-0 ') +
+        'absolute inset-y-0 left-0 overflow-hidden px-[10px] py-[7px] sm:px-3 sm:py-2 text-left text-control leading-snug rounded-panel border cursor-pointer ' +
+        (gutter ? 'right-[4px] sm:right-[6px] ' : 'right-0 ') +
         (selected
           ? 'border-brand-500 bg-brand-125 '
           : dashed

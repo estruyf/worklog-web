@@ -83,10 +83,14 @@ export function TodosView() {
             {openCount} open{doneTasks.length > 0 ? ` · ${doneTasks.length} completed` : ''}
           </span>
         </div>
-        <Button variant="primary" size="md" onClick={openTodoForm}>
-          <PlusIcon size={15} />
-          New to-do
-        </Button>
+        {/* On a phone the mobile top bar's "New" already adds a to-do from this
+         *  view, and this button would only squeeze the heading onto three lines. */}
+        <span className="hidden md:inline-flex shrink-0">
+          <Button variant="primary" size="md" onClick={openTodoForm}>
+            <PlusIcon size={15} />
+            New to-do
+          </Button>
+        </span>
       </ViewHeader>
 
       <div className="flex-1 overflow-auto px-6 pt-6 pb-10">

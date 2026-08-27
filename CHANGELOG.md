@@ -20,6 +20,14 @@ Every change to Worklog, by day, newest first.
 - The landing page has a **See it in action** section under the hero, with a 30-second video of the app being used — a day's hours logged into the gap in the bar, the Markdown that wrote, and the commit that followed. A 90-second tour of every view is linked beside it. Neither loads until you press play.
 - Both videos are built in `promo/`, from a scripted run of the real app against a demo timesheet that ships with it. Nothing in either one is a mock-up, and nothing touches a real repository.
 
+## 2026-08-25
+
+- The "a new version is available" bar no longer squeezes itself onto a phone: the sentence gets a line of its own and Reload sits on the next one, instead of every word breaking to fit beside the buttons.
+- On a phone, the top bar's "New" adds straight to the to-do list while you're in the To-dos view, so that view's own "New to-do" button is now hidden there and the heading has room to fit on one line.
+- The "Today" pill next to the date in the day view is hidden on phones, where it pushed the date onto a second line and the disabled "Today" button already said the same thing.
+- The day bar is more compact on phones: each logged entry now sits in a shorter box, so the whole day fits on screen with less scrolling. Nothing changes on larger screens.
+- On a phone, the day view is ordered the way you read it: the day itself first, then the links of the clients on it, then open, worked and done tasks, with the general to-do list last. On wide screens the links and to-dos stay together in the side column, which now lines up with the top of the day instead of hanging below it once you scroll.
+
 ## 2026-08-21
 
 - A new **Upcoming** view in the nav lists everything you have planned but not yet reached: open tasks due after today, bucketed by how far off they are — tomorrow, later this week, next week, later this month, later — nearest first, with the same search, tag, status and sort controls the other task lists have. A recurring task shows its next occurrence rather than its whole series.
