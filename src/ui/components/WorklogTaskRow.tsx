@@ -7,6 +7,7 @@ import { fmtShort } from '../utils';
 import { DisclosureIcon } from './icons';
 import { PriorityChip } from './PriorityChip';
 import { StatusPicker } from './StatusPicker';
+import type { TaskTableLayout } from './TaskTable';
 import { WorkedToggle } from './WorkedToggle';
 
 /** The fold toggle, or the space it would take. Within a list that nests, rows
@@ -85,7 +86,7 @@ function RepeatChip({ label }: { label: string }) {
 
 /** Tag chips. Clickable when the row supplies `onTagClick`, which opens the
  * tag-filtered search — otherwise plain labels. */
-function TagChips({ tags, onTagClick }: { tags: string[]; onTagClick?: (tag: string) => void }) {
+function TagChips({ tags, onTagClick, truncate }: { tags: string[]; onTagClick?: (tag: string) => void; truncate?: boolean }) {
   return (
     <>
       {tags.map((tag) =>
@@ -93,6 +94,7 @@ function TagChips({ tags, onTagClick }: { tags: string[]; onTagClick?: (tag: str
           <Chip
             key={tag}
             variant="tag"
+            truncate={truncate}
             onClick={(e) => {
               e.stopPropagation();
               onTagClick(tag);
@@ -102,12 +104,34 @@ function TagChips({ tags, onTagClick }: { tags: string[]; onTagClick?: (tag: str
             {tag}
           </Chip>
         ) : (
-          <Chip key={tag} variant="tag" as="span">
+          <Chip key={tag} variant="tag" as="span" truncate={truncate} title={tag}>
             {tag}
           </Chip>
         ),
       )}
     </>
+  );
+}
+
+/** The tags column on a wide row: the repeat marker, one tag, and a count of
+ *  whatever else the task carries — the rest is a hover away, and the narrow
+ *  layout below wraps and shows the lot. One rather than as many as fit, because
+ *  the lane gives way in a narrow pane and two chips sharing 90px are two chips
+ *  you can't read. The one that is shown ellipsizes rather than being cut
+ *  through by the lane's edge: a chip sliced in half reads as a fault. */
+function TagCell({ row }: { row: WorklogRow }) {
+  const shown = row.tags.slice(0, 1);
+  const hidden = row.tags.slice(shown.length);
+  return (
+    <div className="hidden @lg:flex items-center gap-[6px] min-w-0 overflow-hidden">
+      {row.repeat && <RepeatChip label={row.repeat} />}
+      <TagChips tags={shown} onTagClick={row.onTagClick} truncate />
+      {hidden.length > 0 && (
+        <span title={hidden.join(', ')} className="shrink-0 text-eyebrow text-neutral-675 tabular-nums">
+          +{hidden.length}
+        </span>
+      )}
+    </div>
   );
 }
 
@@ -123,7 +147,7 @@ function LinkChip({ link, size }: { link: string; size: number }) {
 // buttons to its left, which is the fold slot (16px + its 11px gap) when the list
 // reserves one, plus the done circle and — on rows that have it — the worked
 // toggle. Written out per case rather than summed into an arbitrary value at
-// runtime: Tailwind only emits the classes its source scan finds.
+// runtime: Tailwind only emits classes its source scan finds.
 const META_INDENT = {
   'slot-worked': 'pl-[72px]',
   'slot-plain': 'pl-[55px]',
@@ -133,26 +157,27 @@ const META_INDENT = {
 
 // Memoized so a row skips re-rendering while its stable `row` object is
 // unchanged — important because the task lists re-render on every keystroke in
-// the surrounding views (log form, search box).
+// the surrounding views (log form, search box). `layout` is memoized by
+// `TaskTable`, which is the only thing that renders this.
 //
-// The row collapses gracefully when it is narrower than `@lg` (32rem): the
-// status column and hover actions drop out, the title is allowed to wrap, and
-// the metadata (status, progress, due, tags, link) reflows onto a second line
-// indented under the title. It keys off the row's own width rather than the
-// viewport's, because the same row is used both full-width and in the day
-// view's ~320px to-do side column, where the hover actions would otherwise
-// squeeze the title down to a couple of characters.
-export const WorklogTaskRow = React.memo(function WorklogTaskRow({ row }: { row: WorklogRow }) {
+// From `@lg` (32rem) up the row is a grid: `layout.cols` gives every list one
+// set of columns, so the chips line up down the page whether or not the row
+// above carried the same fields. Every lane the layout reserves gets a cell
+// here, empty or not — a skipped one would slide the rest of the row into the
+// wrong column.
+//
+// Below `@lg` the same cells are `hidden` and the row falls back to a flex line:
+// the title wraps, the meta reflows onto a second line indented under it, and
+// the hover actions become an overflow menu. It keys off the *list's* width (the
+// container is on `TaskTable`), because the same row is used both full-width and
+// in the day view's ~320px to-do side column.
+export const WorklogTaskRow = React.memo(function WorklogTaskRow({ row, layout }: { row: WorklogRow; layout: TaskTableLayout }) {
   const hasNarrowMeta =
     !!row.status || !!row.priority || !!row.progress || !!row.due || !!row.repeat || row.tags.length > 0 || row.hasLink;
   return (
-    <div
-      key={row.id}
-      className="@container group py-2 px-2.5 rounded-lg hover:bg-neutral-175"
-      style={{ paddingLeft: row.pad }}
-    >
-      <div className="flex items-center gap-[11px]">
-        <FoldToggle slot={row.foldSlot} collapsed={row.collapsed} onToggle={row.onToggleCollapse} />
+    <div key={row.id} className="group relative py-2 px-2.5 rounded-lg hover:bg-neutral-175">
+      <div className="flex items-center gap-[11px] @lg:grid" style={{ gridTemplateColumns: layout.cols }}>
+        <FoldToggle slot={layout.fold} collapsed={row.collapsed} onToggle={row.onToggleCollapse} />
         {/* The visible circle stays 17px, but the tap target doesn't: the halo
             extends 8px up/down and 5px sideways — half the 11px gap to the worked
             toggle, so the two ticks meet at the midline rather than stealing each
@@ -160,8 +185,9 @@ export const WorklogTaskRow = React.memo(function WorklogTaskRow({ row }: { row:
         <button onClick={row.onDone} title="Mark done" className="relative before:absolute before:-inset-y-2 before:-inset-x-[5px] w-[17px] h-[17px] shrink-0 border-[1.5px] border-neutral-575 rounded-full bg-white cursor-pointer p-0 text-neutral-500 hover:border-success-500 hover:text-success-500 flex items-center justify-center">
           <CheckIcon size={11} strokeWidth={2.5} />
         </button>
-        {/* Worked toggle — absent for rows with no worked-on state (to-dos). */}
-        {row.onWorked && (
+        {/* Worked toggle — absent for rows with no worked-on state (to-dos), which
+            in a list that mixes the two still hold the lane open. */}
+        {row.onWorked ? (
           <WorkedToggle
             worked={row.worked}
             onToggle={row.onWorked}
@@ -169,64 +195,56 @@ export const WorklogTaskRow = React.memo(function WorklogTaskRow({ row }: { row:
             label={row.workedLabel}
             ariaLabel={`${row.workedLabel} — ${row.title}`}
           />
+        ) : (
+          layout.worked && <span className="hidden @lg:block" aria-hidden="true" />
         )}
         {/* Status column — wide rows only; when narrow it moves to the meta row
-            below. Absent for rows without a meaningful status (to-dos).
-            `min-w-16` rather than `w-16`: the width lines the titles up across a
-            list, but a custom status can be named anything, and clipping the one
-            word the column exists to show would be worse than the ragged edge a
-            long one leaves. */}
-        {row.status && (
-          <span className="hidden @lg:block min-w-16 shrink-0">
-            <StatusPicker
-              statusId={row.status.id}
-              label={row.status.label}
-              name={row.status.name}
-              color={row.status.color}
-              done={row.status.done}
-              choices={row.status.choices}
-              onSelect={row.status.onSelect}
-            />
+            below. A custom status can be named anything, so a long one is cut off
+            with its full name left on the trigger's title: in a table the column
+            it would push out of shape belongs to every other row too. */}
+        {layout.status && (
+          <span className="hidden @lg:block min-w-0">
+            {row.status && (
+              <StatusPicker
+                statusId={row.status.id}
+                label={row.status.label}
+                name={row.status.name}
+                color={row.status.color}
+                done={row.status.done}
+                choices={row.status.choices}
+                onSelect={row.status.onSelect}
+                className="block max-w-full truncate"
+              />
+            )}
           </span>
         )}
         <button
           onClick={row.onView}
           title="View task"
+          style={{ paddingLeft: row.indent }}
           className="text-row text-neutral-825 flex-1 min-w-0 text-left bg-transparent border-none cursor-pointer p-0 hover:underline whitespace-normal leading-[1.35] @lg:whitespace-nowrap @lg:overflow-hidden @lg:text-ellipsis @lg:leading-normal"
         >
           {row.title}
         </button>
         {/* Inline meta — wide rows only. When narrow these reflow to the row below. */}
-        <div className="hidden @lg:contents">
-          {/* First of the chips: it is the one that says whether the rest of the
-              row is worth reading now. */}
-          {row.priority && <PriorityChip priority={row.priority} />}
-          {row.progress && <ProgressChip progress={row.progress} barWidth={46} />}
-          {row.due && <DueChip due={row.due} overdue={row.overdue} days={row.overdueDays} />}
-          {row.repeat && <RepeatChip label={row.repeat} />}
-          <TagChips tags={row.tags} onTagClick={row.onTagClick} />
-        </div>
-        {/* Hover actions — wide rows only; they would crowd out the title otherwise. */}
-        <div className="hidden @lg:flex items-center gap-[6px] shrink-0 opacity-0 pointer-events-none transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 group-hover:pointer-events-auto group-focus-within:pointer-events-auto">
-          <Button size="xs" onClick={row.onView} title="View task">
-            <EyeIcon size={12} />
-            <span className="sr-only">View task</span>
-          </Button>
-          <Button size="xs" onClick={row.onEdit} title="Edit task">
-            <Pencil size={12} />
-            <span className="sr-only">Edit task</span>
-          </Button>
-          <Button size="xs" variant="danger" onClick={row.onDelete} title="Delete task">
-            <Trash size={12} />
-            <span className="sr-only">Delete task</span>
-          </Button>
-        </div>
-        {row.hasLink && (
-          <span className="hidden @lg:inline-flex">
-            <LinkChip link={row.link} size={14} />
-          </span>
+        {layout.priority && (
+          <div className="hidden @lg:flex items-center min-w-0">{row.priority && <PriorityChip priority={row.priority} />}</div>
         )}
-        {/* Narrow rows have no room for the hover actions above, and hover
+        {layout.progress && (
+          <div className="hidden @lg:flex items-center justify-end min-w-0">
+            {row.progress && <ProgressChip progress={row.progress} barWidth={32} />}
+          </div>
+        )}
+        {layout.due && (
+          <div className="hidden @lg:flex items-center min-w-0">
+            {row.due && <DueChip due={row.due} overdue={row.overdue} days={row.overdueDays} />}
+          </div>
+        )}
+        {layout.tags && <TagCell row={row} />}
+        {layout.link && (
+          <div className="hidden @lg:flex items-center justify-center">{row.hasLink && <LinkChip link={row.link} size={14} />}</div>
+        )}
+        {/* Narrow rows have no room for the hover actions below, and hover
             doesn't exist on the touch screens most of them are on — so the same
             three actions live behind one overflow trigger instead of vanishing. */}
         <span className="@lg:hidden shrink-0">
@@ -247,6 +265,29 @@ export const WorklogTaskRow = React.memo(function WorklogTaskRow({ row }: { row:
         </span>
       </div>
 
+      {/* Hover actions — wide rows only, and laid over the row rather than in a
+          lane of their own: three buttons' worth of width reserved on every row
+          is width the titles need, and they are only ever wanted on the one row
+          under the pointer. They stop short of the link column so following a
+          link doesn't mean moving the mouse away first. */}
+      <div
+        className="hidden @lg:flex items-center gap-[6px] absolute top-1/2 -translate-y-1/2 bg-neutral-175 opacity-0 pointer-events-none transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 group-hover:pointer-events-auto group-focus-within:pointer-events-auto before:absolute before:right-full before:inset-y-0 before:w-6 before:bg-gradient-to-r before:from-transparent before:to-neutral-175"
+        style={{ right: layout.link ? 39 : 10 }}
+      >
+        <Button size="xs" onClick={row.onView} title="View task">
+          <EyeIcon size={12} />
+          <span className="sr-only">View task</span>
+        </Button>
+        <Button size="xs" onClick={row.onEdit} title="Edit task">
+          <Pencil size={12} />
+          <span className="sr-only">Edit task</span>
+        </Button>
+        <Button size="xs" variant="danger" onClick={row.onDelete} title="Delete task">
+          <Trash size={12} />
+          <span className="sr-only">Delete task</span>
+        </Button>
+      </div>
+
       {/* Narrow-row meta — status + progress + due + tags + link, indented under
           the title by `META_INDENT`.
           Hidden from `@lg` up, and skipped entirely when there is nothing to show. */}
@@ -254,7 +295,7 @@ export const WorklogTaskRow = React.memo(function WorklogTaskRow({ row }: { row:
         <div
           className={
             'flex @lg:hidden flex-wrap items-center gap-x-[10px] gap-y-[6px] mt-[6px] ' +
-            META_INDENT[`${row.foldSlot ? 'slot' : 'flat'}-${row.onWorked ? 'worked' : 'plain'}`]
+            META_INDENT[`${layout.fold ? 'slot' : 'flat'}-${row.onWorked ? 'worked' : 'plain'}`]
           }
         >
           {row.status && (

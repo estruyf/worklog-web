@@ -17,6 +17,10 @@ Every change to Worklog, by day, newest first.
 
 ## 2026-08-27
 
+- Open task lists are laid out as tables: status, task, priority, subtasks, due and tags each have a column of their own, so a task without a due date leaves a gap instead of shifting the rest of the row along. Subtasks indent their title rather than the whole row, which keeps their status in the status column.
+- Clicking a column heading sorts the list by it, and clicking the same one again reverses it. It is the same order the toolbar's picker sets, so the two always agree — and "Save as default" still makes it the order every list opens in.
+- Views that split one list across cards — Overdue by client, Upcoming by horizon, the day's open tasks — share one set of columns, so a due date sits in the same place from card to card.
+- A wide row now shows one tag and a count of the others ("+2"); the full set is still there on a narrow screen, and in the task itself. Hovering a row lays its view/edit/delete buttons over the right-hand end instead of reserving room for them on every row.
 - The landing page has a **See it in action** section under the hero, with a 30-second video of the app being used — a day's hours logged into the gap in the bar, the Markdown that wrote, and the commit that followed. A 90-second tour of every view is linked beside it. Neither loads until you press play.
 - Both videos are built in `promo/`, from a scripted run of the real app against a demo timesheet that ships with it. Nothing in either one is a mock-up, and nothing touches a real repository.
 

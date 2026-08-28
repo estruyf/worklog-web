@@ -1,7 +1,7 @@
 import React from 'react';
 import { TriangleAlertIcon } from 'lucide-react';
 import { Badge, Card, LinkButton, SectionLabel } from '../../primitives';
-import { WorklogTaskRow } from '../../components';
+import { TaskTable } from '../../components';
 import { navigateToView } from '../../router';
 import type { WorklogRow } from '../../model';
 
@@ -27,9 +27,7 @@ export function OverdueTasksSection({ overdueRows }: { overdueRows: WorklogRow[]
         </LinkButton>
       </div>
       <Card tone="danger" padding="list" className="mb-[34px]">
-        {overdueRows.map((row) => (
-          <WorklogTaskRow key={row.id} row={row} />
-        ))}
+        <TaskTable rows={overdueRows} />
       </Card>
     </>
   );

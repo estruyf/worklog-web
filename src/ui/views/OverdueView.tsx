@@ -7,7 +7,7 @@ import React, { useMemo } from 'react';
 import { TriangleAlertIcon } from 'lucide-react';
 import { collectOverdue, daysOverdue, formatDaysLate } from '../../model/overdue';
 import type { Task } from '../../model/types';
-import { TaskListToolbar, WorklogTaskRow } from '../components';
+import { TaskListToolbar, TaskTable, useTaskTableLayout } from '../components';
 import { Badge, Card, EmptyState, LinkButton, SectionLabel, ViewHeader } from '../primitives';
 import { useData } from '../context';
 import type { ClientTaskGroup } from '../model';
@@ -72,6 +72,11 @@ function useOverdueData() {
 
 export function OverdueView() {
   const { groups, overdueCount, dueTodayRows, worstDays, filter } = useOverdueData();
+  // One column set for the whole page: the client cards and the due-today card
+  // are one list the view happened to split up, and columns that moved between
+  // them would say they weren't.
+  const rows = useMemo(() => [...groups.flatMap((g) => g.rows), ...dueTodayRows], [groups, dueTodayRows]);
+  const layout = useTaskTableLayout(rows);
 
   return (
     <div className="flex flex-1 flex-col min-h-0">
@@ -101,7 +106,9 @@ export function OverdueView() {
               </LinkButton>
             </EmptyState>
           ) : (
-            groups.map((group) => <GroupCard key={group.id} group={group} tone="overdue" />)
+            groups.map((group) => (
+              <GroupCard key={group.id} group={group} tone="overdue" sort={filter.sort} layout={layout} />
+            ))
           )}
 
           {dueTodayRows.length > 0 && (
@@ -111,9 +118,7 @@ export function OverdueView() {
                 <Badge>{dueTodayRows.length}</Badge>
               </div>
               <Card padding="list">
-                {dueTodayRows.map((row) => (
-                  <WorklogTaskRow key={row.id} row={row} />
-                ))}
+                <TaskTable rows={dueTodayRows} sort={filter.sort} layout={layout} />
               </Card>
             </>
           )}

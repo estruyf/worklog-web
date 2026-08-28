@@ -13,6 +13,7 @@ import type { Task } from '../../model/types';
 import { NORMAL_PRIORITY_ID, PRIORITIES } from '../../model/priority';
 import { sameTaskSort } from '../../model/taskSort';
 import type { TaskListToolbarProps, TaskStatusOption } from '../components/TaskListToolbar';
+import type { TaskTableSort } from '../components/TaskTable';
 import { useData } from '../context';
 import { deriveTaskList, taskListFiltersFor, type TaskListFilters, type TaskSortKey } from '../utils';
 
@@ -40,6 +41,10 @@ export interface TaskListFilterApi {
   filtered: boolean;
   /** Back to no narrowing, in the user's configured order. */
   reset: () => void;
+  /** The order, and the reorder a column header fires — the same state the
+   *  toolbar's picker edits, so the two can never disagree. Present even when
+   *  the list is too short for a toolbar: a table still has headers. */
+  sort: TaskTableSort;
   /** Props to spread onto `<TaskListToolbar>`, or null when the list is too
    *  short to be worth one. */
   toolbar: TaskListToolbarProps | null;
@@ -104,6 +109,15 @@ export function useTaskListFilter(tasks: Task[], options: TaskListFilterOptions 
   const setStatus = useCallback((status: string) => setFilters((f) => ({ ...f, status })), []);
   const setPriority = useCallback((priority: string) => setFilters((f) => ({ ...f, priority })), []);
   const setSort = useCallback((sort: TaskSortKey) => setFilters((f) => ({ ...f, sort })), []);
+  // What a column header does: re-picking the column it is already sorted by
+  // flips the direction, since that is the only thing left for a second click to
+  // mean. A new column starts ascending — which reads as oldest, highest and A→Z
+  // in turn (`sortDirectionLabels`), the useful end of all three.
+  const sortBy = useCallback(
+    (key: TaskSortKey) =>
+      setFilters((f) => (f.sort === key ? { ...f, dir: f.dir === 'asc' ? 'desc' : 'asc' } : { ...f, sort: key, dir: 'asc' })),
+    [],
+  );
   const toggleDir = useCallback(() => setFilters((f) => ({ ...f, dir: f.dir === 'asc' ? 'desc' : 'asc' })), []);
   const toggleTag = useCallback(
     (tag: string) =>
@@ -153,6 +167,11 @@ export function useTaskListFilter(tasks: Task[], options: TaskListFilterOptions 
     return present.map((p) => ({ id: p.id, label: p.label, count: derived.priorityCounts[p.id] ?? 0 }));
   }, [derived.priorityCounts, filters.priority]);
 
+  const sort = useMemo<TaskTableSort>(
+    () => ({ key: filters.sort, dir: filters.dir, onSort: sortBy }),
+    [filters.sort, filters.dir, sortBy],
+  );
+
   const toolbar = useMemo<TaskListToolbarProps | null>(() => {
     if (tasks.length < minItems && !derived.dirty) {
       return null;
@@ -200,5 +219,5 @@ export function useTaskListFilter(tasks: Task[], options: TaskListFilterOptions 
     reset,
   ]);
 
-  return { tasks: derived.tasks, count: derived.count, total: derived.total, filtered: derived.filtered, reset, toolbar };
+  return { tasks: derived.tasks, count: derived.count, total: derived.total, filtered: derived.filtered, reset, sort, toolbar };
 }

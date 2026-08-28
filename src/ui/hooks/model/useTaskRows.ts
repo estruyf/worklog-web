@@ -73,7 +73,7 @@ export function useTaskRows(deps: TaskRowDeps) {
       return {
         id: t.id,
         title: t.title,
-        pad: child ? "40px" : "10px",
+        indent: child ? 30 : 0,
         foldSlot,
         status: m && {
           id: t.status,

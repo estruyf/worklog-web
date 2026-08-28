@@ -85,7 +85,11 @@ export interface RowStatus {
 export interface WorklogRow {
   id: string;
   title: string;
-  pad: string;
+  /** How far the title is indented under its parent, in px — 0 at top level.
+   *  The *title* rather than the row: the columns beside it belong to the whole
+   *  list, and a subtask whose status sat 30px right of every other row's would
+   *  be a subtask outside the status column. */
+  indent: number;
   /** Whether the row leaves room for the fold toggle. A list-level answer, the
    *  same on every row in one list: true once anything in it has subtasks, so the
    *  titles line up whether or not this particular row folds; false in a flat

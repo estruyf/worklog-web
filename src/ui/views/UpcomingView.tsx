@@ -6,7 +6,7 @@
 import React, { useMemo } from 'react';
 import { CalendarClockIcon } from 'lucide-react';
 import { collectUpcoming, daysUntil, formatDaysUntil, groupUpcoming } from '../../model/upcoming';
-import { TaskListToolbar, WorklogTaskRow } from '../components';
+import { TaskListToolbar, TaskTable, useTaskTableLayout } from '../components';
 import { Badge, Card, EmptyState, LinkButton, SectionLabel, ViewHeader } from '../primitives';
 import { useData } from '../context';
 import type { WorklogRow } from '../model';
@@ -47,6 +47,10 @@ function useUpcomingData() {
 
 export function UpcomingView() {
   const { sections, total, nextIn, filter } = useUpcomingData();
+  // The horizons are one list cut into buckets, so they share one column set —
+  // a due date that moved column between "this week" and "later" would read as
+  // a different kind of thing.
+  const layout = useTaskTableLayout(useMemo(() => sections.flatMap((s) => s.rows), [sections]));
 
   return (
     <div className="flex flex-1 flex-col min-h-0">
@@ -85,9 +89,7 @@ export function UpcomingView() {
                       <Badge>{section.rows.length}</Badge>
                     </div>
                     <Card padding="list">
-                      {section.rows.map((row) => (
-                        <WorklogTaskRow key={row.id} row={row} />
-                      ))}
+                      <TaskTable rows={section.rows} sort={filter.sort} layout={layout} />
                     </Card>
                   </div>
                 ))

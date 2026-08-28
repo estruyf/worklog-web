@@ -1,5 +1,5 @@
 import React from 'react';
-import { WorklogTaskRow } from '../../components';
+import { TaskTable, type TaskTableLayout, type TaskTableSort } from '../../components';
 import { Badge, Card, cn, type BadgeTone, type CardTone } from '../../primitives';
 import type { ClientTaskGroup } from '../../model';
 
@@ -17,7 +17,21 @@ const HEADERS: Record<GroupCardTone, string> = {
   overdue: 'bg-danger-75 border-danger-200',
 };
 
-export function GroupCard({ group, tone = 'plain' }: { group: ClientTaskGroup; tone?: GroupCardTone }) {
+/** `sort` is the list's order, passed on so each card gets the sortable column
+ *  header; the views that group without a filter behind them leave it out.
+ *  `layout` is the column set the *view* built across every card, so one client's
+ *  due dates sit under the next one's. */
+export function GroupCard({
+  group,
+  tone = 'plain',
+  sort,
+  layout,
+}: {
+  group: ClientTaskGroup;
+  tone?: GroupCardTone;
+  sort?: TaskTableSort;
+  layout?: TaskTableLayout;
+}) {
   return (
     <Card tone={CARDS[tone]} className="mb-[14px] overflow-hidden">
       <div className={cn('flex items-center gap-[9px] px-[18px] py-[13px] border-b whitespace-nowrap', HEADERS[tone])}>
@@ -26,9 +40,7 @@ export function GroupCard({ group, tone = 'plain' }: { group: ClientTaskGroup; t
         <Badge tone={BADGES[tone]}>{group.count}</Badge>
       </div>
       <div className="px-2 py-[6px]">
-        {group.rows.map((row) => (
-          <WorklogTaskRow key={row.id} row={row} />
-        ))}
+        <TaskTable rows={group.rows} sort={sort} layout={layout} />
       </div>
     </Card>
   );

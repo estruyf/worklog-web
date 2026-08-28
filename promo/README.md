@@ -122,10 +122,24 @@ Shots sit on one of two stages, and both cuts use the same two so a cut between 
 screenshot and a recording does not shift the picture sideways:
 
 - **`wide`** — caption above, picture the width of the frame. For the whole
-  window (0.94x of the app's own pixels) and for crops wider than about 2:1.
-- **`side`** — caption in a column on the left, picture the full height. For the
-  shapes that are taller than they are wide: the phone, the task form, and the
-  day card at 1.55x, which is what it takes to read a note inside a segment.
+  window (0.94x of the app's own pixels), and for the crops that are wider still:
+  a status picker over a list at 2.4x, the settings pane cropped to the status
+  list at 1.5x, the to-do list at 1.4x.
+- **`side`** — caption in a column on the left, picture nearly the height of the
+  frame. For everything taller than it is wide, which since the task lists became
+  tables is most of the app: a list now runs to the bottom of the window, so the
+  only crop edge below it that isn't slicing a row in half is the window's own,
+  and a full-height crop lands at 1.17x.
+
+That last constraint is worth stating plainly, because it decided the framing of
+the piece. The log beat used to crop to the day card alone at 1.55x. It worked
+while the form was open and fell apart the moment it closed: the card shrinks
+back, the open-task table slides up into the frame, and the crop's bottom edge
+lands in the middle of a row — showing the app's own ellipsised column headers,
+of all things, right after a caption about clarity. There are 23 pixels of gap
+below that card in the payoff state and the form is 190 taller than that, so no
+single crop frames both halves. The window's own bottom edge is the one that is
+clean in both, which is why the side stage is now as tall as it can be drawn.
 
 [`Spotlight`](src/components/Spotlight.tsx) points at one control by dimming
 everything else. Its rect is in the capture's own pixels, measured once off the

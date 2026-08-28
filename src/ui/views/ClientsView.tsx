@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import type { WorklogRow } from '../model';
 import { PencilIcon } from 'lucide-react';
-import { TaskListToolbar, WorklogTaskRow } from '../components';
+import { TaskListToolbar, TaskTable } from '../components';
 import { Badge, Button, Card, EmptyState, LinkButton, SectionLabel, ViewHeader } from '../primitives';
 import { useData, useUi } from '../context';
 import { useTaskListFilter } from '../hooks';
@@ -121,21 +121,22 @@ export function ClientsView() {
           <SectionLabel className="mb-[14px]">Open tasks · {selectedOpenCount}</SectionLabel>
           {openFilter.toolbar && <TaskListToolbar {...openFilter.toolbar} />}
           <Card padding="list" className="mb-[38px]">
-            {selectedOpenRows.map((r) => <WorklogTaskRow key={r.id} row={r} />)}
-            {selectedOpenRows.length === 0 && (
-              <EmptyState className="py-2 px-2.5">
-                {selectedOpenCount === 0 ? (
-                  'No open tasks.'
-                ) : (
-                  <>
-                    No open tasks match these filters.{' '}
-                    <LinkButton size="inherit" onClick={openFilter.reset} className="italic underline">
-                      Reset
-                    </LinkButton>
-                  </>
-                )}
-              </EmptyState>
-            )}
+            <TaskTable rows={selectedOpenRows} sort={openFilter.sort}>
+              {selectedOpenRows.length === 0 && (
+                <EmptyState className="py-2 px-2.5">
+                  {selectedOpenCount === 0 ? (
+                    'No open tasks.'
+                  ) : (
+                    <>
+                      No open tasks match these filters.{' '}
+                      <LinkButton size="inherit" onClick={openFilter.reset} className="italic underline">
+                        Reset
+                      </LinkButton>
+                    </>
+                  )}
+                </EmptyState>
+              )}
+            </TaskTable>
           </Card>
 
           <CompletedTaskList tasks={selectedDone} clientName={selectedName} />

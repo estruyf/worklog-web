@@ -42,18 +42,22 @@ export const SOURCE = { width: 2560, height: 1640 } as const;
 
 /// The two stages a shot can be mounted on.
 ///
-/// `wide` is for the whole window, which is half again as wide as it is tall:
-/// the caption goes above it and the picture gets the width of the frame. At
-/// that size the app's own 14px text lands just under 1:1, which is legible but
-/// not comfortable — so anything the caption actually asks you to *read* goes on
-/// the same stage as a crop instead, at somewhere between 1.5x and 2.5x.
+/// `wide` is for the whole window, which is half again as wide as it is tall,
+/// and for the crops that are wider still — a status picker over a list, a
+/// settings pane cropped to the part that is written on. The caption goes above
+/// and the picture gets the width of the frame, which at a full window puts the
+/// app's own 14px text just under 1:1 and at those crops well over it.
 ///
-/// `side` puts the caption in a column on the left and gives the picture the
-/// full height. It is for the shapes that are taller than they are wide: the
-/// phone, and a crop of one column.
+/// `side` puts the caption in a column on the left and gives the picture nearly
+/// the height of the frame. It is for the shapes that are taller than they are
+/// wide, and since the task lists became tables that is most of them: a list now
+/// runs to the bottom of the window, so the only crop edge below it that isn't
+/// slicing a row in half is the window's own. A full-height crop is therefore
+/// the norm, and this is as large as one can be drawn — 990 of 1080, leaving the
+/// picture a margin rather than a stage.
 export const STAGE = {
   wide: { top: 258, maxW: 1560, maxH: 772, left: null },
-  side: { top: 90, maxW: 1150, maxH: 900, left: 706 },
+  side: { top: 45, maxW: 1220, maxH: 990, left: 686 },
 } as const;
 
 /// The caption block is bottom-aligned to this line on the `wide` stage, so a

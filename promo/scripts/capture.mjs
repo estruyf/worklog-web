@@ -204,14 +204,21 @@ const CLIPS = {
     async prepare(page) {
       await reset(page);
       // The log form opens *under* the day card, so the card has to come up the
-      // page or the form is half below the bottom edge. Backed off again by a
-      // hundred pixels afterwards: flush to the top, the card's own top border
-      // is scrolled out of the window, and a crop of a card with no top edge
-      // reads as a mistake rather than as a zoom.
-      await page.getByText('YOUR DAY').first().evaluate((el) => el.scrollIntoView({ block: 'start' }));
-      await page.evaluate(() => {
-        const doc = document.scrollingElement;
-        if (doc) doc.scrollTop = Math.max(0, doc.scrollTop - 110);
+      // page or the form is half below the bottom edge. Backed off again
+      // afterwards by more than the sticky day header is tall: flush to the top,
+      // the card's own top border sits behind that header, and a card with no
+      // visible top edge reads as a rendering fault rather than as a scroll.
+      await page.getByText('YOUR DAY').first().evaluate((el) => {
+        el.scrollIntoView({ block: 'start' });
+        // Whatever actually moved — the main column has its own scroller, not the
+        // document — backed off by more than the sticky day header is tall.
+        for (let n = el; n; n = n.parentElement) {
+          if (n.scrollTop > 0) {
+            n.scrollTop = Math.max(0, n.scrollTop - 120);
+            return;
+          }
+        }
+        document.scrollingElement?.scrollBy(0, -120);
       });
       await settle(page, 700);
     },

@@ -49,24 +49,27 @@ const S = {
 
 // ---- crops, in the capture's own 2560x1640 -------------------------------
 //
-// Read off the files in public/shots. Every edge falls inside the app: a crop
-// that clips a window's border reads as a mistake, one that starts inside it
-// reads as a zoom.
-
-/// The day card — the bar, the note, and the log form that opens beneath it.
-/// 1.55x of the app's own pixels.
-const DAY_CARD: Rect = { x: 494, y: 126, w: 1326, h: 1164 };
+// Read off the files in public/shots. Every edge either falls inside the app —
+// which reads as a zoom — or is the window's own; an edge that slices a border
+// or a row in half is the one thing that reads as a mistake.
 
 /// The main column with the sidebar dropped: the default for a view whose
 /// caption is about what is *in* a list rather than about the app having lists.
-/// It shares an aspect with the whole window, so cutting between `DESK` and this
-/// reads as a push rather than a reframe. 1.18x.
-const MAIN_COL: Rect = { x: 480, y: 0, w: 2080, h: 1330 };
+/// The task form and the log beat use it too — in the form's case because the
+/// Add task button at the bottom has to be in frame, since the beat ends with it
+/// being pressed.
+///
+/// Floor to ceiling. Since the lists became tables they run to the bottom of the
+/// window, so there is no gap between cards left to end a crop in; the only
+/// clean bottom edge is the window's own. That makes it taller than it is wide,
+/// which is why every view using it sits on the side stage. 1.17x.
+const MAIN_COL: Rect = { x: 480, y: 0, w: 2080, h: 1640 };
 
-/// The task form, floor to ceiling. Taller than it is wide, so it goes on the
-/// side stage; the Add task button at the bottom has to be in frame, because the
-/// beat ends with it being pressed.
-const FORM: Rect = { x: 486, y: 0, w: 2074, h: 1640 };
+/// The to-do list is the one that does not fill the window — five rows and a
+/// completed fold. Below its last card the page is empty, and putting that on
+/// screen is putting nothing on screen, so this stops in the white space and
+/// goes on the wide stage at 1.43x instead.
+const TODO_LIST: Rect = { x: 480, y: 0, w: 2080, h: 1090 };
 
 /// The overdue block with the status picker open over it. Wide and short, which
 /// is the one shape the wide stage flatters — 2.36x, and every status in the
@@ -131,7 +134,7 @@ export const Tour: React.FC = () => (
       <Scene duration={S.log.duration}>
         <Shot
           stage="side"
-          rectAt={() => DAY_CARD}
+          rectAt={() => MAIN_COL}
           aside={
             <>
               <Sequence durationInFrames={244} layout="none">
@@ -162,10 +165,11 @@ export const Tour: React.FC = () => (
     <Sequence from={S.overdue.from} durationInFrames={S.overdue.duration}>
       <Scene duration={S.overdue.duration}>
         <Shot
-          stage="wide"
+          stage="side"
           rectAt={() => MAIN_COL}
           aside={
             <Caption
+              where="side"
               kicker="Overdue"
               headline="Everything that has slipped, in one place."
               note="Grouped by client, longest overdue first, across every client and the to-do list. The nav badge is this number."
@@ -180,10 +184,11 @@ export const Tour: React.FC = () => (
     <Sequence from={S.upcoming.from} durationInFrames={S.upcoming.duration}>
       <Scene duration={S.upcoming.duration}>
         <Shot
-          stage="wide"
+          stage="side"
           rectAt={() => MAIN_COL}
           aside={
             <Caption
+              where="side"
               kicker="Upcoming"
               headline="And everything that has not arrived yet."
               note="Tomorrow, later this week, next week, later this month. Between this and Overdue, every dated task has a home."
@@ -199,7 +204,7 @@ export const Tour: React.FC = () => (
       <Scene duration={S.todos.duration}>
         <Shot
           stage="wide"
-          rectAt={() => MAIN_COL}
+          rectAt={() => TODO_LIST}
           aside={
             <Caption
               kicker="To-dos"
@@ -234,10 +239,11 @@ export const Tour: React.FC = () => (
     <Sequence from={S.clients.from} durationInFrames={S.clients.duration}>
       <Scene duration={S.clients.duration}>
         <Shot
-          stage="wide"
+          stage="side"
           rectAt={() => MAIN_COL}
           aside={
             <Caption
+              where="side"
               kicker="Clients"
               headline="Each one with its own tasks, colour and notes."
               note="The rate you agreed, who to invoice, the board and the repo — kept beside the work rather than in another tab."
@@ -252,10 +258,11 @@ export const Tour: React.FC = () => (
     <Sequence from={S.task.from} durationInFrames={S.task.duration}>
       <Scene duration={S.task.duration}>
         <Shot
-          stage="wide"
+          stage="side"
           rectAt={() => MAIN_COL}
           aside={
             <Caption
+              where="side"
               kicker="A task"
               headline="Description, subtasks, prompts, notes, links."
               note="Status, priority, a due date and tags down the side. Prompts are the ones you parked to hand to an agent later."
@@ -271,7 +278,7 @@ export const Tour: React.FC = () => (
       <Scene duration={S.newTask.duration}>
         <Shot
           stage="side"
-          rectAt={() => FORM}
+          rectAt={() => MAIN_COL}
           aside={
             <Caption
               where="side"
@@ -309,10 +316,11 @@ export const Tour: React.FC = () => (
     <Sequence from={S.archive.from} durationInFrames={S.archive.duration}>
       <Scene duration={S.archive.duration}>
         <Shot
-          stage="wide"
+          stage="side"
           rectAt={() => MAIN_COL}
           aside={
             <Caption
+              where="side"
               kicker="Archive"
               headline="Closed work, by client and month."
               note="Reopen one and it moves back to the client file it came from."
@@ -327,10 +335,11 @@ export const Tour: React.FC = () => (
     <Sequence from={S.insights.from} durationInFrames={S.insights.duration}>
       <Scene duration={S.insights.duration}>
         <Shot
-          stage="wide"
+          stage="side"
           rectAt={() => MAIN_COL}
           aside={
             <Caption
+              where="side"
               kicker="Insights"
               headline="Hours and days per client, and the dates behind them."
               note="Vacation, holidays and sick days counted separately. The dates copy out as a line for the invoice."

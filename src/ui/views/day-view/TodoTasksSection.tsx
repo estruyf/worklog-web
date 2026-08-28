@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Badge, Card, Pager, SectionLabel } from '../../primitives';
-import { WorklogTaskRow } from '../../components';
+import { TaskTable } from '../../components';
 import type { WorklogRow } from '../../model';
 
 /** Open general to-dos (tasks not linked to any client). A persistent, personal
@@ -28,21 +28,19 @@ export function TodoTasksSection({ todoRows, pageSize }: { todoRows: WorklogRow[
         <Badge>{todoRows.length}</Badge>
       </div>
       <Card padding="list" className="mb-[34px] xl:mb-0">
-        {rows.map((row) => (
-          <WorklogTaskRow key={row.id} row={row} />
-        ))}
-
-        {pageCount > 1 && (
-          <Pager
-            variant="compact"
-            page={current}
-            pageCount={pageCount}
-            onPage={setPage}
-            previousLabel="Previous to-dos"
-            nextLabel="More to-dos"
-            className="mt-[6px] px-2.5 py-2 border-t border-neutral-275"
-          />
-        )}
+        <TaskTable rows={rows}>
+          {pageCount > 1 && (
+            <Pager
+              variant="compact"
+              page={current}
+              pageCount={pageCount}
+              onPage={setPage}
+              previousLabel="Previous to-dos"
+              nextLabel="More to-dos"
+              className="mt-[6px] px-2.5 py-2 border-t border-neutral-275"
+            />
+          )}
+        </TaskTable>
       </Card>
     </>
   );

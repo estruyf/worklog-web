@@ -6,7 +6,7 @@ import React, { useMemo, useState } from 'react';
 import { PlusIcon } from 'lucide-react';
 import { GENERAL_TODO_COLOR, GENERAL_TODO_LABEL, isGeneralTodoClientId } from '../../model/todos';
 import type { Task } from '../../model/types';
-import { CompletedTaskRow, DisclosureIcon, TaskListToolbar, WorklogTaskRow } from '../components';
+import { CompletedTaskRow, DisclosureIcon, TaskListToolbar, TaskTable } from '../components';
 import { Button, Card, EmptyState, LinkButton, SectionLabel, ViewHeader } from '../primitives';
 import { useData } from '../context';
 import { useTaskListFilter } from '../hooks';
@@ -109,9 +109,7 @@ export function TodosView() {
                 </EmptyState>
               ) : (
                 <Card padding="list">
-                  {openRows.map((row) => (
-                    <WorklogTaskRow key={row.id} row={row} />
-                  ))}
+                  <TaskTable rows={openRows} sort={filter.sort} />
                 </Card>
               )}
             </>

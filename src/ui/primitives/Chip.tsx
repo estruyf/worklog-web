@@ -11,7 +11,7 @@ import { cn } from './cn';
  */
 export type ChipVariant = 'select' | 'add' | 'filter' | 'tag';
 
-const BASE = 'inline-flex items-center gap-[6px] shrink-0 rounded-full border';
+const BASE = 'inline-flex items-center gap-[6px] rounded-full border';
 
 const GEOMETRY: Record<ChipVariant, string> = {
   select: 'px-[13px] py-[7px] text-control font-semibold',
@@ -54,13 +54,20 @@ export interface ChipProps extends React.ButtonHTMLAttributes<HTMLButtonElement>
    *  It then carries its `title` and nothing else, because there is nothing else
    *  a non-control should be handed. */
   as?: 'button' | 'span';
+  /** For a chip in a column of fixed width: it gives up its width when the row
+   *  is short of it and ellipsizes its label, rather than keeping its size and
+   *  being cut through by the edge of the lane. Everywhere else a chip holds its
+   *  width — a filter row wraps instead. */
+  truncate?: boolean;
 }
 
 /** A rounded label, optionally a control. */
-export function Chip({ variant = 'filter', selected, as = 'button', className, children, ...rest }: ChipProps) {
+export function Chip({ variant = 'filter', selected, as = 'button', truncate, className, children, ...rest }: ChipProps) {
   const on = selected ?? false;
+  const label = truncate ? <span className="truncate">{children}</span> : children;
   const style = cn(
     BASE,
+    truncate ? 'min-w-0 max-w-full' : 'shrink-0',
     GEOMETRY[variant],
     on ? ON[variant] : OFF[variant],
     as === 'button' && 'cursor-pointer',
@@ -70,13 +77,13 @@ export function Chip({ variant = 'filter', selected, as = 'button', className, c
   if (as === 'span') {
     return (
       <span className={style} title={rest.title}>
-        {children}
+        {label}
       </span>
     );
   }
   return (
     <button type="button" aria-pressed={selected} className={style} {...rest}>
-      {children}
+      {label}
     </button>
   );
 }

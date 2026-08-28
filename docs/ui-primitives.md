@@ -349,7 +349,7 @@ the file now states: hand-rolled glyphs are the nav's, everything else is lucide
 <SectionLabel size="sm|md" tone="muted|danger" />   // uppercases its own text
 <EmptyState size="sm|md" />
 <Badge tone="neutral|outline|brand|danger" size="xs|sm|md" />
-<Chip variant="select|add|filter|tag" selected as="button|span" />
+<Chip variant="select|add|filter|tag" selected as="button|span" truncate />  // truncate: for a fixed-width column
 <SegmentedControl options={[{value, label, title}]} value onChange
                   variant="raised|joined" size="sm|md" aria-label="…" />  // aria-label required
 <Toggle checked onChange aria-label="…" />                               // aria-label required

@@ -33,10 +33,16 @@ const S = {
 // or is the window's own edge; an edge that slices a border in half is the one
 // thing that reads as a mistake.
 
-/// The day card: the bar, the note under it and the log form that opens beneath,
-/// with its own top and bottom borders inside the crop. At 1.55x of the app's
-/// own pixels, which is what it takes to read a note in a segment.
-const DAY_CARD: Rect = { x: 494, y: 126, w: 1326, h: 1164 };
+/// The day column, floor to ceiling.
+///
+/// It used to crop to the day card alone, at half again the size. That worked
+/// while the form was open and fell apart the moment it closed: the card shrinks
+/// back, the open-task table slides up into the frame, and the crop's bottom
+/// edge lands somewhere in the middle of a row. There is exactly one gap below
+/// the card in the payoff state, 23px of it, and the form is 190px taller than
+/// that — so no single crop frames both halves of this beat. The window's own
+/// bottom edge is the one that is clean in both. 1.17x.
+const MAIN_COL: Rect = { x: 480, y: 0, w: 2080, h: 1640 };
 
 /// The whole window. It shares its aspect with `MAIN` below, so cutting between
 /// the two is a push rather than a reframe.
@@ -91,7 +97,7 @@ export const Promo: React.FC = () => (
       <Scene duration={S.log.duration}>
         <Shot
           stage="side"
-          rectAt={() => DAY_CARD}
+          rectAt={() => MAIN_COL}
           aside={
             <>
               <Sequence durationInFrames={246} layout="none">
