@@ -60,7 +60,7 @@ export interface TaskTableLayout {
 // and ship with no CSS, since Tailwind only emits what its source scan finds. The
 // classes that *read* those variables are literal, so they do get emitted.
 const LANE = {
-  fold: '16px',
+  fold: '14px',
   done: '17px',
   worked: '17px',
   status: 'minmax(0,84px)',
@@ -90,10 +90,13 @@ export function useTaskTableLayout(rows: WorklogRow[]): TaskTableLayout {
   return useMemo(() => {
     const lanes = (withTags: boolean) =>
       [
-        fold && LANE.fold,
         LANE.done,
         worked && LANE.worked,
         status && LANE.status,
+        // Immediately before the title, not out at the left edge: a chevron is
+        // read as belonging to the line it opens, and from there the rail under
+        // it lands where the subtask titles start.
+        fold && LANE.fold,
         LANE.title,
         priority && LANE.priority,
         progress && LANE.progress,
@@ -193,10 +196,10 @@ function TaskTableHead({
       )}
       style={tableColumnVars(layout)}
     >
-      {layout.fold && <span />}
       <span />
       {layout.worked && <span />}
       {layout.status && <Head label="Status" sortKey="status" sort={sort} />}
+      {layout.fold && <span />}
       <Head label="Task" sortKey="title" sort={sort} />
       {layout.priority && <Head label="Priority" sortKey="priority" sort={sort} />}
       {layout.progress && <Head label="Sub" sort={sort} className="justify-end" />}
@@ -249,7 +252,12 @@ export function TaskTable({
 /** Just the rows, for a list whose container and column header belong to
  *  something above it — see `TaskTableGroups`. */
 export function TaskRows({ rows, layout }: { rows: WorklogRow[]; layout: TaskTableLayout }) {
-  return rows.map((row) => <WorklogTaskRow key={row.id} row={row} layout={layout} />);
+  // Namespaces the rows' element ids, which a fold toggle points `aria-controls`
+  // at. Per list rather than per task: one view can render the same task in two
+  // sections (the day view's overdue and worked blocks), and two elements sharing
+  // an id would leave the toggle controlling whichever one came first.
+  const listId = React.useId();
+  return rows.map((row) => <WorklogTaskRow key={row.id} row={row} layout={layout} idPrefix={listId} />);
 }
 
 /** One list broken into cards — a card per client — under a single column

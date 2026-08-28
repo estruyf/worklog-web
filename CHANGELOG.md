@@ -17,6 +17,9 @@ Every change to Worklog, by day, newest first.
 
 ## 2026-08-28
 
+- Subtasks now show up in the task lists. A task that has them carries a chevron next to its title and a count of how many; opening it lists them as indented rows in the same columns as everything else, so a subtask's status, tags and link line up with its parent's. They start open, and a parent you fold shut stays shut on the next visit. Searching looks inside subtask titles too and opens the parent it found one in.
+- Task lists read by task name first: the status has become a small coloured dot with a quiet label, instead of a bold coloured word competing with the title next to it.
+- The counts on a client card, in the control bar and beside "Open tasks" now count tasks, not tasks plus their subtasks.
 - Searching and filtering a task list now happens inside the list itself: one control bar sits at the top of the card the rows are in, with the search box, the filters and the order on a single line instead of floating above a separate card with a second row of tag chips under it.
 - Filters are quiet until they are doing something — a plain word with a chevron, and a box only once one is applied, so an untouched list no longer reads as four equally important controls.
 - The counts moved into the menus: "All statuses" no longer carries a number that told you nothing, and each option inside says how many rows picking it would leave. Tags are a menu now too, with a search box once there are more than a dozen.

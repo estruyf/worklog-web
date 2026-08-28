@@ -51,7 +51,7 @@ export function useTaskRows(deps: TaskRowDeps) {
   } = deps;
 
   const makeRow = useCallback(
-    (t: Task, child: boolean, foldSlot = false): WorklogRow => {
+    (t: Task, child: boolean, foldSlot = false, parentTitle?: string): WorklogRow => {
       const ls = linksOf(t);
       // General to-dos are open or closed only: no worked-on marking and no
       // status to show or move between.
@@ -73,7 +73,8 @@ export function useTaskRows(deps: TaskRowDeps) {
       return {
         id: t.id,
         title: t.title,
-        indent: child ? 30 : 0,
+        child,
+        parentTitle,
         foldSlot,
         status: m && {
           id: t.status,
@@ -124,20 +125,26 @@ export function useTaskRows(deps: TaskRowDeps) {
   /** A flat list of rows with subtasks indented under their parent, and orphaned
    *  subtasks (whose parent isn't in `list`) shown at top level. Parents the user
    *  has folded shut carry the toggle and drop their children — the nesting rules
-   *  themselves are `planTaskRows`.
+   *  themselves are `planTaskRows`. `expanded` is the filter's answer to a hit
+   *  inside a folded parent: those open for this render regardless.
    *
    *  The fold column is decided here rather than per row, because it is a
    *  property of the list: see `plansFold`. */
   const openRowsFor = useCallback(
-    (list: Task[]): WorklogRow[] => {
-      const plans = planTaskRows(list, collapsed);
+    (list: Task[], expanded?: ReadonlySet<string>): WorklogRow[] => {
+      const plans = planTaskRows(list, collapsed, expanded);
       const foldSlot = plansFold(plans);
       return plans.map((plan) => {
-        const row = makeRow(plan.task, plan.child, foldSlot);
+        const row = makeRow(plan.task, plan.child, foldSlot, plan.parentTitle);
         if (!plan.foldable) {
           return row;
         }
-        return { ...row, collapsed: plan.collapsed, onToggleCollapse: () => toggleCollapsed(plan.task.id) };
+        return {
+          ...row,
+          collapsed: plan.collapsed,
+          childIds: plan.childIds,
+          onToggleCollapse: () => toggleCollapsed(plan.task.id),
+        };
       });
     },
     [makeRow, collapsed, toggleCollapsed],

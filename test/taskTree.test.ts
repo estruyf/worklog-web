@@ -12,6 +12,7 @@ import {
   plansFold,
   pruneCollapsed,
   toggleCollapsed,
+  topLevelTasks,
   type CollapsedStore,
 } from '../src/ui/utils/taskTree';
 import type { Task } from '../src/model/types';
@@ -34,8 +35,8 @@ const kidB = task({ id: 'k2', parentId: 'p1' });
 const lone = task({ id: 'p2' });
 
 /** `id:child` per line, so an assertion reads like the list on screen. */
-const shape = (list: Task[], collapsed?: Set<string>) =>
-  planTaskRows(list, collapsed).map((p) => `${p.task.id}${p.child ? ':child' : ''}`);
+const shape = (list: Task[], collapsed?: Set<string>, expanded?: Set<string>) =>
+  planTaskRows(list, collapsed, expanded).map((p) => `${p.task.id}${p.child ? ':child' : ''}`);
 
 describe('planTaskRows', () => {
   it('nests subtasks under their parent', () => {
@@ -57,6 +58,31 @@ describe('planTaskRows', () => {
 
   it('ignores a fold on a task with no subtasks in the list', () => {
     expect(shape([parent, lone], new Set(['p1', 'p2']))).toEqual(['p1', 'p2']);
+  });
+
+  it('carries the parent it nests under, and the ids the toggle controls', () => {
+    const plans = planTaskRows([parent, kidA, kidB, lone]);
+    expect(plans[0]).toMatchObject({ childIds: ['k1', 'k2'] });
+    expect(plans[0].parentTitle).toBeUndefined();
+    // The rail and the indent are silent; the parent's name is how a subtask row
+    // says what it belongs to out loud.
+    expect(plans[1]).toMatchObject({ parentTitle: 'p1', childIds: [] });
+    expect(plans[3]).toMatchObject({ childIds: [] });
+  });
+
+  it('opens a folded parent that `expanded` names, without forgetting the fold', () => {
+    // A search whose hit is a subtask: answering it with a shut parent would be
+    // no answer at all.
+    const collapsed = new Set(['p1']);
+    expect(shape([parent, kidA, kidB], collapsed, new Set(['p1']))).toEqual(['p1', 'k1:child', 'k2:child']);
+    expect(planTaskRows([parent, kidA], collapsed, new Set(['p1']))[0]).toMatchObject({
+      foldable: true,
+      collapsed: false,
+    });
+    // The set itself is untouched, so clearing the query puts the list back.
+    expect(collapsed.has('p1')).toBe(true);
+    // A name that isn't folded shut changes nothing.
+    expect(shape([parent, kidA], collapsed, new Set(['p2']))).toEqual(['p1']);
   });
 
   it('keeps an orphaned subtask at top level rather than losing it', () => {
@@ -84,6 +110,18 @@ describe('plansFold', () => {
     // The children are out of the plan, but the toggle that brings them back is
     // still on screen and still needs its slot.
     expect(plansFold(planTaskRows([parent, kidA], new Set(['p1'])))).toBe(true);
+  });
+});
+
+describe('topLevelTasks', () => {
+  it('counts the rows a list draws at top level, subtasks folded into their parent', () => {
+    expect(topLevelTasks([parent, kidA, kidB, lone]).map((t) => t.id)).toEqual(['p1', 'p2']);
+  });
+
+  it('counts an orphan, because the list draws it at top level', () => {
+    // Same rule as `planTaskRows`: a count of rows that aren't there would be the
+    // same mistake pointed the other way.
+    expect(topLevelTasks([kidA, lone]).map((t) => t.id)).toEqual(['k1', 'p2']);
   });
 });
 

@@ -227,6 +227,60 @@ describe('deriveTaskList', () => {
   });
 });
 
+// A subtask is drawn as part of the task above it, not as another line on the
+// list — so it is not counted like one, not ordered like one, and cannot be shown
+// without the parent that says what it belongs to.
+describe('deriveTaskList and subtasks', () => {
+  const parent = task({ id: 'roll-out', title: 'Roll out', created: '2026-07-01' });
+  const stepA = task({ id: 'step-a', title: 'Draft the plan', parentId: 'roll-out', created: '2026-07-30' });
+  const stepB = task({ id: 'step-b', title: 'Review the plan', parentId: 'roll-out', created: '2026-07-02' });
+  const other = task({ id: 'invoice', title: 'Invoice', created: '2026-07-10' });
+  const nested = [parent, stepA, stepB, other];
+
+  it('counts parent tasks only, so one task never reads as four', () => {
+    const d = deriveTaskList(nested, filters(), deps);
+    expect([d.total, d.count]).toEqual([2, 2]);
+    // ...and every row is still there to render.
+    expect(ids(d)).toHaveLength(4);
+  });
+
+  it('orders the parents and leaves the subtasks in source order under them', () => {
+    // By creation date the steps would be b-then-a; they stay written order.
+    expect(ids(deriveTaskList(nested, filters({ sort: 'created' }), deps))).toEqual([
+      'roll-out',
+      'invoice',
+      'step-a',
+      'step-b',
+    ]);
+    // The parents flip with the direction; the steps do not.
+    expect(ids(deriveTaskList(nested, filters({ dir: 'desc' }), deps))).toEqual([
+      'invoice',
+      'roll-out',
+      'step-a',
+      'step-b',
+    ]);
+  });
+
+  it('brings the parent back for a subtask a query matched, and forces it open', () => {
+    const d = deriveTaskList(nested, filters({ query: 'draft' }), deps);
+    expect(ids(d)).toEqual(['roll-out', 'step-a']);
+    expect([...d.expanded]).toEqual(['roll-out']);
+    // The parent is what the list counts, even though the query matched the step.
+    expect([d.count, d.total]).toEqual([1, 2]);
+  });
+
+  it('leaves the folds alone when nothing is filtering', () => {
+    expect([...deriveTaskList(nested, filters(), deps).expanded]).toEqual([]);
+    expect([...deriveTaskList(nested, filters({ sort: 'title' }), deps).expanded]).toEqual([]);
+  });
+
+  it('counts an orphaned subtask, which the list draws at top level', () => {
+    // The Overdue and Upcoming views are slices: the parent is often not in them.
+    const d = deriveTaskList([stepA, other], filters(), deps);
+    expect([d.total, d.count]).toEqual([2, 2]);
+  });
+});
+
 // The order is a saved preference (`.worklog/config.json` → `defaultTaskSort`),
 // unlike the narrowing, which is session-local. These cover the two things that
 // makes true of the pure layer: where a list starts, and what "dirty" measures

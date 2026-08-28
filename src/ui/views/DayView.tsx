@@ -15,6 +15,7 @@ import {
   isDone,
   previousLoggedDay,
   relevantDayClientIds,
+  topLevelTasks,
   workedOnDate,
 } from '../utils';
 import {
@@ -53,10 +54,16 @@ function useDayData() {
       clients
         .map((c) => {
           const ct = openFilter.tasks.filter((t) => clientIdOf(t) === c.id);
-          return { id: c.id, name: c.name, color: colorOf(c.id), count: ct.length, rows: openRowsFor(ct) };
+          return {
+            id: c.id,
+            name: c.name,
+            color: colorOf(c.id),
+            count: topLevelTasks(ct).length,
+            rows: openRowsFor(ct, openFilter.expanded),
+          };
         })
         .filter((g) => g.count > 0),
-    [clients, openFilter.tasks, colorOf, openRowsFor],
+    [clients, openFilter.tasks, openFilter.expanded, colorOf, openRowsFor],
   );
   // Anything already past its due date on the day being viewed. Judged against
   // the selected date rather than today, so the block always reads as "late as
@@ -93,10 +100,16 @@ function useDayData() {
       clients
         .map((c) => {
           const ct = workedFilter.tasks.filter((t) => clientIdOf(t) === c.id);
-          return { id: c.id, name: c.name, color: colorOf(c.id), count: ct.length, rows: openRowsFor(ct) };
+          return {
+            id: c.id,
+            name: c.name,
+            color: colorOf(c.id),
+            count: topLevelTasks(ct).length,
+            rows: openRowsFor(ct, workedFilter.expanded),
+          };
         })
         .filter((g) => g.count > 0),
-    [workedFilter.tasks, clients, colorOf, openRowsFor],
+    [workedFilter.tasks, workedFilter.expanded, clients, colorOf, openRowsFor],
   );
 
   // The clients the day is about, and where their things live. Derived from what

@@ -11,7 +11,7 @@ import { TaskListToolbar, TaskTable, TaskTableGroups, useTaskTableLayout } from 
 import { Badge, Card, EmptyState, LinkButton, SectionLabel, ViewHeader } from '../primitives';
 import { useData } from '../context';
 import type { ClientTaskGroup } from '../model';
-import { clientIdOf, dueOn, isDone } from '../utils';
+import { clientIdOf, dueOn, isDone, topLevelTasks } from '../utils';
 import { useTaskListFilter } from '../hooks';
 import { GroupCard } from './day-view';
 
@@ -55,14 +55,14 @@ function useOverdueData() {
       id,
       name: clientName(id),
       color: colorOf(id),
-      count: list.length,
-      rows: openRowsFor([...list].sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0))),
+      count: topLevelTasks(list).length,
+      rows: openRowsFor([...list].sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0)), filter.expanded),
     }));
-  }, [overdue, filter.tasks, clientName, colorOf, openRowsFor]);
+  }, [overdue, filter.tasks, filter.expanded, clientName, colorOf, openRowsFor]);
 
   const dueTodayRows = useMemo(
-    () => openRowsFor(filter.tasks.filter((t) => !lateIds.has(t.id))),
-    [filter.tasks, lateIds, openRowsFor],
+    () => openRowsFor(filter.tasks.filter((t) => !lateIds.has(t.id)), filter.expanded),
+    [filter.tasks, filter.expanded, lateIds, openRowsFor],
   );
 
   const worstDays = overdue.length ? daysOverdue(overdue[0], today) : 0;

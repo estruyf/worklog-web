@@ -2,7 +2,7 @@ import React from 'react';
 import type { WorklogRow } from '../model';
 import { CalendarIcon, CheckIcon, EllipsisIcon, EyeIcon, GlobeIcon, Pencil, RefreshCwIcon, Trash } from 'lucide-react';
 import { formatDaysLate } from '../../model/overdue';
-import { Button, Chip, Menu } from '../primitives';
+import { Button, Chip, Menu, cn } from '../primitives';
 import { fmtShort } from '../utils';
 import { DisclosureIcon } from './icons';
 import { PriorityChip } from './PriorityChip';
@@ -14,22 +14,47 @@ import { WorkedToggle } from './WorkedToggle';
  *  without subtasks render the spacer rather than nothing, so every title starts
  *  at the same x — a chevron that shifted its neighbours would be worse than no
  *  chevron. A list where nothing nests (`slot` false) drops the column entirely
- *  instead of indenting every row around a toggle it will never draw. */
-function FoldToggle({ slot, collapsed, onToggle }: { slot: boolean; collapsed?: boolean; onToggle?: () => void }) {
+ *  instead of indenting every row around a toggle it will never draw.
+ *
+ *  It says how many subtasks and whose, because "Show subtasks" on the eleventh
+ *  toggle down a list is eleven identical buttons. `aria-controls` names the rows
+ *  it opens, and only while they exist: a folded parent's children are out of the
+ *  DOM entirely, and pointing at ids that aren't there is worse than pointing at
+ *  nothing. */
+function FoldToggle({
+  slot,
+  collapsed,
+  task,
+  controls,
+  onToggle,
+}: {
+  slot: boolean;
+  collapsed?: boolean;
+  task: string;
+  controls?: string[];
+  onToggle?: () => void;
+}) {
   if (!slot) {
     return null;
   }
   if (!onToggle) {
-    return <span className="w-4 shrink-0" aria-hidden="true" />;
+    return <span className="w-[14px] shrink-0" aria-hidden="true" />;
   }
+  const n = controls?.length ?? 0;
+  const action = `${collapsed ? 'Show' : 'Hide'} ${n} subtask${n === 1 ? '' : 's'} of ${task}`;
   return (
     <button
       onClick={onToggle}
       aria-expanded={!collapsed}
-      title={collapsed ? 'Show subtasks' : 'Hide subtasks'}
-      className="w-4 h-4 shrink-0 flex items-center justify-center bg-transparent border-none p-0 cursor-pointer text-neutral-625 hover:text-neutral-825"
+      aria-controls={collapsed ? undefined : controls?.join(' ')}
+      aria-label={action}
+      title={action}
+      // 14px wide in every layout so the lane and the rail below it agree, but
+      // 20px tall on a touch row — with the halo the same treatment the done
+      // circle gets, which takes the tap target to the row's own height.
+      className="relative before:absolute before:-inset-y-[9px] before:-inset-x-[5px] w-[14px] h-5 @lg:h-[14px] shrink-0 flex items-center justify-center bg-transparent border-none p-0 cursor-pointer text-neutral-625 hover:text-neutral-825"
     >
-      <DisclosureIcon open={!collapsed} size={11} />
+      <DisclosureIcon open={!collapsed} size={12} />
     </button>
   );
 }
@@ -144,16 +169,20 @@ function LinkChip({ link, size }: { link: string; size: number }) {
 }
 
 // How far the narrow row's meta line is indented to sit under the title: the
-// buttons to its left, which is the fold slot (16px + its 11px gap) when the list
+// buttons to its left, which is the fold slot (14px + its 11px gap) when the list
 // reserves one, plus the done circle and — on rows that have it — the worked
 // toggle. Written out per case rather than summed into an arbitrary value at
 // runtime: Tailwind only emits classes its source scan finds.
 const META_INDENT = {
-  'slot-worked': 'pl-[72px]',
-  'slot-plain': 'pl-[55px]',
+  'slot-worked': 'pl-[70px]',
+  'slot-plain': 'pl-[53px]',
   'flat-worked': 'pl-[45px]',
   'flat-plain': 'pl-[28px]',
 };
+
+// And how much further on a subtask, whose title starts past its own rail: the
+// meta belongs under the title it describes, not under the parent's.
+const CHILD_META_INDENT = 'ml-[22px]';
 
 // Memoized so a row skips re-rendering while its stable `row` object is
 // unchanged — important because the task lists re-render on every keystroke in
@@ -172,16 +201,24 @@ const META_INDENT = {
 // the hover actions become an overflow menu. It keys off the *list's* width (the
 // container is on `TaskTable`), because the same row is used both full-width and
 // in the day view's ~320px to-do side column.
-export const WorklogTaskRow = React.memo(function WorklogTaskRow({ row, layout }: { row: WorklogRow; layout: TaskTableLayout }) {
+export const WorklogTaskRow = React.memo(function WorklogTaskRow({
+  row,
+  layout,
+  idPrefix,
+}: {
+  row: WorklogRow;
+  layout: TaskTableLayout;
+  /** Namespaces this row's element id — see `TaskRows`, which owns it. */
+  idPrefix: string;
+}) {
   const hasNarrowMeta =
     !!row.status || !!row.priority || !!row.progress || !!row.due || !!row.repeat || row.tags.length > 0 || row.hasLink;
   return (
-    <div key={row.id} className="group relative py-2 px-2.5 rounded-lg hover:bg-neutral-175">
+    <div key={row.id} id={idPrefix + row.id} className="group relative py-2 px-2.5 rounded-lg hover:bg-neutral-175">
       <div
         className="flex items-center gap-[11px] @lg:grid @lg:[grid-template-columns:var(--cols)] @4xl:[grid-template-columns:var(--cols-wide)]"
         style={tableColumnVars(layout)}
       >
-        <FoldToggle slot={layout.fold} collapsed={row.collapsed} onToggle={row.onToggleCollapse} />
         {/* The visible circle stays 17px, but the tap target doesn't: the halo
             extends 8px up/down and 5px sideways — half the 11px gap to the worked
             toggle, so the two ticks meet at the midline rather than stealing each
@@ -217,20 +254,61 @@ export const WorklogTaskRow = React.memo(function WorklogTaskRow({ row, layout }
                 done={row.status.done}
                 choices={row.status.choices}
                 onSelect={row.status.onSelect}
-                className="block max-w-full truncate"
+                variant="dot"
+                className="max-w-full"
               />
             )}
           </span>
         )}
-        <div className="flex-1 min-w-0 flex items-center gap-[8px]">
+        {/* The chevron sits against the title rather than out at the row's left
+            edge, so it reads as belonging to the line it opens — and so the rail
+            down the subtasks below starts where their titles do. */}
+        <FoldToggle
+          slot={layout.fold}
+          collapsed={row.collapsed}
+          task={row.title}
+          controls={row.childIds?.map((id) => idPrefix + id)}
+          onToggle={row.onToggleCollapse}
+        />
+        {/* Only the title cell indents, and only it carries the rail: the lanes
+            beside it belong to the whole list, and a subtask whose status sat
+            22px right of every other row's would be a subtask outside the status
+            column. */}
+        <div
+          className={cn(
+            'flex-1 min-w-0 flex items-center gap-[8px]',
+            row.child && 'pl-[20px] @lg:pl-[22px] border-l-2 border-neutral-400',
+          )}
+        >
           <button
             onClick={row.onView}
             title="View task"
-            style={{ paddingLeft: row.indent }}
-            className="text-row text-neutral-825 min-w-0 text-left bg-transparent border-none cursor-pointer p-0 hover:underline whitespace-normal leading-[1.35] @lg:whitespace-nowrap @lg:overflow-hidden @lg:text-ellipsis @lg:leading-normal"
+            // The darkest thing in the row, which is enough: it is the status
+            // that was shouting, and quieting that down (see `StatusPicker`) is
+            // what puts the task name first — bolding it as well would just move
+            // the noise. A subtask drops a size and takes the muted tone — same
+            // row height, lighter type, so it reads as belonging to the line
+            // above rather than as another item of its own.
+            className={cn(
+              'min-w-0 text-left bg-transparent border-none cursor-pointer p-0 hover:underline whitespace-normal leading-[1.35] @lg:whitespace-nowrap @lg:overflow-hidden @lg:text-ellipsis @lg:leading-normal font-medium',
+              row.child ? 'text-[14px] @lg:text-[13.5px] text-neutral-700' : 'text-row text-neutral-825',
+            )}
           >
+            {/* Nesting is drawn, not spoken — so it is also said, once, here. */}
+            {row.child && <span className="sr-only">Subtask of {row.parentTitle}: </span>}
             {row.title}
           </button>
+          {/* How many there are under it, next to the name that has them. The
+              progress bar in its own lane answers a different question at a
+              different reading speed — how far along — and keeps its place. */}
+          {!row.child && row.progress && (
+            <span
+              title={`${row.progress.total} subtask${row.progress.total === 1 ? '' : 's'}`}
+              className="shrink-0 text-eyebrow text-neutral-625 tabular-nums"
+            >
+              {row.progress.total}
+            </span>
+          )}
           {/* Between @lg and @4xl the tags give up their lane and ride behind the
               title: they are short and few, and 140px of them is 140px the
               titles need more. Everything else keeps its column. */}
@@ -311,10 +389,11 @@ export const WorklogTaskRow = React.memo(function WorklogTaskRow({ row, layout }
           Hidden from `@lg` up, and skipped entirely when there is nothing to show. */}
       {hasNarrowMeta && (
         <div
-          className={
-            'flex @lg:hidden flex-wrap items-center gap-x-[10px] gap-y-[6px] mt-[6px] ' +
-            META_INDENT[`${layout.fold ? 'slot' : 'flat'}-${row.onWorked ? 'worked' : 'plain'}`]
-          }
+          className={cn(
+            'flex @lg:hidden flex-wrap items-center gap-x-[10px] gap-y-[6px] mt-[6px]',
+            META_INDENT[`${layout.fold ? 'slot' : 'flat'}-${row.onWorked ? 'worked' : 'plain'}`],
+            row.child && CHILD_META_INDENT,
+          )}
         >
           {row.status && (
             <StatusPicker
@@ -325,6 +404,7 @@ export const WorklogTaskRow = React.memo(function WorklogTaskRow({ row, layout }
               done={row.status.done}
               choices={row.status.choices}
               onSelect={row.status.onSelect}
+              variant="dot"
             />
           )}
           {row.priority && <PriorityChip priority={row.priority} />}

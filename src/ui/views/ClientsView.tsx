@@ -5,7 +5,7 @@ import { TaskListToolbar, TaskTable } from '../components';
 import { Badge, Button, Card, EmptyState, LinkButton, SectionLabel, ViewHeader } from '../primitives';
 import { useData, useUi } from '../context';
 import { useTaskListFilter } from '../hooks';
-import { clientIdOf, fmtLong, isDone } from '../utils';
+import { clientIdOf, fmtLong, isDone, topLevelTasks } from '../utils';
 import { ClientInfoCard, ClientList, CompletedTaskList, MobileClientDropdown } from './clients-view';
 
 /** Derives the selected client's open rows, done list, counts and last-worked label. */
@@ -25,7 +25,10 @@ function useClientsData() {
   // Keyed on the client: switching to another one starts from an unfiltered list
   // rather than making its tasks look absent.
   const openFilter = useTaskListFilter(scOpen, { label: 'open tasks', resetKey: selectedClient });
-  const selectedOpenRows = useMemo<WorklogRow[]>(() => openRowsFor(openFilter.tasks), [openRowsFor, openFilter.tasks]);
+  const selectedOpenRows = useMemo<WorklogRow[]>(
+    () => openRowsFor(openFilter.tasks, openFilter.expanded),
+    [openRowsFor, openFilter.tasks, openFilter.expanded],
+  );
   const selectedDone = useMemo(
     () => tasks.filter((t) => clientIdOf(t) === selectedClient && isDone(t)).sort((a, b) => (b.completed! > a.completed! ? 1 : -1)),
     [tasks, selectedClient],
@@ -47,7 +50,9 @@ function useClientsData() {
     selectedClientObj,
     clientOpenCounts,
     selectedOpenRows,
-    selectedOpenCount: scOpen.length,
+    // Parent tasks only, like every other count in the lists: a subtask is part
+    // of the task above it, not a second thing on this client's plate.
+    selectedOpenCount: topLevelTasks(scOpen).length,
     openFilter,
     selectedDone,
     selectedLastWorked,

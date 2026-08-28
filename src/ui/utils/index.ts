@@ -31,6 +31,7 @@ export {
   parseCollapsedStore,
   planTaskRows,
   plansFold,
+  topLevelTasks,
   pruneCollapsed,
   toggleCollapsed,
 } from "./taskTree";

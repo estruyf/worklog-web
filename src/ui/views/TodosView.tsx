@@ -21,7 +21,7 @@ function useTodosData() {
   const openTasks = useMemo(() => todos.filter((t) => !isDone(t)), [todos]);
   // A to-do's status is open-or-closed, so a status filter would say nothing.
   const filter = useTaskListFilter(openTasks, { label: 'to-dos', withStatus: false });
-  const openRows = useMemo(() => openRowsFor(filter.tasks), [filter.tasks, openRowsFor]);
+  const openRows = useMemo(() => openRowsFor(filter.tasks, filter.expanded), [filter.tasks, filter.expanded, openRowsFor]);
   const doneTasks = useMemo(
     () =>
       todos

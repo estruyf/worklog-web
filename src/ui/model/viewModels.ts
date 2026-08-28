@@ -85,11 +85,14 @@ export interface RowStatus {
 export interface WorklogRow {
   id: string;
   title: string;
-  /** How far the title is indented under its parent, in px — 0 at top level.
-   *  The *title* rather than the row: the columns beside it belong to the whole
-   *  list, and a subtask whose status sat 30px right of every other row's would
-   *  be a subtask outside the status column. */
-  indent: number;
+  /** A subtask, drawn under its parent. Only the *title cell* indents and takes
+   *  the lighter type: the columns beside it belong to the whole list, and a
+   *  subtask whose status sat 22px right of every other row's would be a subtask
+   *  outside the status column. */
+  child: boolean;
+  /** The parent's title, for the row's spoken name — the rail and the indent say
+   *  nothing out loud. Set exactly when `child` is. */
+  parentTitle?: string;
   /** Whether the row leaves room for the fold toggle. A list-level answer, the
    *  same on every row in one list: true once anything in it has subtasks, so the
    *  titles line up whether or not this particular row folds; false in a flat
@@ -128,6 +131,9 @@ export interface WorklogRow {
   collapsed?: boolean;
   /** Folds/unfolds the subtasks. Present exactly when `collapsed` is. */
   onToggleCollapse?: () => void;
+  /** The ids of the subtask rows this one folds away, so the toggle can name
+   *  what it controls. Present exactly when `collapsed` is. */
+  childIds?: string[];
   onView: () => void;
   onDone: () => void;
   /** Omitted for tasks without a worked-on state (general to-dos); the row then

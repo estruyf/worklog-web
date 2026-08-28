@@ -7,6 +7,7 @@ import type { Task } from '../../model/types';
 import { priorityBucket, priorityRank } from '../../model/priority';
 import { DEFAULT_TASK_SORT, type TaskSortDirection, type TaskSortKey, type TaskSortPref } from '../../model/taskSort';
 import { clientIdOf } from './task';
+import { topLevelTasks } from './taskTree';
 
 // The sort vocabulary itself lives in `model/taskSort` — the chosen order is
 // persisted in config.json, so the workspace and settings layers have to be able
@@ -90,11 +91,19 @@ export interface TaskTagCount {
 }
 
 export interface TaskListDerived {
-  /** The tasks to render: filtered, then ordered. */
+  /** The tasks to render: filtered, then ordered. Top-level tasks first in the
+   *  chosen order, then the surviving subtasks in source order — `planTaskRows`
+   *  is what nests them back under their parents. */
   tasks: Task[];
-  /** The list before any filter — the denominator in "3 of 12". */
+  /** The list before any filter — the denominator in "3 of 12". Counted over
+   *  top-level tasks only: a subtask is part of its parent, so counting both
+   *  would make one task read as several. */
   total: number;
   count: number;
+  /** Parents a filter matched *through a subtask*, which the list has to render
+   *  open however the reader last left them — see `planTaskRows`. Empty unless
+   *  a filter is on. */
+  expanded: ReadonlySet<string>;
   /** True when a query/tag/status filter is hiding something. Sort is not a
    *  filter, so re-ordering alone never sets this. */
   filtered: boolean;
@@ -230,16 +239,50 @@ export function deriveTaskList(tasks: Task[], filters: TaskListFilters, deps: Ta
     .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
     .map(([tag, count]) => ({ tag, count, selected: selected.has(tag.toLowerCase()) }));
 
+  // A subtask that matched brings its parent back with it, and forces it open:
+  // a hit rendered as an orphan at top level loses the one thing that says what
+  // it is part of, and a hit inside a parent the reader had folded shut would be
+  // no answer at all. Only under an active filter — with none, every parent is
+  // already here and every fold would be overridden.
+  const shown = new Set(matched.map((t) => t.id));
+  const expanded = new Set<string>();
+  const adopted: Task[] = [];
+  if (filtered) {
+    for (const t of matched) {
+      if (!t.parentId) {
+        continue;
+      }
+      expanded.add(t.parentId);
+      if (!shown.has(t.parentId)) {
+        const parent = tasks.find((p) => p.id === t.parentId);
+        if (parent) {
+          shown.add(parent.id);
+          adopted.push(parent);
+        }
+      }
+    }
+  }
+
   const ranks = new Map(statusOrder.map((id, i) => [id, i]));
   const statusRank = (id: string) => ranks.get(id) ?? statusOrder.length;
-  const sorted = [...matched].sort((a, b) => compare(a, b, filters.sort, filters.dir, statusRank));
+  // The order is over the rows that carry it — the top-level ones. Subtasks keep
+  // the order they sit in in the Markdown and follow their parent wherever it
+  // lands: sorting them too would shuffle a checklist by due date, and the list
+  // reads as "these tasks, in this order" with the steps of each underneath.
+  const rendered = [...matched, ...adopted];
+  const tops = new Set(topLevelTasks(rendered).map((t) => t.id));
+  const sorted = [
+    ...rendered.filter((t) => tops.has(t.id)).sort((a, b) => compare(a, b, filters.sort, filters.dir, statusRank)),
+    ...rendered.filter((t) => !tops.has(t.id)),
+  ];
 
   return {
     tasks: sorted,
-    total: tasks.length,
-    count: sorted.length,
+    total: topLevelTasks(tasks).length,
+    count: tops.size,
     filtered,
     dirty,
+    expanded,
     tagCounts,
     statusCounts,
     priorityCounts,

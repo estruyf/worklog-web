@@ -36,9 +36,9 @@ function useUpcomingData() {
     return groupUpcoming(filter.tasks, today, weekStart).map((bucket) => ({
       id: bucket.id,
       label: bucket.label,
-      rows: openRowsFor([...bucket.tasks].sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0))),
+      rows: openRowsFor([...bucket.tasks].sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0)), filter.expanded),
     }));
-  }, [filter.tasks, today, weekStart, openRowsFor]);
+  }, [filter.tasks, filter.expanded, today, weekStart, openRowsFor]);
 
   const nextIn = upcoming.length ? daysUntil(upcoming[0], today) : 0;
 

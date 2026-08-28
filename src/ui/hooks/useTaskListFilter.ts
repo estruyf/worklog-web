@@ -39,6 +39,10 @@ export interface TaskListFilterApi {
   total: number;
   /** True when a filter is hiding rows — what an empty list should explain. */
   filtered: boolean;
+  /** Parents the filter matched through one of their subtasks: the list has to
+   *  render those open, whatever the reader folded shut. Hand it to
+   *  `openRowsFor` alongside `tasks`. */
+  expanded: ReadonlySet<string>;
   /** Back to no narrowing, in the user's configured order. */
   reset: () => void;
   /** The order, and the reorder a column header fires — the same state the
@@ -221,5 +225,14 @@ export function useTaskListFilter(tasks: Task[], options: TaskListFilterOptions 
     reset,
   ]);
 
-  return { tasks: derived.tasks, count: derived.count, total: derived.total, filtered: derived.filtered, reset, sort, toolbar };
+  return {
+    tasks: derived.tasks,
+    count: derived.count,
+    total: derived.total,
+    filtered: derived.filtered,
+    expanded: derived.expanded,
+    reset,
+    sort,
+    toolbar,
+  };
 }

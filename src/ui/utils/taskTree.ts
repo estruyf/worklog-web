@@ -60,6 +60,10 @@ export interface TaskRowPlan {
   task: Task;
   /** Indented under its parent, which is the line directly above it. */
   child: boolean;
+  /** The parent it sits under, for the row's spoken name: indentation and a
+   *  rail say "belongs to the line above" to the eye and nothing at all out
+   *  loud. Set exactly when `child` is. */
+  parentTitle?: string;
   /** The task has subtasks *in this list*, so its row gets a fold toggle. A
    *  parent whose subtasks a filter removed gets none — there is nothing behind
    *  it to fold away. */
@@ -67,13 +71,25 @@ export interface TaskRowPlan {
   /** Its subtasks are folded away and absent from the plan. Never true unless
    *  `foldable` is. */
   collapsed: boolean;
+  /** The ids of its subtasks in this list — what the fold toggle is announced as
+   *  controlling. Empty unless `foldable` is. */
+  childIds: string[];
 }
 
 /** Nested render order for `list`, with the subtasks of every parent in
  *  `collapsed` left out. Subtasks whose parent isn't in `list` stay at top level:
  *  the list is usually a filtered slice, and dropping them would lose them
- *  entirely rather than nest them. */
-export function planTaskRows(list: Task[], collapsed: ReadonlySet<string> = new Set()): TaskRowPlan[] {
+ *  entirely rather than nest them.
+ *
+ *  `expanded` overrides a fold for this render only — a search whose hit is a
+ *  subtask has to show it, and leaving the parent shut would answer the query
+ *  with a row that doesn't contain it. The fold itself is untouched, so clearing
+ *  the query puts the list back the way the reader left it. */
+export function planTaskRows(
+  list: Task[],
+  collapsed: ReadonlySet<string> = new Set(),
+  expanded: ReadonlySet<string> = new Set(),
+): TaskRowPlan[] {
   const plans: TaskRowPlan[] = [];
   const tops = list.filter((t) => !t.parentId);
   const placed = new Set<string>();
@@ -81,12 +97,12 @@ export function planTaskRows(list: Task[], collapsed: ReadonlySet<string> = new 
   tops.forEach((t) => {
     const kids = list.filter((c) => c.parentId === t.id);
     const foldable = kids.length > 0;
-    const folded = foldable && collapsed.has(t.id);
-    plans.push({ task: t, child: false, foldable, collapsed: folded });
+    const folded = foldable && collapsed.has(t.id) && !expanded.has(t.id);
+    plans.push({ task: t, child: false, foldable, collapsed: folded, childIds: kids.map((c) => c.id) });
     placed.add(t.id);
     if (!folded) {
       kids.forEach((c) => {
-        plans.push({ task: c, child: true, foldable: false, collapsed: false });
+        plans.push({ task: c, child: true, parentTitle: t.title, foldable: false, collapsed: false, childIds: [] });
         placed.add(c.id);
       });
     }
@@ -96,12 +112,24 @@ export function planTaskRows(list: Task[], collapsed: ReadonlySet<string> = new 
     .filter((t) => t.parentId && !tops.some((p) => p.id === t.parentId))
     .forEach((c) => {
       if (!placed.has(c.id)) {
-        plans.push({ task: c, child: false, foldable: false, collapsed: false });
+        plans.push({ task: c, child: false, foldable: false, collapsed: false, childIds: [] });
         placed.add(c.id);
       }
     });
 
   return plans;
+}
+
+/** The tasks `list` draws as top-level rows — everything not nested under a
+ *  parent that is in the same list. This is what the lists count by: a subtask is
+ *  part of its parent, not a second thing on the list, so a card reading "4 tasks"
+ *  means four bold lines and not four plus their children.
+ *
+ *  An orphan counts, because `planTaskRows` draws it at top level. Counting rows
+ *  that aren't there would be the same mistake in the other direction. */
+export function topLevelTasks(list: Task[]): Task[] {
+  const ids = new Set(list.map((t) => t.id));
+  return list.filter((t) => !t.parentId || !ids.has(t.parentId));
 }
 
 /** Whether anything in the plan nests, which is what decides if the rows reserve
