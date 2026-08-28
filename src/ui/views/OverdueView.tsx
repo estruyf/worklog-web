@@ -7,7 +7,7 @@ import React, { useMemo } from 'react';
 import { TriangleAlertIcon } from 'lucide-react';
 import { collectOverdue, daysOverdue, formatDaysLate } from '../../model/overdue';
 import type { Task } from '../../model/types';
-import { TaskListToolbar, TaskTable, useTaskTableLayout } from '../components';
+import { TaskListToolbar, TaskTable, TaskTableGroups, useTaskTableLayout } from '../components';
 import { Badge, Card, EmptyState, LinkButton, SectionLabel, ViewHeader } from '../primitives';
 import { useData } from '../context';
 import type { ClientTaskGroup } from '../model';
@@ -92,7 +92,7 @@ export function OverdueView() {
 
       <div className="flex-1 overflow-auto px-6 pt-6 pb-10">
         <div className="max-w-[920px] xl:max-w-[1280px] mx-auto">
-          {filter.toolbar && <TaskListToolbar {...filter.toolbar} />}
+          {filter.toolbar && <TaskListToolbar {...filter.toolbar} surface="page" />}
           {overdueCount === 0 ? (
             <EmptyState>
               Nothing is past its due date. Tasks land here the day after they were due — including a recurring one
@@ -106,9 +106,11 @@ export function OverdueView() {
               </LinkButton>
             </EmptyState>
           ) : (
-            groups.map((group) => (
-              <GroupCard key={group.id} group={group} tone="overdue" sort={filter.sort} layout={layout} />
-            ))
+            <TaskTableGroups layout={layout} sort={filter.sort}>
+              {groups.map((group) => (
+                <GroupCard key={group.id} group={group} tone="overdue" layout={layout} />
+              ))}
+            </TaskTableGroups>
           )}
 
           {dueTodayRows.length > 0 && (

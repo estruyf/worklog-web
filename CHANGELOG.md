@@ -15,6 +15,17 @@ Every change to Worklog, by day, newest first.
      both). Links must be absolute — a relative path resolves against /changelog and
      404s. -->
 
+## 2026-08-28
+
+- Searching and filtering a task list now happens inside the list itself: one control bar sits at the top of the card the rows are in, with the search box, the filters and the order on a single line instead of floating above a separate card with a second row of tag chips under it.
+- Filters are quiet until they are doing something — a plain word with a chevron, and a box only once one is applied, so an untouched list no longer reads as four equally important controls.
+- The counts moved into the menus: "All statuses" no longer carries a number that told you nothing, and each option inside says how many rows picking it would leave. Tags are a menu now too, with a search box once there are more than a dozen.
+- On a phone the three menus collapse into one **Filters** sheet that slides up from the bottom, with the status, priority and tag lists in it and a Clear all. Sort keeps its own sheet and stays on the bar, because it changes what is at the top of the list.
+- In a mid-width list — a tablet, or the day view's middle column — tags give up their column and ride behind the task title instead, so the titles get the width back. Everything else keeps its lane.
+- The lists that group by client — Overdue, and the day's open and worked tasks — now put the column headings once above the cards instead of repeating them on every one, and every card lines its rows up against that single set of columns.
+- A client card can be shut: click its header to fold its tasks away. The header keeps the client's name, its count and how many tasks are in it, and what you have shut is remembered per repository across reloads and across all three lists.
+- The control bar in those grouped lists sits on the page above the cards rather than in a card of its own.
+
 ## 2026-08-27
 
 - Open task lists are laid out as tables: status, task, priority, subtasks, due and tags each have a column of their own, so a task without a due date leaves a gap instead of shifting the rest of the row along. Subtasks indent their title rather than the whole row, which keeps their status in the status column.

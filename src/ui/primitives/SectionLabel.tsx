@@ -5,8 +5,10 @@ import { cn } from './cn';
  *  rail or a dropdown. */
 export type SectionLabelSize = 'sm' | 'md';
 
-/** `danger` is for the one block that is a warning in itself — overdue work. */
-export type SectionLabelTone = 'muted' | 'danger';
+/** `danger` is for the one block that is a warning in itself — overdue work.
+ *  `faint` is the column header over a table: it names a lane rather than
+ *  titling a block, and at that job it should be legible without being read. */
+export type SectionLabelTone = 'muted' | 'danger' | 'faint';
 
 /** `uppercase` lives here rather than in the text, so a label can be written the
  *  way it should be read aloud and still render as an eyebrow.
@@ -24,6 +26,7 @@ const SIZES: Record<SectionLabelSize, string> = {
 const TONES: Record<SectionLabelTone, string> = {
   muted: 'text-neutral-675',
   danger: 'text-danger-675',
+  faint: 'text-neutral-600',
 };
 
 export interface SectionLabelProps extends React.HTMLAttributes<HTMLSpanElement> {

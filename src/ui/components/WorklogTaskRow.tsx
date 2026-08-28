@@ -7,7 +7,7 @@ import { fmtShort } from '../utils';
 import { DisclosureIcon } from './icons';
 import { PriorityChip } from './PriorityChip';
 import { StatusPicker } from './StatusPicker';
-import type { TaskTableLayout } from './TaskTable';
+import { tableColumnVars, type TaskTableLayout } from './TaskTable';
 import { WorkedToggle } from './WorkedToggle';
 
 /** The fold toggle, or the space it would take. Within a list that nests, rows
@@ -113,17 +113,17 @@ function TagChips({ tags, onTagClick, truncate }: { tags: string[]; onTagClick?:
   );
 }
 
-/** The tags column on a wide row: the repeat marker, one tag, and a count of
+/** What a wide row shows of its tags: the repeat marker, one tag, and a count of
  *  whatever else the task carries — the rest is a hover away, and the narrow
  *  layout below wraps and shows the lot. One rather than as many as fit, because
- *  the lane gives way in a narrow pane and two chips sharing 90px are two chips
+ *  the run gives way in a narrow pane and two chips sharing 90px are two chips
  *  you can't read. The one that is shown ellipsizes rather than being cut
- *  through by the lane's edge: a chip sliced in half reads as a fault. */
-function TagCell({ row }: { row: WorklogRow }) {
+ *  through by the edge it runs into: a chip sliced in half reads as a fault. */
+function TagRun({ row }: { row: WorklogRow }) {
   const shown = row.tags.slice(0, 1);
   const hidden = row.tags.slice(shown.length);
   return (
-    <div className="hidden @lg:flex items-center gap-[6px] min-w-0 overflow-hidden">
+    <>
       {row.repeat && <RepeatChip label={row.repeat} />}
       <TagChips tags={shown} onTagClick={row.onTagClick} truncate />
       {hidden.length > 0 && (
@@ -131,7 +131,7 @@ function TagCell({ row }: { row: WorklogRow }) {
           +{hidden.length}
         </span>
       )}
-    </div>
+    </>
   );
 }
 
@@ -164,7 +164,8 @@ const META_INDENT = {
 // set of columns, so the chips line up down the page whether or not the row
 // above carried the same fields. Every lane the layout reserves gets a cell
 // here, empty or not — a skipped one would slide the rest of the row into the
-// wrong column.
+// wrong column. From `@4xl` (56rem) it switches to `layout.colsWide`, which adds
+// the tags lane the narrower band folds in behind the title.
 //
 // Below `@lg` the same cells are `hidden` and the row falls back to a flex line:
 // the title wraps, the meta reflows onto a second line indented under it, and
@@ -176,7 +177,10 @@ export const WorklogTaskRow = React.memo(function WorklogTaskRow({ row, layout }
     !!row.status || !!row.priority || !!row.progress || !!row.due || !!row.repeat || row.tags.length > 0 || row.hasLink;
   return (
     <div key={row.id} className="group relative py-2 px-2.5 rounded-lg hover:bg-neutral-175">
-      <div className="flex items-center gap-[11px] @lg:grid" style={{ gridTemplateColumns: layout.cols }}>
+      <div
+        className="flex items-center gap-[11px] @lg:grid @lg:[grid-template-columns:var(--cols)] @4xl:[grid-template-columns:var(--cols-wide)]"
+        style={tableColumnVars(layout)}
+      >
         <FoldToggle slot={layout.fold} collapsed={row.collapsed} onToggle={row.onToggleCollapse} />
         {/* The visible circle stays 17px, but the tap target doesn't: the halo
             extends 8px up/down and 5px sideways — half the 11px gap to the worked
@@ -218,14 +222,24 @@ export const WorklogTaskRow = React.memo(function WorklogTaskRow({ row, layout }
             )}
           </span>
         )}
-        <button
-          onClick={row.onView}
-          title="View task"
-          style={{ paddingLeft: row.indent }}
-          className="text-row text-neutral-825 flex-1 min-w-0 text-left bg-transparent border-none cursor-pointer p-0 hover:underline whitespace-normal leading-[1.35] @lg:whitespace-nowrap @lg:overflow-hidden @lg:text-ellipsis @lg:leading-normal"
-        >
-          {row.title}
-        </button>
+        <div className="flex-1 min-w-0 flex items-center gap-[8px]">
+          <button
+            onClick={row.onView}
+            title="View task"
+            style={{ paddingLeft: row.indent }}
+            className="text-row text-neutral-825 min-w-0 text-left bg-transparent border-none cursor-pointer p-0 hover:underline whitespace-normal leading-[1.35] @lg:whitespace-nowrap @lg:overflow-hidden @lg:text-ellipsis @lg:leading-normal"
+          >
+            {row.title}
+          </button>
+          {/* Between @lg and @4xl the tags give up their lane and ride behind the
+              title: they are short and few, and 140px of them is 140px the
+              titles need more. Everything else keeps its column. */}
+          {layout.tags && (
+            <span className="hidden @lg:flex @4xl:hidden items-center gap-[6px] min-w-0 overflow-hidden">
+              <TagRun row={row} />
+            </span>
+          )}
+        </div>
         {/* Inline meta — wide rows only. When narrow these reflow to the row below. */}
         {layout.priority && (
           <div className="hidden @lg:flex items-center min-w-0">{row.priority && <PriorityChip priority={row.priority} />}</div>
@@ -240,7 +254,11 @@ export const WorklogTaskRow = React.memo(function WorklogTaskRow({ row, layout }
             {row.due && <DueChip due={row.due} overdue={row.overdue} days={row.overdueDays} />}
           </div>
         )}
-        {layout.tags && <TagCell row={row} />}
+        {layout.tags && (
+          <div className="hidden @4xl:flex items-center gap-[6px] min-w-0 overflow-hidden">
+            <TagRun row={row} />
+          </div>
+        )}
         {layout.link && (
           <div className="hidden @lg:flex items-center justify-center">{row.hasLink && <LinkChip link={row.link} size={14} />}</div>
         )}

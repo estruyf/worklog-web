@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import type { ClientTaskGroup } from '../../model';
 import type { WorklogEntry } from '../../../model/types';
 import { EmptyState, LinkButton, SectionLabel } from '../../primitives';
-import { TaskListToolbar, useTaskTableLayout } from '../../components';
+import { TaskListToolbar, TaskTableGroups, useTaskTableLayout } from '../../components';
 import type { TaskListFilterApi } from '../../hooks';
 import { GroupCard } from './GroupCard';
 
@@ -36,10 +36,14 @@ export function OpenTasksSection({
   return (
     <>
       <SectionLabel className="mb-[14px]">{isTodaySel ? 'Open tasks' : 'Edit day · open tasks'}</SectionLabel>
-      {openFilter.toolbar && <TaskListToolbar {...openFilter.toolbar} />}
-      {openGroups.map((group) => (
-        <GroupCard key={group.id} group={group} sort={openFilter.sort} layout={layout} />
-      ))}
+      {openFilter.toolbar && <TaskListToolbar {...openFilter.toolbar} surface="page" />}
+      {openGroups.length > 0 && (
+        <TaskTableGroups layout={layout} sort={openFilter.sort}>
+          {openGroups.map((group) => (
+            <GroupCard key={group.id} group={group} layout={layout} />
+          ))}
+        </TaskTableGroups>
+      )}
       {openGroups.length === 0 && (
         <EmptyState className="mb-[30px]">
           {openFilter.filtered ? (

@@ -98,21 +98,19 @@ export function TodosView() {
           {openCount === 0 ? (
             <EmptyState>No open to-dos. These are the tasks that aren&apos;t linked to a client.</EmptyState>
           ) : (
-            <>
+            <Card padding="list">
               {filter.toolbar && <TaskListToolbar {...filter.toolbar} />}
-              {openRows.length === 0 ? (
-                <EmptyState>
-                  No to-dos match these filters.{' '}
-                  <LinkButton size="inherit" onClick={filter.reset} className="italic underline">
-                    Reset
-                  </LinkButton>
-                </EmptyState>
-              ) : (
-                <Card padding="list">
-                  <TaskTable rows={openRows} sort={filter.sort} />
-                </Card>
-              )}
-            </>
+              <TaskTable rows={openRows} sort={filter.sort}>
+                {openRows.length === 0 && (
+                  <EmptyState className="py-2 px-2.5">
+                    No to-dos match these filters.{' '}
+                    <LinkButton size="inherit" onClick={filter.reset} className="italic underline">
+                      Reset
+                    </LinkButton>
+                  </EmptyState>
+                )}
+              </TaskTable>
+            </Card>
           )}
 
           <CompletedTodos doneTasks={doneTasks} />

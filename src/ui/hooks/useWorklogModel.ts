@@ -15,8 +15,9 @@ import { worklogStore, type ToastMessage } from "../../data/worklogStore";
 import type { AiAgent, AutoSyncConfig, AutoSyncEvent, CodeTheme, FeatureConfig, TaskSortPref } from "../../model/types";
 import { DEFAULT_CODE_THEME } from "../../model/codeTheme";
 import { DEFAULT_TASK_SORT } from "../../model/taskSort";
+import { GENERAL_TODO_CLIENT_ID } from "../../model/todos";
 import type { WorklogState } from "../state";
-import { useCollapsedTasks } from "./useCollapsedTasks";
+import { COLLAPSED_CLIENTS_KEY, COLLAPSED_TASKS_KEY, useCollapsedTasks } from "./useCollapsedTasks";
 import { useClientModel } from "./model/useClientModel";
 import { useDayNoteModel } from "./model/useDayNoteModel";
 import { useLogModel } from "./model/useLogModel";
@@ -90,7 +91,18 @@ export function useWorklogModel(
     return open ? repoKeyOf(open.owner, open.repo, open.branch) : "";
   }, [snap]);
   const taskIds = useMemo(() => new Set(tasks.map((t) => t.id)), [tasks]);
-  const { collapsed, toggleCollapsed } = useCollapsedTasks(repoKey, taskIds);
+  const { collapsed, toggleCollapsed } = useCollapsedTasks(COLLAPSED_TASKS_KEY, repoKey, taskIds);
+  // The to-do bucket is a group in the lists but not a client, so it is added
+  // here — without it, collapsing To-dos would be forgotten on the next prune.
+  const groupIds = useMemo(
+    () => new Set([...allClients.map((c) => c.id), GENERAL_TODO_CLIENT_ID]),
+    [allClients],
+  );
+  const { collapsed: collapsedClients, toggleCollapsed: toggleCollapsedClient } = useCollapsedTasks(
+    COLLAPSED_CLIENTS_KEY,
+    repoKey,
+    groupIds,
+  );
 
   const clientModel = useClientModel(allClients, clients, tasks, worklog, ui);
   const statusModel = useStatusModel(statuses, tasks, ui);
@@ -154,6 +166,8 @@ export function useWorklogModel(
     // Archived clients still count as clients — otherwise archiving the last one
     // would drop you on the "add your first client" screen with no way back.
     noClients: allClients.length === 0,
+    collapsedClients,
+    toggleCollapsedClient,
     ...clientModel,
     ...statusModel,
     ...tagModel,

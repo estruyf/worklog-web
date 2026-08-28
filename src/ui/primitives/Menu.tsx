@@ -6,19 +6,24 @@ import { Input } from './Input';
 
 /** One choice in the menu. `color` paints a dot before the label and `icon`
  *  replaces that dot with the call site's own mark; `hint` is the consequence of
- *  picking it, on a second line. */
+ *  picking it, on a second line. `meta` is the number that qualifies it — how
+ *  many rows the option would leave — set right against the tick column. */
 export interface MenuOption {
   id: string;
   label: string;
   color?: string;
   icon?: React.ReactNode;
   hint?: string;
+  meta?: string;
 }
 
 export interface MenuProps {
   options: MenuOption[];
   /** The option in effect, ticked in the list. */
   value?: string;
+  /** The options in effect for a `multiple` menu. Replaces `value`; picking one
+   *  is a toggle, so `onSelect` gets the id that was hit, not the new set. */
+  values?: string[];
   onSelect: (id: string) => void;
   /** Accessible name for both the trigger and the list it opens. */
   label: string;
@@ -35,6 +40,10 @@ export interface MenuProps {
    *  is a list of commands — no tick column, plain `menuitem`s — for the row
    *  overflow ("⋯") case where nothing is "selected". */
   kind?: 'choice' | 'action';
+  /** Several options can be on at once. The panel stays open on a pick — a set
+   *  is built by hitting two or three things in a row — and the options become
+   *  `menuitemcheckbox`es. Only meaningful for a `choice` menu. */
+  multiple?: boolean;
   /** Puts a filter box above the list, for option sets long enough that reading
    *  them is worse than typing. Changes the keyboard model — see below. */
   searchable?: boolean;
@@ -67,6 +76,7 @@ const EDGE = 8;
 export function Menu({
   options,
   value,
+  values,
   onSelect,
   label,
   title,
@@ -75,11 +85,16 @@ export function Menu({
   style,
   align = 'start',
   kind = 'choice',
+  multiple = false,
   searchable = false,
   searchPlaceholder = 'Search…',
   emptyText = 'No matches',
 }: MenuProps) {
   const isAction = kind === 'action';
+  const isChecked = React.useCallback(
+    (id: string) => (multiple ? (values ?? []).includes(id) : id === value),
+    [multiple, values, value],
+  );
   const [open, setOpen] = React.useState(false);
   const [pos, setPos] = React.useState<{ top: number; left: number } | null>(null);
   const [query, setQuery] = React.useState('');
@@ -94,7 +109,7 @@ export function Menu({
     const needle = query.trim().toLowerCase();
     return needle ? options.filter((o) => o.label.toLowerCase().includes(needle)) : options;
   }, [options, query]);
-  const selectedIndex = visible.findIndex((o) => o.id === value);
+  const selectedIndex = visible.findIndex((o) => isChecked(o.id));
 
   const close = React.useCallback((refocus: boolean) => {
     setOpen(false);
@@ -199,8 +214,12 @@ export function Menu({
     setOpen(true);
   };
 
+  // A multi-select menu is a set being built, so it survives the pick: closing
+  // after each one would mean reopening it for every tag.
   const pick = (id: string) => {
-    close(true);
+    if (!multiple) {
+      close(true);
+    }
     onSelect(id);
   };
 
@@ -306,7 +325,7 @@ export function Menu({
                 above it. */}
             <div id={searchable ? listId : undefined} role={searchable ? 'listbox' : undefined} className="max-h-[264px] overflow-y-auto">
               {visible.map((option, i) => {
-                const checked = option.id === value;
+                const checked = isChecked(option.id);
                 return (
                   <button
                     key={option.id}
@@ -315,7 +334,7 @@ export function Menu({
                       itemRefs.current[i] = el;
                     }}
                     type="button"
-                    role={searchable ? 'option' : isAction ? 'menuitem' : 'menuitemradio'}
+                    role={searchable ? 'option' : isAction ? 'menuitem' : multiple ? 'menuitemcheckbox' : 'menuitemradio'}
                     {...(searchable ? { 'aria-selected': checked } : isAction ? {} : { 'aria-checked': checked })}
                     // Nothing in a searchable list is tabbable: focus belongs to
                     // the input, and Tab is what closes the menu.
@@ -347,6 +366,9 @@ export function Menu({
                       <span className="block text-control text-neutral-825">{option.label}</span>
                       {option.hint && <span className="block text-meta text-neutral-650 mt-[1px]">{option.hint}</span>}
                     </span>
+                    {option.meta && (
+                      <span className="shrink-0 mt-[2px] text-meta text-neutral-650 tabular-nums">{option.meta}</span>
+                    )}
                     {!isAction && (
                       <span className="w-[13px] shrink-0 mt-[3px] text-brand-575" aria-hidden="true">
                         {checked && <CheckIcon size={13} strokeWidth={2.5} />}

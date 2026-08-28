@@ -12,7 +12,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Task } from '../../model/types';
 import { NORMAL_PRIORITY_ID, PRIORITIES } from '../../model/priority';
 import { sameTaskSort } from '../../model/taskSort';
-import type { TaskListToolbarProps, TaskStatusOption } from '../components/TaskListToolbar';
+import type { TaskListToolbarProps, TaskStatusOption } from '../components/task-list-toolbar';
 import type { TaskTableSort } from '../components/TaskTable';
 import { useData } from '../context';
 import { deriveTaskList, taskListFiltersFor, type TaskListFilters, type TaskSortKey } from '../utils';

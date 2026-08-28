@@ -73,7 +73,7 @@ export function UpcomingView() {
             </EmptyState>
           ) : (
             <>
-              {filter.toolbar && <TaskListToolbar {...filter.toolbar} />}
+              {filter.toolbar && <TaskListToolbar {...filter.toolbar} surface="page" />}
               {sections.length === 0 ? (
                 <EmptyState>
                   No upcoming tasks match these filters.{' '}

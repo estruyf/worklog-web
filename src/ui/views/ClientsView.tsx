@@ -119,8 +119,8 @@ export function ClientsView() {
           <ClientInfoCard description={clientDescription} links={clientLinks} />
 
           <SectionLabel className="mb-[14px]">Open tasks · {selectedOpenCount}</SectionLabel>
-          {openFilter.toolbar && <TaskListToolbar {...openFilter.toolbar} />}
           <Card padding="list" className="mb-[38px]">
+            {openFilter.toolbar && <TaskListToolbar {...openFilter.toolbar} />}
             <TaskTable rows={selectedOpenRows} sort={openFilter.sort}>
               {selectedOpenRows.length === 0 && (
                 <EmptyState className="py-2 px-2.5">
