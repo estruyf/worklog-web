@@ -25,6 +25,7 @@ Every change to Worklog, by day, newest first.
 - The lists that group by client — Overdue, and the day's open and worked tasks — now put the column headings once above the cards instead of repeating them on every one, and every card lines its rows up against that single set of columns.
 - A client card can be shut: click its header to fold its tasks away. The header keeps the client's name, its count and how many tasks are in it, and what you have shut is remembered per repository across reloads and across all three lists.
 - The control bar in those grouped lists sits on the page above the cards rather than in a card of its own.
+- "Save as default" and "Reset" moved out of the bar and into the sort menu, under the options they act on. The menu marks which order is the saved default, and the sort trigger carries a dot while the list is in some other one.
 
 ## 2026-08-27
 

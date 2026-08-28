@@ -10,7 +10,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { ArrowDownIcon, ArrowUpIcon, ChevronDownIcon, SearchIcon, SlidersHorizontalIcon } from 'lucide-react';
-import { Badge, Button, cn, IconButton, Input, LinkButton, Menu, type MenuOption } from '../../primitives';
+import { Badge, Button, cn, IconButton, Input, Menu, type MenuOption } from '../../primitives';
 import { sortDirectionLabels, TASK_SORTS, type TaskSortDirection, type TaskSortKey, type TaskTagCount } from '../../utils';
 import { ANY, type TaskStatusOption } from './facets';
 import { FilterSheet, SortSheet } from './FilterSheets';
@@ -34,6 +34,9 @@ export interface TaskListToolbarProps {
   onToggleTag: (tag: string) => void;
   sort: TaskSortKey;
   onSort: (v: TaskSortKey) => void;
+  /** The order every list opens in. Marks its option "Default" in the menu, so
+   *  "Save as default" says what it would change. */
+  defaultSortKey: TaskSortKey;
   dir: TaskSortDirection;
   onToggleDir: () => void;
   /** Saves the current order as the default for every list, or `null` when it
@@ -63,7 +66,7 @@ export interface TaskListToolbarProps {
  *
  *  A span inside the `Menu`, not classes on the menu's own button: `cn` cannot
  *  reliably override the trigger's `border-none`, which is a border *style*. */
-function TriggerFace({ on, children }: { on: boolean; children: React.ReactNode }) {
+function TriggerFace({ on, marker, children }: { on: boolean; marker?: boolean; children: React.ReactNode }) {
   return (
     <span
       className={cn(
@@ -74,6 +77,7 @@ function TriggerFace({ on, children }: { on: boolean; children: React.ReactNode 
       )}
     >
       <span className="truncate">{children}</span>
+      {marker && <span className="w-[6px] h-[6px] shrink-0 rounded-full bg-info" aria-hidden="true" />}
       <ChevronDownIcon size={12} strokeWidth={2.25} className="shrink-0 opacity-55" />
     </span>
   );
@@ -133,6 +137,7 @@ export function TaskListToolbar({
   onToggleTag,
   sort,
   onSort,
+  defaultSortKey,
   dir,
   onToggleDir,
   onSaveDefault,
@@ -151,7 +156,10 @@ export function TaskListToolbar({
     () => tags.map((t) => ({ id: t.tag, label: t.tag, meta: String(t.count) })),
     [tags],
   );
-  const sortOptions = useMemo<MenuOption[]>(() => TASK_SORTS.map((s) => ({ id: s.key, label: s.label })), []);
+  const sortOptions = useMemo<MenuOption[]>(
+    () => TASK_SORTS.map((s) => ({ id: s.key, label: s.label, meta: s.key === defaultSortKey ? 'Default' : undefined })),
+    [defaultSortKey],
+  );
 
   const dirLabels = sortDirectionLabels(sort);
   const sortLabel = TASK_SORTS.find((s) => s.key === sort)?.label ?? sort;
@@ -164,6 +172,45 @@ export function TaskListToolbar({
   // replaces are not on screen to show their own state.
   const activeFilters = (status ? 1 : 0) + (priority ? 1 : 0) + selectedTags.length;
 
+  // Both belong to the order, so they live under it rather than beside it: two
+  // link buttons in the bar competed with the filters for a glance they had not
+  // earned, and neither is reachable until something has been changed anyway.
+  const sortFooter =
+    onSaveDefault || dirty
+      ? (close: () => void) => (
+          <div className="flex items-center gap-1 px-1">
+            {onSaveDefault && (
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  onSaveDefault();
+                  close();
+                }}
+                title={`Open every list in this order from now on (${sortLabel} — ${(dir === 'asc' ? dirLabels.asc : dirLabels.desc).toLowerCase()})`}
+                className="flex-1 px-[11px] py-[7px] rounded-control bg-transparent border-none cursor-pointer text-control font-semibold text-info hover:bg-neutral-200"
+              >
+                Save as default
+              </button>
+            )}
+            {dirty && (
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  onReset();
+                  close();
+                }}
+                title="Clear the filters and go back to the default order"
+                className="px-[11px] py-[7px] rounded-control bg-transparent border-none cursor-pointer text-control text-neutral-675 hover:bg-neutral-200"
+              >
+                Reset
+              </button>
+            )}
+          </div>
+        )
+      : undefined;
+
   const sortControls = (
     <>
       {filtered && (
@@ -171,29 +218,20 @@ export function TaskListToolbar({
           {count} of {total}
         </span>
       )}
-      {onSaveDefault && (
-        <LinkButton
-          onClick={onSaveDefault}
-          className="shrink-0 px-1"
-          title={`Open every list in this order from now on (${sortLabel} — ${(dir === 'asc' ? dirLabels.asc : dirLabels.desc).toLowerCase()})`}
-        >
-          Save as default
-        </LinkButton>
-      )}
-      {dirty && (
-        <LinkButton onClick={onReset} className="shrink-0 px-1">
-          Reset
-        </LinkButton>
-      )}
       <Menu
         options={sortOptions}
         value={sort}
         onSelect={(id) => onSort(id as TaskSortKey)}
         label={`Sort ${label}`}
         align="end"
+        footer={sortFooter}
         className="group/trigger shrink-0"
       >
-        <TriggerFace on={false}>Sort: {sortLabel}</TriggerFace>
+        {/* The dot is the only thing left saying this list is not in the order
+            every other one opens in — the words "Sort: Progress" cannot. */}
+        <TriggerFace on={false} marker={!!onSaveDefault}>
+          Sort: {sortLabel}
+        </TriggerFace>
       </Menu>
       <IconButton
         onClick={onToggleDir}
@@ -328,6 +366,7 @@ export function TaskListToolbar({
           onClose={() => setSheet(null)}
           sort={sort}
           onSort={onSort}
+          defaultSortKey={defaultSortKey}
           dir={dir}
           onToggleDir={onToggleDir}
           onSaveDefault={onSaveDefault}

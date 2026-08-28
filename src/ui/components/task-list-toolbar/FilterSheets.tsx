@@ -161,6 +161,7 @@ export function SortSheet({
   onClose,
   sort,
   onSort,
+  defaultSortKey,
   dir,
   onToggleDir,
   onSaveDefault,
@@ -168,6 +169,7 @@ export function SortSheet({
   onClose: () => void;
   sort: TaskSortKey;
   onSort: (v: TaskSortKey) => void;
+  defaultSortKey: TaskSortKey;
   dir: TaskSortDirection;
   onToggleDir: () => void;
   onSaveDefault: (() => void) | null;
@@ -183,6 +185,7 @@ export function SortSheet({
           <SheetRow
             key={s.key}
             label={s.label}
+            meta={s.key === defaultSortKey ? 'Default' : undefined}
             selected={s.key === sort}
             onClick={() => {
               onSort(s.key);

@@ -50,6 +50,16 @@ export interface MenuProps {
   searchPlaceholder?: string;
   /** Shown in place of the list when the filter matches nothing. */
   emptyText?: string;
+  /** Actions that belong to the menu as a whole rather than to one option —
+   *  "save this order as the default", "put it back". Rendered under a rule
+   *  below the list. The call site owns the markup, so it also owns the roles:
+   *  inside a `role="menu"` panel these have to be `menuitem`s.
+   *
+   *  Called with the menu's own `close` because an action that finishes is an
+   *  action the menu should go away for — and because a footer button that
+   *  removes itself (Reset, once nothing deviates) would otherwise unmount the
+   *  focused element and leave the panel open behind a lost caret. */
+  footer?: (close: () => void) => React.ReactNode;
 }
 
 /** Gap between the trigger and the panel, and the margin the panel keeps from
@@ -89,6 +99,7 @@ export function Menu({
   searchable = false,
   searchPlaceholder = 'Search…',
   emptyText = 'No matches',
+  footer,
 }: MenuProps) {
   const isAction = kind === 'action';
   const isChecked = React.useCallback(
@@ -235,7 +246,12 @@ export function Menu({
       return;
     }
     if (e.key === 'Tab') {
-      close(false);
+      // With a footer the panel holds more than a list, so Tab walks into it
+      // instead of dismissing the menu — focus leaving the panel is what closes
+      // one of those (see `onBlur`). Without a footer there is nowhere to walk.
+      if (!footer) {
+        close(false);
+      }
       return;
     }
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
@@ -296,6 +312,17 @@ export function Menu({
             role={searchable ? undefined : 'menu'}
             aria-label={searchable ? undefined : label}
             onKeyDown={onPanelKeyDown}
+            // Only for the footer case, where Tab is allowed to move within the
+            // panel: closing then has to key off focus actually leaving it.
+            onBlur={
+              footer
+                ? (e) => {
+                  if (!panelRef.current?.contains(e.relatedTarget)) {
+                    close(false);
+                  }
+                }
+                : undefined
+            }
             // Above both modal layers: a menu opened from inside a dialog is the
             // topmost thing on screen. Hidden until measured, so it never paints
             // once at the origin and then jumps to the trigger.
@@ -379,6 +406,7 @@ export function Menu({
               })}
               {visible.length === 0 && <p className="px-[11px] py-[7px] m-0 text-control text-neutral-650">{emptyText}</p>}
             </div>
+            {footer && <div className="mt-1 pt-1 border-t border-neutral-375">{footer(() => close(true))}</div>}
           </div>,
           document.body,
         )}
