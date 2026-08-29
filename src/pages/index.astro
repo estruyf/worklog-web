@@ -47,6 +47,11 @@ const features = [
     icon: "repeat",
   },
   {
+    title: "Lists",
+    body: "Reusable checklists — a packing list, a release run, the invoicing routine. Tick through it, drag items into order, press Start again and it is waiting unticked for next time.",
+    icon: "list",
+  },
+  {
     title: "Search everything",
     body: "One shortcut over open tasks, the archive and your day notes. Filter by tag, and every tag chip in the app is a filter you can click.",
     icon: "search",
@@ -99,6 +104,8 @@ const tree = [
   { t: "│   └── 2026-06.md", c: "one block per day · freeform notes" },
   { t: "├── archive/" },
   { t: "│   └── acme/2026-06.md", c: "closed tasks · per client, per month" },
+  { t: "├── lists/" },
+  { t: "│   └── release.md", c: "one file per reusable checklist" },
   { t: "└── assets/", c: "images pasted into descriptions" },
 ];
 
@@ -163,6 +170,19 @@ Kickoff with Globex. They want the uploader before the demo.
 ## 2026-06-26
 
 Export queue prototype. Renders, doesn't paginate yet.`;
+
+const listMd = `# Release checklist
+- last run: 2026-06-12
+
+Run this from a clean checkout of \`main\`.
+
+## Steps
+- [ ] Bump the version
+- [x] Update the changelog
+- [ ] Tag it
+
+## After
+- [ ] Announce it`;
 ---
 
 <Layout
@@ -423,6 +443,25 @@ Export queue prototype. Renders, doesn't paginate yet.`;
                     <path d="M21 13v1a4 4 0 0 1-4 4H3" />
                   </svg>
                 )}
+                {f.icon === "list" && (
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="m3 6 1.5 1.5L7 5" />
+                    <path d="m3 12 1.5 1.5L7 11" />
+                    <path d="m3 18 1.5 1.5L7 17" />
+                    <path d="M11 6h10" />
+                    <path d="M11 12h10" />
+                    <path d="M11 18h10" />
+                  </svg>
+                )}
                 {f.icon === "search" && (
                   <svg
                     width="20"
@@ -588,6 +627,18 @@ Export queue prototype. Renders, doesn't paginate yet.`;
               stay prose.
             </div>
           </div>
+
+          <div class="code-card lists-card">
+            <div class="code-head">
+              <span class="fname">lists/release.md</span>
+            </div>
+            <pre class="code">{listMd}</pre>
+            <div class="code-foot">
+              Plain GFM checkboxes, grouped by optional <code>## headings</code>.
+              Ticking one rewrites that single line; <strong>Start again</strong>
+              clears them all and stamps <code>- last run:</code>.
+            </div>
+          </div>
         </div>
 
         <div class="commit-note">
@@ -658,7 +709,8 @@ Export queue prototype. Renders, doesn't paginate yet.`;
                 only ever touches its own files — <code>.worklog/</code>, <code
                   >clients/</code
                 >, <code>worklog/</code>, <code>notes/</code>, <code>archive/</code
-                > and <code>assets/</code> — in the repository you choose.
+                >, <code>lists/</code> and <code>assets/</code> — in the repository
+                you choose.
               </p>
             </div>
           </details>
@@ -1241,7 +1293,8 @@ Export queue prototype. Renders, doesn't paginate yet.`;
   }
   .tree-card,
   .config-card,
-  .notes-card {
+  .notes-card,
+  .lists-card {
     grid-column: 1 / -1;
   }
   .code-card {
