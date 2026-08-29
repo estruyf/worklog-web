@@ -16,7 +16,7 @@ import { BrandMark } from './BrandMark';
  *  mounted (see `useTaskFormBar`); its fields stay its own, so typing a title no
  *  longer re-renders the nav. */
 export function MobileTopBar({ onOpenDrawer }: { onOpenDrawer: () => void }) {
-  const { openTaskForm, openTodoForm, noClients, offline } = useData();
+  const { openTaskFormInContext, openTodoForm, noClients, offline } = useData();
   const { setSearchOpen } = useUi();
   const route = useRoute();
   const onForm = route.name === 'taskForm';
@@ -25,6 +25,10 @@ export function MobileTopBar({ onOpenDrawer }: { onOpenDrawer: () => void }) {
   // in for it — and a to-do needs no client, which is why it shows even when the
   // repo has none configured yet.
   const onTodos = route.name === 'view' && route.view === 'todos';
+  // Everywhere else it reads the open task the way ⇧N does — a phone has no
+  // keyboard, and this is the only New it has, so the two must agree. With a task
+  // open that means a subtask of it, seeded with its client: a subtask of a
+  // general to-do opens as a to-do, not as a client task to switch back.
   const taskForm = useTaskFormBar();
   const canSave = taskForm?.canSave ?? false;
 
@@ -62,7 +66,7 @@ export function MobileTopBar({ onOpenDrawer }: { onOpenDrawer: () => void }) {
         </Button>
       ) : (
         (onTodos || !noClients) && (
-          <Button variant="primary" size="md" onClick={onTodos ? openTodoForm : openTaskForm} className="h-9">
+          <Button variant="primary" size="md" onClick={onTodos ? openTodoForm : openTaskFormInContext} className="h-9">
             <PlusIcon size={15} />
             New
           </Button>

@@ -15,6 +15,10 @@ Every change to Worklog, by day, newest first.
      both). Links must be absolute — a relative path resolves against /changelog and
      404s. -->
 
+## 2026-08-29
+
+- On a phone, "New" with a task open now starts a subtask of that task — the same thing ⇧N does on a desktop — instead of a blank new task. Start one under a general to-do and the form opens as a to-do with that to-do already picked as its parent, so there is no type to switch and no parent to hunt for.
+
 ## 2026-08-25
 
 - The "a new version is available" bar no longer squeezes itself onto a phone: the sentence gets a line of its own and Reload sits on the next one, instead of every word breaking to fit beside the buttons.

@@ -50,10 +50,16 @@ export function useTaskFormActions(deps: TaskFormDeps, ui: WorklogUiState) {
   const openSubtaskForm = (parent: Task) =>
     navigateToTaskForm(null, { clientId: clientIdOf(parent), parentId: parent.id });
 
-  /** The keyboard shortcut's "new task": a subtask of whatever is open, else a
+  /** "New task" as the open task reads it: a subtask of whatever is open, else a
    *  plain new one. A subtask is open — the tree is one level deep, so there is
-   *  no subtask to start under it — falls to the plain one. */
-  const openTaskFormFromShortcut = () => {
+   *  no subtask to start under it — falls to the plain one.
+   *
+   *  Both the ⇧N shortcut and the phone's New button go through here, so the one
+   *  button on a phone means what the one keystroke means on a desktop. Seeding
+   *  the subtask off the open task is also what carries its client over — a
+   *  subtask of a general to-do opens as a to-do rather than as a client task the
+   *  user then has to switch. */
+  const openTaskFormInContext = () => {
     const detailTask = ui.detailId ? tasks.find((t) => t.id === ui.detailId) : undefined;
     if (detailTask && !isDone(detailTask) && canHaveSubtasks(detailTask)) {
       openSubtaskForm(detailTask);
@@ -128,7 +134,7 @@ export function useTaskFormActions(deps: TaskFormDeps, ui: WorklogUiState) {
     openTaskFormForDue,
     openTodoForm,
     openSubtaskForm,
-    openTaskFormFromShortcut,
+    openTaskFormInContext,
     submitTask,
   };
 }
