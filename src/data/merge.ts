@@ -105,6 +105,12 @@ interface SplitFile {
   records: MergeRecord[];
   /** Reassemble a header + records back into file content. */
   join(header: string, records: MergeRecord[]): string;
+  /** The order of the records is itself something a user edits, so a side that
+   *  reordered them has made a change the merge must carry — see
+   *  {@link mergeRecords}. Off everywhere else: a task file's order is the order
+   *  tasks were added, and keeping the branch's is what makes a merged file a
+   *  small diff. */
+  ordered?: boolean;
 }
 
 type Splitter = (content: string) => SplitFile;
@@ -158,7 +164,7 @@ function splitDayNotes(content: string): SplitFile {
  *  point of the format. */
 function splitChecklist(content: string): SplitFile {
   const { header, records } = splitChecklistItems(content);
-  return { header, records, join: (h, recs) => joinChecklist(h, recs) };
+  return { header, records, join: (h, recs) => joinChecklist(h, recs), ordered: true };
 }
 
 const LEDGER_LINE = /^-\s+(\d{4}-\d{2}-\d{2})\s+(\S+)\s/;
@@ -198,7 +204,7 @@ function mergeRecordFile(path: string, base: string, local: string, remote: stri
   const b = split(base);
   const l = split(local);
   const r = split(remote);
-  const { records, conflicts } = mergeRecords(path, b.records, l.records, r.records);
+  const { records, conflicts } = mergeRecords(path, b.records, l.records, r.records, l.ordered);
   const header = pick3(b.header, l.header, r.header);
   if (header.conflict) {
     conflicts.push(`${path}: the file heading changed here and on GitHub — kept your version`);
@@ -213,6 +219,7 @@ function mergeRecords(
   base: MergeRecord[],
   local: MergeRecord[],
   remote: MergeRecord[],
+  ordered = false,
 ): { records: MergeRecord[]; conflicts: string[] } {
   const byKey = (list: MergeRecord[]) => new Map(list.map((rec) => [rec.key, rec.text]));
   const b = byKey(base);
@@ -259,6 +266,29 @@ function mergeRecords(
 
   // Keep the branch's ordering for everything it knows about, then append what
   // only exists locally, so a merged file stays a small diff against the branch.
+  //
+  // For an `ordered` file that is not enough: reordering a checklist changes no
+  // record's text, so the branch's order would silently put every moved item
+  // back. The order the sides agree on is picked the same way `pick3` picks a
+  // single value — whichever side moved off the base wins, local when both did —
+  // and the winner leads the emission.
+  let first = remote;
+  let second = local;
+  if (ordered) {
+    const common = new Set([...b.keys()].filter((key) => l.has(key) && r.has(key)));
+    const bo = orderOf(base, common);
+    const lo = orderOf(local, common);
+    const ro = orderOf(remote, common);
+    if (lo !== ro && ro === bo) {
+      first = local;
+      second = remote;
+    } else if (lo !== ro && lo !== bo) {
+      first = local;
+      second = remote;
+      conflicts.push(`${path}: the order changed here and on GitHub — kept your order`);
+    }
+  }
+
   const out: MergeRecord[] = [];
   const emitted = new Set<string>();
   const emit = (key: string) => {
@@ -271,16 +301,25 @@ function mergeRecords(
       out.push({ key, text });
     }
   };
-  for (const rec of remote) {
+  for (const rec of first) {
     emit(rec.key);
   }
-  for (const rec of local) {
+  for (const rec of second) {
     emit(rec.key);
   }
   for (const key of resolved.keys()) {
     emit(key);
   }
   return { records: out, conflicts };
+}
+
+/** One side's record order, restricted to the keys all three sides hold — the
+ *  only keys whose relative order every side has an opinion about. */
+function orderOf(list: readonly MergeRecord[], common: ReadonlySet<string>): string {
+  return list
+    .filter((rec) => common.has(rec.key))
+    .map((rec) => rec.key)
+    .join('\u0000');
 }
 
 /** A record key as it should read in a conflict notice. */

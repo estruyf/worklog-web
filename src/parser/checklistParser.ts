@@ -138,13 +138,7 @@ export function addChecklistItem(content: string, list: Checklist, sectionIndex:
  *  The stamp is the date of the run being *ended*, not of the one beginning —
  *  "when did I last do a release" is the question a reader has. */
 export function resetChecklist(content: string, date: string): string {
-  const lines = content.split(/\r?\n/);
-  for (let i = 0; i < lines.length; i++) {
-    const m = ITEM.exec(lines[i]);
-    if (m && m[3] !== ' ') {
-      lines[i] = `${m[1]}${m[2]} [ ] ${m[4].trim()}`;
-    }
-  }
+  const lines = untickAll(content.split(/\r?\n/));
   const existing = lines.findIndex((l) => LAST_RUN.test(l));
   if (existing >= 0) {
     lines[existing] = `- last run: ${date}`;
@@ -196,6 +190,94 @@ export function renameChecklist(content: string, name: string): string {
   }
   lines[title] = `# ${oneLine(name)}`;
   return endWithNewline(lines.join('\n'));
+}
+
+/** Move one item to a place in a section — its own or another's.
+ *
+ *  `index` is the position among that section's items as they are *now*, so
+ *  moving the first item to index 2 of a three-item section lands it between the
+ *  second and the third. Dropping onto the list is the gesture, and "before the
+ *  one I aimed at" is what a drop means.
+ *
+ *  The line keeps its own bullet and indent rather than adopting the
+ *  destination's, unlike `addChecklistItem`: this is the same item, and
+ *  rewriting its marker would make a move a two-line diff for no gain. */
+export function moveChecklistItem(
+  content: string,
+  list: Checklist,
+  line: number,
+  sectionIndex: number,
+  index: number,
+): string {
+  const lines = content.split(/\r?\n/);
+  const section = list.sections[sectionIndex];
+  if (!section || line < 0 || line >= lines.length || !ITEM.test(lines[line])) {
+    return content;
+  }
+  const items = section.items;
+  let at: number;
+  if (items.length === 0) {
+    if (section.line === undefined) {
+      return content; // an empty untitled section has no anchor to insert against
+    }
+    at = section.line + 1;
+  } else if (index >= items.length) {
+    at = items[items.length - 1].line + 1;
+  } else {
+    at = items[index].line;
+  }
+  // Landing where it already is. Both spellings of "no move" — before itself and
+  // after itself — because a drop on either edge of a row means the same thing.
+  if (at === line || at === line + 1) {
+    return content;
+  }
+  const [moved] = lines.splice(line, 1);
+  lines.splice(at > line ? at - 1 : at, 0, moved);
+  return endWithNewline(lines.join('\n'));
+}
+
+/** Swap a `## ` group with the one before or after it, items and prose included.
+ *
+ *  The one edit in this module that touches spacing it didn't write: the blank
+ *  line separating two groups belongs *between* them, so moving a block past
+ *  another leaves headings glued to the items above them. A blank line is put
+ *  back before any heading that lost one — never more than that, so a file
+ *  spaced by hand keeps its spacing everywhere the move didn't disturb. */
+export function moveChecklistSection(content: string, line: number, direction: -1 | 1): string {
+  const lines = content.replace(/\s+$/, '').split(/\r?\n/);
+  if (line < 0 || line >= lines.length || !H2.test(lines[line])) {
+    return content;
+  }
+  const end = sectionEnd(lines, line);
+  let at: number;
+  if (direction === 1) {
+    if (end >= lines.length) {
+      return content; // already the last group
+    }
+    at = line + (sectionEnd(lines, end) - end);
+  } else {
+    let prev = line - 1;
+    while (prev >= 0 && !H2.test(lines[prev])) {
+      prev--;
+    }
+    if (prev < 0) {
+      return content; // nothing above it but the title and the ungrouped items
+    }
+    at = prev;
+  }
+  lines.splice(at, 0, ...lines.splice(line, end - line));
+  return endWithNewline(spaceSections(lines).join('\n'));
+}
+
+/** A copy of a list, ready to run: same name with "copy" on it, same items and
+ *  groups, nothing ticked and no `- last run:` stamp.
+ *
+ *  The ticks stay on the original, which is the point — you duplicate the list
+ *  you have just worked through to keep it as the record of that run, and start
+ *  the copy from the top. */
+export function copyChecklistFile(content: string, name: string): string {
+  const lines = untickAll(content.split(/\r?\n/).filter((l) => !LAST_RUN.test(l)));
+  return renameChecklist(endWithNewline(lines.join('\n')), name);
 }
 
 // ---- the merge's view of a list file --------------------------------------
@@ -257,6 +339,39 @@ export function joinChecklist(header: string, records: readonly ChecklistRecord[
 }
 
 // ---- helpers --------------------------------------------------------------
+
+/** Where the group starting at `line` ends: the next `## `, or the end. */
+function sectionEnd(lines: readonly string[], line: number): number {
+  let end = line + 1;
+  while (end < lines.length && !H2.test(lines[end])) {
+    end++;
+  }
+  return end;
+}
+
+/** Every box cleared. Shared by Start again and Duplicate, which differ only in
+ *  what they do with the stamp. */
+function untickAll(lines: string[]): string[] {
+  for (let i = 0; i < lines.length; i++) {
+    const m = ITEM.exec(lines[i]);
+    if (m && m[3] !== ' ') {
+      lines[i] = `${m[1]}${m[2]} [ ] ${m[4].trim()}`;
+    }
+  }
+  return lines;
+}
+
+/** A blank line before every heading that hasn't got one. Only ever adds. */
+function spaceSections(lines: string[]): string[] {
+  const out: string[] = [];
+  for (const line of lines) {
+    if (H2.test(line) && out.length > 0 && out[out.length - 1].trim() !== '') {
+      out.push('');
+    }
+    out.push(line);
+  }
+  return out;
+}
 
 function editLine(content: string, line: number, rewrite: (raw: string) => string): string {
   const lines = content.split(/\r?\n/);

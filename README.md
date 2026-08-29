@@ -716,7 +716,16 @@ Run this from a clean checkout.
 of items, and **Add section** turns one into the other whenever a list outgrows
 being flat. Items written above the first heading stay above it, as their own
 untitled run. Deleting a section takes the items under it with it: to keep them,
-move them out first. `- last run:` is written by **Start again** and records the day the run
+move them out first.
+
+Order is yours to set: drag an item up, down, or into another section, and drop it
+where it belongs. The ⋯ menu on a row does the same without a drag — Move up, Move
+down, or **Move to “Bike”** — which is how it works on a phone, and the ⋯ menu on a
+heading moves the whole section. **Duplicate** on the list menu makes a copy with
+nothing ticked, for keeping the run you just finished as a record and starting the
+next one from the top. Items and list names are searchable from ⌘K.
+
+`- last run:` is written by **Start again** and records the day the run
 it closed was finished, which is the "when did I last do this" a release or an
 invoice run gets asked. Anything else in the file is yours: a paragraph, a nested
 bullet, a link to the runbook. Ticking an item rewrites that one line and leaves

@@ -78,7 +78,7 @@ export const AUTO_SYNC_EVENTS: AutoSyncEventDef[] = [
   {
     id: 'list',
     label: 'A list changes',
-    description: 'An item on a reusable checklist is ticked, added, edited or removed — or a list is created, renamed, deleted or started again.',
+    description: 'An item on a reusable checklist is ticked, added, edited, moved or removed — or a list is created, renamed, duplicated, deleted or started again.',
   },
 ];
 
@@ -125,6 +125,9 @@ const REASON_EVENT: Record<string, AutoSyncEvent> = {
   addChecklistSection: 'list',
   renameChecklistSection: 'list',
   deleteChecklistSection: 'list',
+  moveChecklistItem: 'list',
+  moveChecklistSection: 'list',
+  duplicateChecklist: 'list',
   startChecklistAgain: 'list',
 
   addClient: 'settings',

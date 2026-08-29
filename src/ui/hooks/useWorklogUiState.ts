@@ -21,6 +21,11 @@ export function useWorklogUiState() {
   // tags picked and no query, the overlay browses everything tagged that way.
   const [tagFilter, setTagFilter] = useState<string[]>([]);
   const [searchSel, setSearchSel] = useState(0);
+  // A one-shot request to show a particular list: set by a search hit, consumed
+  // and cleared by the Lists view, which owns which of its cards is open. A
+  // request rather than the open list itself, so asking twice for the list you
+  // closed in between works the second time as well as the first.
+  const [showListId, setShowListId] = useState<string | null>(null);
 
   // Any change to the query or its filters re-orders the hit list, so the
   // keyboard-nav cursor starts over at the top. Reopening the overlay likewise
@@ -131,6 +136,8 @@ export function useWorklogUiState() {
     setTagFilter,
     searchSel,
     setSearchSel,
+    showListId,
+    setShowListId,
     logOpen,
     setLogOpen,
     logEditingClientId,

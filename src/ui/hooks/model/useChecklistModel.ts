@@ -42,9 +42,20 @@ export function useChecklistModel(today: string, ui: WorklogUiState) {
       worklogStore.renameChecklistItem(list.id, item.line, text),
     deleteItem: (list: Checklist, item: ChecklistItem) => worklogStore.deleteChecklistItem(list.id, item.line),
 
+    /** Put an item at `index` among `sectionIndex`'s items — the drop target of a
+     *  drag, or the neighbouring slot a menu move names. */
+    moveItem: (list: Checklist, item: ChecklistItem, sectionIndex: number, index: number) =>
+      worklogStore.moveChecklistItem(list.id, item.line, sectionIndex, index),
+
+    /** A copy to run from the top. Resolves to it so the view can open it. */
+    duplicateList: (list: Checklist) => worklogStore.duplicateChecklist(list.id),
+
     addSection: (list: Checklist, title: string) => worklogStore.addChecklistSection(list.id, title),
     renameSection: (list: Checklist, section: ChecklistSection, title: string) =>
       section.line === undefined ? Promise.resolve() : worklogStore.renameChecklistSection(list.id, section.line, title),
+
+    moveSection: (list: Checklist, section: ChecklistSection, direction: -1 | 1) =>
+      section.line === undefined ? Promise.resolve() : worklogStore.moveChecklistSection(list.id, section.line, direction),
 
     /** Removing a section takes its items with it — see `removeChecklistSection`
      *  for why the heading can't go on its own. An empty one goes without asking:

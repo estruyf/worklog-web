@@ -50,6 +50,9 @@ import {
   deleteChecklistSection,
   deleteChecklist,
   deleteChecklistItem,
+  duplicateChecklist,
+  moveChecklistItemTo,
+  moveChecklistSectionBy,
   renameChecklistById,
   renameChecklistItem,
   renameChecklistSectionAt,
@@ -778,6 +781,22 @@ class WorklogStore {
   }
 
   /** Untick the whole list and stamp the run that just ended. */
+  /** Move an item within its section or into another one. `index` is the
+   *  position among the destination section's items as they stand now. */
+  moveChecklistItem(id: string, line: number, sectionIndex: number, index: number): Promise<void> {
+    return this.run(() => moveChecklistItemTo(this.store, id, line, sectionIndex, index));
+  }
+
+  moveChecklistSection(id: string, line: number, direction: -1 | 1): Promise<void> {
+    return this.run(() => moveChecklistSectionBy(this.store, id, line, direction));
+  }
+
+  /** Copy a list, unticked. Awaited like `createChecklist` so the view can open
+   *  the copy it made. */
+  duplicateChecklist(id: string): Promise<Checklist | undefined> {
+    return this.runFor(() => duplicateChecklist(this.store, id));
+  }
+
   startChecklistAgain(id: string, date: string): Promise<void> {
     return this.run(() => startChecklistAgain(this.store, id, date));
   }

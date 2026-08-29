@@ -17,6 +17,9 @@ import {
   deleteChecklistSection,
   deleteChecklist,
   deleteChecklistItem,
+  duplicateChecklist,
+  moveChecklistItemTo,
+  moveChecklistSectionBy,
   renameChecklistById,
   renameChecklistItem,
   renameChecklistSectionAt,
@@ -297,6 +300,111 @@ describe('sections', () => {
   });
 });
 
+describe('reordering', () => {
+  it('moves an item down past the one after it', async () => {
+    await moveChecklistItemTo(store, 'cycling-trip', list('cycling-trip').sections[0].items[0].line, 0, 2);
+    expect(text('cycling-trip')).toBe('# Cycling trip\n\n- [ ] Spare tubes\n- [ ] Multi-tool\n');
+  });
+
+  it('moves an item back up', async () => {
+    await moveChecklistItemTo(store, 'cycling-trip', list('cycling-trip').sections[0].items[1].line, 0, 0);
+    expect(text('cycling-trip')).toBe('# Cycling trip\n\n- [ ] Spare tubes\n- [ ] Multi-tool\n');
+  });
+
+  it('leaves the file alone when the item lands where it already is', async () => {
+    const before = text('cycling-trip');
+    await moveChecklistItemTo(store, 'cycling-trip', list('cycling-trip').sections[0].items[0].line, 0, 0);
+    await moveChecklistItemTo(store, 'cycling-trip', list('cycling-trip').sections[0].items[0].line, 0, 1);
+    expect(text('cycling-trip')).toBe(before);
+  });
+
+  // The item keeps its own bullet rather than adopting the destination's: it is
+  // the same line, moved.
+  it('moves an item into another section, bullet and all', async () => {
+    const tag = list('release').sections[0].items[2];
+    expect(tag.text).toBe('Tag it');
+    await moveChecklistItemTo(store, 'release', tag.line, 1, 1);
+    expect(text('release')).toBe(`# Release checklist
+- last run: 2026-08-12
+
+Run this from a clean checkout. See [the runbook](https://example.com/runbook).
+
+## Steps
+- [ ] Bump the version
+- [x] Update the changelog
+  - the entry goes under today's date
+
+## After
+- [ ] Announce it
+* [ ] Tag it
+`);
+    expect(list('release').sections[1].items.map((i) => i.text)).toEqual(['Announce it', 'Tag it']);
+  });
+
+  it('takes an item into a section that has nothing in it yet', async () => {
+    await addChecklistSectionTo(store, 'cycling-trip', 'Tools');
+    await moveChecklistItemTo(store, 'cycling-trip', list('cycling-trip').sections[0].items[0].line, 1, 0);
+    expect(text('cycling-trip')).toBe('# Cycling trip\n\n- [ ] Spare tubes\n\n## Tools\n- [ ] Multi-tool\n');
+  });
+
+  it('moves a section past the next one, keeping them apart', async () => {
+    await moveChecklistSectionBy(store, 'release', list('release').sections[0].line!, 1);
+    expect(text('release')).toBe(`# Release checklist
+- last run: 2026-08-12
+
+Run this from a clean checkout. See [the runbook](https://example.com/runbook).
+
+## After
+- [ ] Announce it
+
+## Steps
+- [ ] Bump the version
+- [x] Update the changelog
+  - the entry goes under today's date
+* [ ] Tag it
+`);
+  });
+
+  it('moves a section back up', async () => {
+    await moveChecklistSectionBy(store, 'release', list('release').sections[1].line!, -1);
+    expect(list('release').sections.map((s) => s.title)).toEqual(['After', 'Steps']);
+  });
+
+  it('has nothing above the first section to move it past', async () => {
+    const before = text('release');
+    await moveChecklistSectionBy(store, 'release', list('release').sections[0].line!, -1);
+    await moveChecklistSectionBy(store, 'release', list('release').sections[1].line!, 1);
+    expect(text('release')).toBe(before);
+  });
+});
+
+describe('duplicating a list', () => {
+  it('copies it unticked, with no last run and a name of its own', async () => {
+    const copy = await duplicateChecklist(store, 'release');
+    expect(copy?.id).toBe('release-checklist-copy');
+    expect(copy?.name).toBe('Release checklist copy');
+    expect(copy?.lastRun).toBeUndefined();
+    expect(checklistProgress(copy!)).toEqual({ done: 0, total: 4 });
+    // The prose, the nesting and the `*` bullet come along.
+    expect(text('release-checklist-copy')).toContain('See [the runbook](https://example.com/runbook)');
+    expect(text('release-checklist-copy')).toContain("  - the entry goes under today's date");
+    expect(text('release-checklist-copy')).toContain('* [ ] Tag it');
+  });
+
+  it('leaves the original as the record of the run just finished', async () => {
+    await setChecklistItem(store, 'cycling-trip', list('cycling-trip').sections[0].items[0].line, true);
+    await duplicateChecklist(store, 'cycling-trip');
+    expect(checklistProgress(list('cycling-trip'))).toEqual({ done: 1, total: 2 });
+    expect(checklistProgress(list('cycling-trip-copy'))).toEqual({ done: 0, total: 2 });
+  });
+
+  it('gives a second copy its own file', async () => {
+    await duplicateChecklist(store, 'cycling-trip');
+    await duplicateChecklist(store, 'cycling-trip');
+    expect(store.db.getAllChecklists().map((l) => l.id)).toContain('cycling-trip-copy-2');
+  });
+});
+
 describe('starting again', () => {
   it('unticks everything and stamps the run that just ended', async () => {
     await startChecklistAgain(store, 'release', '2026-08-29');
@@ -385,6 +493,40 @@ describe('syncing a list', () => {
     expect(merged.text).toContain('- [x] Multi-tool');
     expect(merged.text).toContain('- [ ] Multitool');
     expect(merged.conflicts[0]).toContain('"Multi-tool"');
+  });
+
+  // Reordering changes no record's text, so without the ordered merge the
+  // branch's order would quietly put every moved item back.
+  it('keeps a reorder the other device knows nothing about', () => {
+    const local = '# Cycling trip\n\n- [ ] Spare tubes\n- [ ] Multi-tool\n';
+    const remote = PACKING_MD.replace('- [ ] Spare tubes', '- [x] Spare tubes');
+
+    const merged = mergeFile('lists/cycling-trip.md', { base: PACKING_MD, local, remote });
+
+    expect(merged.conflicts).toEqual([]);
+    expect(merged.text).toBe('# Cycling trip\n\n- [x] Spare tubes\n- [ ] Multi-tool\n');
+  });
+
+  it('keeps your order when both devices reordered, and says so', () => {
+    const base = '# Cycling trip\n\n- [ ] Multi-tool\n- [ ] Spare tubes\n- [ ] Pump\n';
+    const local = '# Cycling trip\n\n- [ ] Spare tubes\n- [ ] Multi-tool\n- [ ] Pump\n';
+    const remote = '# Cycling trip\n\n- [ ] Pump\n- [ ] Multi-tool\n- [ ] Spare tubes\n';
+
+    const merged = mergeFile('lists/cycling-trip.md', { base, local, remote });
+
+    expect(merged.text).toBe(local);
+    expect(merged.conflicts[0]).toContain('the order changed here and on GitHub');
+  });
+
+  it('says nothing about an order both devices moved the same way', () => {
+    const base = '# Cycling trip\n\n- [ ] Multi-tool\n- [ ] Spare tubes\n';
+    const local = '# Cycling trip\n\n- [ ] Spare tubes\n- [ ] Multi-tool\n';
+    const remote = '# Cycling trip\n\n- [x] Spare tubes\n- [ ] Multi-tool\n';
+
+    const merged = mergeFile('lists/cycling-trip.md', { base, local, remote });
+
+    expect(merged.conflicts).toEqual([]);
+    expect(merged.text).toBe(remote);
   });
 
   it('resolves an unchanged file to itself, so no phantom commit', () => {

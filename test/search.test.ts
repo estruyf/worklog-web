@@ -1,16 +1,20 @@
 // Unit tests for the search overlay's pure derivation — in particular the tag
 // filter, which doubles as a standalone way to browse everything tagged X, and
-// the day-note group, which is appended to the task hits rather than mixed in.
+// the day-note and checklist groups, which are appended to the task hits rather
+// than mixed in.
 
 import { describe, it, expect } from 'vitest';
 import {
   appendGroup,
+  deriveListGroup,
   deriveNoteGroup,
   deriveSearch,
   snippetAround,
+  LIST_GROUP_NAME,
   NOTE_GROUP_NAME,
   type SearchFilters,
 } from '../src/ui/utils/search';
+import type { Checklist } from '../src/model/checklist';
 import type { DayNote, Task } from '../src/model/types';
 
 function task(over: Partial<Task> & { id: string }): Task {
@@ -164,7 +168,7 @@ describe('appendGroup', () => {
   it('puts note rows after task rows in both groups and flat', () => {
     const tasksDerived = deriveSearch(tasks, filters({ query: 'e' }), deps);
     const noteGroup = deriveNoteGroup(notes, filters({ query: 'e' }), noteDeps);
-    const d = appendGroup(tasksDerived, noteGroup, notes.length);
+    const d = appendGroup(tasksDerived, noteGroup, { noteCount: notes.length });
 
     expect(d.groups.map((g) => g.name)).toEqual(['Acme Corp', 'Globex', NOTE_GROUP_NAME]);
     expect(d.count).toBe(tasksDerived.count + noteGroup!.count);
@@ -178,9 +182,77 @@ describe('appendGroup', () => {
 
   it('leaves the derivation alone but still reports the total when there is no group', () => {
     const tasksDerived = deriveSearch(tasks, filters({ query: 'mobile' }), deps);
-    const d = appendGroup(tasksDerived, undefined, notes.length);
+    const d = appendGroup(tasksDerived, undefined, { noteCount: notes.length });
     expect(d.groups).toEqual(tasksDerived.groups);
     expect(d.count).toBe(tasksDerived.count);
     expect(d.noteCount).toBe(3);
+  });
+});
+
+// ---- checklists ------------------------------------------------------------
+
+const lists: Checklist[] = [
+  {
+    id: 'cycling-trip',
+    name: 'Cycling trip',
+    sourceFile: 'lists/cycling-trip.md',
+    sections: [
+      { title: 'Bike', line: 2, items: [{ text: 'Spare tubes', done: false, line: 3 }] },
+      { title: 'Clothes', line: 5, items: [{ text: 'Rain jacket', done: true, line: 6 }] },
+    ],
+  },
+  {
+    id: 'release',
+    name: 'Release checklist',
+    sourceFile: 'lists/release.md',
+    sections: [{ items: [{ text: 'Bump the version', done: false, line: 2 }] }],
+  },
+];
+
+const openList = () => () => {};
+
+describe('deriveListGroup', () => {
+  it('matches an item by its words, and says which list it is on', () => {
+    const g = deriveListGroup(lists, filters({ query: 'tubes' }), { onOpen: openList });
+    expect(g?.name).toBe(LIST_GROUP_NAME);
+    expect(g?.rows.map((r) => r.title)).toEqual(['Spare tubes']);
+    expect(g?.rows[0].snippet).toBe('Cycling trip · Bike');
+    expect(g?.rows[0].kind).toBe('list');
+    // The match is highlightable in the title.
+    expect(g?.rows[0].mid).toBe('tubes');
+  });
+
+  it('matches every item under a section whose heading matched', () => {
+    const g = deriveListGroup(lists, filters({ query: 'clothes' }), { onOpen: openList });
+    expect(g?.rows.map((r) => r.title)).toEqual(['Rain jacket']);
+  });
+
+  // Searching the name of a list means you want the list, not its twelve steps.
+  it('answers a list-name match with the list itself, not its items', () => {
+    const g = deriveListGroup(lists, filters({ query: 'cycling' }), { onOpen: openList });
+    expect(g?.rows.map((r) => r.title)).toEqual(['Cycling trip']);
+    expect(g?.rows[0].snippet).toBe('2 items, 1 ticked');
+  });
+
+  it('has nothing to say without a query, or under a filter a list cannot satisfy', () => {
+    expect(deriveListGroup(lists, filters(), { onOpen: openList })).toBeUndefined();
+    expect(deriveListGroup(lists, filters({ query: 'tubes', scope: 'open' }), { onOpen: openList })).toBeUndefined();
+    expect(deriveListGroup(lists, filters({ query: 'tubes', client: 'acme' }), { onOpen: openList })).toBeUndefined();
+    expect(deriveListGroup(lists, filters({ query: 'tubes', tags: ['bug'] }), { onOpen: openList })).toBeUndefined();
+  });
+
+  it('appends after the notes, keeping both totals and the flat order', () => {
+    const tasksDerived = deriveSearch(tasks, filters({ query: 'mobile' }), deps);
+    const noteGroup = deriveNoteGroup(notes, filters({ query: 'mobile' }), { onOpen: () => () => {} });
+    const listGroup = deriveListGroup(lists, filters({ query: 'tubes' }), { onOpen: openList });
+
+    const d = appendGroup(appendGroup(tasksDerived, noteGroup, { noteCount: notes.length }), listGroup, {
+      listCount: lists.length,
+    });
+
+    expect(d.groups[d.groups.length - 1]?.name).toBe(LIST_GROUP_NAME);
+    expect(d.flat[d.flat.length - 1]?.title).toBe('Spare tubes');
+    expect(d.noteCount).toBe(notes.length);
+    expect(d.listCount).toBe(2);
   });
 });

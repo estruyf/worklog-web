@@ -10,7 +10,7 @@ import { ScopeFilterBar, SearchField, SearchIdleState, SearchResultRow, TagFilte
 export function SearchOverlay() {
   const { clearTagFilter } = useData();
   const { search, setSearch, searchScope, setSearchScope, searchClient, setSearchClient, tagFilter, searchSel, setSearchOpen } = useUi();
-  const { q, filtered, groups, count, openCount, archivedCount, noteCount } = useSearchData();
+  const { q, filtered, groups, count, openCount, archivedCount, noteCount, listCount } = useSearchData();
 
   const close = () => setSearchOpen(false);
 
@@ -44,7 +44,7 @@ export function SearchOverlay() {
 
       {/* Results (scrollable) */}
       <div className="flex-1 overflow-auto px-5 pb-5 border-t border-neutral-325">
-        {!filtered && <SearchIdleState openCount={openCount} archivedCount={archivedCount} noteCount={noteCount} />}
+        {!filtered && <SearchIdleState openCount={openCount} archivedCount={archivedCount} noteCount={noteCount} listCount={listCount} />}
 
         {filtered && count === 0 && (
           <EmptyState className="mt-5">

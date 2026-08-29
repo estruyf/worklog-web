@@ -3,11 +3,13 @@
 // be unit-tested directly and shared between the Search view and the shell's
 // keyboard-nav handler.
 //
-// Day notes are a second, much simpler corpus, derived by `deriveNoteGroup` and
-// stapled on with `appendGroup` rather than folded into `deriveSearch`. They
-// have no client to group by and no open/archived state to scope by, so pushing
-// them through the task pipeline would mean weakening every rule in it.
+// Day notes and checklists are two further, much simpler corpora, derived by
+// `deriveNoteGroup` / `deriveListGroup` and stapled on with `appendGroup` rather
+// than folded into `deriveSearch`. Neither has a client to group by or an
+// open/archived state to scope by, so pushing them through the task pipeline
+// would mean weakening every rule in it.
 
+import type { Checklist } from '../../model/checklist';
 import type { DayNote, Task } from '../../model/types';
 import type { SearchGroup, SearchResult, SearchScope } from '../model';
 import { fmtLong } from './date';
@@ -65,6 +67,8 @@ export interface SearchDerived {
   archivedCount: number;
   /** Unfiltered day-note total. Filled in by {@link appendGroup}. */
   noteCount: number;
+  /** Unfiltered list total, for the idle-state tile. */
+  listCount: number;
 }
 
 export function deriveSearch(tasks: Task[], filters: SearchFilters, deps: SearchDeps): SearchDerived {
@@ -77,7 +81,7 @@ export function deriveSearch(tasks: Task[], filters: SearchFilters, deps: Search
   const archivedCount = tasks.length - openCount;
 
   if (!filtered) {
-    return { q, filtered, groups: [], flat: [], count: 0, openCount, archivedCount, noteCount: 0 };
+    return { q, filtered, groups: [], flat: [], count: 0, openCount, archivedCount, noteCount: 0, listCount: 0 };
   }
 
   const groupsByClient = new Map<string, SearchGroup>();
@@ -162,7 +166,7 @@ export function deriveSearch(tasks: Task[], filters: SearchFilters, deps: Search
   const groups = [...groupsByClient.values()];
   // Flatten in group render order so the cursor index lines up with the DOM.
   const flat = groups.flatMap((g) => g.rows);
-  return { q, filtered, groups, flat, count: flat.length, openCount, archivedCount, noteCount: 0 };
+  return { q, filtered, groups, flat, count: flat.length, openCount, archivedCount, noteCount: 0, listCount: 0 };
 }
 
 // ---- day notes -------------------------------------------------------------
@@ -241,16 +245,100 @@ export function deriveNoteGroup(
   return { name: NOTE_GROUP_NAME, color: NOTE_COLOR, count: rows.length, rows };
 }
 
+// ---- checklists ------------------------------------------------------------
+
+/** The group checklist hits are collected under, with its own colour for the
+ *  same reason day notes have one: it isn't a client. */
+export const LIST_GROUP_NAME = 'Lists';
+export const LIST_COLOR = '#2E8B84';
+
+export interface ListSearchDeps {
+  /** Builds the row's open handler — showing that list. */
+  onOpen: (listId: string) => () => void;
+}
+
+/** Checklist hits for the current query.
+ *
+ *  Scoped like day notes — the `all` scope only, no client, no tags — because a
+ *  list has none of those to satisfy.
+ *
+ *  A list whose *name* matches is one row rather than every item it holds:
+ *  searching "release" means you want the release checklist, not its twelve
+ *  steps. Its items still appear individually when they match on their own. */
+export function deriveListGroup(
+  lists: Checklist[],
+  filters: SearchFilters,
+  deps: ListSearchDeps,
+): SearchGroup | undefined {
+  const q = filters.query.trim().toLowerCase();
+  if (!q || filters.scope !== 'all' || filters.client !== '' || filters.tags.length > 0) {
+    return undefined;
+  }
+
+  const rows: SearchResult[] = [];
+  for (const list of lists) {
+    const nameHit = list.name.toLowerCase().includes(q);
+    if (nameHit) {
+      const items = list.sections.flatMap((s) => s.items);
+      const done = items.filter((i) => i.done).length;
+      rows.push(
+        listRow(list.name, q, `${items.length === 1 ? '1 item' : `${items.length} items`}, ${done} ticked`, deps.onOpen(list.id)),
+      );
+    }
+    for (const section of list.sections) {
+      const sectionHit = (section.title ?? '').toLowerCase().includes(q);
+      for (const item of section.items) {
+        if (nameHit || !(item.text.toLowerCase().includes(q) || sectionHit)) {
+          continue;
+        }
+        const where = section.title ? `${list.name} · ${section.title}` : list.name;
+        rows.push(listRow(item.text, q, where, deps.onOpen(list.id)));
+      }
+    }
+  }
+  if (rows.length === 0) {
+    return undefined;
+  }
+  return { name: LIST_GROUP_NAME, color: LIST_COLOR, count: rows.length, rows };
+}
+
+function listRow(title: string, q: string, snippet: string, onEdit: () => void): SearchResult {
+  const sp = splitMatch(title, q);
+  return {
+    kind: 'list',
+    title,
+    hasLink: false,
+    link: '',
+    tags: [],
+    pre: sp.pre,
+    mid: sp.mid,
+    post: sp.post,
+    hasMid: sp.hasMid,
+    snippet,
+    matchBadge: '',
+    onEdit,
+  };
+}
+
 /** Staple a group onto a derivation, keeping `flat` in render order.
  *
  *  Appending rather than merging is what lets the shell's ↑/↓/↵ walk `flat` by
  *  index without knowing day notes exist: the overlay renders groups in order,
  *  so last-in-the-list is last-in-the-DOM. */
-export function appendGroup(derived: SearchDerived, group: SearchGroup | undefined, noteCount = 0): SearchDerived {
+export function appendGroup(
+  derived: SearchDerived,
+  group: SearchGroup | undefined,
+  totals: { noteCount?: number; listCount?: number } = {},
+): SearchDerived {
+  const counted = {
+    ...derived,
+    noteCount: totals.noteCount ?? derived.noteCount,
+    listCount: totals.listCount ?? derived.listCount,
+  };
   if (!group) {
-    return { ...derived, noteCount };
+    return counted;
   }
-  const groups = [...derived.groups, group];
-  const flat = [...derived.flat, ...group.rows];
-  return { ...derived, groups, flat, count: flat.length, noteCount };
+  const groups = [...counted.groups, group];
+  const flat = [...counted.flat, ...group.rows];
+  return { ...counted, groups, flat, count: flat.length };
 }

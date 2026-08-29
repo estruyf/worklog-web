@@ -10,6 +10,9 @@ import { Store } from '../store';
 import {
   addChecklistItem,
   addChecklistSection,
+  copyChecklistFile,
+  moveChecklistItem,
+  moveChecklistSection,
   newChecklistFile,
   parseChecklistFile,
   removeChecklistItem,
@@ -108,6 +111,50 @@ export async function renameChecklistSectionAt(store: Store, id: string, line: n
 /** Remove a group and the items under it. */
 export async function deleteChecklistSection(store: Store, id: string, line: number): Promise<void> {
   await edit(store, id, 'deleteChecklistSection', (content) => removeChecklistSection(content, line));
+}
+
+/** Move an item to a position in a section — the one it is in, or another.
+ *  `index` counts that section's items as they stand; see `moveChecklistItem`. */
+export async function moveChecklistItemTo(
+  store: Store,
+  id: string,
+  line: number,
+  sectionIndex: number,
+  index: number,
+): Promise<void> {
+  await edit(store, id, 'moveChecklistItem', (content, list) =>
+    moveChecklistItem(content, list, line, sectionIndex, index),
+  );
+}
+
+/** Swap a group with the one above or below it. */
+export async function moveChecklistSectionBy(
+  store: Store,
+  id: string,
+  line: number,
+  direction: -1 | 1,
+): Promise<void> {
+  await edit(store, id, 'moveChecklistSection', (content) => moveChecklistSection(content, line, direction));
+}
+
+/** Copy a list to run again from the top, leaving this one's ticks as the record
+ *  of the run just finished. The copy is a new file with its own id, so the two
+ *  are separate lists from here on — nothing links them. */
+export async function duplicateChecklist(store: Store, id: string): Promise<Checklist | undefined> {
+  const content = await readText(store.ws.listFile(id));
+  if (content === undefined) {
+    return undefined;
+  }
+  const source = parseChecklistFile(content, store.ws.listFile(id), id);
+  const name = `${source.name} copy`;
+  const newId = uniqueChecklistId(
+    name,
+    store.db.getAllChecklists().map((l) => l.id),
+  );
+  await ensureDir(store.ws.listsDir);
+  await writeText(store.ws.listFile(newId), copyChecklistFile(content, name));
+  await store.rebuild('duplicateChecklist');
+  return store.db.getAllChecklists().find((l) => l.id === newId);
 }
 
 /** Start the list over: untick everything and stamp the day the run just

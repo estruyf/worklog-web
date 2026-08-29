@@ -89,6 +89,8 @@ describe('the event map', () => {
     expect(autoSyncEventFor('addChecklistItem')).toBe('list');
     expect(autoSyncEventFor('startChecklistAgain')).toBe('list');
     expect(autoSyncEventFor('deleteChecklist')).toBe('list');
+    expect(autoSyncEventFor('moveChecklistItem')).toBe('list');
+    expect(autoSyncEventFor('duplicateChecklist')).toBe('list');
   });
 
   it('maps the sync machinery to nothing, so a pull can never trigger a sync', () => {

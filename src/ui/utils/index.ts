@@ -11,7 +11,7 @@ export { continueList, insertLink, toggleLinePrefix, toggleWrap } from "./markdo
 export type { LinePrefix, MarkdownEdit, WrapMarker } from "./markdownEdit";
 export { TASK_REF, applyMention, matchTaskRefs, mentionAt } from "./taskRefs";
 export type { TaskMentionQuery } from "./taskRefs";
-export { splitMatch, deriveSearch, deriveNoteGroup, appendGroup, snippetAround, NOTE_COLOR, NOTE_GROUP_NAME } from "./search";
+export { splitMatch, deriveSearch, deriveNoteGroup, deriveListGroup, appendGroup, snippetAround, NOTE_COLOR, NOTE_GROUP_NAME, LIST_COLOR, LIST_GROUP_NAME } from "./search";
 export type { NoteSearchDeps, SearchDeps, SearchDerived, SearchFilters, SplitMatch } from "./search";
 export { deriveArchive, pageWindow, periodStart, ARCHIVE_PAGE_SIZES } from "./archive";
 export type { ArchiveDeps, ArchiveDerived, ArchiveFilters, ArchivePeriod } from "./archive";

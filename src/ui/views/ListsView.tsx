@@ -10,14 +10,41 @@
 // Nothing here reaches the day, the ledger or a client: an item is not work, and
 // a list has no dates beyond the day its last run finished.
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { CheckIcon, EllipsisIcon, PlusIcon, RotateCcwIcon } from 'lucide-react';
 import type { Checklist, ChecklistItem, ChecklistSection } from '../../model/checklist';
-import { checklistProgress } from '../../model/checklist';
+import { checklistItems, checklistProgress } from '../../model/checklist';
 import { DisclosureIcon } from '../components';
 import { Button, Card, EmptyState, Input, LinkButton, Menu, SectionLabel, ViewHeader } from '../primitives';
-import { useData } from '../context';
+import type { MenuOption } from '../primitives';
+import { useData, useUi } from '../context';
 import { fmtShort } from '../utils';
+
+/** Where a dragged item would land: a section, and the position among its items.
+ *  The same coordinates `moveItem` takes, so the drop is the call. */
+interface DropTarget {
+  sectionIndex: number;
+  index: number;
+}
+
+/** The drag in progress, threaded down from the card because a drag crosses
+ *  sections — the row being dragged and the row being dropped on are in two
+ *  different `SectionBlock`s as often as not. */
+interface DragState {
+  /** The line of the item being dragged, or null when nothing is. */
+  line: number | null;
+  target: DropTarget | null;
+  start: (line: number) => void;
+  over: (target: DropTarget) => void;
+  end: () => void;
+  drop: () => void;
+}
+
+/** The row overflow menus are hover-revealed on a pointer and always there on a
+ *  phone, which has no hover to reveal them with. Without this the only actions
+ *  a touch device can reach are ticking and adding. */
+const TOUCH_MENU =
+  'opacity-100 sm:opacity-0 sm:focus-visible:opacity-100 hover:text-neutral-825 hover:bg-neutral-250';
 
 /** A one-line editor that commits on ↵ and abandons on Esc. Both the item rows
  *  and the two "name it" fields are this: a checklist is a thing you type into
@@ -65,15 +92,39 @@ function InlineInput({
       // Clicking away is a commit, not a discard: the row is gone either way and
       // silently throwing the words away is the surprising half of the two.
       onBlur={commit}
+      // Width is layout, so it belongs to the call site — see `CONTROL_BASE`.
+      // Every one of these stands in a row of its own and should fill it.
+      className="w-full"
     />
   );
 }
 
+/** The line a dragged item would drop onto. */
+function DropLine() {
+  return <div className="h-[2px] mx-2.5 my-[3px] rounded-full bg-brand-500" aria-hidden="true" />;
+}
+
 /** One tickable line. The circle and the words are one control — the whole row
  *  toggles, the way a checkbox and its label do — with the overflow menu holding
- *  the two things that aren't ticking. */
-function ItemRow({ list, item }: { list: Checklist; item: ChecklistItem }) {
-  const { toggleItem, renameItem, deleteItem } = useData();
+ *  everything that isn't ticking.
+ *
+ *  The row is a drag source and a drop target both. Dropping on its top half
+ *  means "before this one", the bottom half "after" — so an insertion between
+ *  two rows can be aimed at from either side of the gap. */
+function ItemRow({
+  list,
+  item,
+  sectionIndex,
+  index,
+  drag,
+}: {
+  list: Checklist;
+  item: ChecklistItem;
+  sectionIndex: number;
+  index: number;
+  drag: DragState;
+}) {
+  const { toggleItem, renameItem, deleteItem, moveItem } = useData();
   const [renaming, setRenaming] = useState(false);
 
   if (renaming) {
@@ -92,8 +143,71 @@ function ItemRow({ list, item }: { list: Checklist; item: ChecklistItem }) {
     );
   }
 
+  const section = list.sections[sectionIndex];
+  const options: MenuOption[] = [{ id: 'rename', label: 'Rename' }];
+  // Omitted rather than greyed out at the ends of a section: a menu of four
+  // where two never do anything reads as broken.
+  if (index > 0) {
+    options.push({ id: 'up', label: 'Move up' });
+  }
+  if (index < section.items.length - 1) {
+    options.push({ id: 'down', label: 'Move down' });
+  }
+  // The touch half of a drag: dragging works with a mouse and not with a thumb,
+  // and moving an item between groups is exactly what a phone is holding the
+  // list for.
+  list.sections.forEach((s, i) => {
+    if (i !== sectionIndex && s.title) {
+      options.push({ id: `to:${i}`, label: `Move to “${s.title}”` });
+    }
+  });
+  options.push({ id: 'delete', label: 'Delete' });
+
+  const onSelect = (id: string) => {
+    if (id === 'rename') {
+      setRenaming(true);
+    } else if (id === 'delete') {
+      void deleteItem(list, item);
+    } else if (id === 'up') {
+      void moveItem(list, item, sectionIndex, index - 1);
+    } else if (id === 'down') {
+      // Past the next item, which is two slots along in the list as it stands.
+      void moveItem(list, item, sectionIndex, index + 2);
+    } else if (id.startsWith('to:')) {
+      const to = Number(id.slice(3));
+      void moveItem(list, item, to, list.sections[to].items.length);
+    }
+  };
+
+  const dragging = drag.line === item.line;
   return (
-    <div className="group/item flex items-center gap-[11px] py-2 px-2.5 rounded-lg hover:bg-neutral-175">
+    <div
+      draggable
+      onDragStart={(e) => {
+        e.dataTransfer.effectAllowed = 'move';
+        // Firefox starts no drag at all without something on the transfer.
+        e.dataTransfer.setData('text/plain', item.text);
+        drag.start(item.line);
+      }}
+      onDragEnd={drag.end}
+      onDragOver={(e) => {
+        if (drag.line === null) {
+          return;
+        }
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        const box = e.currentTarget.getBoundingClientRect();
+        drag.over({ sectionIndex, index: e.clientY > box.top + box.height / 2 ? index + 1 : index });
+      }}
+      onDrop={(e) => {
+        e.preventDefault();
+        drag.drop();
+      }}
+      className={
+        'group/item flex items-center gap-[11px] py-2 px-2.5 rounded-lg hover:bg-neutral-175 ' +
+        (dragging ? 'opacity-40' : '')
+      }
+    >
       <button
         onClick={() => void toggleItem(list, item)}
         aria-pressed={item.done}
@@ -122,12 +236,9 @@ function ItemRow({ list, item }: { list: Checklist; item: ChecklistItem }) {
         kind="action"
         align="end"
         label={`Actions for “${item.text}”`}
-        options={[
-          { id: 'rename', label: 'Rename' },
-          { id: 'delete', label: 'Delete' },
-        ]}
-        onSelect={(id) => (id === 'rename' ? setRenaming(true) : void deleteItem(list, item))}
-        className="w-7 h-7 -my-1 shrink-0 flex items-center justify-center rounded-lg text-neutral-625 opacity-0 group-hover/item:opacity-100 focus-visible:opacity-100 group-focus-within/item:opacity-100 hover:text-neutral-825 hover:bg-neutral-250"
+        options={options}
+        onSelect={onSelect}
+        className={`w-7 h-7 -my-1 shrink-0 flex items-center justify-center rounded-lg text-neutral-625 sm:group-hover/item:opacity-100 sm:group-focus-within/item:opacity-100 ${TOUCH_MENU}`}
       >
         <EllipsisIcon size={16} />
       </Menu>
@@ -137,9 +248,19 @@ function ItemRow({ list, item }: { list: Checklist; item: ChecklistItem }) {
 
 /** The way to add to a section: a quiet line that becomes the input when you
  *  reach for it, and stays open afterwards so a list can be typed in one go. */
-function AddItemRow({ list, sectionIndex }: { list: Checklist; sectionIndex: number }) {
+function AddItemRow({
+  list,
+  sectionIndex,
+  startOpen = false,
+}: {
+  list: Checklist;
+  sectionIndex: number;
+  /** Already open on mount: the first item of a list is typed into the empty
+   *  card's own field, and that field is gone by the time this row appears. */
+  startOpen?: boolean;
+}) {
   const { addItem } = useData();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(startOpen);
 
   if (!open) {
     return (
@@ -171,13 +292,67 @@ function AddItemRow({ list, sectionIndex }: { list: Checklist; sectionIndex: num
 
 /** A `## ` group. An untitled one — the run of items a flat list is, or the ones
  *  sitting above the first heading — renders as those items and nothing else: it
- *  has no heading to rename, delete, or leave an empty label behind. */
-function SectionBlock({ list, section, index }: { list: Checklist; section: ChecklistSection; index: number }) {
-  const { renameSection, deleteSection } = useData();
+ *  has no heading to rename, delete, move, or leave an empty label behind. */
+function SectionBlock({
+  list,
+  section,
+  index,
+  firstTitled,
+  drag,
+  startOpen,
+}: {
+  list: Checklist;
+  section: ChecklistSection;
+  index: number;
+  /** Array position of the first group with a heading — where "move up" runs out. */
+  firstTitled: number;
+  drag: DragState;
+  startOpen?: boolean;
+}) {
+  const { renameSection, deleteSection, moveSection } = useData();
   const [renaming, setRenaming] = useState(false);
 
+  const options: MenuOption[] = [{ id: 'rename', label: 'Rename section' }];
+  if (index > firstTitled) {
+    options.push({ id: 'up', label: 'Move up' });
+  }
+  if (index < list.sections.length - 1) {
+    options.push({ id: 'down', label: 'Move down' });
+  }
+  options.push({ id: 'delete', label: 'Delete section' });
+
+  const onSelect = (id: string) => {
+    if (id === 'rename') {
+      setRenaming(true);
+    } else if (id === 'delete') {
+      void deleteSection(list, section);
+    } else {
+      void moveSection(list, section, id === 'up' ? -1 : 1);
+    }
+  };
+
+  const at = (i: number) => drag.target?.sectionIndex === index && drag.target.index === i;
   return (
-    <div className={index > 0 ? 'mt-4' : ''}>
+    <div
+      className={index > 0 ? 'mt-4' : ''}
+      // An empty group still has to be droppable, and it has no row to aim at.
+      onDragOver={
+        section.items.length === 0 && drag.line !== null
+          ? (e) => {
+              e.preventDefault();
+              drag.over({ sectionIndex: index, index: 0 });
+            }
+          : undefined
+      }
+      onDrop={
+        section.items.length === 0
+          ? (e) => {
+              e.preventDefault();
+              drag.drop();
+            }
+          : undefined
+      }
+    >
       {section.title &&
         (renaming ? (
           <div className="py-[5px] px-2.5 mb-[2px]">
@@ -201,54 +376,111 @@ function SectionBlock({ list, section, index }: { list: Checklist; section: Chec
               kind="action"
               align="end"
               label={`Actions for “${section.title}”`}
-              options={[
-                { id: 'rename', label: 'Rename section' },
-                { id: 'delete', label: 'Delete section' },
-              ]}
-              onSelect={(id) => (id === 'rename' ? setRenaming(true) : void deleteSection(list, section))}
-              className="w-6 h-6 -my-1 shrink-0 flex items-center justify-center rounded-lg text-neutral-625 opacity-0 group-hover/section:opacity-100 focus-visible:opacity-100 group-focus-within/section:opacity-100 hover:text-neutral-825 hover:bg-neutral-250"
+              options={options}
+              onSelect={onSelect}
+              className={`w-6 h-6 -my-1 shrink-0 flex items-center justify-center rounded-lg text-neutral-625 sm:group-hover/section:opacity-100 sm:group-focus-within/section:opacity-100 ${TOUCH_MENU}`}
             >
               <EllipsisIcon size={15} />
             </Menu>
           </div>
         ))}
-      {section.items.map((item) => (
-        <ItemRow key={`${item.line}-${item.text}`} list={list} item={item} />
+      {section.items.map((item, i) => (
+        <React.Fragment key={`${item.line}-${item.text}`}>
+          {at(i) && <DropLine />}
+          <ItemRow list={list} item={item} sectionIndex={index} index={i} drag={drag} />
+        </React.Fragment>
       ))}
-      <AddItemRow list={list} sectionIndex={index} />
+      {at(section.items.length) && <DropLine />}
+      <AddItemRow list={list} sectionIndex={index} startOpen={startOpen} />
     </div>
   );
 }
 
 /** The way to group a list that has outgrown being one run of items. Sits under
  *  the last section because that is where the new one lands — a list is worked
- *  through in the order it is written. */
+ *  through in the order it is written.
+ *
+ *  Under a rule, and dashed rather than one more quiet grey line: it was the
+ *  same shape as the "Add item" under every section, so on a list with anything
+ *  on it the two read as the same control and this one looked like an "Add item"
+ *  that had lost its heading. A dashed button is what the app already uses for
+ *  starting a new container of things (a client, a prompt), which is what this
+ *  is — the rule closes the list, and the button is plainly not part of it. */
 function AddSectionRow({ list }: { list: Checklist }) {
   const { addSection } = useData();
   const [open, setOpen] = useState(false);
 
-  if (!open) {
+  return (
+    <div className="mt-3 pt-3 px-2.5 border-t border-neutral-325">
+      {open ? (
+        <InlineInput
+          label="New section"
+          placeholder="Bike, Clothes, Electronics…"
+          onCommit={(title) => {
+            setOpen(false);
+            void addSection(list, title);
+          }}
+          onCancel={() => setOpen(false)}
+        />
+      ) : (
+        <Button variant="dashed" size="sm" onClick={() => setOpen(true)} className="w-full">
+          <PlusIcon size={14} />
+          Add section
+        </Button>
+      )}
+    </div>
+  );
+}
+
+/** What a list with nothing on it shows instead of its rows.
+ *
+ *  The two quiet "Add …" lines are the right shape once there is a list to add
+ *  to, and the wrong one when the card is otherwise blank: two equal grey links
+ *  under an empty box say nothing about which of them starts a list. So the
+ *  empty card says what a list is for and offers the one obvious move, with
+ *  grouping as the aside it is — you group a list you already have. */
+function EmptyList({ list, onSeeded }: { list: Checklist; onSeeded: () => void }) {
+  const { addItem, addSection } = useData();
+  const [adding, setAdding] = useState<'item' | 'section' | null>(null);
+
+  if (adding) {
     return (
-      <button
-        onClick={() => setOpen(true)}
-        className="flex items-center gap-[7px] mt-4 py-2 px-2.5 rounded-lg bg-transparent border-none cursor-pointer text-control text-neutral-650 hover:text-neutral-825 hover:bg-neutral-175"
-      >
-        <PlusIcon size={14} />
-        Add section
-      </button>
+      <div className="py-3 px-2.5">
+        <InlineInput
+          label={adding === 'item' ? 'New item' : 'New section'}
+          placeholder={adding === 'item' ? 'What needs doing?' : 'Bike, Clothes, Electronics…'}
+          onCommit={(text) => {
+            if (adding === 'item') {
+              // This card goes the moment the item lands — the list isn't empty
+              // any more — so the ordinary rows take over. They come up with
+              // their own field already open, which is what keeps the rest of
+              // the list typeable in one go.
+              onSeeded();
+              void addItem(list, 0, text);
+            } else {
+              setAdding(null);
+              void addSection(list, text);
+            }
+          }}
+          onCancel={() => setAdding(null)}
+        />
+      </div>
     );
   }
+
   return (
-    <div className="mt-4 py-[5px] px-2.5">
-      <InlineInput
-        label="New section"
-        placeholder="Bike, Clothes, Electronics…"
-        onCommit={(title) => {
-          setOpen(false);
-          void addSection(list, title);
-        }}
-        onCancel={() => setOpen(false)}
-      />
+    <div className="px-2.5 py-6 text-center">
+      <p className="text-body text-neutral-750 m-0">Nothing on this list yet.</p>
+      <p className="text-chip text-neutral-650 mt-[5px] mb-4">
+        Add the things you tick off, then start it again next time.
+      </p>
+      <div className="flex items-center justify-center gap-3">
+        <Button variant="primary" size="sm" onClick={() => setAdding('item')}>
+          <PlusIcon size={14} />
+          Add item
+        </Button>
+        <LinkButton onClick={() => setAdding('section')}>or start with a section</LinkButton>
+      </div>
     </div>
   );
 }
@@ -272,9 +504,40 @@ function Progress({ done, total }: { done: number; total: number }) {
 
 /** One list: its header always, its items when it is the open one. */
 function ListCard({ list, open, onOpen }: { list: Checklist; open: boolean; onOpen: () => void }) {
-  const { renameList, deleteList, startAgain } = useData();
+  const { renameList, deleteList, duplicateList, startAgain, moveItem } = useData();
+  const { setShowListId } = useUi();
   const [renaming, setRenaming] = useState(false);
+  // The first item of this list was typed into the empty card, so the row that
+  // replaces it opens its field rather than making you reach for it again.
+  const [seeded, setSeeded] = useState(false);
+  // The drag lives here rather than in a row: it starts in one section and ends
+  // in another, and only the card sees both.
+  const [dragLine, setDragLine] = useState<number | null>(null);
+  const [target, setTarget] = useState<DropTarget | null>(null);
   const { done, total } = checklistProgress(list);
+
+  const drag: DragState = {
+    line: dragLine,
+    target,
+    start: setDragLine,
+    over: (next) =>
+      setTarget((prev) => (prev && prev.sectionIndex === next.sectionIndex && prev.index === next.index ? prev : next)),
+    end: () => {
+      setDragLine(null);
+      setTarget(null);
+    },
+    drop: () => {
+      const item = checklistItems(list).find((i) => i.line === dragLine);
+      if (item && target) {
+        void moveItem(list, item, target.sectionIndex, target.index);
+      }
+      setDragLine(null);
+      setTarget(null);
+    },
+  };
+
+  const empty = list.sections.length === 1 && !list.sections[0].title && list.sections[0].items.length === 0;
+  const firstTitled = list.sections.findIndex((s) => s.title);
 
   return (
     <Card padding="list" className="mb-3">
@@ -316,9 +579,20 @@ function ListCard({ list, open, onOpen }: { list: Checklist; open: boolean; onOp
               label={`Actions for “${list.name}”`}
               options={[
                 { id: 'rename', label: 'Rename list' },
+                { id: 'duplicate', label: 'Duplicate', hint: 'A copy with nothing ticked' },
                 { id: 'delete', label: 'Delete list' },
               ]}
-              onSelect={(id) => (id === 'rename' ? setRenaming(true) : void deleteList(list))}
+              onSelect={(id) => {
+                if (id === 'rename') {
+                  setRenaming(true);
+                } else if (id === 'delete') {
+                  void deleteList(list);
+                } else {
+                  // Open the copy: duplicating is how a run is started, and the
+                  // copy is the one you are about to work down.
+                  void duplicateList(list).then((made) => made && setShowListId(made.id));
+                }
+              }}
               className="w-7 h-7 shrink-0 flex items-center justify-center rounded-lg text-neutral-625 hover:text-neutral-825 hover:bg-neutral-250"
             >
               <EllipsisIcon size={16} />
@@ -329,10 +603,24 @@ function ListCard({ list, open, onOpen }: { list: Checklist; open: boolean; onOp
 
       {open && (
         <div className="mt-1 pb-1">
-          {list.sections.map((section, i) => (
-            <SectionBlock key={section.line ?? `flat-${i}`} list={list} section={section} index={i} />
-          ))}
-          <AddSectionRow list={list} />
+          {empty ? (
+            <EmptyList list={list} onSeeded={() => setSeeded(true)} />
+          ) : (
+            <>
+              {list.sections.map((section, i) => (
+                <SectionBlock
+                  key={section.line ?? `flat-${i}`}
+                  list={list}
+                  section={section}
+                  index={i}
+                  firstTitled={firstTitled}
+                  drag={drag}
+                  startOpen={seeded && i === 0}
+                />
+              ))}
+              <AddSectionRow list={list} />
+            </>
+          )}
           {/* The stamp sits under the list rather than in the header: it is the
               answer to "when did I last do this", which is a thing you look up
               once you are already in the list. */}
@@ -347,10 +635,21 @@ function ListCard({ list, open, onOpen }: { list: Checklist; open: boolean; onOp
 
 export function ListsView() {
   const { checklists, createList } = useData();
+  const { showListId, setShowListId } = useUi();
   // One open at a time, and a repo with a single list opens on it: there is
   // nothing to choose between.
   const [openId, setOpenId] = useState<string | null>(checklists.length === 1 ? checklists[0].id : null);
   const [naming, setNaming] = useState(false);
+
+  // A search hit, a new list or a duplicate asks for a list to be shown. The
+  // request is cleared as it is taken, so the next one lands even when it names
+  // the same list.
+  useEffect(() => {
+    if (showListId) {
+      setOpenId(showListId);
+      setShowListId(null);
+    }
+  }, [showListId, setShowListId]);
 
   return (
     <div className="flex flex-1 flex-col min-h-0">
