@@ -138,8 +138,8 @@ export interface Client {
   archived?: boolean;
 }
 
-/** Which of the optional task blocks the app offers. Both are on by default and
- *  absent reads as on, so a repo written before these existed is unchanged.
+/** Which of the optional blocks the app offers. All are on by default and absent
+ *  reads as on, so a repo written before these existed is unchanged.
  *
  *  Switching one off is a display decision, not a data one: the actions and the
  *  section go, and whatever is already written in the Markdown stays exactly
@@ -151,6 +151,11 @@ export interface FeatureConfig {
   attachments: boolean;
   /** The task's prompt queue (`### Prompts`). */
   prompts: boolean;
+  /** Reusable checklists (`lists/*.md`) and the tab they live on. Unlike the two
+   *  above this hides a whole view, not a block inside a task — see the route
+   *  fallback in `WorklogApp`. The files keep syncing either way: switching it
+   *  off is a UI decision, so turning it back on finds every list intact. */
+  lists: boolean;
 }
 
 /** Automatic Git sync after logging time, so a timesheet doesn't sit unpushed. */

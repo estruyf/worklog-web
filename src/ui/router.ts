@@ -28,7 +28,7 @@ import type { TaskLink } from '../model/types';
 const APP_BASE = '/app';
 
 // The routable dashboard views. `day` lives at the base path; the rest hang off it.
-const VIEWS: AppView[] = ['day', 'overdue', 'upcoming', 'todos', 'calendar', 'clients', 'insights', 'archive', 'shortcuts', 'settings'];
+const VIEWS: AppView[] = ['day', 'overdue', 'upcoming', 'todos', 'lists', 'calendar', 'clients', 'insights', 'archive', 'shortcuts', 'settings'];
 
 export type Route =
   | { name: 'view'; view: AppView }

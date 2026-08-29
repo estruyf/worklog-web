@@ -38,7 +38,7 @@ function isEditableTarget(target: EventTarget | null): boolean {
 }
 
 export function WorklogApp({ repoProps }: { repoProps?: SidebarRepoProps } = {}) {
-  const { snap, toast, dismissToast, loading, noClients, today, openTaskFormInContext, openLogForm } = useData();
+  const { snap, toast, dismissToast, loading, noClients, today, features, openTaskFormInContext, openLogForm } = useData();
   const { view, searchOpen, detailId, clientModalOpen, setSearchOpen, setDetailId, searchSel, setSearchSel, setSelectedDate } = useUi();
   const searchData = useSearchData();
   // The task form and the open task are routes, but both live in the dashboard's
@@ -155,7 +155,11 @@ export function WorklogApp({ repoProps }: { repoProps?: SidebarRepoProps } = {})
     return <div className="min-h-screen bg-white" />;
   }
 
-  const ActiveView = ROUTES[view];
+  // A hidden tab is not a hidden view: /app/lists is still a bookmark, still
+  // where a reload lands, and still where you are standing when you switch the
+  // feature off from Settings. Falling back to the day view is the other half of
+  // what `features.lists` has to mean — see NavList for the tab itself.
+  const ActiveView = view === 'lists' && !features.lists ? ROUTES.day : ROUTES[view];
 
   return (
     // The app is the viewport, not the document: it is exactly one screen tall and

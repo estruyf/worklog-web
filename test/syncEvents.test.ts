@@ -85,6 +85,10 @@ describe('the event map', () => {
     expect(autoSyncEventFor('setDayNote')).toBe('dayNote');
     expect(autoSyncEventFor('addPrompt')).toBe('prompt');
     expect(autoSyncEventFor('setPromptRan')).toBe('prompt');
+    expect(autoSyncEventFor('setChecklistItem')).toBe('list');
+    expect(autoSyncEventFor('addChecklistItem')).toBe('list');
+    expect(autoSyncEventFor('startChecklistAgain')).toBe('list');
+    expect(autoSyncEventFor('deleteChecklist')).toBe('list');
   });
 
   it('maps the sync machinery to nothing, so a pull can never trigger a sync', () => {
@@ -226,6 +230,28 @@ describe('syncing on an event', () => {
     expect(store.hasPending()).toBe(false);
     expect(files['clients/acme.md']).toContain('- attachment: assets/export-spec.pdf');
     expect(files['assets/export-spec.pdf']).toBeDefined();
+  });
+
+  it('pushes a ticked-off list item within seconds when that is the ticked event', async () => {
+    files['lists/cycling-trip.md'] = '# Cycling trip\n\n- [ ] Multi-tool\n- [ ] Spare tubes\n';
+    const store = await openStore({ enabled: false, delayMinutes: DELAY_MINUTES, events: ['list'] });
+
+    await store.setChecklistItem('cycling-trip', 2, true);
+    await vi.advanceTimersByTimeAsync(EVENT_MS);
+
+    expect(store.hasPending()).toBe(false);
+    expect(files['lists/cycling-trip.md']).toContain('- [x] Multi-tool');
+  });
+
+  it('leaves a ticked list item to the user when the ticked event is a different kind', async () => {
+    files['lists/cycling-trip.md'] = '# Cycling trip\n\n- [ ] Multi-tool\n';
+    const store = await openStore({ enabled: false, delayMinutes: DELAY_MINUTES, events: ['taskCreated'] });
+
+    await store.setChecklistItem('cycling-trip', 2, true);
+    await vi.advanceTimersByTimeAsync(DELAY_MS * 2);
+
+    expect(commitAttempts).toBe(0);
+    expect(store.hasPending()).toBe(true);
   });
 
   it('leaves a prompt alone when the ticked event is a different kind', async () => {

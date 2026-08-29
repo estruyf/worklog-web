@@ -2,8 +2,8 @@ import React from 'react';
 
 /** The navigation rail's glyphs.
  *
- *  Everywhere else the app draws from `lucide-react`; these eight are the
- *  exception, hand-tuned to read at 16px against the rail's weight. They live
+ *  Everywhere else the app draws from `lucide-react`; these are the exception,
+ *  hand-tuned to read at 16px against the rail's weight. They live
  *  here rather than inline in `Sidebar` so that file is about navigating rather
  *  than about paths — it carried 76 lines of them.
  *
@@ -52,6 +52,16 @@ export function NavUpcomingIcon() {
       <path d="M12.5 7.5V4.5a1.5 1.5 0 00-1.5-1.5H3.5A1.5 1.5 0 002 4.5v7A1.5 1.5 0 003.5 13H8" />
       <path d="M2 6.5h9M4.5 1.5v2M9.5 1.5v2" />
       <path d="M9.5 11.5h4.5M12.2 9.7l1.8 1.8-1.8 1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </NavGlyph>
+  );
+}
+
+export function NavListsIcon() {
+  return (
+    <NavGlyph>
+      {/* Three ruled lines, the first one ticked: a checklist mid-run. */}
+      <path d="M2 4.2l1.4 1.4L6.2 2.8" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M8 4.6h6M2.6 8.6h11.4M2.6 12.6h11.4" strokeLinecap="round" />
     </NavGlyph>
   );
 }

@@ -485,6 +485,7 @@ clients/<id>.md                # open tasks
 archive/<client>/<YYYY-MM>.md  # closed tasks
 worklog/<YYYY-MM>.md           # time entries: - <YYYY-MM-DD> <clientId|event:type> <hours>
 notes/<YYYY-MM>.md             # freeform notes per day (optional)
+lists/<id>.md                  # reusable checklists (optional)
 assets/                        # images pasted into notes + files attached to tasks (optional)
 ```
 
@@ -686,6 +687,45 @@ A day starts at a `## ` heading whose whole content is a date, so the note itsel
 can use `##` and `###` headings freely — `## Scripts` and `## 2026-07-16 planning`
 are both prose. The one exception is a line that is *exactly* `## <YYYY-MM-DD>`
 inside a fenced code block: that still reads as the start of a new day.
+
+### Lists
+
+A list is a checklist you *reuse*: what to pack for a cycling trip, the steps of a
+release, the invoicing routine. You tick through it, press **Start again**, and it
+is waiting unticked for the next trip — so it is deliberately not a task. A list
+has no client, no due date and no status, and nothing on it ever reaches the day
+view, the ledger or an invoice.
+
+Each list is one file under `lists/`, written as plain GFM checkboxes:
+
+```markdown
+# Release checklist
+- last run: 2026-08-12
+
+Run this from a clean checkout.
+
+## Steps
+- [ ] Bump the version
+- [x] Update the changelog
+
+## After
+- [ ] Announce it
+```
+
+`## ` headings group the items and are optional — a list with none is a plain run
+of items, and **Add section** turns one into the other whenever a list outgrows
+being flat. Items written above the first heading stay above it, as their own
+untitled run. Deleting a section takes the items under it with it: to keep them,
+move them out first. `- last run:` is written by **Start again** and records the day the run
+it closed was finished, which is the "when did I last do this" a release or an
+invoice run gets asked. Anything else in the file is yours: a paragraph, a nested
+bullet, a link to the runbook. Ticking an item rewrites that one line and leaves
+all of it alone, so the file stays yours to hand-edit and the commit stays a
+one-line diff.
+
+Lists can be switched off in **Settings → Views**, which hides the tab and the
+view. The files keep syncing either way — turning it back on finds every list
+where you left it.
 
 ### Recurring tasks
 

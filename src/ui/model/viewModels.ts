@@ -11,6 +11,7 @@ export type AppView =
   | "overdue"
   | "upcoming"
   | "todos"
+  | "lists"
   | "calendar"
   | "clients"
   | "insights"

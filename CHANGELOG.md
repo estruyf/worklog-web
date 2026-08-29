@@ -17,6 +17,10 @@ Every change to Worklog, by day, newest first.
 
 ## 2026-08-29
 
+- **Lists** — reusable checklists, on a tab of their own. A packing list for a cycling trip, the steps of a release, the invoicing routine: tick through it, press Start again, and it is waiting unticked for next time, with the day that run finished recorded on it. Each list is a plain Markdown file of checkboxes under `lists/`, so it reads as a checklist on GitHub and stays yours to hand-edit — ticking an item rewrites that one line and leaves your own prose, nesting and links exactly where they are.
+- A list can be one long run of items or broken into sections — Bike, Clothes, Electronics — with its own **Add item** under each and a done count beside each heading. Add a section to a flat list and what was already on it stays above the new heading, so grouping a list you have been keeping never reshuffles it.
+- Lists can be switched off in Settings → Views if you have no use for them: the tab and the view go, and the files stay in your Markdown for whenever you switch it back on.
+- Settings → Sync gained "A list changes", so ticking your way down a packing list can reach GitHub within seconds instead of waiting out the sync delay — the same choice the other change kinds already had.
 - On a phone, "New" while a task is open now starts a subtask of that task, the way ⌘N already did on a keyboard — so adding under a to-do opens the form as a to-do with the parent already picked, instead of a blank task on some client.
 
 ## 2026-08-28

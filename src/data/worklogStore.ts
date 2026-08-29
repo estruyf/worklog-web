@@ -43,10 +43,24 @@ import {
 } from '../services/taskOps';
 import { removeWorklog, setEventWorklog, setWorklog } from '../services/worklog';
 import { setDayNote } from '../services/dayNotes';
+import {
+  addChecklistItemTo,
+  addChecklistSectionTo,
+  createChecklist,
+  deleteChecklistSection,
+  deleteChecklist,
+  deleteChecklistItem,
+  renameChecklistById,
+  renameChecklistItem,
+  renameChecklistSectionAt,
+  setChecklistItem,
+  startChecklistAgain,
+} from '../services/checklists';
 import { updateSettings, type SettingsFields } from '../services/settings';
 import { createStatus, deleteStatus, moveStatus, updateStatus, type NewStatusInput, type StatusFields } from '../services/statuses';
 import type { WorklogState } from '../ui/state';
 import type { AutoSyncConfig, Client, Task } from '../model/types';
+import type { Checklist } from '../model/checklist';
 import { syncsOnChange } from '../model/syncEvents';
 import { DEFAULT_AUTO_SYNC } from '../workspace/paths';
 import { clearPending, clearSnapshot, loadPending, repoKeyOf, savePending, type PendingSnapshot } from './pendingStore';
@@ -716,6 +730,58 @@ class WorklogStore {
     return this.run(() => setDayNote(this.store, date, body));
   }
 
+  /** Start a new reusable checklist. Awaited like `createTask` and for the same
+   *  reason: the caller opens what it created, and that only exists once the
+   *  write has rebuilt the store. */
+  createChecklist(name: string): Promise<Checklist | undefined> {
+    return this.runFor(() => createChecklist(this.store, name));
+  }
+
+  renameChecklist(id: string, name: string): Promise<void> {
+    return this.run(() => renameChecklistById(this.store, id, name));
+  }
+
+  deleteChecklist(id: string): Promise<void> {
+    return this.run(() => deleteChecklist(this.store, id));
+  }
+
+  /** Tick one item off, or put it back. `line` is where the item sits in its
+   *  file — see `parser/checklistParser` for why the edits are addressed that way. */
+  setChecklistItem(id: string, line: number, done: boolean): Promise<void> {
+    return this.run(() => setChecklistItem(this.store, id, line, done));
+  }
+
+  addChecklistItem(id: string, sectionIndex: number, text: string): Promise<void> {
+    return this.run(() => addChecklistItemTo(this.store, id, sectionIndex, text));
+  }
+
+  renameChecklistItem(id: string, line: number, text: string): Promise<void> {
+    return this.run(() => renameChecklistItem(this.store, id, line, text));
+  }
+
+  deleteChecklistItem(id: string, line: number): Promise<void> {
+    return this.run(() => deleteChecklistItem(this.store, id, line));
+  }
+
+  /** Group the rest of a list under a heading. Sections are addressed by the line
+   *  their `## ` sits on, the same way items are. */
+  addChecklistSection(id: string, title: string): Promise<void> {
+    return this.run(() => addChecklistSectionTo(this.store, id, title));
+  }
+
+  renameChecklistSection(id: string, line: number, title: string): Promise<void> {
+    return this.run(() => renameChecklistSectionAt(this.store, id, line, title));
+  }
+
+  deleteChecklistSection(id: string, line: number): Promise<void> {
+    return this.run(() => deleteChecklistSection(this.store, id, line));
+  }
+
+  /** Untick the whole list and stamp the run that just ended. */
+  startChecklistAgain(id: string, date: string): Promise<void> {
+    return this.run(() => startChecklistAgain(this.store, id, date));
+  }
+
   /** Save a pasted/dropped/picked image and return the markdown ref to insert. */
   async saveImage(dataBase64: string, ext: string): Promise<string> {
     const ref = await saveImageAsset(this.store, dataBase64, ext);
@@ -830,6 +896,7 @@ class WorklogStore {
       tasks: this.store.db.getAllTasks(),
       worklog: this.store.db.getAllWorklog(),
       dayNotes: this.store.db.getAllDayNotes(),
+      checklists: this.store.db.getAllChecklists(),
     };
   }
 

@@ -18,7 +18,8 @@ export type AutoSyncEvent =
   | 'timeLogged'
   | 'settings'
   | 'dayNote'
-  | 'prompt';
+  | 'prompt'
+  | 'list';
 
 export interface AutoSyncEventDef {
   id: AutoSyncEvent;
@@ -71,6 +72,14 @@ export const AUTO_SYNC_EVENTS: AutoSyncEventDef[] = [
     label: 'A prompt is written or run',
     description: 'A prompt in a task’s queue is added, edited, ticked off as run, or removed.',
   },
+  // Appended for the reason above. Its own event rather than part of any of the
+  // task ones: a list is not a task, and the thing you want on the branch fast is
+  // a list being ticked through on a phone that is about to lose signal.
+  {
+    id: 'list',
+    label: 'A list changes',
+    description: 'An item on a reusable checklist is ticked, added, edited or removed — or a list is created, renamed, deleted or started again.',
+  },
 ];
 
 /** Rebuild reason → the event it counts as. A reason absent here never triggers a
@@ -105,6 +114,18 @@ const REASON_EVENT: Record<string, AutoSyncEvent> = {
   updatePrompt: 'prompt',
   setPromptRan: 'prompt',
   deletePrompt: 'prompt',
+
+  createChecklist: 'list',
+  renameChecklist: 'list',
+  deleteChecklist: 'list',
+  setChecklistItem: 'list',
+  addChecklistItem: 'list',
+  renameChecklistItem: 'list',
+  deleteChecklistItem: 'list',
+  addChecklistSection: 'list',
+  renameChecklistSection: 'list',
+  deleteChecklistSection: 'list',
+  startChecklistAgain: 'list',
 
   addClient: 'settings',
   updateClient: 'settings',

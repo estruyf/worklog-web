@@ -128,6 +128,7 @@ export function isWorklogPath(path: string): boolean {
     /^archive\/[^/]+\/[^/]+\.md$/.test(path) ||
     /^worklog\/[^/]+\.md$/.test(path) ||
     /^notes\/[^/]+\.md$/.test(path) ||
+    /^lists\/[^/]+\.md$/.test(path) ||
     /^assets\/[^/]+$/.test(path)
   );
 }

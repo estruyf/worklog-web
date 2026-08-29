@@ -61,6 +61,7 @@ export function SettingsView() {
   const [code, setCode] = useState<CodeTheme>(codeTheme);
   const [attachmentsOn, setAttachmentsOn] = useState(features.attachments);
   const [promptsOn, setPromptsOn] = useState(features.prompts);
+  const [listsOn, setListsOn] = useState(features.lists);
   const [syncEnabled, setSyncEnabled] = useState(autoSync.enabled);
   const [syncDelay, setSyncDelay] = useState(String(autoSync.delayMinutes));
   const [syncEvents, setSyncEvents] = useState<AutoSyncEvent[]>(autoSync.events);
@@ -109,6 +110,9 @@ export function SettingsView() {
     setPromptsOn(features.prompts);
   }, [features.prompts]);
   useEffect(() => {
+    setListsOn(features.lists);
+  }, [features.lists]);
+  useEffect(() => {
     setSyncEnabled(autoSync.enabled);
   }, [autoSync.enabled]);
   useEffect(() => {
@@ -139,6 +143,7 @@ export function SettingsView() {
     code !== codeTheme ||
     attachmentsOn !== features.attachments ||
     promptsOn !== features.prompts ||
+    listsOn !== features.lists ||
     syncEnabled !== autoSync.enabled ||
     (delayValid && parsedDelay !== autoSync.delayMinutes) ||
     syncEvents.join(',') !== savedEvents ||
@@ -214,7 +219,7 @@ export function SettingsView() {
       todosPerPage: parsedTodoPage,
       defaultTaskSort: { key: sortKey, dir: sortDir },
       codeTheme: code,
-      features: { attachments: attachmentsOn, prompts: promptsOn },
+      features: { attachments: attachmentsOn, prompts: promptsOn, lists: listsOn },
       autoSync: { enabled: syncEnabled, delayMinutes: parsedDelay, events: syncEvents },
       aiAgents: agents,
     });
@@ -234,6 +239,7 @@ export function SettingsView() {
     setCode(codeTheme);
     setAttachmentsOn(features.attachments);
     setPromptsOn(features.prompts);
+    setListsOn(features.lists);
     setSyncEnabled(autoSync.enabled);
     setSyncDelay(String(autoSync.delayMinutes));
     setSyncEvents(savedEvents ? (savedEvents.split(',') as AutoSyncEvent[]) : []);
@@ -390,6 +396,23 @@ export function SettingsView() {
                 </div>
               </div>
               <Toggle checked={promptsOn} onChange={setPromptsOn} aria-label="Prompts" />
+            </div>
+          </Card>
+
+          {/* Its own section rather than a third row above: the two switches up
+              there hide a block inside a task, and this one hides a whole tab. */}
+          <SectionLabel className="mt-6 mb-[10px]">Views</SectionLabel>
+          <Card>
+            <div className="flex items-start justify-between gap-6 px-[18px] py-[18px]">
+              <div>
+                <div className="text-row font-semibold">Lists</div>
+                <div className="text-control text-neutral-675 mt-[3px]">
+                  Reusable checklists you run again each time: a packing list, a release, an invoicing routine. Kept in{' '}
+                  <code className="text-meta bg-neutral-250 rounded-chip px-[5px] py-[1px]">lists/</code>. Off hides the
+                  tab and the view; the lists themselves stay in your Markdown and come back with the switch.
+                </div>
+              </div>
+              <Toggle checked={listsOn} onChange={setListsOn} aria-label="Lists" />
             </div>
           </Card>
 

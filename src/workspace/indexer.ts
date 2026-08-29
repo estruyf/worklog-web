@@ -5,8 +5,10 @@ import { MemoryDb } from '../db/memoryDb';
 import { parseTaskFile } from '../parser/taskParser';
 import { parseWorklogFile } from '../parser/worklogParser';
 import { parseDayNotesFile } from '../parser/dayNotes';
+import { parseChecklistFile } from '../parser/checklistParser';
 import { Workspace, fileMap, stem, dirName } from './paths';
 import type { Client, DayNote, Task, WorklogEntry } from '../model/types';
+import type { Checklist } from '../model/checklist';
 import { isEventWorklogClientId } from '../model/worklog';
 import { withSeededDue } from '../model/recurringTask';
 
@@ -15,6 +17,7 @@ export interface RebuildResult {
   tasks: number;
   worklog: number;
   dayNotes: number;
+  checklists: number;
 }
 
 export async function rebuild(db: MemoryDb, ws: Workspace): Promise<RebuildResult> {
@@ -24,6 +27,7 @@ export async function rebuild(db: MemoryDb, ws: Workspace): Promise<RebuildResul
   const tasks: Task[] = [];
   const worklog: WorklogEntry[] = [];
   const dayNotes: DayNote[] = [];
+  const checklists: Checklist[] = [];
 
   for (const [path, text] of fm.text) {
     // Open tasks: clients/<id>.md (filename stem is the canonical client id).
@@ -46,6 +50,11 @@ export async function rebuild(db: MemoryDb, ws: Workspace): Promise<RebuildResul
       dayNotes.push(...parseDayNotesFile(text, path));
       continue;
     }
+    // Reusable checklists: lists/<id>.md (filename stem is the list id).
+    if (/^lists\/[^/]+\.md$/.test(path)) {
+      checklists.push(parseChecklistFile(text, path, stem(path)));
+      continue;
+    }
   }
 
   // A recurring task with no due date has no day to appear on. Seed it here so
@@ -56,9 +65,17 @@ export async function rebuild(db: MemoryDb, ws: Workspace): Promise<RebuildResul
   db.reset();
   // Day notes belong to no client, so they are deliberately not fed to
   // `mergeClients` — a note must never conjure a client into the pickers.
-  db.load({ clients, tasks: seeded, worklog, dayNotes });
+  // Checklists belong to no client either, and for a stronger reason than a day
+  // note: a list is not work at all, so it must never reach billing.
+  db.load({ clients, tasks: seeded, worklog, dayNotes, checklists });
 
-  return { clients: clients.length, tasks: seeded.length, worklog: worklog.length, dayNotes: dayNotes.length };
+  return {
+    clients: clients.length,
+    tasks: seeded.length,
+    worklog: worklog.length,
+    dayNotes: dayNotes.length,
+    checklists: checklists.length,
+  };
 }
 
 /** Clients come from config; also synthesise any referenced-but-unconfigured

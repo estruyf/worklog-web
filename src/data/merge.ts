@@ -21,6 +21,7 @@
 
 import { splitTaskBlocks } from '../parser/blocks';
 import { joinDayNotes, splitDayNoteBlocks } from '../parser/dayNotes';
+import { joinChecklist, splitChecklistItems } from '../parser/checklistParser';
 
 /** The three sides of a merge. `undefined` means the file is absent on that side. */
 export interface MergeSides {
@@ -81,6 +82,9 @@ export function mergeFile(path: string, sides: MergeSides): MergeResult {
   if (/^notes\/[^/]+\.md$/.test(path)) {
     return mergeRecordFile(path, ancestor, local, remote, splitDayNotes);
   }
+  if (/^lists\/[^/]+\.md$/.test(path)) {
+    return mergeRecordFile(path, ancestor, local, remote, splitChecklist);
+  }
   // Unknown text file: no structure to merge on, so the local edit wins and the
   // caller gets told the branch's version was dropped.
   return { text: local, conflicts: [`${path} changed here and on GitHub — kept your version`] };
@@ -137,6 +141,24 @@ function splitDayNotes(content: string): SplitFile {
     records: blocks.map((b) => ({ key: `date:${b.date}`, text: `## ${b.date}\n\n${b.text}` })),
     join: (h, recs) => joinDayNotes(h, recs.flatMap((r) => splitDayNoteBlocks(r.text).blocks)),
   };
+}
+
+/** Checklist files: one record per `- [ ]` item, keyed by its words.
+ *
+ *  Ticking is the edit these files get, and it is per item, so two devices
+ *  working through the same list on the same trip merge cleanly. The title, the
+ *  `- last run:` stamp and the section headings ride along as the header and the
+ *  records' own prefix lines — see `splitChecklistItems` for why.
+ *
+ *  The known wart: renaming an item reads as a delete plus an add, so rewording
+ *  one here while the other device ticks or rewords it leaves *both* wordings in
+ *  the list. Nothing is lost — you delete the one you don't want — which is the
+ *  right way for this to fail. Ids in the Markdown would resolve it properly and
+ *  would also stop the file being something you can hand-edit, which is the
+ *  point of the format. */
+function splitChecklist(content: string): SplitFile {
+  const { header, records } = splitChecklistItems(content);
+  return { header, records, join: (h, recs) => joinChecklist(h, recs) };
 }
 
 const LEDGER_LINE = /^-\s+(\d{4}-\d{2}-\d{2})\s+(\S+)\s/;
@@ -268,6 +290,9 @@ function describe(key: string): string {
   }
   if (key.startsWith('date:')) {
     return `the note for ${key.slice(5)}`;
+  }
+  if (key.startsWith('item:')) {
+    return `"${key.replace(/^item:\d+:/, '')}"`;
   }
   if (key.startsWith('text:')) {
     return 'an entry';

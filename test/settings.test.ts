@@ -134,43 +134,55 @@ describe('updateSettings', () => {
   });
 });
 
-// Both blocks are on by default, and a repo written before the switches existed
-// has no `features` key at all — so absence has to keep meaning "on", the same
-// way an absent `defaultTaskSort` has to keep meaning the original order.
+// Every switch is on by default, and a repo written before one existed has no
+// key for it — so absence has to keep meaning "on", the same way an absent
+// `defaultTaskSort` has to keep meaning the original order. `lists` arrived last
+// and is the case that proves it for the ones that come after.
+const ALL_ON = { attachments: true, prompts: true, lists: true };
+
 describe('feature switches', () => {
-  it('reads a config that predates them as both on', async () => {
-    expect((await config()).features).toEqual({ attachments: true, prompts: true });
+  it('reads a config that predates them as all on', async () => {
+    expect((await config()).features).toEqual(ALL_ON);
   });
 
-  it('reads a repo with no config.json at all as both on', async () => {
+  it('reads a repo with no config.json at all as all on', async () => {
     await mount();
     fm.text.delete('.worklog/config.json');
-    expect((await config()).features).toEqual({ attachments: true, prompts: true });
+    expect((await config()).features).toEqual(ALL_ON);
+  });
+
+  it('reads a config written before lists existed as having them on', async () => {
+    await mount({ ...CONFIG, features: { attachments: false, prompts: false } });
+    expect((await config()).features).toEqual({ attachments: false, prompts: false, lists: true });
   });
 
   it('switches one off only on an explicit false', async () => {
     await mount({ ...CONFIG, features: { attachments: false, prompts: true } });
-    expect((await config()).features).toEqual({ attachments: false, prompts: true });
+    expect((await config()).features).toEqual({ ...ALL_ON, attachments: false });
+
+    await mount({ ...CONFIG, features: { lists: false } });
+    expect((await config()).features).toEqual({ ...ALL_ON, lists: false });
 
     // Anything else — a hand-typed string, a half-written block — reads as on
     // rather than quietly hiding a block the user has content in.
     await mount({ ...CONFIG, features: { attachments: 'no' } });
-    expect((await config()).features).toEqual({ attachments: true, prompts: true });
+    expect((await config()).features).toEqual(ALL_ON);
   });
 
   it('writes the switches into config.json', async () => {
-    await updateSettings(store, { features: { attachments: false, prompts: false } });
+    await updateSettings(store, { features: { attachments: false, prompts: false, lists: false } });
 
-    expect(writtenFeatures()).toEqual({ attachments: false, prompts: false });
-    expect(store.getConfig().features).toEqual({ attachments: false, prompts: false });
+    const allOff = { attachments: false, prompts: false, lists: false };
+    expect(writtenFeatures()).toEqual(allOff);
+    expect(store.getConfig().features).toEqual(allOff);
   });
 
   it('changes only the keys it is given', async () => {
     await updateSettings(store, { features: { prompts: false } });
-    expect(writtenFeatures()).toEqual({ attachments: true, prompts: false });
+    expect(writtenFeatures()).toEqual({ ...ALL_ON, prompts: false });
 
     await updateSettings(store, { hoursPerDay: 7 });
-    expect(writtenFeatures()).toEqual({ attachments: true, prompts: false });
+    expect(writtenFeatures()).toEqual({ ...ALL_ON, prompts: false });
     expect(store.getConfig().hoursPerDay).toBe(7);
   });
 });

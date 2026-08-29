@@ -4,6 +4,7 @@
 // insights client-side — no per-view round trips. Kept DOM- and dependency-free.
 
 import type { AiAgent, AutoSyncConfig, Client, CodeTheme, DayNote, FeatureConfig, StatusDef, Task, TaskSortPref, WorklogEntry } from "../model/types";
+import type { Checklist } from "../model/checklist";
 
 /**
  * The full app state, re-derived on every edit and read by the UI through the
@@ -25,4 +26,5 @@ export interface WorklogState {
   tasks: Task[]; // all tasks (open + done)
   worklog: WorklogEntry[]; // all ledger entries
   dayNotes: DayNote[]; // one freeform Markdown note per day that has one
+  checklists: Checklist[]; // reusable checklists from lists/*.md, by name
 }
