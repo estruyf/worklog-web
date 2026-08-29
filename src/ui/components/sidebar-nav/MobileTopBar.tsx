@@ -16,7 +16,7 @@ import { BrandMark } from './BrandMark';
  *  mounted (see `useTaskFormBar`); its fields stay its own, so typing a title no
  *  longer re-renders the nav. */
 export function MobileTopBar({ onOpenDrawer }: { onOpenDrawer: () => void }) {
-  const { openTaskForm, openTodoForm, noClients, offline } = useData();
+  const { openTaskFormInContext, openTodoForm, noClients, offline } = useData();
   const { setSearchOpen } = useUi();
   const route = useRoute();
   const onForm = route.name === 'taskForm';
@@ -25,6 +25,10 @@ export function MobileTopBar({ onOpenDrawer }: { onOpenDrawer: () => void }) {
   // in for it — and a to-do needs no client, which is why it shows even when the
   // repo has none configured yet.
   const onTodos = route.name === 'view' && route.view === 'todos';
+  // With a task open this is the phone's ⌘N: it starts a subtask of what you are
+  // looking at. A to-do's subtask is another to-do, which is the whole reason it
+  // goes through the contextual opener rather than starting a blank client task.
+  const onTask = route.name === 'task';
   const taskForm = useTaskFormBar();
   const canSave = taskForm?.canSave ?? false;
 
@@ -61,8 +65,14 @@ export function MobileTopBar({ onOpenDrawer }: { onOpenDrawer: () => void }) {
           {isEdit ? 'Save' : 'Add'}
         </Button>
       ) : (
-        (onTodos || !noClients) && (
-          <Button variant="primary" size="md" onClick={onTodos ? openTodoForm : openTaskForm} className="h-9">
+        (onTodos || onTask || !noClients) && (
+          <Button
+            variant="primary"
+            size="md"
+            onClick={onTodos ? openTodoForm : openTaskFormInContext}
+            title={onTask ? 'Add a task under the one you are looking at' : undefined}
+            className="h-9"
+          >
             <PlusIcon size={15} />
             New
           </Button>

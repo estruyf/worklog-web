@@ -38,7 +38,7 @@ function isEditableTarget(target: EventTarget | null): boolean {
 }
 
 export function WorklogApp({ repoProps }: { repoProps?: SidebarRepoProps } = {}) {
-  const { snap, toast, dismissToast, loading, noClients, today, openTaskFormFromShortcut, openLogForm } = useData();
+  const { snap, toast, dismissToast, loading, noClients, today, openTaskFormInContext, openLogForm } = useData();
   const { view, searchOpen, detailId, clientModalOpen, setSearchOpen, setDetailId, searchSel, setSearchSel, setSelectedDate } = useUi();
   const searchData = useSearchData();
   // The task form and the open task are routes, but both live in the dashboard's
@@ -55,9 +55,9 @@ export function WorklogApp({ repoProps }: { repoProps?: SidebarRepoProps } = {})
   // mount, since the effect below deliberately never re-subscribes.
   // Written after commit, not during render: a render that React discards must not
   // leave the handler pointing at state that was never shown.
-  const stateRef = React.useRef({ view, searchOpen, detailId, clientModalOpen, formOpen, searchSel, searchData, today, openTaskFormFromShortcut, openLogForm });
+  const stateRef = React.useRef({ view, searchOpen, detailId, clientModalOpen, formOpen, searchSel, searchData, today, openTaskFormInContext, openLogForm });
   React.useEffect(() => {
-    stateRef.current = { view, searchOpen, detailId, clientModalOpen, formOpen, searchSel, searchData, today, openTaskFormFromShortcut, openLogForm };
+    stateRef.current = { view, searchOpen, detailId, clientModalOpen, formOpen, searchSel, searchData, today, openTaskFormInContext, openLogForm };
   });
 
   // Global shortcuts. ⌘F/⌘S -> open the Search overlay (⌘S also suppresses the
@@ -90,7 +90,7 @@ export function WorklogApp({ repoProps }: { repoProps?: SidebarRepoProps } = {})
       // actually works in a tab, hence the two accepted forms.
       if ((meta && key === 'n') || (key === 'n' && e.shiftKey && !e.altKey && idle)) {
         e.preventDefault();
-        s.openTaskFormFromShortcut();
+        s.openTaskFormInContext();
         return;
       }
       // ⇧D / ⌘D -> the Day view, snapped back to today the same way the sidebar's

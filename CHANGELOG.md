@@ -15,6 +15,10 @@ Every change to Worklog, by day, newest first.
      both). Links must be absolute — a relative path resolves against /changelog and
      404s. -->
 
+## 2026-08-29
+
+- On a phone, "New" while a task is open now starts a subtask of that task, the way ⌘N already did on a keyboard — so adding under a to-do opens the form as a to-do with the parent already picked, instead of a blank task on some client.
+
 ## 2026-08-28
 
 - Subtasks now show up in the task lists. A task that has them carries a chevron next to its title and a count of how many; opening it lists them as indented rows in the same columns as everything else, so a subtask's status, tags and link line up with its parent's. They start open, and a parent you fold shut stays shut on the next visit. Searching looks inside subtask titles too and opens the parent it found one in.

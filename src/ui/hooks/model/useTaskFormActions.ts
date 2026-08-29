@@ -50,16 +50,26 @@ export function useTaskFormActions(deps: TaskFormDeps, ui: WorklogUiState) {
   const openSubtaskForm = (parent: Task) =>
     navigateToTaskForm(null, { clientId: clientIdOf(parent), parentId: parent.id });
 
-  /** The keyboard shortcut's "new task": a subtask of whatever is open, else a
-   *  plain new one. A subtask is open — the tree is one level deep, so there is
-   *  no subtask to start under it — falls to the plain one. */
-  const openTaskFormFromShortcut = () => {
+  /** A "new task" that starts from whatever is on screen: a subtask of the open
+   *  task, else a plain new one. The ⌘N shortcut and the phone's top-bar New —
+   *  which is that shortcut's stand-in on a device with no keyboard — are the same
+   *  action and go through here.
+   *
+   *  A task that can't take subtasks (it is one already — the tree is one level
+   *  deep — or it is done) still hands over its client, so pressing New inside a
+   *  to-do writes another to-do rather than dropping the form on a client you
+   *  weren't looking at. */
+  const openTaskFormInContext = () => {
     const detailTask = ui.detailId ? tasks.find((t) => t.id === ui.detailId) : undefined;
-    if (detailTask && !isDone(detailTask) && canHaveSubtasks(detailTask)) {
+    if (!detailTask) {
+      openTaskForm();
+      return;
+    }
+    if (!isDone(detailTask) && canHaveSubtasks(detailTask)) {
       openSubtaskForm(detailTask);
       return;
     }
-    openTaskForm();
+    navigateToTaskForm(null, { clientId: clientIdOf(detailTask) });
   };
 
   /** Write the open form back to the files. Takes the fields as an argument —
@@ -128,7 +138,7 @@ export function useTaskFormActions(deps: TaskFormDeps, ui: WorklogUiState) {
     openTaskFormForDue,
     openTodoForm,
     openSubtaskForm,
-    openTaskFormFromShortcut,
+    openTaskFormInContext,
     submitTask,
   };
 }
