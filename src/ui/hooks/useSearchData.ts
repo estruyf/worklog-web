@@ -4,12 +4,12 @@
 
 import { useMemo } from 'react';
 import { useData, useUi } from '../context';
-import { navigateToView } from '../router';
+import { navigateToList, navigateToView } from '../router';
 import { appendGroup, clientIdOf, deriveListGroup, deriveNoteGroup, deriveSearch, isDone, linksOf } from '../utils';
 
 export function useSearchData() {
   const { tasks, dayNotes, checklists, features, clientName, colorOf, statusMeta, openDetail } = useData();
-  const { search, searchScope, searchClient, tagFilter, setSelectedDate, setSearchOpen, setShowListId } = useUi();
+  const { search, searchScope, searchClient, tagFilter, setSelectedDate, setSearchOpen } = useUi();
   return useMemo(() => {
     const filters = { query: search, scope: searchScope, client: searchClient, tags: tagFilter };
     const tasksDerived = deriveSearch(tasks, filters, {
@@ -34,8 +34,7 @@ export function useSearchData() {
     // open falls back to the day, so a hit there is a dead end.
     const lists = deriveListGroup(features.lists ? checklists : [], filters, {
       onOpen: (listId) => () => {
-        setShowListId(listId);
-        navigateToView('lists');
+        navigateToList(listId);
         setSearchOpen(false);
       },
     });
@@ -59,6 +58,5 @@ export function useSearchData() {
     openDetail,
     setSelectedDate,
     setSearchOpen,
-    setShowListId,
   ]);
 }

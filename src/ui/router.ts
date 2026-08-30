@@ -31,7 +31,11 @@ const APP_BASE = '/app';
 const VIEWS: AppView[] = ['day', 'overdue', 'upcoming', 'todos', 'lists', 'calendar', 'clients', 'insights', 'archive', 'shortcuts', 'settings'];
 
 export type Route =
-  | { name: 'view'; view: AppView }
+  // `listId` is the one view whose *inside* is addressable: a checklist is a
+  // thing you work down over an afternoon, reload, and send someone. It stays a
+  // view rather than a route of its own because that is what it is — the Lists
+  // view with one of them open, nav rail and all.
+  | { name: 'view'; view: AppView; listId?: string }
   | { name: 'task'; taskId: string }
   // The task form: `taskId` is the task being edited, or null for a new one.
   | { name: 'taskForm'; taskId: string | null }
@@ -52,6 +56,10 @@ export function parseRoute(pathname: string): Route {
   const task = /^\/task\/([^/]+)\/?$/.exec(rest);
   if (task) {
     return { name: 'task', taskId: decodeURIComponent(task[1]) };
+  }
+  const list = /^\/lists\/([^/]+)\/?$/.exec(rest);
+  if (list) {
+    return { name: 'view', view: 'lists', listId: decodeURIComponent(list[1]) };
   }
   if (rest === '' || rest === '/') {
     return { name: 'view', view: 'day' };
@@ -83,6 +91,11 @@ const TASK_KEY = 'worklogTask';
 // the way back out of a subtask land on its parent without pushing a second copy
 // of the parent on top of the chain — see `navigateBackToTask`.
 const FROM_KEY = 'worklogTaskFrom';
+// Marks a history entry this app pushed for an open list, the same way and for
+// the same reason as TASK_KEY: leaving the list walks back off it, so closing it
+// in-app and closing it with Back leave the same history behind. A list arrived
+// at by a shared link has no entry of ours and falls back to the board.
+const LIST_KEY = 'worklogList';
 // Marks a history entry this app pushed for the task form, so closing the form
 // can walk back off it instead of stranding the user on an unrelated page.
 const FORM_KEY = 'worklogForm';
@@ -225,6 +238,9 @@ let closingTask = false;
 // second close request in that window must not pop an extra entry (saving and
 // deleting both close the form on their way out).
 let closingForm = false;
+// Same again for an open list: Escape held down would otherwise pop one entry
+// per repeat while the first `history.back()` is still landing.
+let closingList = false;
 // A task to show once the form's `history.back()` has landed — see
 // `closeTaskFormOnto`. Held here rather than passed along because the landing is
 // a popstate, and popstate carries nothing of ours.
@@ -239,6 +255,7 @@ function refresh(): void {
   openedFrom = readOpenedFrom();
   closingTask = false;
   closingForm = false;
+  closingList = false;
   const pending = showAfterFormClose;
   showAfterFormClose = null;
   notify();
@@ -322,6 +339,46 @@ function viewPath(view: AppView): string {
 
 export function navigateToView(view: AppView): void {
   navigate(viewPath(view));
+}
+
+/** Open one list at its own URL, so it survives a reload and can be handed to
+ *  someone. Re-opening the list you are already on replaces that entry rather
+ *  than stacking a second one Back would have to step over twice — a duplicate
+ *  and a search hit both open a list that may already be open. */
+export function navigateToList(listId: string): void {
+  const path = `${APP_BASE}/lists/${encodeURIComponent(listId)}`;
+  guarded(path, () => {
+    const url = path + window.location.search;
+    if (window.location.pathname === path) {
+      window.history.replaceState({ [LIST_KEY]: true }, '', url);
+    } else {
+      window.history.pushState({ [LIST_KEY]: true }, '', url);
+    }
+    refresh();
+  });
+}
+
+/** Leave the open list for the board. A no-op when none is open: Escape reaches
+ *  here from a view that may have nothing to close. */
+export function closeList(): void {
+  if (closingList || current.name !== 'view' || current.listId === undefined) {
+    return;
+  }
+  const state = window.history.state as Record<string, unknown> | null;
+  if (state?.[LIST_KEY]) {
+    closingList = true;
+    window.history.back();
+  } else {
+    navigate(viewPath('lists'));
+  }
+}
+
+/** Swap a list URL that resolves to nothing for the board — the list was deleted,
+ *  here or on another device, and the board is a page rather than an error. It
+ *  replaces: a pushed entry would leave Back pointing at the same dead id. */
+export function replaceWithLists(): void {
+  window.history.replaceState({}, '', viewPath('lists') + window.location.search);
+  refresh();
 }
 
 /** Open a task at its own URL. The entry is tagged as ours so `closeTask` can walk
@@ -533,6 +590,13 @@ export function useTaskFormInstance(): TaskFormInstance {
 export function useDetailId(): string | null {
   const route = useRoute();
   return route.name === 'task' ? route.taskId : null;
+}
+
+/** The list being shown, or null when the Lists view is on its board. Like the
+ *  open task, the URL is the only place this lives. */
+export function useOpenListId(): string | null {
+  const route = useRoute();
+  return route.name === 'view' && route.view === 'lists' ? (route.listId ?? null) : null;
 }
 
 /** The task the entry we are on was opened from, or null. Exported for tests; the

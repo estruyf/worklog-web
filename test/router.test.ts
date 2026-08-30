@@ -1,6 +1,10 @@
 // Route parsing for the /app island. The form routes (/app/new and
 // /app/task/<id>/edit) sit next to the single-task route, so the ordering of the
 // two /task/ patterns is what keeps an edit URL from reading as a task id.
+//
+// An open list is a view route carrying an id rather than a route of its own,
+// which is what keeps the nav rail and the view mirror in WorklogContext working
+// off `route.view` alone.
 
 import { describe, it, expect } from 'vitest';
 import { parseRoute } from '../src/ui/router';
@@ -17,6 +21,13 @@ describe('parseRoute', () => {
     expect(parseRoute('/app/upcoming')).toEqual({ name: 'view', view: 'upcoming' });
     expect(parseRoute('/app/shortcuts')).toEqual({ name: 'view', view: 'shortcuts' });
     expect(parseRoute('/app/settings/')).toEqual({ name: 'view', view: 'settings' });
+  });
+
+  it('reads an open list as the Lists view with that list open', () => {
+    expect(parseRoute('/app/lists')).toEqual({ name: 'view', view: 'lists' });
+    expect(parseRoute('/app/lists/release')).toEqual({ name: 'view', view: 'lists', listId: 'release' });
+    expect(parseRoute('/app/lists/release/')).toEqual({ name: 'view', view: 'lists', listId: 'release' });
+    expect(parseRoute('/app/lists/cycling%20trip')).toEqual({ name: 'view', view: 'lists', listId: 'cycling trip' });
   });
 
   it('reads a single task', () => {
@@ -43,5 +54,6 @@ describe('parseRoute', () => {
     expect(parseRoute('/app/nope')).toEqual({ name: 'notFound' });
     expect(parseRoute('/app/task/t-1/edit/extra')).toEqual({ name: 'notFound' });
     expect(parseRoute('/app/task//edit')).toEqual({ name: 'notFound' });
+    expect(parseRoute('/app/lists/a/b')).toEqual({ name: 'notFound' });
   });
 });

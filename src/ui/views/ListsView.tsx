@@ -2,22 +2,27 @@
 // release, the invoicing routine. Each is a file under `lists/` and each is a
 // thing you tick through, start again, and still have next time.
 //
-// One list is open at a time. A checklist is something you work down while you
-// are doing the thing it describes — you are packing, or releasing — so the view
-// is that one list, with the others waiting as a stack of names above and below
-// it. It also means a phone shows one list's items rather than five lists'.
+// The view has two states and no third: a board of tiles, one per list, and one
+// list open across the whole pane. A checklist is something you work down while
+// you are doing the thing it describes — you are packing, or releasing — so the
+// open list gets the pane to itself, and the board is only how you pick it. The
+// tiles carry no actions for the same reason the stack of expandable cards they
+// replace didn't work: ten rows of menu, progress bar and "start again" is ten
+// copies of one row, and the list you are actually running is lost among them.
+// So progress is a ring you can read at a glance, and what you are mid-way
+// through floats to a strip on top with the next item on it.
 //
 // Nothing here reaches the day, the ledger or a client: an item is not work, and
 // a list has no dates beyond the day its last run finished.
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { CheckIcon, EllipsisIcon, PlusIcon, RotateCcwIcon } from 'lucide-react';
 import type { Checklist, ChecklistItem, ChecklistSection } from '../../model/checklist';
 import { checklistItems, checklistProgress } from '../../model/checklist';
-import { DisclosureIcon } from '../components';
-import { Button, Card, EmptyState, Input, LinkButton, Menu, SectionLabel, ViewHeader } from '../primitives';
+import { Button, EmptyState, Input, LinkButton, Menu, SectionLabel, ViewHeader } from '../primitives';
 import type { MenuOption } from '../primitives';
-import { useData, useUi } from '../context';
+import { useData } from '../context';
+import { closeList, navigateToList, replaceWithLists, useOpenListId } from '../router';
 import { fmtShort } from '../utils';
 
 /** Where a dragged item would land: a section, and the position among its items.
@@ -367,8 +372,14 @@ function SectionBlock({
             />
           </div>
         ) : (
-          <div className="group/section flex items-center gap-2 px-2.5 mb-[6px]">
-            <SectionLabel className="flex-1 min-w-0 truncate">{section.title}</SectionLabel>
+          <div className="group/section flex items-center gap-2.5 px-2.5 mb-[6px]">
+            <SectionLabel tone="faint" className="min-w-0 truncate">
+              {section.title}
+            </SectionLabel>
+            {/* The rule carries the heading across to its count, so a group reads
+                as one band rather than as a label with a number stranded on the
+                far side of the row. */}
+            <span className="flex-1 h-px bg-neutral-375" aria-hidden="true" />
             <span className="text-meta text-neutral-625 tabular-nums shrink-0">
               {section.items.filter((i) => i.done).length}/{section.items.length}
             </span>
@@ -485,11 +496,108 @@ function EmptyList({ list, onSeeded }: { list: Checklist; onSeeded: () => void }
   );
 }
 
-/** How far through the run this list is, as the number and as the bar. */
-function Progress({ done, total }: { done: number; total: number }) {
+/** How far through the run a list is, drawn as a ring with the percentage in it.
+ *  A list nobody has started still draws it, empty: the ring is what makes "not
+ *  started" readable across a grid of tiles, and hiding it would leave those
+ *  tiles looking like they were missing something instead. */
+function ProgressRing({ done, total }: { done: number; total: number }) {
+  const pct = total ? Math.round((done / total) * 100) : 0;
   return (
-    <span className="flex items-center gap-2 shrink-0" title={`${done} of ${total} ticked off`}>
-      <span className="hidden sm:block w-[52px] h-[4px] rounded-full bg-neutral-300 overflow-hidden">
+    // Decorative: every tile's `aria-label` already reads the same numbers out.
+    <span
+      aria-hidden="true"
+      className="w-[34px] h-[34px] shrink-0 rounded-full flex items-center justify-center"
+      style={{
+        background: `conic-gradient(${pct === 100 ? 'var(--color-success-500)' : 'var(--color-brand-500)'} ${pct}%, var(--color-neutral-325) 0)`,
+      }}
+    >
+      <span className="w-[26px] h-[26px] rounded-full bg-white flex items-center justify-center text-[9.5px] font-bold text-neutral-700 tabular-nums">
+        {pct}
+      </span>
+    </span>
+  );
+}
+
+/** When this list was last started over. */
+function lastRunLabel(list: Checklist): string {
+  return list.lastRun ? fmtShort(list.lastRun) : 'never run';
+}
+
+/** One list on the board: its name, how far through it is, and nothing you can
+ *  act on. Every action a list has is one click away inside it — a menu and a
+ *  "start again" on each of ten tiles is what made the stack they replace read
+ *  as ten copies of the same row. */
+function ListTile({ list, onOpen }: { list: Checklist; onOpen: () => void }) {
+  const { done, total } = checklistProgress(list);
+  return (
+    <button
+      data-tile={`all:${list.id}`}
+      onClick={onOpen}
+      aria-label={`${list.name}, ${done} of ${total} ticked`}
+      className="flex flex-col gap-2.5 min-h-[104px] p-3.5 text-left rounded-xl border border-neutral-400 bg-white cursor-pointer hover:border-neutral-525 hover:bg-neutral-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+    >
+      <span className="flex items-start gap-2 w-full">
+        <span className="flex-1 min-w-0 text-[14px] font-semibold text-neutral-825 leading-tight line-clamp-2">
+          {list.name}
+        </span>
+        <ProgressRing done={done} total={total} />
+      </span>
+      {/* Pushes the meta line onto the tile's bottom edge, so a row of tiles
+          lines its dates up however long the names above them are. */}
+      <span className="flex-1" />
+      <span className="flex items-center gap-1.5 text-[11.5px] text-neutral-650">
+        <span className="tabular-nums">{total === 1 ? '1 item' : `${total} items`}</span>
+        <span className="w-[3px] h-[3px] rounded-full bg-neutral-550" aria-hidden="true" />
+        {lastRunLabel(list)}
+      </span>
+    </button>
+  );
+}
+
+/** A list you are part-way through, in the strip above the board. It carries the
+ *  next unticked item, which is the one thing you would have opened it to find. */
+function RunningTile({ list, onOpen }: { list: Checklist; onOpen: () => void }) {
+  const { done, total } = checklistProgress(list);
+  const next = checklistItems(list).find((i) => !i.done);
+  return (
+    <button
+      data-tile={`running:${list.id}`}
+      onClick={onOpen}
+      aria-label={`${list.name}, ${done} of ${total} ticked`}
+      className="flex items-center gap-3 p-3.5 text-left rounded-xl border border-brand-350 bg-brand-50 cursor-pointer hover:border-brand-425 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+    >
+      <ProgressRing done={done} total={total} />
+      <span className="flex-1 min-w-0">
+        <span className="block text-[14px] font-semibold text-neutral-825 leading-tight truncate">{list.name}</span>
+        {next && <span className="block text-[12px] text-brand-625 truncate">Next: {next.text}</span>}
+      </span>
+    </button>
+  );
+}
+
+/** Where a new list is named: the first cell of the grid, in the shape of the
+ *  tile it is about to become. */
+function NewListTile({ onCommit, onCancel }: { onCommit: (name: string) => void; onCancel: () => void }) {
+  return (
+    <div className="flex flex-col justify-center min-h-[104px] p-3.5 rounded-xl border border-dashed border-neutral-500 bg-white">
+      <InlineInput
+        label="Name of the new list"
+        placeholder="Cycling trip, Release, Invoicing…"
+        onCommit={onCommit}
+        onCancel={onCancel}
+      />
+    </div>
+  );
+}
+
+/** The strip above an open list's items: how far this run has got, and the way
+ *  to end it. */
+function Meter({ list }: { list: Checklist }) {
+  const { startAgain } = useData();
+  const { done, total } = checklistProgress(list);
+  return (
+    <div className="flex items-center gap-2 px-2.5 pb-3">
+      <span className="w-[100px] h-[5px] rounded-full bg-neutral-400 overflow-hidden">
         <span
           className="block h-full rounded-full bg-success-500"
           style={{ width: total ? `${Math.round((done / total) * 100)}%` : '0%' }}
@@ -498,23 +606,93 @@ function Progress({ done, total }: { done: number; total: number }) {
       <span className="text-control text-neutral-675 tabular-nums">
         {done}/{total}
       </span>
-    </span>
+      <span className="flex-1" />
+      {/* Only once something is ticked: on an untouched list the button would do
+          nothing but stamp a run that never happened. */}
+      {done > 0 && (
+        <Button size="xs" onClick={() => void startAgain(list)} title="Untick everything and record this run as finished">
+          <RotateCcwIcon size={12} />
+          Start again
+        </Button>
+      )}
+    </div>
   );
 }
 
-/** One list: its header always, its items when it is the open one. */
-function ListCard({ list, open, onOpen }: { list: Checklist; open: boolean; onOpen: () => void }) {
-  const { renameList, deleteList, duplicateList, startAgain, moveItem } = useData();
-  const { setShowListId } = useUi();
+/** The band above an open list: the way back to the board, which list this is,
+ *  and everything that acts on the list as a whole. Those actions live here
+ *  rather than on the tile — you rename, duplicate or delete a list you are
+ *  looking at, not one you are scanning past. */
+function OpenListHeader({ list, onBack }: { list: Checklist; onBack: () => void }) {
+  const { renameList, deleteList, duplicateList } = useData();
   const [renaming, setRenaming] = useState(false);
-  // The first item of this list was typed into the empty card, so the row that
+
+  return (
+    <ViewHeader className="max-w-[920px] xl:max-w-[1280px] flex items-center gap-3">
+      <Button variant="neutral" size="xs" onClick={onBack} className="shrink-0">
+        ‹ Lists
+      </Button>
+      {renaming ? (
+        <div className="flex-1">
+          <InlineInput
+            value={list.name}
+            label={`Rename “${list.name}”`}
+            onCommit={(name) => {
+              setRenaming(false);
+              void renameList(list.id, name);
+            }}
+            onCancel={() => setRenaming(false)}
+          />
+        </div>
+      ) : (
+        <>
+          <h1 className="text-[24px] font-bold m-0 truncate">{list.name}</h1>
+          <span className="text-control text-neutral-675 shrink-0">
+            {list.lastRun ? `last run ${fmtShort(list.lastRun)}` : 'never run'}
+          </span>
+          <span className="flex-1" />
+          <Menu
+            kind="action"
+            align="end"
+            label={`Actions for “${list.name}”`}
+            options={[
+              { id: 'rename', label: 'Rename list' },
+              { id: 'duplicate', label: 'Duplicate', hint: 'A copy with nothing ticked' },
+              { id: 'delete', label: 'Delete list' },
+            ]}
+            onSelect={(id) => {
+              if (id === 'rename') {
+                setRenaming(true);
+              } else if (id === 'delete') {
+                void deleteList(list);
+              } else {
+                // Open the copy: duplicating is how a run is started, and the
+                // copy is the one you are about to work down.
+                void duplicateList(list).then((made) => made && navigateToList(made.id));
+              }
+            }}
+            className="w-7 h-7 shrink-0 flex items-center justify-center rounded-lg text-neutral-625 hover:text-neutral-825 hover:bg-neutral-250"
+          >
+            <EllipsisIcon size={16} />
+          </Menu>
+        </>
+      )}
+    </ViewHeader>
+  );
+}
+
+/** The open list itself. Everything below the meter is what the expanded card
+ *  held — the sections, the drag that crosses them, both "add" rows — at reading
+ *  width rather than the board's, which the tiles need and item rows don't. */
+function OpenList({ list }: { list: Checklist }) {
+  const { moveItem } = useData();
+  // The first item of this list was typed into the empty pane, so the row that
   // replaces it opens its field rather than making you reach for it again.
   const [seeded, setSeeded] = useState(false);
   // The drag lives here rather than in a row: it starts in one section and ends
-  // in another, and only the card sees both.
+  // in another, and only this sees both.
   const [dragLine, setDragLine] = useState<number | null>(null);
   const [target, setTarget] = useState<DropTarget | null>(null);
-  const { done, total } = checklistProgress(list);
 
   const drag: DragState = {
     line: dragLine,
@@ -540,116 +718,127 @@ function ListCard({ list, open, onOpen }: { list: Checklist; open: boolean; onOp
   const firstTitled = list.sections.findIndex((s) => s.title);
 
   return (
-    <Card padding="list" className="mb-3">
-      <div className="flex items-center gap-3 px-2.5 py-1.5">
-        {renaming ? (
-          <div className="flex-1">
-            <InlineInput
-              value={list.name}
-              label={`Rename “${list.name}”`}
-              onCommit={(name) => {
-                setRenaming(false);
-                void renameList(list.id, name);
-              }}
-              onCancel={() => setRenaming(false)}
+    <div className="max-w-[720px] mx-auto">
+      <Meter list={list} />
+      {empty ? (
+        <EmptyList list={list} onSeeded={() => setSeeded(true)} />
+      ) : (
+        <>
+          {list.sections.map((section, i) => (
+            <SectionBlock
+              key={section.line ?? `flat-${i}`}
+              list={list}
+              section={section}
+              index={i}
+              firstTitled={firstTitled}
+              drag={drag}
+              startOpen={seeded && i === 0}
             />
-          </div>
-        ) : (
-          <>
-            <button
-              onClick={onOpen}
-              aria-expanded={open}
-              className="group flex items-center gap-2 flex-1 min-w-0 bg-transparent border-none p-0 cursor-pointer text-left"
-            >
-              <DisclosureIcon open={open} size={10} />
-              <span className="text-row font-semibold truncate group-hover:text-neutral-900">{list.name}</span>
-            </button>
-            <Progress done={done} total={total} />
-            {/* Only once something is ticked: on an untouched list the button
-                would do nothing but stamp a run that never happened. */}
-            {done > 0 && (
-              <Button size="xs" onClick={() => void startAgain(list)} title="Untick everything and record this run as finished">
-                <RotateCcwIcon size={12} />
-                <span className="hidden sm:inline">Start again</span>
-              </Button>
-            )}
-            <Menu
-              kind="action"
-              align="end"
-              label={`Actions for “${list.name}”`}
-              options={[
-                { id: 'rename', label: 'Rename list' },
-                { id: 'duplicate', label: 'Duplicate', hint: 'A copy with nothing ticked' },
-                { id: 'delete', label: 'Delete list' },
-              ]}
-              onSelect={(id) => {
-                if (id === 'rename') {
-                  setRenaming(true);
-                } else if (id === 'delete') {
-                  void deleteList(list);
-                } else {
-                  // Open the copy: duplicating is how a run is started, and the
-                  // copy is the one you are about to work down.
-                  void duplicateList(list).then((made) => made && setShowListId(made.id));
-                }
-              }}
-              className="w-7 h-7 shrink-0 flex items-center justify-center rounded-lg text-neutral-625 hover:text-neutral-825 hover:bg-neutral-250"
-            >
-              <EllipsisIcon size={16} />
-            </Menu>
-          </>
-        )}
-      </div>
-
-      {open && (
-        <div className="mt-1 pb-1">
-          {empty ? (
-            <EmptyList list={list} onSeeded={() => setSeeded(true)} />
-          ) : (
-            <>
-              {list.sections.map((section, i) => (
-                <SectionBlock
-                  key={section.line ?? `flat-${i}`}
-                  list={list}
-                  section={section}
-                  index={i}
-                  firstTitled={firstTitled}
-                  drag={drag}
-                  startOpen={seeded && i === 0}
-                />
-              ))}
-              <AddSectionRow list={list} />
-            </>
-          )}
-          {/* The stamp sits under the list rather than in the header: it is the
-              answer to "when did I last do this", which is a thing you look up
-              once you are already in the list. */}
-          {list.lastRun && (
-            <div className="px-2.5 pt-3 text-meta text-neutral-650">Last run {fmtShort(list.lastRun)}</div>
-          )}
-        </div>
+          ))}
+          <AddSectionRow list={list} />
+        </>
       )}
-    </Card>
+      {list.lastRun && (
+        <div className="px-2.5 pt-3 text-meta text-neutral-650">Last run {fmtShort(list.lastRun)}</div>
+      )}
+    </div>
   );
+}
+
+/** Newest run first, and a list that has never been run last: the board is
+ *  ordered by when you last did the thing, which is how you look for it. */
+function byLastRun(a: Checklist, b: Checklist): number {
+  return (b.lastRun ?? '').localeCompare(a.lastRun ?? '');
 }
 
 export function ListsView() {
   const { checklists, createList } = useData();
-  const { showListId, setShowListId } = useUi();
-  // One open at a time, and a repo with a single list opens on it: there is
-  // nothing to choose between.
-  const [openId, setOpenId] = useState<string | null>(checklists.length === 1 ? checklists[0].id : null);
+  // Which list is open lives in the URL and nowhere else — /app/lists/<id> is
+  // what makes a half-ticked list survive a reload and be worth sending someone.
+  const openId = useOpenListId();
   const [naming, setNaming] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  // Where the board was left, so coming back out of a list lands on the tile you
+  // went in from rather than at the top of the grid.
+  const boardScroll = useRef(0);
+  // Which tile opened the list, to hand focus back to on the way out. The tile
+  // itself is gone by then — the board unmounts — so it is found again by its
+  // `data-tile`, and a list can have one in each band.
+  const returnTo = useRef<string | null>(null);
 
-  // A search hit, a new list or a duplicate asks for a list to be shown. The
-  // request is cleared as it is taken, so the next one lands even when it names
-  // the same list.
+  // A URL naming a list that isn't there: deleted here a moment ago, or deleted
+  // on another device and synced in under you. The board is the honest answer,
+  // and it is already the page you would go to next.
   useEffect(() => {
-    if (showListId) {
-      setOpenId(showListId);
-      setShowListId(null);
+    if (openId !== null && !checklists.some((l) => l.id === openId)) {
+      replaceWithLists();
     }
-  }, [showListId, setShowListId]);
+  }, [openId, checklists]);
+
+  // Escape is the way out of a list, the same as the back control. Nothing else
+  // in this view listens for it: the inline fields stop their own Escape before
+  // it leaves the input.
+  useEffect(() => {
+    if (openId === null) {
+      return;
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        closeList();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [openId]);
+
+  // The board and the open list share one scroll box, so switching between them
+  // has to place the scroll itself: back to where the board was, or the top of a
+  // list you just opened. Focus comes after, without scrolling, so restoring the
+  // position isn't undone by the tile scrolling itself into view.
+  useLayoutEffect(() => {
+    const box = scrollRef.current;
+    if (!box) {
+      return;
+    }
+    if (openId !== null) {
+      box.scrollTop = 0;
+      return;
+    }
+    box.scrollTop = boardScroll.current;
+    if (returnTo.current) {
+      const tile = box.querySelector(`[data-tile="${CSS.escape(returnTo.current)}"]`);
+      returnTo.current = null;
+      if (tile instanceof HTMLElement) {
+        tile.focus({ preventScroll: true });
+      }
+    }
+  }, [openId]);
+
+  const openList = openId === null ? undefined : checklists.find((l) => l.id === openId);
+  const open = (list: Checklist, band: 'running' | 'all') => {
+    boardScroll.current = scrollRef.current?.scrollTop ?? 0;
+    returnTo.current = `${band}:${list.id}`;
+    navigateToList(list.id);
+  };
+
+  // Part-way through, and so the thing you are most likely here for.
+  const running = checklists.filter((l) => {
+    const { done, total } = checklistProgress(l);
+    return done > 0 && done < total;
+  });
+  running.sort(byLastRun);
+  const all = [...checklists].sort(byLastRun);
+
+  if (openList) {
+    return (
+      <div className="flex flex-1 flex-col min-h-0">
+        <OpenListHeader list={openList} onBack={closeList} />
+        <div ref={scrollRef} className="flex-1 overflow-auto px-6 pt-[18px] pb-6">
+          <OpenList list={openList} />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-1 flex-col min-h-0">
@@ -668,29 +857,8 @@ export function ListsView() {
         </span>
       </ViewHeader>
 
-      <div className="flex-1 overflow-auto px-6 pt-6 pb-10">
+      <div ref={scrollRef} className="flex-1 overflow-auto px-6 pt-[18px] pb-6">
         <div className="max-w-[920px] xl:max-w-[1280px] mx-auto">
-          {naming && (
-            <Card padding="list" className="mb-3">
-              <div className="px-2.5 py-1.5">
-                <InlineInput
-                  label="Name of the new list"
-                  placeholder="Cycling trip, Release, Invoicing…"
-                  onCommit={async (name) => {
-                    setNaming(false);
-                    // Awaited so the list it creates is the one that opens —
-                    // the store has to have rebuilt before there is an id.
-                    const created = await createList(name);
-                    if (created) {
-                      setOpenId(created.id);
-                    }
-                  }}
-                  onCancel={() => setNaming(false)}
-                />
-              </div>
-            </Card>
-          )}
-
           {checklists.length === 0 && !naming ? (
             <EmptyState>
               No lists yet. A list is a checklist you reuse — what to pack, the steps of a release, the invoicing
@@ -700,14 +868,46 @@ export function ListsView() {
               </LinkButton>
             </EmptyState>
           ) : (
-            checklists.map((list) => (
-              <ListCard
-                key={list.id}
-                list={list}
-                open={openId === list.id}
-                onOpen={() => setOpenId(openId === list.id ? null : list.id)}
-              />
-            ))
+            <>
+              {running.length > 0 && (
+                <div className="pb-5">
+                  <SectionLabel tone="faint" className="pb-2">
+                    Running now
+                  </SectionLabel>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {running.map((list) => (
+                      <RunningTile key={list.id} list={list} onOpen={() => open(list, 'running')} />
+                    ))}
+                  </div>
+                </div>
+              )}
+              {/* Both headings go together when nothing is running: one grid with
+                  nothing above it to contrast with doesn't need naming. */}
+              {running.length > 0 && (
+                <SectionLabel tone="faint" className="pb-2">
+                  All lists
+                </SectionLabel>
+              )}
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                {naming && (
+                  <NewListTile
+                    onCommit={async (name) => {
+                      setNaming(false);
+                      // Awaited so the list it creates is the one that opens —
+                      // the store has to have rebuilt before there is an id.
+                      const created = await createList(name);
+                      if (created) {
+                        navigateToList(created.id);
+                      }
+                    }}
+                    onCancel={() => setNaming(false)}
+                  />
+                )}
+                {all.map((list) => (
+                  <ListTile key={list.id} list={list} onOpen={() => open(list, 'all')} />
+                ))}
+              </div>
+            </>
           )}
         </div>
       </div>

@@ -15,6 +15,11 @@ Every change to Worklog, by day, newest first.
      both). Links must be absolute — a relative path resolves against /changelog and
      404s. -->
 
+## 2026-08-30
+
+- **Lists** — an open list now has its own address: `/app/lists/<list>`. It survives a reload, Back closes it, and a half-ticked packing list is a link you can send someone or pin in a tab.
+- **Lists** — the tab is a board now. Every list is a tile with a progress ring, how many items it holds and when you last ran it, and the ones you are part-way through sit in a strip on top with the next unticked item on them — so what you are in the middle of is the first thing you see, without opening anything. Clicking a tile opens that list across the whole pane; Escape or ‹ Lists takes you back to where you were on the board.
+
 ## 2026-08-29
 
 - **Lists** — reusable checklists, on a tab of their own. A packing list for a cycling trip, the steps of a release, the invoicing routine: tick through it, press Start again, and it is waiting unticked for next time, with the day that run finished recorded on it. Each list is a plain Markdown file of checkboxes under `lists/`, so it reads as a checklist on GitHub and stays yours to hand-edit — ticking an item rewrites that one line and leaves your own prose, nesting and links exactly where they are.
