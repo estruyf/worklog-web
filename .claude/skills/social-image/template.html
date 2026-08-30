@@ -1,0 +1,248 @@
+<!doctype html>
+<!--
+  Worklog social card — 1200x630, rendered by render.sh at 2x.
+
+  This file renders as-is: it is the Lists announcement that shipped, kept
+  working so a new card starts from something you can look at rather than from a
+  skeleton. Copy it, change the four SLOTs, render.
+
+  Everything outside a SLOT is the card's identity — the wash, the palette, the
+  type scale, the panel. Leave it alone and every announcement looks like the
+  same product. The one thing that varies by design is the panel on the right:
+  it is a mock of the actual feature, drawn from the real UI's own markup.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  /* Straight from src/pages/index.astro's .page block and src/ui/styles.css.
+     Never eyeball a colour here: if the card needs one the app doesn't have,
+     the card is wrong. */
+  :root {
+    --ink: #1f2328;
+    --muted: #57606a;
+    --faint: #8a9099;
+    --border: #e5e7eb;
+    --border-strong: #d0d7de;
+    --surface: #f6f8fa;
+    --brand: #f4cf4d;
+    --brand-strong: #e2be2e;
+    --brand-tint: #fbefc0;
+    --brand-ink: #8a5a00;
+    --success: #16a34a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1200px; height: 630px; }
+  body {
+    font-family: Inter, -apple-system, system-ui, "Segoe UI", sans-serif;
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+    background:
+      radial-gradient(58% 60% at 84% -10%, rgba(244, 207, 77, 0.30), transparent 62%),
+      radial-gradient(46% 42% at -6% 6%, rgba(244, 207, 77, 0.16), transparent 64%),
+      linear-gradient(180deg, #fff, #fbfcfd 42%, #f6f8fa);
+    display: flex;
+    align-items: center;
+    gap: 46px;
+    padding: 58px 60px;
+    overflow: hidden;
+  }
+
+  /* ---- left column ---- */
+  .copy { width: 560px; flex: none; display: flex; flex-direction: column; }
+  .brand { display: flex; align-items: center; gap: 11px; }
+  .brand svg { width: 36px; height: 36px; display: block; }
+  .brand span { font-size: 21px; font-weight: 700; letter-spacing: -0.015em; }
+
+  .eyebrow { display: flex; align-items: center; gap: 10px; margin-top: 40px; }
+  .tag {
+    font-size: 12px; font-weight: 800; letter-spacing: 0.11em; text-transform: uppercase;
+    color: #3a2e05; background: var(--brand); border: 1px solid var(--brand-strong);
+    border-radius: 999px; padding: 5px 12px;
+  }
+  .eyebrow em {
+    font-style: normal; font-size: 13px; font-weight: 600; letter-spacing: 0.11em;
+    text-transform: uppercase; color: var(--faint);
+  }
+
+  h1 {
+    margin-top: 20px;
+    font-size: 62px; line-height: 1.03; font-weight: 800; letter-spacing: -0.033em;
+  }
+  h1 u { text-decoration: none; box-shadow: inset 0 -0.28em 0 var(--brand-tint); }
+
+  .lede { margin-top: 20px; font-size: 20px; line-height: 1.5; color: var(--muted); max-width: 520px; }
+
+  .bullets { margin-top: 26px; display: flex; flex-wrap: wrap; gap: 8px; }
+  .bullets span {
+    font-size: 14px; font-weight: 600; color: var(--muted);
+    background: #fff; border: 1px solid var(--border); border-radius: 999px; padding: 7px 13px;
+  }
+
+  .foot { margin-top: 40px; font-size: 15px; font-weight: 600; color: var(--faint); }
+
+  /* ---- SLOT 4 (styles): the feature panel ----------------------------------
+     Everything from here to the end of the stylesheet belongs to the Lists mock.
+     Replace it with the parts your own feature's panel needs, lifted from the
+     real component so the ratios match. The panel's own shell (.board) is not
+     feature-specific — keep its border, radius, shadow and padding. */
+  /* ---- right column: the board ---- */
+  .board {
+    flex: 1; align-self: stretch;
+    background: #fff; border: 1px solid var(--border); border-radius: 18px;
+    box-shadow: 0 22px 48px -22px rgba(31, 35, 40, 0.28), 0 2px 6px rgba(31, 35, 40, 0.04);
+    padding: 18px; display: flex; flex-direction: column; gap: 14px;
+    overflow: hidden;
+  }
+  .board-bar { display: flex; align-items: center; gap: 9px; padding: 0 2px 2px; }
+  .board-bar b { font-size: 17px; font-weight: 700; letter-spacing: -0.01em; }
+  .board-bar i { font-style: normal; font-size: 12.5px; color: var(--faint); }
+  .board-bar .cta {
+    margin-left: auto; font-size: 12px; font-weight: 700; color: #3a2e05;
+    background: var(--brand); border: 1px solid var(--brand-strong); border-radius: 8px; padding: 6px 10px;
+  }
+  .label {
+    font-size: 10px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase;
+    color: #b0b6bd; padding-left: 2px;
+  }
+  .running {
+    display: flex; align-items: center; gap: 12px;
+    border: 1px solid #f0e3bc; background: #fffcf3; border-radius: 12px; padding: 12px 14px;
+    margin-top: -6px;
+  }
+  .running .name { font-size: 15px; font-weight: 700; letter-spacing: -0.01em; }
+  .running .next { font-size: 12.5px; color: var(--brand-ink); margin-top: 2px; }
+
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: -6px; }
+  .tile {
+    border: 1px solid var(--border); background: #fff; border-radius: 12px;
+    padding: 12px 13px; min-height: 92px; display: flex; flex-direction: column;
+  }
+  .tile .top { display: flex; align-items: flex-start; gap: 8px; }
+  .tile .name { flex: 1; font-size: 13.5px; font-weight: 650; line-height: 1.25; letter-spacing: -0.005em; }
+  .tile .meta { margin-top: auto; padding-top: 12px; display: flex; align-items: center; gap: 6px; font-size: 11px; color: #8a9099; }
+  .dot { width: 3px; height: 3px; border-radius: 999px; background: #cdd3da; }
+
+  /* progress ring */
+  .ring { width: 34px; height: 34px; flex: none; border-radius: 999px; display: grid; place-items: center; }
+  .ring i {
+    width: 26px; height: 26px; border-radius: 999px; background: #fff;
+    display: grid; place-items: center; font-style: normal;
+    font-size: 9.5px; font-weight: 800; color: #57606a; font-variant-numeric: tabular-nums;
+  }
+</style>
+</head>
+<body>
+  <div class="copy">
+    <div class="brand">
+      <svg viewBox="0 0 44 44" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <rect x="2" y="2" width="40" height="40" rx="11" ry="11" fill="#f4cf4d"/>
+        <g fill="#252627">
+          <path d="M28.77,12.65h4.16l-5.52,17.27h-3.91l-2.37-10.1-.69-3.34-.69,3.34-2.37,10.1h-3.8l-5.56-17.27h4.35l2.59,9.89.56,2.75.57-2.69,2.21-9.95h4.32l2.33,9.89.6,2.75.6-2.65,2.62-10Z"/>
+          <path d="M26.74,25.93h6.88c1.52,0,2.75.9,2.75,2h0c0,1.1-1.23,2-2.75,2h-6.88c-1.52,0-2.75-.9-2.75-2h0c0-1.1,1.23-2,2.75-2Z"/>
+        </g>
+      </svg>
+      <span>Worklog</span>
+    </div>
+
+    <!-- SLOT 1: the feature's name, in the eyebrow. `New` stays. -->
+    <div class="eyebrow">
+      <span class="tag">New</span>
+      <em>Lists</em>
+    </div>
+
+    <!-- SLOT 2: the headline. Two lines, <= 5 words a line, and the <u> marks
+         the half that gets the brand highlight — put it on the phrase that says
+         what the feature does, not on the product name. Write the promise, not
+         the feature name: "Checklists you run again", not "Lists are here". -->
+    <h1>Checklists you<br /><u>run again.</u></h1>
+
+    <!-- SLOT 3: one sentence on what it is, and at most three chips. The chips
+         are facts a reader can check (a format, a gesture, a guarantee), never
+         adjectives. Four chips wrap to a second row and unbalance the column. -->
+    <p class="lede">
+      A packing list, a release run, the invoicing routine. Tick through it,
+      press Start&nbsp;again, and it is waiting unticked for next time.
+    </p>
+
+    <div class="bullets">
+      <span>Plain Markdown in your repo</span>
+      <span>Drag to reorder</span>
+      <span>Works offline</span>
+    </div>
+
+    <p class="foot">worklog.struyfconsulting.be</p>
+  </div>
+
+  <!-- SLOT 4: the feature, drawn as the app draws it. Copy the real component's
+       structure and numbers — the rings here are the same conic-gradient the
+       tiles use in src/ui/views/ListsView.tsx, at the same 34px. Fill the panel
+       to its bottom edge: dead space under the content is the one thing that
+       makes a card read as a mockup rather than a screenshot. -->
+  <div class="board">
+    <div class="board-bar">
+      <b>Lists</b>
+      <i>11 lists</i>
+      <span class="cta">+ New list</span>
+    </div>
+
+    <div class="label">Running now</div>
+    <div class="running">
+      <span class="ring" style="background: conic-gradient(#e2be2e 33%, #eef0f2 0)"><i>33</i></span>
+      <span>
+        <div class="name">Cycling trip</div>
+        <div class="next">Next: Bib shorts</div>
+      </span>
+    </div>
+
+    <div class="label">All lists</div>
+    <div class="grid">
+      <div class="tile">
+        <div class="top">
+          <div class="name">Release checklist</div>
+          <span class="ring" style="background: conic-gradient(#e2be2e 38%, #eef0f2 0)"><i>38</i></span>
+        </div>
+        <div class="meta"><span>8 items</span><span class="dot"></span><span>4 Aug</span></div>
+      </div>
+      <div class="tile">
+        <div class="top">
+          <div class="name">Invoicing routine</div>
+          <span class="ring" style="background: conic-gradient(#e2be2e 0%, #eef0f2 0)"><i>0</i></span>
+        </div>
+        <div class="meta"><span>5 items</span><span class="dot"></span><span>31 Jul</span></div>
+      </div>
+      <div class="tile">
+        <div class="top">
+          <div class="name">Website launch</div>
+          <span class="ring" style="background: conic-gradient(#16a34a 100%, #eef0f2 0)"><i>100</i></span>
+        </div>
+        <div class="meta"><span>5 items</span><span class="dot"></span><span>12 May</span></div>
+      </div>
+      <div class="tile">
+        <div class="top">
+          <div class="name">New client onboarding</div>
+          <span class="ring" style="background: conic-gradient(#e2be2e 0%, #eef0f2 0)"><i>0</i></span>
+        </div>
+        <div class="meta"><span>5 items</span><span class="dot"></span><span>never run</span></div>
+      </div>
+      <div class="tile">
+        <div class="top">
+          <div class="name">Monthly bookkeeping</div>
+          <span class="ring" style="background: conic-gradient(#e2be2e 0%, #eef0f2 0)"><i>0</i></span>
+        </div>
+        <div class="meta"><span>4 items</span><span class="dot"></span><span>9 Aug</span></div>
+      </div>
+      <div class="tile">
+        <div class="top">
+          <div class="name">Conference prep</div>
+          <span class="ring" style="background: conic-gradient(#16a34a 100%, #eef0f2 0)"><i>100</i></span>
+        </div>
+        <div class="meta"><span>4 items</span><span class="dot"></span><span>3 Mar</span></div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

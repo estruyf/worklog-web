@@ -17,6 +17,7 @@ Every change to Worklog, by day, newest first.
 
 ## 2026-08-30
 
+- **Internal** — a `social-image` skill in `.claude/skills/`: the branded 1200×630 announcement card as one HTML file plus a render script, so every promo image is drawn in the app's own tokens and comes out looking like the last one.
 - **Lists** — an open list now has its own address: `/app/lists/<list>`. It survives a reload, Back closes it, and a half-ticked packing list is a link you can send someone or pin in a tab.
 - **Lists** — the tab is a board now. Every list is a tile with a progress ring, how many items it holds and when you last ran it, and the ones you are part-way through sit in a strip on top with the next unticked item on them — so what you are in the middle of is the first thing you see, without opening anything. Clicking a tile opens that list across the whole pane; Escape or ‹ Lists takes you back to where you were on the board.
 
