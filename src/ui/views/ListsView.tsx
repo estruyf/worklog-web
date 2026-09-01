@@ -15,8 +15,8 @@
 // Nothing here reaches the day, the ledger or a client: an item is not work, and
 // a list has no dates beyond the day its last run finished.
 
-import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { CheckIcon, EllipsisIcon, PlusIcon, RotateCcwIcon } from 'lucide-react';
+import React, { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import { CheckIcon, ChevronDownIcon, EllipsisIcon, PlusIcon, RotateCcwIcon } from 'lucide-react';
 import type { Checklist, ChecklistItem, ChecklistSection } from '../../model/checklist';
 import { checklistItems, checklistProgress } from '../../model/checklist';
 import { Button, EmptyState, Input, LinkButton, Menu, SectionLabel, ViewHeader } from '../primitives';
@@ -106,7 +106,7 @@ function InlineInput({
 
 /** The line a dragged item would drop onto. */
 function DropLine() {
-  return <div className="h-[2px] mx-2.5 my-[3px] rounded-full bg-brand-500" aria-hidden="true" />;
+  return <div className="h-[2px] mx-2.5 my-px rounded-full bg-brand-500" aria-hidden="true" />;
 }
 
 /** One tickable line. The circle and the words are one control — the whole row
@@ -209,7 +209,11 @@ function ItemRow({
         drag.drop();
       }}
       className={
-        'group/item flex items-center gap-[11px] py-2 px-2.5 rounded-lg hover:bg-neutral-175 ' +
+        // A fixed height rather than padding round a line box: a packing list is
+        // read by running down it, and forty rows only fit on one screen if the
+        // row is the height of its words. Nothing in here may wrap — see the
+        // `truncate` on the text below, which is what holds the height.
+        'group/item flex items-center gap-[9px] h-[26px] px-2.5 rounded-control hover:bg-neutral-175 ' +
         (dragging ? 'opacity-40' : '')
       }
     >
@@ -231,7 +235,7 @@ function ItemRow({
         type="button"
         onClick={() => void toggleItem(list, item)}
         className={
-          'text-body flex-1 min-w-0 text-left bg-transparent border-none p-0 cursor-pointer ' +
+          'text-body leading-none truncate flex-1 min-w-0 text-left bg-transparent border-none p-0 cursor-pointer ' +
           (item.done ? 'line-through decoration-neutral-550 text-neutral-700' : 'text-neutral-825')
         }
       >
@@ -243,9 +247,9 @@ function ItemRow({
         label={`Actions for “${item.text}”`}
         options={options}
         onSelect={onSelect}
-        className={`w-7 h-7 -my-1 shrink-0 flex items-center justify-center rounded-lg text-neutral-625 sm:group-hover/item:opacity-100 sm:group-focus-within/item:opacity-100 ${TOUCH_MENU}`}
+        className={`w-[22px] h-[22px] shrink-0 flex items-center justify-center rounded-control text-neutral-625 sm:group-hover/item:opacity-100 sm:group-focus-within/item:opacity-100 ${TOUCH_MENU}`}
       >
-        <EllipsisIcon size={16} />
+        <EllipsisIcon size={15} />
       </Menu>
     </div>
   );
@@ -271,7 +275,7 @@ function AddItemRow({
     return (
       <button
         onClick={() => setOpen(true)}
-        className="flex items-center gap-[7px] w-full py-2 px-2.5 rounded-lg bg-transparent border-none cursor-pointer text-control text-neutral-650 hover:text-neutral-825 hover:bg-neutral-175"
+        className="flex items-center gap-[7px] w-full h-[26px] px-2.5 rounded-control bg-transparent border-none cursor-pointer text-control text-neutral-650 hover:text-neutral-825 hover:bg-neutral-175"
       >
         <PlusIcon size={14} />
         Add item
@@ -297,7 +301,8 @@ function AddItemRow({
 
 /** A `## ` group. An untitled one — the run of items a flat list is, or the ones
  *  sitting above the first heading — renders as those items and nothing else: it
- *  has no heading to rename, delete, move, or leave an empty label behind. */
+ *  has no heading to rename, delete, move, leave an empty label behind, or fold
+ *  away behind. */
 function SectionBlock({
   list,
   section,
@@ -305,6 +310,9 @@ function SectionBlock({
   firstTitled,
   drag,
   startOpen,
+  collapsed,
+  onToggleCollapse,
+  hideChecked,
 }: {
   list: Checklist;
   section: ChecklistSection;
@@ -313,9 +321,13 @@ function SectionBlock({
   firstTitled: number;
   drag: DragState;
   startOpen?: boolean;
+  collapsed: boolean;
+  onToggleCollapse: () => void;
+  hideChecked: boolean;
 }) {
   const { renameSection, deleteSection, moveSection } = useData();
   const [renaming, setRenaming] = useState(false);
+  const bodyId = useId();
 
   const options: MenuOption[] = [{ id: 'rename', label: 'Rename section' }];
   if (index > firstTitled) {
@@ -372,10 +384,26 @@ function SectionBlock({
             />
           </div>
         ) : (
-          <div className="group/section flex items-center gap-2.5 px-2.5 mb-[6px]">
-            <SectionLabel tone="faint" className="min-w-0 truncate">
-              {section.title}
-            </SectionLabel>
+          // Pinned under the meter, which is a band outside this scroll box — so
+          // the offset here is zero and stays zero however that band wraps.
+          // Opaque, because the rows go under it rather than round it.
+          <div className="group/section sticky top-0 z-10 bg-white flex items-center gap-2.5 h-[26px] px-2.5 mb-[2px]">
+            <button
+              type="button"
+              onClick={onToggleCollapse}
+              aria-expanded={!collapsed}
+              aria-controls={bodyId}
+              className="flex min-w-0 items-center gap-[6px] shrink bg-transparent border-none p-0 cursor-pointer text-neutral-600 hover:text-neutral-825"
+            >
+              <ChevronDownIcon
+                size={13}
+                className={'shrink-0 transition-transform ' + (collapsed ? '-rotate-90' : '')}
+                aria-hidden="true"
+              />
+              <SectionLabel tone="faint" className="min-w-0 truncate">
+                {section.title}
+              </SectionLabel>
+            </button>
             {/* The rule carries the heading across to its count, so a group reads
                 as one band rather than as a label with a number stranded on the
                 far side of the row. */}
@@ -395,14 +423,22 @@ function SectionBlock({
             </Menu>
           </div>
         ))}
-      {section.items.map((item, i) => (
-        <React.Fragment key={`${item.line}-${item.text}`}>
-          {at(i) && <DropLine />}
-          <ItemRow list={list} item={item} sectionIndex={index} index={i} drag={drag} />
-        </React.Fragment>
-      ))}
-      {at(section.items.length) && <DropLine />}
-      <AddItemRow list={list} sectionIndex={index} startOpen={startOpen} />
+      {!collapsed && (
+        <div id={bodyId}>
+          {/* Mapped over every item and skipped rather than filtered: `i` is the
+              position `moveItem` takes, and a hidden row must not shift it. */}
+          {section.items.map((item, i) =>
+            hideChecked && item.done ? null : (
+              <React.Fragment key={`${item.line}-${item.text}`}>
+                {at(i) && <DropLine />}
+                <ItemRow list={list} item={item} sectionIndex={index} index={i} drag={drag} />
+              </React.Fragment>
+            ),
+          )}
+          {at(section.items.length) && <DropLine />}
+          <AddItemRow list={list} sectionIndex={index} startOpen={startOpen} />
+        </div>
+      )}
     </div>
   );
 }
@@ -590,31 +626,72 @@ function NewListTile({ onCommit, onCancel }: { onCommit: (name: string) => void;
   );
 }
 
-/** The strip above an open list's items: how far this run has got, and the way
- *  to end it. */
-function Meter({ list }: { list: Checklist }) {
+/** The band above an open list's items: how far this run has got, the two ways
+ *  to shorten what is on screen, and the way to end the run.
+ *
+ *  A band outside the scroll box rather than a `sticky` element inside it, for
+ *  the reason `ViewHeader` gives: the section headings pin under it, and sticky
+ *  would make them carry its height as a number — wrong the moment this wraps
+ *  on a phone. Out here their offset is zero. */
+function Meter({
+  list,
+  collapsible,
+  allCollapsed,
+  onToggleAll,
+  hideChecked,
+  onToggleHideChecked,
+}: {
+  list: Checklist;
+  /** False on a list with no headings: there is nothing to fold. */
+  collapsible: boolean;
+  allCollapsed: boolean;
+  onToggleAll: () => void;
+  hideChecked: boolean;
+  onToggleHideChecked: () => void;
+}) {
   const { startAgain } = useData();
   const { done, total } = checklistProgress(list);
   return (
-    <div className="flex items-center gap-2 px-2.5 pb-3">
-      <span className="w-[100px] h-[5px] rounded-full bg-neutral-400 overflow-hidden">
-        <span
-          className="block h-full rounded-full bg-success-500"
-          style={{ width: total ? `${Math.round((done / total) * 100)}%` : '0%' }}
-        />
-      </span>
-      <span className="text-control text-neutral-675 tabular-nums">
-        {done}/{total}
-      </span>
-      <span className="flex-1" />
-      {/* Only once something is ticked: on an untouched list the button would do
-          nothing but stamp a run that never happened. */}
-      {done > 0 && (
-        <Button size="xs" onClick={() => void startAgain(list)} title="Untick everything and record this run as finished">
-          <RotateCcwIcon size={12} />
-          Start again
-        </Button>
-      )}
+    <div className="shrink-0 border-b border-neutral-325 bg-white px-6 py-2">
+      <div className="max-w-[720px] mx-auto flex flex-wrap items-center gap-2 px-2.5">
+        <span className="w-[100px] h-[5px] rounded-full bg-neutral-400 overflow-hidden">
+          <span
+            className="block h-full rounded-full bg-success-500"
+            style={{ width: total ? `${Math.round((done / total) * 100)}%` : '0%' }}
+          />
+        </span>
+        <span className="text-control text-neutral-675 tabular-nums">
+          {done}/{total}
+        </span>
+        {done < total && (
+          <span className="hidden sm:inline text-meta text-neutral-625 tabular-nums">{total - done} left</span>
+        )}
+        <span className="flex-1" />
+        {collapsible && (
+          <Button size="xs" onClick={onToggleAll}>
+            {allCollapsed ? 'Expand all' : 'Collapse all'}
+          </Button>
+        )}
+        {total > 0 && (
+          <Button
+            size="xs"
+            variant={hideChecked ? 'primary' : 'secondary'}
+            aria-pressed={hideChecked}
+            onClick={onToggleHideChecked}
+            title="Leave only what is still to do"
+          >
+            Hide checked
+          </Button>
+        )}
+        {/* Only once something is ticked: on an untouched list the button would do
+            nothing but stamp a run that never happened. */}
+        {done > 0 && (
+          <Button size="xs" onClick={() => void startAgain(list)} title="Untick everything and record this run as finished">
+            <RotateCcwIcon size={12} />
+            Start again
+          </Button>
+        )}
+      </div>
     </div>
   );
 }
@@ -681,10 +758,32 @@ function OpenListHeader({ list, onBack }: { list: Checklist; onBack: () => void 
   );
 }
 
-/** The open list itself. Everything below the meter is what the expanded card
- *  held — the sections, the drag that crosses them, both "add" rows — at reading
- *  width rather than the board's, which the tiles need and item rows don't. */
-function OpenList({ list }: { list: Checklist }) {
+/** Which sections are folded away, keyed by heading rather than by the line the
+ *  heading sits on: a line number moves under you the moment an item is added
+ *  anywhere above it, and a fold that jumps to the next section on every tick is
+ *  worse than no fold at all. Two sections sharing a title fold together, which
+ *  is a fair reading of two sections with the same name. */
+type Folded = ReadonlySet<string>;
+
+/** The headings of the groups that are finished — every item ticked. An empty
+ *  group is not finished, it is empty. */
+function completeSections(list: Checklist): Set<string> {
+  return new Set(
+    list.sections
+      .filter((s) => s.title && s.items.length > 0 && s.items.every((i) => i.done))
+      .map((s) => s.title as string),
+  );
+}
+
+/** The open list itself: the meter band, then the sections, the drag that
+ *  crosses them and both "add" rows, at reading width rather than the board's,
+ *  which the tiles need and item rows don't.
+ *
+ *  It owns the scroll box rather than being handed one, because the band above
+ *  has to sit outside it — the whole point of the band is that it does not
+ *  scroll. `scrollRef` is passed down so the view can still place the scroll
+ *  when it swaps between the board and a list. */
+function OpenList({ list, scrollRef }: { list: Checklist; scrollRef: React.RefObject<HTMLDivElement | null> }) {
   const { moveItem } = useData();
   // The first item of this list was typed into the empty pane, so the row that
   // replaces it opens its field rather than making you reach for it again.
@@ -693,6 +792,30 @@ function OpenList({ list }: { list: Checklist }) {
   // in another, and only this sees both.
   const [dragLine, setDragLine] = useState<number | null>(null);
   const [target, setTarget] = useState<DropTarget | null>(null);
+  const [folded, setFolded] = useState<Folded>(new Set());
+  const [hideChecked, setHideChecked] = useState(false);
+
+  // A finished group folds itself, and unfolds again when it stops being
+  // finished — "start again" is what makes that second half matter, and without
+  // it a list would come back from a run with every group shut. Only the
+  // crossings are acted on, so a group you opened by hand stays open.
+  const wasComplete = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    const complete = completeSections(list);
+    const before = wasComplete.current;
+    wasComplete.current = complete;
+    const shut = [...complete].filter((title) => !before.has(title));
+    const opened = [...before].filter((title) => !complete.has(title));
+    if (shut.length === 0 && opened.length === 0) {
+      return;
+    }
+    setFolded((prev) => {
+      const next = new Set(prev);
+      shut.forEach((title) => next.add(title));
+      opened.forEach((title) => next.delete(title));
+      return next;
+    });
+  }, [list]);
 
   const drag: DragState = {
     line: dragLine,
@@ -717,31 +840,62 @@ function OpenList({ list }: { list: Checklist }) {
   const empty = list.sections.length === 1 && !list.sections[0].title && list.sections[0].items.length === 0;
   const firstTitled = list.sections.findIndex((s) => s.title);
 
+  const titles = list.sections.filter((s) => s.title).map((s) => s.title as string);
+  const allFolded = titles.length > 0 && titles.every((title) => folded.has(title));
+
   return (
-    <div className="max-w-[720px] mx-auto">
-      <Meter list={list} />
-      {empty ? (
-        <EmptyList list={list} onSeeded={() => setSeeded(true)} />
-      ) : (
-        <>
-          {list.sections.map((section, i) => (
-            <SectionBlock
-              key={section.line ?? `flat-${i}`}
-              list={list}
-              section={section}
-              index={i}
-              firstTitled={firstTitled}
-              drag={drag}
-              startOpen={seeded && i === 0}
-            />
-          ))}
-          <AddSectionRow list={list} />
-        </>
-      )}
-      {list.lastRun && (
-        <div className="px-2.5 pt-3 text-meta text-neutral-650">Last run {fmtShort(list.lastRun)}</div>
-      )}
-    </div>
+    <>
+      <Meter
+        list={list}
+        collapsible={titles.length > 0}
+        allCollapsed={allFolded}
+        onToggleAll={() => setFolded(allFolded ? new Set() : new Set(titles))}
+        hideChecked={hideChecked}
+        onToggleHideChecked={() => setHideChecked((on) => !on)}
+      />
+      <div ref={scrollRef} className="flex-1 overflow-auto px-6 pb-6">
+        {/* The gap above the first section belongs to the content, not to the
+            scroll box: a scroller's own `padding-top` offsets a `top-0` sticky
+            child by exactly that much — the inset resolves against the content
+            box, not the padding box — which left every heading pinned 18px low
+            with a row of the list showing in the gap above it. */}
+        <div className="max-w-[720px] mx-auto pt-[18px]">
+          {empty ? (
+            <EmptyList list={list} onSeeded={() => setSeeded(true)} />
+          ) : (
+            <>
+              {list.sections.map((section, i) => (
+                <SectionBlock
+                  key={section.line ?? `flat-${i}`}
+                  list={list}
+                  section={section}
+                  index={i}
+                  firstTitled={firstTitled}
+                  drag={drag}
+                  startOpen={seeded && i === 0}
+                  collapsed={!!section.title && folded.has(section.title)}
+                  onToggleCollapse={() =>
+                    setFolded((prev) => {
+                      const next = new Set(prev);
+                      const title = section.title as string;
+                      if (!next.delete(title)) {
+                        next.add(title);
+                      }
+                      return next;
+                    })
+                  }
+                  hideChecked={hideChecked}
+                />
+              ))}
+              <AddSectionRow list={list} />
+            </>
+          )}
+          {list.lastRun && (
+            <div className="px-2.5 pt-3 text-meta text-neutral-650">Last run {fmtShort(list.lastRun)}</div>
+          )}
+        </div>
+      </div>
+    </>
   );
 }
 
@@ -833,9 +987,9 @@ export function ListsView() {
     return (
       <div className="flex flex-1 flex-col min-h-0">
         <OpenListHeader list={openList} onBack={closeList} />
-        <div ref={scrollRef} className="flex-1 overflow-auto px-6 pt-[18px] pb-6">
-          <OpenList list={openList} />
-        </div>
+        {/* Keyed by list: what is folded, and whether checked rows are hidden,
+            belong to the list you are running, not to the pane. */}
+        <OpenList key={openList.id} list={openList} scrollRef={scrollRef} />
       </div>
     );
   }
