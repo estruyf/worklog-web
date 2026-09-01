@@ -141,6 +141,13 @@ const PERSIST_DEBOUNCE_MS = 800;
  *  and a couple of seconds is still "right away" to the person who did it. */
 const EVENT_SYNC_DEBOUNCE_MS = 2_000;
 
+/** How long an Undo offer stands: the toast carrying it stays this long (see
+ *  `useWorklogState`) and an event sync armed by the change it would reverse waits
+ *  it out. One constant for both, because the offer being on screen after the
+ *  commit has gone up is the bug — the undo then lands as a second commit
+ *  reverting the first, and while the push is in flight it doesn't land at all. */
+export const UNDO_WINDOW_MS = 8_000;
+
 class WorklogStore {
   private store = new Store();
   private fm = new FileMap();
@@ -151,6 +158,8 @@ class WorklogStore {
   /** True while `commitTimer` is the short event-triggered one rather than the
    *  `delayMinutes` one, so a later edit can't quietly push it back. */
   private eventSyncArmed = false;
+  /** When the Undo currently on offer expires; 0 when none is. */
+  private undoWindowUntil = 0;
   private persistTimer: ReturnType<typeof setTimeout> | undefined;
   private rolloverTimer: ReturnType<typeof setTimeout> | undefined;
   // A recovered snapshot loaded on open, held until the user restores or discards it.
@@ -249,6 +258,14 @@ class WorklogStore {
    *  Undo. Same channel the store's own sync/error toasts go out on, so there is
    *  exactly one toast on screen at a time whoever raised it. */
   notify(toast: ToastMessage): void {
+    // An Undo on offer holds back the sync it would reverse. The change is already
+    // in the file map and the recovery snapshot, so waiting costs nothing, and it
+    // is what keeps taking the offer up an edit that never left the device rather
+    // than a commit chasing a commit.
+    if (toast.action) {
+      this.undoWindowUntil = Date.now() + UNDO_WINDOW_MS;
+      this.deferEventSyncForUndo();
+    }
     for (const l of this.toastListeners) {
       l(toast);
     }
@@ -1006,18 +1023,35 @@ class WorklogStore {
       return;
     }
     if (onEvent) {
-      this.eventSyncArmed = true;
-      this.commitTimer = setTimeout(() => {
-        // Clear before syncing, not from inside `sync`: it returns early when a
-        // sync is already running, and a flag left set would block every later
-        // timer from being armed.
-        this.eventSyncArmed = false;
-        this.commitTimer = undefined;
-        void this.sync({ silent: true });
-      }, EVENT_SYNC_DEBOUNCE_MS);
+      this.armEventSync();
       return;
     }
     this.commitTimer = setTimeout(() => void this.sync({ silent: true }), this.autoSyncDelayMs(autoSync));
+  }
+
+  /** Arm the short event-triggered commit timer — never before an Undo still on
+   *  offer has run out. The timed auto-sync needs no such guard: its shortest
+   *  delay is a minute, well past any window. */
+  private armEventSync(): void {
+    this.eventSyncArmed = true;
+    this.commitTimer = setTimeout(() => {
+      // Clear before syncing, not from inside `sync`: it returns early when a
+      // sync is already running, and a flag left set would block every later
+      // timer from being armed.
+      this.eventSyncArmed = false;
+      this.commitTimer = undefined;
+      void this.sync({ silent: true });
+    }, Math.max(EVENT_SYNC_DEBOUNCE_MS, this.undoWindowUntil - Date.now()));
+  }
+
+  /** Push an already-armed event sync out past the Undo just offered — the usual
+   *  order, since the write that raises the toast arms the timer first. */
+  private deferEventSyncForUndo(): void {
+    if (!this.eventSyncArmed) {
+      return;
+    }
+    clearTimeout(this.commitTimer);
+    this.armEventSync();
   }
 
   /** Re-arm after a sync left files behind (it failed, or an edit landed mid-flight).

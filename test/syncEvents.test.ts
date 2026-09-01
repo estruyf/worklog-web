@@ -9,6 +9,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { AUTO_SYNC_EVENTS, autoSyncEventFor, parseAutoSyncEvents, syncsOnChange } from '../src/model/syncEvents';
 import type { AutoSyncEvent } from '../src/model/syncEvents';
+import { UNDO_WINDOW_MS } from '../src/data/worklogStore';
 import type { worklogStore as WorklogStore } from '../src/data/worklogStore';
 
 function configWith(autoSync: { enabled: boolean; delayMinutes: number; events: AutoSyncEvent[] }): string {
@@ -275,5 +276,81 @@ describe('syncing on an event', () => {
 
     expect(commitAttempts).toBe(0);
     expect(store.hasPending()).toBe(true);
+  });
+});
+
+// An Undo offered on a toast is only real while the change is still local. The
+// event debounce is 2s and the offer stands for 8s, so without this the commit
+// went up first and "Undo" quietly became "commit the opposite" — or, mid-push,
+// nothing at all.
+describe('an Undo on offer holds the event sync back', () => {
+  beforeEach(() => {
+    files = { 'clients/acme.md': '# Acme Corp\n' };
+    head = 'c0';
+    commits = 0;
+    commitFails = false;
+    commitAttempts = 0;
+    vi.stubGlobal('fetch', fakeFetch as unknown as typeof fetch);
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  async function closeWithUndo(store: typeof WorklogStore, taskId: string) {
+    await store.closeTask(taskId, '2026-08-03');
+    // What the UI does right after the write — the toast carrying the way back.
+    store.notify({ message: 'Completed', tone: 'success', action: { label: 'Undo', run: () => {} } });
+  }
+
+  it('does not commit while the offer is still on screen', async () => {
+    const store = await openStore({ enabled: false, delayMinutes: DELAY_MINUTES, events: ['taskStatus'] });
+    const task = await store.createTask({ title: 'Tick me off', clientId: 'acme' });
+
+    await closeWithUndo(store, task!.id);
+    await vi.advanceTimersByTimeAsync(EVENT_MS);
+
+    expect(commitAttempts).toBe(0);
+    expect(store.hasPending()).toBe(true);
+  });
+
+  it('commits once the offer has run out', async () => {
+    const store = await openStore({ enabled: false, delayMinutes: DELAY_MINUTES, events: ['taskStatus'] });
+    const task = await store.createTask({ title: 'Tick me off', clientId: 'acme' });
+
+    await closeWithUndo(store, task!.id);
+    await vi.advanceTimersByTimeAsync(UNDO_WINDOW_MS + EVENT_MS);
+
+    expect(commitAttempts).toBe(1);
+    expect(store.hasPending()).toBe(false);
+  });
+
+  it('takes the undo up as a local edit, so the branch never sees the close', async () => {
+    const store = await openStore({ enabled: false, delayMinutes: DELAY_MINUTES, events: ['taskStatus'] });
+    const task = await store.createTask({ title: 'Tick me off', clientId: 'acme' });
+    const before = task!.status;
+
+    await closeWithUndo(store, task!.id);
+    // Late in the window — where the old 2s debounce had already pushed.
+    await vi.advanceTimersByTimeAsync(UNDO_WINDOW_MS - 1_000);
+    await store.setStatus(task!.id, before);
+    await vi.advanceTimersByTimeAsync(UNDO_WINDOW_MS + EVENT_MS);
+
+    expect(commitAttempts).toBe(1);
+    expect(files['clients/acme.md']).toContain('Tick me off');
+    expect(files['archive/2026.md']).toBeUndefined();
+  });
+
+  it('leaves a toast without an offer alone', async () => {
+    const store = await openStore({ enabled: false, delayMinutes: DELAY_MINUTES, events: ['taskStatus'] });
+    const task = await store.createTask({ title: 'Tick me off', clientId: 'acme' });
+
+    await store.closeTask(task!.id, '2026-08-03');
+    store.notify({ message: 'Completed', tone: 'success' });
+    await vi.advanceTimersByTimeAsync(EVENT_MS);
+
+    expect(commitAttempts).toBe(1);
   });
 });

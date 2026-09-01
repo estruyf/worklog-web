@@ -15,6 +15,10 @@ Every change to Worklog, by day, newest first.
      both). Links must be absolute — a relative path resolves against /changelog and
      404s. -->
 
+## 2026-09-01
+
+- **Undo actually undoes** — the "Undo" on a toast now stays for 8 seconds, and auto-sync waits for it: ticking a task off no longer reaches GitHub while the offer is still on screen, so taking it up stays a local change instead of a second commit undoing the first.
+
 ## 2026-08-30
 
 - **Lists** — an open list packs into a screen: rows are half the height, sections fold (and a section you finish folds itself), the progress bar and the section heading stay put while you scroll, and "Hide checked" leaves only what you still have to do — so a 43-item packing list is something you read rather than scroll.
