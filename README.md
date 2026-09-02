@@ -140,7 +140,10 @@ The dashboard has these views:
   (vacation, out-of-office, …). Logging past your working day is allowed: the bar grows past the
   target and the day reads as over. On a day with nothing logged yet, **Same as yesterday** copies
   the last day you logged. See overdue, due, open, worked, and done tasks for that day; mark a task
-  worked, change its status, or close it. Anything past its due date sits in an **Overdue** block at
+  worked, change its status, or close it. **Board** above the open tasks opens them as a
+  full-window status board — a column per status, dragged between them, with each card saying
+  which client it belongs to and the closing column holding what you finished that day — over the
+  whole screen until you close it with **Esc** or the ×. Anything past its due date sits in an **Overdue** block at
   the very top. Alongside the to-do list, a **Links** panel gathers the reference links of the
   clients the day is about — whoever you logged time to, plus whoever owns a task the day shows —
   so their board or repo is one click away. It follows the day, and stays hidden when those
@@ -161,9 +164,16 @@ The dashboard has these views:
   of them: an event or a client, full/half day or custom hours, an optional note, and **Skip**
   weekends on or off. The range can cross months. It adds to those days rather than clearing them
   — anything already logged stays, unless it is the same client or event, which is replaced.
-- **Clients** — every client and its open tasks. Create/edit clients (name, accent colour, a
-  Markdown description and reference links — the repo, the shared drive, the ticket board — shown
-  above the client's tasks), add
+- **Clients** — every client and its open tasks, as a **List** or as a **Board**: the board draws
+  a column per status and moves a task by dragging its card between them — or by its status picker,
+  which is also the way on a phone. The expand button beside the switch throws the board over the
+  whole window, where each column scrolls on its own; **Esc** or the × brings the page back. The
+  last column is the closing one: dropping a card there completes and archives the task the same
+  way ticking it off does, **Undo** included, and the column lists what you closed most recently
+  (the rest is in the Archive). Drag one of those back out and it reopens into the column you
+  dropped it in. Create/edit clients (name, accent
+  colour, a Markdown description and reference links — the repo, the shared drive, the ticket board
+  — shown above the client's tasks), add
   tasks with links, tags, due dates, descriptions and subtasks. Retire a client you no longer work
   with by **archiving** it: it drops out of the pickers, the Day view and the log form, while every
   task and logged hour stays put and keeps reporting. Archived clients are listed (and restored)

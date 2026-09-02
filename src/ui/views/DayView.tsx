@@ -1,17 +1,22 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { isEventWorklogClientId } from '../../model/worklog';
 import { isGeneralTodoClientId } from '../../model/todos';
 import { collectOverdue } from '../../model/overdue';
-import type { ClientTaskGroup } from '../model';
+import type { ClientTaskGroup, WorklogRow } from '../model';
 import { useData, useUi } from '../context';
 import { useTaskListFilter } from '../hooks';
-import { Card } from '../primitives';
+import { BoardOverlay } from '../components';
+import type { BoardDone } from '../components';
+import { Card, EmptyState, LinkButton } from '../primitives';
 import { navigateToView } from '../router';
 import {
+  boardColumns,
+  BOARD_DONE_LIMIT,
   clientIdOf,
   deriveClientLinks,
   deriveDayBar,
   dueOn,
+  fmtLong,
   isDone,
   previousLoggedDay,
   relevantDayClientIds,
@@ -33,9 +38,11 @@ import {
   WorkedTasksSection,
 } from './day-view';
 
-/** Derives the selected day's logs, open/worked task groups and done list. */
-function useDayData() {
-  const { tasks, clients, allClients, colorOf, openRowsFor, logsFor, today } = useData();
+/** Derives the selected day's logs, open/worked task groups and done list.
+ *  `boardOpen` is the full-window board's state: it decides both whether the
+ *  board's rows are worth building and whether the status filter applies. */
+function useDayData(boardOpen: boolean) {
+  const { tasks, clients, allClients, statuses, clientName, colorOf, makeRow, openRowsFor, logsFor, today, openDetail, reopen, setTaskStatus } = useData();
   const { selectedDate } = useUi();
 
   const openTasks = useMemo(() => tasks.filter((t) => !isDone(t)), [tasks]);
@@ -48,7 +55,13 @@ function useDayData() {
     const loggedClientIds = new Set(dayLogs.filter((l) => !isEventWorklogClientId(l.clientId)).map((l) => l.clientId));
     return openTasks.filter((t) => loggedClientIds.has(clientIdOf(t)));
   }, [openTasks, dayLogs]);
-  const openFilter = useTaskListFilter(dayOpenTasks, { label: 'open tasks', resetKey: selectedDate });
+  // The board *is* the status grouping, so while it is up the status filter
+  // steps aside: narrowing to one status there would leave a board of one column.
+  const openFilter = useTaskListFilter(dayOpenTasks, {
+    label: 'open tasks',
+    resetKey: selectedDate,
+    withStatus: !boardOpen,
+  });
   const openGroups = useMemo<ClientTaskGroup[]>(
     () =>
       clients
@@ -65,6 +78,23 @@ function useDayData() {
         .filter((g) => g.count > 0),
     [clients, openFilter.tasks, openFilter.expanded, colorOf, openRowsFor],
   );
+  // Columns come from the day's open tasks rather than the filtered set, so one
+  // doesn't come and go while a query is being typed. Rows are flat — a board
+  // column is a set of cards, and each subtask carries its own status.
+  const openColumns = useMemo(() => boardColumns(statuses, dayOpenTasks), [statuses, dayOpenTasks]);
+  const openBoardRows = useMemo<WorklogRow[]>(
+    () => (boardOpen ? openFilter.tasks.map((t) => makeRow(t, false)) : []),
+    [boardOpen, openFilter.tasks, makeRow],
+  );
+  // The day's board mixes every client that logged time, so a card has to say
+  // whose it is — the list below says it with the card each group sits in.
+  const boardClientOf = useMemo(() => {
+    const clientByTask = new Map(dayOpenTasks.map((t) => [t.id, clientIdOf(t)]));
+    return (row: WorklogRow) => {
+      const id = clientByTask.get(row.id);
+      return id ? { name: clientName(id), color: colorOf(id) } : undefined;
+    };
+  }, [dayOpenTasks, clientName, colorOf]);
   // Anything already past its due date on the day being viewed. Judged against
   // the selected date rather than today, so the block always reads as "late as
   // of this day" wherever you are in the calendar.
@@ -87,6 +117,28 @@ function useDayData() {
     [openTasks, openRowsFor],
   );
   const doneTasks = useMemo(() => tasks.filter((t) => t.completed === selectedDate), [tasks, selectedDate]);
+  // The closing column: what was finished on the day being looked at. No date on
+  // the cards — every one of them carries the same one, which is the day itself.
+  const boardDone = useMemo<BoardDone>(() => {
+    if (!boardOpen) {
+      return { cards: [], more: 0 };
+    }
+    const shown = doneTasks.slice(0, BOARD_DONE_LIMIT);
+    return {
+      cards: shown.map((t) => {
+        const id = clientIdOf(t);
+        return {
+          id: t.id,
+          task: t,
+          client: id ? { name: clientName(id), color: colorOf(id) } : undefined,
+          onOpen: () => openDetail(t),
+          onReopen: () => void reopen(t),
+          onSelect: (statusId: string) => setTaskStatus(t.id, statusId),
+        };
+      }),
+      more: doneTasks.length - shown.length,
+    };
+  }, [boardOpen, doneTasks, clientName, colorOf, openDetail, reopen, setTaskStatus]);
   // Filtered before it is bucketed, so a client whose tasks all fall out of the
   // filter drops its card instead of leaving an empty one behind. The date keys
   // the reset: yesterday's filter has nothing to say about today's work.
@@ -134,6 +186,10 @@ function useDayData() {
     todoRows,
     linkGroups,
     openGroups,
+    openColumns,
+    openBoardRows,
+    boardClientOf,
+    boardDone,
     openFilter,
     doneTasks,
     workedGroups,
@@ -145,6 +201,7 @@ function useDayData() {
 export function DayView() {
   const { today, worklog, clients, allClients, colorOf, clientName, statusMeta, reopen, openDetail, typeLabel, hoursPerDay, todosPerPage, logState, setLogState, saveLog, removeLog, closeLogForm, editLog, openLogForm, copyDayLogs, openTaskFormForDue, dayNoteDirty, saveDayNote, saveDayNoteText, editDayNote, cancelDayNote, hasDayNote } = useData();
   const { selectedDate, setSelectedDate, setSelectedClient, setShowArchivedClients, editDayOpen, setEditDayOpen, dayNoteDraft, setDayNoteDraft, dayNoteMode, setDayNoteMode, dayNoteSavedAt } = useUi();
+  const [boardOpen, setBoardOpen] = useState(false);
   const {
     openTasks,
     dayLogs,
@@ -153,12 +210,16 @@ export function DayView() {
     todoRows,
     linkGroups,
     openGroups,
+    openColumns,
+    openBoardRows,
+    boardClientOf,
+    boardDone,
     openFilter,
     doneTasks,
     workedGroups,
     workedFilter,
     isTodaySel,
-  } = useDayData();
+  } = useDayData(boardOpen);
   const onSelectDate = setSelectedDate;
   // Select-then-navigate, the same shape the calendar uses to open a day. The
   // day can surface a client that has since been archived, so unfold the
@@ -298,6 +359,7 @@ export function DayView() {
                 openFilter={openFilter}
                 dayLogs={dayLogs}
                 openTasksCount={openTasksCount}
+                onOpenBoard={() => setBoardOpen(true)}
               />
 
               <WorkedTasksSection isTodaySel={isTodaySel} workedGroups={workedGroups} filter={workedFilter} />
@@ -314,6 +376,26 @@ export function DayView() {
           </div>
         </div>
       </div>
+
+      {boardOpen && (
+        <BoardOverlay
+          title={`Open tasks · ${fmtLong(selectedDate)}`}
+          columns={openColumns}
+          rows={openBoardRows}
+          done={boardDone}
+          clientOf={boardClientOf}
+          toolbar={openFilter.toolbar}
+          empty={
+            <EmptyState>
+              No open tasks match these filters.{' '}
+              <LinkButton size="inherit" onClick={openFilter.reset} className="italic underline">
+                Reset
+              </LinkButton>
+            </EmptyState>
+          }
+          onClose={() => setBoardOpen(false)}
+        />
+      )}
     </div>
   );
 }

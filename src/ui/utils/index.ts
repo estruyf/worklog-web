@@ -66,3 +66,5 @@ export { deriveClientLinks, relevantDayClientIds } from "./clientLinks";
 export type { ClientLinkGroup } from "./clientLinks";
 export { defaultTaskClientId } from "./newTaskDefaultClient";
 export { addTag, isNewTag, matchExistingTag, normalizeTag, removeTag, suggestTags } from "./tags";
+export { boardColumns, BOARD_DONE_LIMIT } from "./board";
+export type { BoardColumn } from "./board";

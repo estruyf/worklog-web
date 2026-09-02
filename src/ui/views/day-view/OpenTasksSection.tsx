@@ -1,7 +1,8 @@
 import React, { useMemo } from 'react';
+import { KanbanIcon } from 'lucide-react';
 import type { ClientTaskGroup } from '../../model';
 import type { WorklogEntry } from '../../../model/types';
-import { EmptyState, LinkButton, SectionLabel } from '../../primitives';
+import { Button, EmptyState, LinkButton, SectionLabel } from '../../primitives';
 import { TaskListToolbar, TaskTableGroups, useTaskTableLayout } from '../../components';
 import type { TaskListFilterApi } from '../../hooks';
 import { GroupCard } from './GroupCard';
@@ -15,6 +16,8 @@ type OpenTasksSectionProps = {
   openFilter: TaskListFilterApi;
   dayLogs: WorklogEntry[];
   openTasksCount: number;
+  /** Opens the same tasks as a board, in the full window. */
+  onOpenBoard: () => void;
 };
 
 export function OpenTasksSection({
@@ -24,6 +27,7 @@ export function OpenTasksSection({
   openFilter,
   dayLogs,
   openTasksCount,
+  onOpenBoard,
 }: OpenTasksSectionProps) {
   // Built across every client card, so the day's open work reads as one table
   // broken up by client rather than a column set per client.
@@ -35,7 +39,17 @@ export function OpenTasksSection({
 
   return (
     <>
-      <SectionLabel className="mb-[14px]">{isTodaySel ? 'Open tasks' : 'Edit day · open tasks'}</SectionLabel>
+      <div className="flex items-center justify-between gap-3 mb-[14px]">
+        <SectionLabel>{isTodaySel ? 'Open tasks' : 'Edit day · open tasks'}</SectionLabel>
+        {/* Offered only when there is something to lay out: a board of empty
+            columns is a worse answer than the line explaining why the list is. */}
+        {openGroups.length > 0 && (
+          <Button size="xs" onClick={onOpenBoard} title="See the day's open tasks as a board — a column per status">
+            <KanbanIcon size={13} />
+            Board
+          </Button>
+        )}
+      </div>
       {openFilter.toolbar && <TaskListToolbar {...openFilter.toolbar} surface="page" />}
       {openGroups.length > 0 && (
         <TaskTableGroups layout={layout} sort={openFilter.sort}>

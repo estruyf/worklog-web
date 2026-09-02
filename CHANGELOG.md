@@ -17,6 +17,22 @@ Every change to Worklog, by day, newest first.
 
 ## 2026-09-02
 
+- **A board view for a client's open tasks** — the Clients view now switches between **List** and
+  **Board**, where every status you have configured is a column and a task moves by dragging its
+  card into another one. Each card keeps its status picker, so a thumb or a keyboard moves a task
+  just as well as a drag does, and a status you removed while tasks were still in it gets a column
+  of its own rather than hiding them. The last column is the closing one: drop a card there and the
+  task is completed and archived, exactly as ticking it off would — toast, **Undo** and all — and
+  the column shows what you have recently closed rather than sitting empty. Drag one of those back
+  into a working column to reopen it straight into that column.
+- **The board can take the whole window** — the expand button beside the Clients view's List/Board
+  switch, and **Board** above the Day view's open tasks, throw the board over the entire screen with
+  the sidebar and the rails out of the way: more columns visible at once, and each one scrolling on
+  its own instead of the page scrolling past all of them. **Esc** or the × puts the page back, still
+  narrowed by whatever filters you had on. The day's board mixes clients, so every card there says
+  whose task it is, and its closing column is what you finished that day.
+- **Where the layout choice lives** — the Clients view remembers whether you left it on List or
+  Board, per device.
 - **The landing page is reachable while signed in** — visiting the homepage no longer bounces you straight into the app, so you can read the feature pages, the changelog link and the setup steps whenever you like. **Sign in** on that page takes you back into the app in one hop instead of sending you through GitHub again.
 - **Break a task into steps** — a task can now carry its own checklist: **Checklist** on a task starts one, ↵ adds the next, and each step is one line you tick off as you go. It is a checklist, not a to-do list — a step has no client, no due date and no status, and ticking them all doesn't close the task. **From a list** copies one of your Lists onto a task unticked, task rows show how far along you are ("2/5"), and a repeating task carries its steps onto the next occurrence with every box cleared. Written into your Markdown as a plain `### Checklist` checkbox list, so ticking one on GitHub means the same thing. Switch it off under **Settings → Task content**.
 - **Log a stretch of days at once** — in the Calendar, **Log a range** takes the run between two days and logs the same thing on all of them: vacation, a public holiday, a week on one client — full or half days, an optional note, and weekends skipped unless you say otherwise. The bar names the click it is waiting for ("now click the last day"), previews the run as you move across the grid, and shows both ends as **From**/**To** fields you can type into; a further click moves the nearer end rather than starting over. A fortnight away is now two clicks and one commit instead of fourteen visits to the Day view.

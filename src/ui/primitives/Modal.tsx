@@ -15,8 +15,13 @@ export type ModalLayer = 'base' | 'top';
 /** `center` hangs the panel from the top of the viewport; `sheet` docks it to the
  *  bottom edge at full width — the phone presentation for secondary content the
  *  page has set aside (the task rail, notes), where a floating panel would cover
- *  the very words it is about. `size` and `offset` are center-only. */
-export type ModalPlacement = 'center' | 'sheet';
+ *  the very words it is about. `full` takes the whole viewport, for the one thing
+ *  that is worth the entire screen rather than a panel on top of it: the board.
+ *  It lays its children out in a column and leaves the scrolling to them — a
+ *  board's columns scroll one at a time, not as one page. `size` and `offset` are
+ *  center-only, and `full` has no visible backdrop left to dismiss it with, so it
+ *  needs a × of its own. */
+export type ModalPlacement = 'center' | 'sheet' | 'full';
 export type ModalTitleSize = 'sm' | 'md';
 
 const SIZES: Record<ModalSize, string> = {
@@ -160,6 +165,15 @@ export function Modal({
       if (!panel.contains(active) && !loose) {
         return;
       }
+      // That check passes for *both* dialogs when one is rendered inside another
+      // — the filter sheets a toolbar opens from inside the full-window board are
+      // DOM descendants of it, not siblings at the app root like `ConfirmDialog`.
+      // The outer one subscribed first, so without this Escape would close the
+      // pair. The innermost dialog holding the focus owns the key.
+      const innermost = active instanceof Element ? active.closest('[role="dialog"], [role="alertdialog"]') : null;
+      if (innermost && innermost !== panel) {
+        return;
+      }
 
       const { onClose: close, captureKeys: swallow } = handlers.current;
       if (swallow) {
@@ -202,7 +216,7 @@ export function Modal({
       onClick={onClose}
       className={cn(
         'fixed inset-0 bg-overlay flex',
-        placement === 'center' ? cn('items-start justify-center', OFFSETS[offset]) : 'items-end',
+        placement === 'center' ? cn('items-start justify-center', OFFSETS[offset]) : placement === 'sheet' ? 'items-end' : 'items-stretch',
         LAYERS[layer],
       )}
     >
@@ -225,14 +239,22 @@ export function Modal({
               SIZES[size],
               padding === 'md' && 'px-7.5 pt-6.5 pb-6',
             )
-            : cn(
-              // The sheet scrolls itself: its content is a page section that can
-              // be any length, and the cap is what keeps the backdrop — the way
-              // out under a thumb — on screen. The bottom padding rides above
-              // the phone's home-indicator inset.
-              'w-full rounded-t-card shadow-[0_-16px_48px_rgba(0,0,0,0.3)] max-h-[85dvh] overflow-y-auto overscroll-contain',
-              padding === 'md' && 'px-5 pt-5 pb-[calc(24px+env(safe-area-inset-bottom))]',
-            ),
+            : placement === 'sheet'
+              ? cn(
+                // The sheet scrolls itself: its content is a page section that can
+                // be any length, and the cap is what keeps the backdrop — the way
+                // out under a thumb — on screen. The bottom padding rides above
+                // the phone's home-indicator inset.
+                'w-full rounded-t-card shadow-[0_-16px_48px_rgba(0,0,0,0.3)] max-h-[85dvh] overflow-y-auto overscroll-contain',
+                padding === 'md' && 'px-5 pt-5 pb-[calc(24px+env(safe-area-inset-bottom))]',
+              )
+              : cn(
+                // No corner and no shadow: there is nothing behind it to lift it
+                // off. `min-w-0` so a child that scrolls sideways scrolls rather
+                // than widening the panel past the viewport.
+                'w-full min-w-0 flex flex-col',
+                padding === 'md' && 'px-5 pt-5 pb-[calc(20px+env(safe-area-inset-bottom))]',
+              ),
           className,
         )}
       >
