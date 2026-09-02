@@ -46,6 +46,9 @@ export interface TaskListFilters {
   query: string;
   /** Tags a task must carry — all of them. Empty means no tag filter. */
   tags: string[];
+  /** A single client id, or '' for every client. Only offered by the lists that
+   *  span more than one — a client's own list would be one option. */
+  client: string;
   /** A single status id, or '' for every status. */
   status: string;
   /** A single priority bucket id, or '' for every priority. `normal` selects the
@@ -61,6 +64,7 @@ export interface TaskListFilters {
 export const DEFAULT_TASK_LIST_FILTERS: TaskListFilters = {
   query: '',
   tags: [],
+  client: '',
   status: '',
   priority: '',
   sort: DEFAULT_TASK_SORT.key,
@@ -120,6 +124,8 @@ export interface TaskListDerived {
   /** The same, per priority bucket — counted with the priority filter itself
    *  lifted. Unset tasks count under `normal`. */
   priorityCounts: Record<string, number>;
+  /** The same, per client id — for the lists that span several. */
+  clientCounts: Record<string, number>;
 }
 
 /** Whether `q` (already trimmed + lower-cased) occurs anywhere a human would
@@ -198,28 +204,37 @@ export function deriveTaskList(tasks: Task[], filters: TaskListFilters, deps: Ta
   const { clientName, statusOrder, defaultSort = DEFAULT_TASK_SORT } = deps;
   const q = filters.query.trim().toLowerCase();
   const tags = filters.tags.map((t) => t.toLowerCase());
-  const filtered = q !== '' || tags.length > 0 || filters.status !== '' || filters.priority !== '';
+  const filtered = q !== '' || tags.length > 0 || filters.client !== '' || filters.status !== '' || filters.priority !== '';
   const dirty = filtered || filters.sort !== defaultSort.key || filters.dir !== defaultSort.dir;
 
-  // Query + tags only: the two picker facets are counted from here, each with its
-  // own selection lifted but the other one applied — so a number is exactly the
-  // list that picking it would leave.
+  // Query + tags only: the picker facets are counted from here, each with its own
+  // selection lifted but the others applied — so a number is exactly the list
+  // that picking it would leave.
   const facetMatched = tasks.filter((t) => matchesTaskQuery(t, q, clientName(clientIdOf(t))) && hasEveryTag(t, tags));
+  const matchesClient = (t: Task) => !filters.client || clientIdOf(t) === filters.client;
   const matchesStatus = (t: Task) => !filters.status || t.status === filters.status;
   const matchesPriority = (t: Task) => !filters.priority || priorityBucket(t.priority) === filters.priority;
 
   const statusCounts: Record<string, number> = {};
-  for (const t of facetMatched.filter(matchesPriority)) {
+  for (const t of facetMatched.filter((t) => matchesPriority(t) && matchesClient(t))) {
     statusCounts[t.status] = (statusCounts[t.status] ?? 0) + 1;
   }
 
   const priorityCounts: Record<string, number> = {};
-  for (const t of facetMatched.filter(matchesStatus)) {
+  for (const t of facetMatched.filter((t) => matchesStatus(t) && matchesClient(t))) {
     const bucket = priorityBucket(t.priority);
     priorityCounts[bucket] = (priorityCounts[bucket] ?? 0) + 1;
   }
 
-  const matched = facetMatched.filter((t) => matchesStatus(t) && matchesPriority(t));
+  const clientCounts: Record<string, number> = {};
+  for (const t of facetMatched.filter((t) => matchesStatus(t) && matchesPriority(t))) {
+    const id = clientIdOf(t);
+    if (id) {
+      clientCounts[id] = (clientCounts[id] ?? 0) + 1;
+    }
+  }
+
+  const matched = facetMatched.filter((t) => matchesClient(t) && matchesStatus(t) && matchesPriority(t));
 
   // Counted over what survived every filter, so an unselected chip's number is
   // exactly the list it would leave behind.
@@ -286,5 +301,6 @@ export function deriveTaskList(tasks: Task[], filters: TaskListFilters, deps: Ta
     tagCounts,
     statusCounts,
     priorityCounts,
+    clientCounts,
   };
 }

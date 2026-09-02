@@ -20,6 +20,11 @@ export interface TaskListToolbarProps {
   label: string;
   query: string;
   onQuery: (v: string) => void;
+  client: string;
+  onClient: (v: string) => void;
+  /** `null` for a list that is one client's already — the Day view's board is
+   *  the case it exists for, where the cards lose the grouping the list had. */
+  clientOptions: TaskStatusOption[] | null;
   status: string;
   onStatus: (v: string) => void;
   /** `null` for a list whose status carries no information (general to-dos),
@@ -127,6 +132,9 @@ export function TaskListToolbar({
   label,
   query,
   onQuery,
+  client,
+  onClient,
+  clientOptions,
   status,
   onStatus,
   statusOptions,
@@ -170,7 +178,7 @@ export function TaskListToolbar({
   const DirIcon = dir === 'asc' ? ArrowUpIcon : ArrowDownIcon;
   // What the phone's one trigger has to stand in for, since the three menus it
   // replaces are not on screen to show their own state.
-  const activeFilters = (status ? 1 : 0) + (priority ? 1 : 0) + selectedTags.length;
+  const activeFilters = (client ? 1 : 0) + (status ? 1 : 0) + (priority ? 1 : 0) + selectedTags.length;
 
   // Both belong to the order, so they live under it rather than beside it: two
   // link buttons in the bar competed with the filters for a glance they had not
@@ -279,6 +287,17 @@ export function TaskListToolbar({
               for both. */}
           <div className="hidden @xl:flex flex-1 min-w-0 items-center gap-1">
             <span className="hidden @4xl:block w-px h-5 mr-2 shrink-0 bg-neutral-400" aria-hidden="true" />
+            {/* First, because it is the coarsest cut: which of the day's clients
+                you are looking at, before which state its work is in. */}
+            {clientOptions && (
+              <FilterMenu
+                anyLabel="All clients"
+                value={client}
+                options={clientOptions}
+                onSelect={onClient}
+                label={`Filter ${label} by client`}
+              />
+            )}
             {statusOptions && (
               <FilterMenu
                 anyLabel="All statuses"
@@ -349,6 +368,9 @@ export function TaskListToolbar({
       {sheet === 'filters' && (
         <FilterSheet
           onClose={() => setSheet(null)}
+          client={client}
+          onClient={onClient}
+          clientOptions={clientOptions}
           status={status}
           onStatus={onStatus}
           statusOptions={statusOptions}

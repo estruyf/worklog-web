@@ -1,7 +1,7 @@
 // Filter + sort state for one open-task list, plus the props its toolbar renders
 // from. The rules themselves live in `ui/utils/taskFilter`.
 //
-// The narrowing (query, tags, status, priority) is session-scoped on purpose: it
+// The narrowing (query, tags, client, status, priority) is session-scoped on purpose: it
 // belongs to the list you are looking at right now, and a restored query would
 // make a list read as empty for no visible reason on the next open. The *order*
 // is not — it is a standing preference, so it comes from `config.defaultTaskSort`
@@ -23,6 +23,12 @@ export interface TaskListFilterOptions {
   /** Off for lists whose status carries no information (general to-dos are open
    *  or closed only), which drops the status control entirely. */
   withStatus?: boolean;
+  /** On for a list that spans clients and doesn't group by them — the day's
+   *  board, where every task is a card in a status column and the client card
+   *  that used to say whose it is has gone. Off, the control isn't offered:
+   *  every other list here is one client's, or already grouped into one card per
+   *  client. */
+  withClient?: boolean;
   /** Changing this clears the filters: the Clients view swaps the whole list
    *  under the toolbar when another client is picked, and a query left over from
    *  the previous one reads as "this client has no tasks". */
@@ -43,6 +49,12 @@ export interface TaskListFilterApi {
    *  render those open, whatever the reader folded shut. Hand it to
    *  `openRowsFor` alongside `tasks`. */
   expanded: ReadonlySet<string>;
+  /** The client id the list is narrowed to, '' for all of them. Exposed because
+   *  a view may hold something the toolbar doesn't own that has to narrow the
+   *  same way — the day's board filters its closed column by it, and a board
+   *  showing one client's open work beside another's finished work would read
+   *  as a fault. */
+  client: string;
   /** Back to no narrowing, in the user's configured order. */
   reset: () => void;
   /** The order, and the reorder a column header fires — the same state the
@@ -55,7 +67,7 @@ export interface TaskListFilterApi {
 }
 
 export function useTaskListFilter(tasks: Task[], options: TaskListFilterOptions = {}): TaskListFilterApi {
-  const { label = 'tasks', withStatus = true, resetKey, minItems = 2 } = options;
+  const { label = 'tasks', withStatus = true, withClient = false, resetKey, minItems = 2 } = options;
   const { clientName, statuses, statusMeta, defaultTaskSort: savedSort, saveSettings } = useData();
 
   // Re-memoized from the two values, not taken as the snapshot's object:
@@ -92,8 +104,8 @@ export function useTaskListFilter(tasks: Task[], options: TaskListFilterOptions 
 
   const statusOrder = useMemo(() => statuses.map((s) => s.id), [statuses]);
   const effective = useMemo<TaskListFilters>(
-    () => (withStatus ? filters : { ...filters, status: '' }),
-    [filters, withStatus],
+    () => ({ ...filters, status: withStatus ? filters.status : '', client: withClient ? filters.client : '' }),
+    [filters, withStatus, withClient],
   );
 
   const derived = useMemo(
@@ -110,6 +122,7 @@ export function useTaskListFilter(tasks: Task[], options: TaskListFilterOptions 
   );
 
   const setQuery = useCallback((query: string) => setFilters((f) => ({ ...f, query })), []);
+  const setClient = useCallback((client: string) => setFilters((f) => ({ ...f, client })), []);
   const setStatus = useCallback((status: string) => setFilters((f) => ({ ...f, status })), []);
   const setPriority = useCallback((priority: string) => setFilters((f) => ({ ...f, priority })), []);
   const setSort = useCallback((sort: TaskSortKey) => setFilters((f) => ({ ...f, sort })), []);
@@ -156,6 +169,26 @@ export function useTaskListFilter(tasks: Task[], options: TaskListFilterOptions 
     ];
   }, [withStatus, statuses, derived.statusCounts, filters.status, statusMeta]);
 
+  // Only the clients the list actually holds, plus whichever one is picked so a
+  // filter narrowed to nothing can be undone. Fewer than two is no choice at all
+  // — the control would offer "All clients" and the one client you are looking
+  // at — so the picker isn't drawn.
+  const clientOptions = useMemo<TaskStatusOption[] | null>(() => {
+    if (!withClient) {
+      return null;
+    }
+    const ids = new Set(Object.keys(derived.clientCounts));
+    if (filters.client) {
+      ids.add(filters.client);
+    }
+    if (ids.size < 2) {
+      return null;
+    }
+    return [...ids]
+      .map((id) => ({ id, label: clientName(id) || id, count: derived.clientCounts[id] ?? 0 }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [withClient, derived.clientCounts, filters.client, clientName]);
+
   // Offered on every list, to-dos included — unlike status, priority says
   // something about a to-do too — but only once something in the list carries
   // one. A list where everything is normal would get a picker whose single option
@@ -184,6 +217,9 @@ export function useTaskListFilter(tasks: Task[], options: TaskListFilterOptions 
       label,
       query: filters.query,
       onQuery: setQuery,
+      client: effective.client,
+      onClient: setClient,
+      clientOptions,
       status: effective.status,
       onStatus: setStatus,
       statusOptions,
@@ -210,11 +246,14 @@ export function useTaskListFilter(tasks: Task[], options: TaskListFilterOptions 
     label,
     filters,
     defaultSort.key,
+    effective.client,
     effective.status,
+    clientOptions,
     statusOptions,
     priorityOptions,
     derived,
     setQuery,
+    setClient,
     setStatus,
     setPriority,
     setSort,
@@ -231,6 +270,7 @@ export function useTaskListFilter(tasks: Task[], options: TaskListFilterOptions 
     total: derived.total,
     filtered: derived.filtered,
     expanded: derived.expanded,
+    client: effective.client,
     reset,
     sort,
     toolbar,

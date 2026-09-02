@@ -30,7 +30,9 @@ Every change to Worklog, by day, newest first.
   the sidebar and the rails out of the way: more columns visible at once, and each one scrolling on
   its own instead of the page scrolling past all of them. **Esc** or the × puts the page back, still
   narrowed by whatever filters you had on. The day's board mixes clients, so every card there says
-  whose task it is, and its closing column is what you finished that day.
+  whose task it is — and a **client** filter appears in its toolbar, so a day split across two or
+  three of them can be read one at a time. Its closing column is what you finished that day, and
+  narrows to the same client.
 - **Where the layout choice lives** — the Clients view remembers whether you left it on List or
   Board, per device.
 - **The landing page is reachable while signed in** — visiting the homepage no longer bounces you straight into the app, so you can read the feature pages, the changelog link and the setup steps whenever you like. **Sign in** on that page takes you back into the app in one hop instead of sending you through GitHub again.

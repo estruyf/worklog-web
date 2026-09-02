@@ -143,7 +143,9 @@ The dashboard has these views:
   worked, change its status, or close it. **Board** above the open tasks opens them as a
   full-window status board — a column per status, dragged between them, with each card saying
   which client it belongs to and the closing column holding what you finished that day — over the
-  whole screen until you close it with **Esc** or the ×. Anything past its due date sits in an **Overdue** block at
+  whole screen until you close it with **Esc** or the ×. Its toolbar adds a **client** filter (the
+  one place a list here spans clients without grouping by them), which narrows the closed column
+  along with the open ones. Anything past its due date sits in an **Overdue** block at
   the very top. Alongside the to-do list, a **Links** panel gathers the reference links of the
   clients the day is about — whoever you logged time to, plus whoever owns a task the day shows —
   so their board or repo is one click away. It follows the day, and stays hidden when those

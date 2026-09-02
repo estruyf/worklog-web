@@ -81,6 +81,9 @@ function SheetFacet({
 
 export function FilterSheet({
   onClose,
+  client,
+  onClient,
+  clientOptions,
   status,
   onStatus,
   statusOptions,
@@ -93,6 +96,9 @@ export function FilterSheet({
   onReset,
 }: {
   onClose: () => void;
+  client: string;
+  onClient: (v: string) => void;
+  clientOptions: TaskStatusOption[] | null;
   status: string;
   onStatus: (v: string) => void;
   statusOptions: TaskStatusOption[] | null;
@@ -119,6 +125,9 @@ export function FilterSheet({
       </div>
 
       <div className="-mx-1" role="menu" aria-label="Filters">
+        {clientOptions && (
+          <SheetFacet title="Client" anyLabel="All clients" value={client} options={clientOptions} onSelect={onClient} />
+        )}
         {statusOptions && (
           <SheetFacet title="Status" anyLabel="All statuses" value={status} options={statusOptions} onSelect={onStatus} />
         )}

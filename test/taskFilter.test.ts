@@ -227,6 +227,50 @@ describe('deriveTaskList', () => {
   });
 });
 
+// The client facet exists for the one list that spans clients without grouping
+// by them — the day's board. It has to behave like the other two pickers: its
+// own count is taken with itself lifted, and the others' counts are taken with
+// it applied, so every number is exactly the list that picking it would leave.
+describe('deriveTaskList and the client facet', () => {
+  it('narrows to one client', () => {
+    expect(ids(deriveTaskList(tasks, filters({ client: 'globex' }), deps))).toEqual(['delta']);
+    expect(ids(deriveTaskList(tasks, filters({ client: 'acme' }), deps)).sort()).toEqual(['alpha', 'bravo', 'charlie']);
+  });
+
+  it('counts as a filter on its own', () => {
+    const d = deriveTaskList(tasks, filters({ client: 'globex' }), deps);
+    expect(d.filtered).toBe(true);
+    // The denominator is still the whole list — "1 of 4", not "1 of 1".
+    expect(d.count).toBe(1);
+    expect(d.total).toBe(4);
+  });
+
+  it('counts each client with the client filter itself lifted', () => {
+    const d = deriveTaskList(tasks, filters({ client: 'globex' }), deps);
+    expect(d.clientCounts).toEqual({ acme: 3, globex: 1 });
+  });
+
+  it('counts each client with the other filters applied', () => {
+    const d = deriveTaskList(tasks, filters({ status: 'open' }), deps);
+    expect(d.clientCounts).toEqual({ acme: 1, globex: 1 });
+  });
+
+  it('narrows what the status and priority pickers promise', () => {
+    const d = deriveTaskList(tasks, filters({ client: 'globex' }), deps);
+    expect(d.statusCounts).toEqual({ open: 1 });
+    expect(d.priorityCounts).toEqual({ normal: 1 });
+  });
+
+  it('drops a client another filter has emptied out', () => {
+    const d = deriveTaskList(tasks, filters({ client: 'globex', status: 'blocked' }), deps);
+    expect(d.count).toBe(0);
+    // Globex has nothing blocked, so it isn't in the counts — offering it would
+    // promise a list that isn't there. Keeping the *picked* one selectable so the
+    // filter can be undone is `useTaskListFilter`'s job, not this one's.
+    expect(d.clientCounts).toEqual({ acme: 1 });
+  });
+});
+
 // A subtask is drawn as part of the task above it, not as another line on the
 // list — so it is not counted like one, not ordered like one, and cannot be shown
 // without the parent that says what it belongs to.

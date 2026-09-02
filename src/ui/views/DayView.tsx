@@ -55,12 +55,16 @@ function useDayData(boardOpen: boolean) {
     const loggedClientIds = new Set(dayLogs.filter((l) => !isEventWorklogClientId(l.clientId)).map((l) => l.clientId));
     return openTasks.filter((t) => loggedClientIds.has(clientIdOf(t)));
   }, [openTasks, dayLogs]);
-  // The board *is* the status grouping, so while it is up the status filter
-  // steps aside: narrowing to one status there would leave a board of one column.
+  // The board *is* the status grouping, so while it is up the status filter steps
+  // aside: narrowing to one status there would leave a board of one column. The
+  // client filter is the other way round — the list groups the day's work into a
+  // card per client, and the board doesn't, so that is the one place the day
+  // needs a way to narrow to one of them.
   const openFilter = useTaskListFilter(dayOpenTasks, {
     label: 'open tasks',
     resetKey: selectedDate,
     withStatus: !boardOpen,
+    withClient: boardOpen,
   });
   const openGroups = useMemo<ClientTaskGroup[]>(
     () =>
@@ -117,13 +121,17 @@ function useDayData(boardOpen: boolean) {
     [openTasks, openRowsFor],
   );
   const doneTasks = useMemo(() => tasks.filter((t) => t.completed === selectedDate), [tasks, selectedDate]);
+  const boardClient = openFilter.client;
   // The closing column: what was finished on the day being looked at. No date on
   // the cards — every one of them carries the same one, which is the day itself.
   const boardDone = useMemo<BoardDone>(() => {
     if (!boardOpen) {
       return { cards: [], more: 0 };
     }
-    const shown = doneTasks.slice(0, BOARD_DONE_LIMIT);
+    // Narrowed by the board's client filter along with the open columns: one
+    // client's open work beside everyone's finished work would read as a fault.
+    const closed = boardClient ? doneTasks.filter((t) => clientIdOf(t) === boardClient) : doneTasks;
+    const shown = closed.slice(0, BOARD_DONE_LIMIT);
     return {
       cards: shown.map((t) => {
         const id = clientIdOf(t);
@@ -136,9 +144,9 @@ function useDayData(boardOpen: boolean) {
           onSelect: (statusId: string) => setTaskStatus(t.id, statusId),
         };
       }),
-      more: doneTasks.length - shown.length,
+      more: closed.length - shown.length,
     };
-  }, [boardOpen, doneTasks, clientName, colorOf, openDetail, reopen, setTaskStatus]);
+  }, [boardOpen, boardClient, doneTasks, clientName, colorOf, openDetail, reopen, setTaskStatus]);
   // Filtered before it is bucketed, so a client whose tasks all fall out of the
   // filter drops its card instead of leaving an empty one behind. The date keys
   // the reset: yesterday's filter has nothing to say about today's work.
