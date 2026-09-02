@@ -1,5 +1,5 @@
 import React from 'react';
-import { PaperclipIcon, PlusIcon, SparklesIcon } from 'lucide-react';
+import { ListChecksIcon, PaperclipIcon, PlusIcon, SparklesIcon } from 'lucide-react';
 import type { Task } from '../../../model/types';
 import { useData, useUi } from '../../context';
 import { canHaveSubtasks, isDone } from '../../utils';
@@ -43,9 +43,9 @@ function ContentAction({
  *
  *  Each entry drops out once its block exists, because the block then carries its
  *  own way of adding to it — the description's Edit, the attachments' drop zone,
- *  the prompt queue's "+ Prompt", the subtask header's button. A task with all
- *  four renders nothing here, which is the point: the row is an empty state, not
- *  a toolbar. */
+ *  the prompt queue's "+ Prompt", the checklist's "Add an item", the subtask
+ *  header's button. A task with all of them renders nothing here, which is the
+ *  point: the row is an empty state, not a toolbar. */
 export function TaskContentActions({
   task,
   hasDescription,
@@ -56,7 +56,7 @@ export function TaskContentActions({
   hasSubtasks: boolean;
 }) {
   const { editDescription, openSubtaskForm, features } = useData();
-  const { promptComposing, setPromptComposing } = useUi();
+  const { promptComposing, setPromptComposing, checklistComposing, setChecklistComposing } = useUi();
   const { openFilePicker, uploading, fileInput } = useAttachmentUpload(task.id);
   // Switched off in Settings, the block is not offered at all. What a task
   // already holds stays in its Markdown — see `FeatureConfig`.
@@ -65,10 +65,13 @@ export function TaskContentActions({
   // as soon as the flag is set — so the offer goes away exactly when the queue
   // appears.
   const showPrompt = features.prompts && (task.prompts ?? []).length === 0 && !promptComposing;
+  // Same shape as the prompt offer above: `TaskChecklistSection` renders itself
+  // the moment the flag is set, and carries its own "Add an item" from then on.
+  const showChecklist = features.checklist && (task.checklist ?? []).length === 0 && !checklistComposing;
   // The two rules the subtask list's own button already follows: the tree is one
   // level deep, and a closed task keeps its list as a record rather than growing.
   const showSubtask = !hasSubtasks && canHaveSubtasks(task) && !isDone(task);
-  if (hasDescription && !showAttach && !showPrompt && !showSubtask) {
+  if (hasDescription && !showAttach && !showPrompt && !showChecklist && !showSubtask) {
     return null;
   }
   return (
@@ -99,6 +102,14 @@ export function TaskContentActions({
           label="Prompt"
           title="Write a prompt to run against this task later"
           onClick={() => setPromptComposing(true)}
+        />
+      )}
+      {showChecklist && (
+        <ContentAction
+          icon={<ListChecksIcon size={15} />}
+          label="Checklist"
+          title="Break this task into steps to tick off"
+          onClick={() => setChecklistComposing(true)}
         />
       )}
       {showSubtask && (

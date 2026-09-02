@@ -3,7 +3,7 @@
 // refreshes the cache + app state afterwards.
 
 import { Store } from "../store";
-import type { Recurrence, Task, TaskLink, TaskNote, TaskPrompt } from "../model/types";
+import type { Recurrence, Task, TaskChecklistItem, TaskLink, TaskNote, TaskPrompt } from "../model/types";
 import {
   inProgressStatusId,
   isTerminalStatus,
@@ -289,6 +289,117 @@ export async function deleteTaskPrompt(
   return store.db.getTask(taskId) ?? task;
 }
 
+/** Put steps on a task's checklist, in the order given, after whatever is
+ *  already there. Takes a list rather than one line because the two ways in are
+ *  typing a step and copying a saved list onto the task, and the second must be
+ *  one write — twenty items added one at a time is twenty rebuilds and twenty
+ *  entries in the commit that follows.
+ *
+ *  Blank lines are skipped rather than refused: a copied list can hold one, and
+ *  losing it is better than losing the nineteen steps around it. */
+export async function addTaskChecklist(
+  store: Store,
+  taskId: string,
+  texts: readonly string[],
+): Promise<Task> {
+  const task = store.db.getTask(taskId);
+  if (!task) {
+    throw new Error(`Task ${taskId} not found.`);
+  }
+  const items: TaskChecklistItem[] = texts
+    .map((text) => itemText(text))
+    .filter(Boolean)
+    .map((text) => ({ text, done: false }));
+  if (items.length === 0) {
+    return task;
+  }
+  await updateInPlace(store, task, (t) => ({
+    ...t,
+    checklist: [...(t.checklist ?? []), ...items],
+  }));
+  await store.rebuild("addTaskChecklist");
+  return store.db.getTask(taskId) ?? task;
+}
+
+/** Tick a step off, or put it back. Nothing follows from the last one being
+ *  ticked: closing the task is the status's job, and a checklist that closed it
+ *  would archive the task out from under whoever was still reading it. */
+export async function setTaskChecklistItemDone(
+  store: Store,
+  taskId: string,
+  index: number,
+  done: boolean,
+): Promise<Task> {
+  return editChecklist(store, taskId, index, "setTaskChecklistItem", (item) => ({ ...item, done }));
+}
+
+/** Rewrite one step's words, keeping its tick. */
+export async function updateTaskChecklistItem(
+  store: Store,
+  taskId: string,
+  index: number,
+  text: string,
+): Promise<Task> {
+  const clean = itemText(text);
+  if (!clean) {
+    throw new Error("A checklist item needs some text.");
+  }
+  return editChecklist(store, taskId, index, "updateTaskChecklistItem", (item) => ({ ...item, text: clean }));
+}
+
+/** Remove one step by its 0-based index in the task's checklist. */
+export async function deleteTaskChecklistItem(
+  store: Store,
+  taskId: string,
+  index: number,
+): Promise<Task> {
+  const task = store.db.getTask(taskId);
+  if (!task) {
+    throw new Error(`Task ${taskId} not found.`);
+  }
+  await updateInPlace(store, task, (t) => {
+    const checklist = [...(t.checklist ?? [])];
+    if (index >= 0 && index < checklist.length) {
+      checklist.splice(index, 1);
+    }
+    return { ...t, checklist };
+  });
+  await store.rebuild("deleteTaskChecklistItem");
+  return store.db.getTask(taskId) ?? task;
+}
+
+/** Rewrite one item in place. The index is checked here rather than in each
+ *  caller: an edit aimed past the end of the list is a stale row on screen, and
+ *  saying so beats silently writing nothing. */
+async function editChecklist(
+  store: Store,
+  taskId: string,
+  index: number,
+  reason: string,
+  rewrite: (item: TaskChecklistItem) => TaskChecklistItem,
+): Promise<Task> {
+  const task = store.db.getTask(taskId);
+  if (!task) {
+    throw new Error(`Task ${taskId} not found.`);
+  }
+  if (index < 0 || index >= (task.checklist ?? []).length) {
+    throw new Error(`Task ${taskId} has no checklist item at index ${index}.`);
+  }
+  await updateInPlace(store, task, (t) => {
+    const next = [...(t.checklist ?? [])];
+    next[index] = rewrite(next[index]);
+    return { ...t, checklist: next };
+  });
+  await store.rebuild(reason);
+  return store.db.getTask(taskId) ?? task;
+}
+
+/** A checklist item is one line: the item *is* its line, so a newline in it
+ *  would serialize as a second step. */
+function itemText(text: string): string {
+  return text.replace(/\s+/g, " ").trim();
+}
+
 /** A title is one line: the entry line is where it is written, so a newline in it
  *  would serialize as a second prompt. */
 function promptTitle(title: string): string {
@@ -512,6 +623,10 @@ async function rollOccurrence(store: Store, args: RollArgs): Promise<Task> {
     // occurrence that ran them and stay on its snapshot, or a weekly task would
     // carry every prompt it ever ran into every future week.
     prompts: queuedPrompts(source.prompts),
+    // Same reasoning one step further: the steps are the plan for the series and
+    // come along, but unticked — the ticks belong to the occurrence that earned
+    // them and stay on its snapshot.
+    checklist: untickedChecklist(source.checklist),
     workedOn: undefined,
   };
 
@@ -539,6 +654,11 @@ async function rollOccurrence(store: Store, args: RollArgs): Promise<Task> {
 function queuedPrompts(prompts: TaskPrompt[] | undefined): TaskPrompt[] | undefined {
   const queued = (prompts ?? []).filter((p) => !p.ran);
   return queued.length ? queued : undefined;
+}
+
+/** The checklist as the next occurrence starts it: every box cleared. */
+function untickedChecklist(checklist: TaskChecklistItem[] | undefined): TaskChecklistItem[] | undefined {
+  return checklist?.length ? checklist.map((i) => ({ ...i, done: false })) : undefined;
 }
 
 /** Move a closed task back out of the archive into its client file. An archived
@@ -621,6 +741,7 @@ async function undoOccurrence(
     lastDone: previous?.completed,
     notes: snapshot.notes,
     prompts: snapshot.prompts,
+    checklist: snapshot.checklist,
     workedOn: snapshot.workedOn,
   }));
   await store.rebuild("undoOccurrence");

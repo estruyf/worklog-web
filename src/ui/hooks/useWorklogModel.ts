@@ -35,7 +35,7 @@ const NO_AUTO_SYNC: AutoSyncConfig = { enabled: false, delayMinutes: 5, events: 
 
 /** Same reason as `NO_AUTO_SYNC`, and the same answer a repo with no config.json
  *  gives: both blocks are on until a setting says otherwise. */
-const ALL_FEATURES: FeatureConfig = { attachments: true, prompts: true, lists: true };
+const ALL_FEATURES: FeatureConfig = { attachments: true, prompts: true, checklist: true, lists: true };
 
 /** Same reason as `NO_AUTO_SYNC`: `useTaskListFilter` seeds its state from this
  *  and resets to it, so a fresh object per render would re-seed every list. */
@@ -120,6 +120,7 @@ export function useWorklogModel(
     statusChoices: statusModel.statusChoices,
     setTaskStatus: statusModel.setTaskStatus,
     openTagSearch: tagModel.openTagSearch,
+    showChecklist: features.checklist,
     openDetail: taskActions.openDetail,
     markDone: taskActions.markDone,
     toggleWorked: taskActions.toggleWorked,
@@ -140,7 +141,7 @@ export function useWorklogModel(
     defaultTaskSort?: TaskSortPref;
     codeTheme?: CodeTheme;
     autoSync?: { enabled?: boolean; delayMinutes?: number; events?: AutoSyncEvent[] };
-    features?: { attachments?: boolean; prompts?: boolean; lists?: boolean };
+    features?: { attachments?: boolean; prompts?: boolean; checklist?: boolean; lists?: boolean };
     aiAgents?: AiAgent[];
   }) => worklogStore.updateSettings(fields);
 

@@ -7,6 +7,8 @@ export { Legend } from './Legend';
 export type { LegendEntry } from './Legend';
 export { PeriodNav } from './PeriodNav';
 export type { PeriodNavProps } from './PeriodNav';
+export { RangeLogBar } from './RangeLogBar';
+export type { RangeLogBarProps } from './RangeLogBar';
 export { WorkedPerClient } from './WorkedPerClient';
 export type { WorkedPerClientProps } from './WorkedPerClient';
 export { colorFor, labelFor } from './entryLabels';

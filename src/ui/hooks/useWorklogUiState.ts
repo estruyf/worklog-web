@@ -80,6 +80,11 @@ export function useWorklogUiState() {
   // section because the way *in* to the first prompt is the content-action row
   // next to "+ Description" — a different component, one block above it.
   const [promptComposing, setPromptComposing] = useState(false);
+  // Whether the open task's checklist is showing its "add a step" line. Here for
+  // the same reason as `promptComposing`: the way in to the first step is the
+  // content-action row, and the section it opens renders nothing until there is
+  // either a step or this.
+  const [checklistComposing, setChecklistComposing] = useState(false);
 
   // The day view's freeform Markdown for `selectedDate`. Distinct from
   // `noteDraft` above, which is the *task* note composer — the two sit side by
@@ -156,6 +161,8 @@ export function useWorklogUiState() {
     setNoteDraft,
     promptComposing,
     setPromptComposing,
+    checklistComposing,
+    setChecklistComposing,
     dayNoteDraft,
     setDayNoteDraft,
     dayNoteMode,

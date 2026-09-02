@@ -25,6 +25,10 @@ export interface TaskRowDeps {
   statusChoices: StatusChoice[];
   setTaskStatus: (taskId: string, statusId: string) => void;
   openTagSearch: (tag: string) => void;
+  /** Whether task checklists are switched on (`features.checklist`). Off, a row
+   *  says nothing about one — the block isn't offered, so counting it here would
+   *  point at something the app doesn't show. */
+  showChecklist: boolean;
   openDetail: (t: Task) => void;
   markDone: (t: Task) => void;
   toggleWorked: (t: Task) => void;
@@ -43,6 +47,7 @@ export function useTaskRows(deps: TaskRowDeps) {
     statusChoices,
     setTaskStatus,
     openTagSearch,
+    showChecklist,
     openDetail,
     markDone,
     toggleWorked,
@@ -62,6 +67,8 @@ export function useTaskRows(deps: TaskRowDeps) {
       const workedText = workedLabels(worked, selectedDate, today);
       const children = tasks.filter((c) => c.parentId === t.id);
       const progress = children.length ? { done: children.filter(isDone).length, total: children.length } : undefined;
+      const steps = showChecklist ? (t.checklist ?? []) : [];
+      const checklist = steps.length ? { done: steps.filter((i) => i.done).length, total: steps.length } : undefined;
       // On a day the rule lands on, the chip shows *that* occurrence — a
       // recurring task only stores its next due date, so showing it raw would
       // label a September occurrence with an August date.
@@ -98,6 +105,7 @@ export function useTaskRows(deps: TaskRowDeps) {
         repeat: t.repeat && !isDone(t) ? describeRecurrence(t.repeat) : undefined,
         tags: t.tags ?? [],
         progress,
+        checklist,
         onView: () => openDetail(t),
         onDone: () => markDone(t),
         onWorked: todo ? undefined : () => toggleWorked(t),
@@ -111,6 +119,7 @@ export function useTaskRows(deps: TaskRowDeps) {
       statusChoices,
       setTaskStatus,
       selectedDate,
+      showChecklist,
       tasks,
       today,
       openDetail,

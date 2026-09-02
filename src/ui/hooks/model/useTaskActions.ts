@@ -148,6 +148,27 @@ export function useTaskActions(tasks: Task[], selectedDate: string, ui: WorklogU
     worklogStore.deletePrompt(taskId, index);
   }, []);
 
+  /** Add steps to a task's checklist. One typed line or a whole saved list, in
+   *  one write either way — see `addTaskChecklist`. */
+  const addChecklistSteps = useCallback((taskId: string, texts: readonly string[]) => {
+    worklogStore.addTaskChecklist(taskId, texts);
+  }, []);
+
+  const setChecklistStepDone = useCallback((taskId: string, index: number, done: boolean) => {
+    worklogStore.setTaskChecklistItem(taskId, index, done);
+  }, []);
+
+  const renameChecklistStep = useCallback((taskId: string, index: number, text: string) => {
+    if (!text.trim()) {
+      return;
+    }
+    worklogStore.renameTaskChecklistItem(taskId, index, text);
+  }, []);
+
+  const deleteChecklistStep = useCallback((taskId: string, index: number) => {
+    worklogStore.deleteTaskChecklistItem(taskId, index);
+  }, []);
+
   /** Read a picked/dropped file and record it on the task. Resolves once the
    *  attachment is saved (or its failure is on screen as a toast), so callers
    *  can hold an uploading state across it. */
@@ -219,5 +240,5 @@ export function useTaskActions(tasks: Task[], selectedDate: string, ui: WorklogU
     setDescMode("read");
   };
 
-  return { markDone, toggleWorked, openDetail, openEdit, deleteTask, addNote, updateNote, deleteNote, addPrompt, updatePrompt, setPromptRan, deletePrompt, addAttachment, deleteAttachment, downloadAttachment, saveDescription, saveDescriptionText, editDescription, cancelDescription };
+  return { markDone, toggleWorked, openDetail, openEdit, deleteTask, addNote, updateNote, deleteNote, addPrompt, updatePrompt, setPromptRan, deletePrompt, addChecklistSteps, setChecklistStepDone, renameChecklistStep, deleteChecklistStep, addAttachment, deleteAttachment, downloadAttachment, saveDescription, saveDescriptionText, editDescription, cancelDescription };
 }

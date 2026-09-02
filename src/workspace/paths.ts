@@ -15,14 +15,19 @@ export const DEFAULT_HOURS_PER_DAY = 8;
 export const DEFAULT_WEEK_START = 0; // Sunday
 export const DEFAULT_TODOS_PER_PAGE = 5;
 export const DEFAULT_AUTO_SYNC: AutoSyncConfig = { enabled: false, delayMinutes: 5, events: [] };
-export const DEFAULT_FEATURES: FeatureConfig = { attachments: true, prompts: true, lists: true };
+export const DEFAULT_FEATURES: FeatureConfig = { attachments: true, prompts: true, checklist: true, lists: true };
 
 /** Normalize a config `features` block. Only an explicit `false` switches one
  *  off: every config written before these settings existed omits the block, and
  *  those repos must keep offering what they always did. */
 export function parseFeatures(value: unknown): FeatureConfig {
   const raw = (value ?? {}) as Partial<FeatureConfig>;
-  return { attachments: raw.attachments !== false, prompts: raw.prompts !== false, lists: raw.lists !== false };
+  return {
+    attachments: raw.attachments !== false,
+    prompts: raw.prompts !== false,
+    checklist: raw.checklist !== false,
+    lists: raw.lists !== false,
+  };
 }
 
 /** Normalize a config `todosPerPage` to a whole number of at least 1, falling

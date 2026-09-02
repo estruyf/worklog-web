@@ -114,6 +114,17 @@ export function useLogModel(
     }
   };
 
+  /** Log the same entry on a run of days — the calendar's range selection. One
+   *  read/write per month file rather than per day, so a fortnight of vacation is
+   *  one rebuild and one commit instead of fourteen. */
+  const logRange = async (dates: string[], clientId: string, hours: number, note?: string) => {
+    if (dates.length === 0) {
+      return;
+    }
+    await worklogStore.setWorklogRange(dates, clientId, hours, note);
+    worklogStore.notify({ message: `Logged ${dates.length} ${dates.length === 1 ? "day" : "days"}`, tone: "success" });
+  };
+
   /** Copy another day's entries onto the selected one — the one-click path for
    *  "same clients, same split as yesterday". Notes are left behind: they say
    *  what was worked on that day, which is exactly what this doesn't know. */
@@ -154,6 +165,7 @@ export function useLogModel(
     editLog,
     saveLog,
     removeLog,
+    logRange,
     copyDayLogs,
     closeLogForm,
     logState,

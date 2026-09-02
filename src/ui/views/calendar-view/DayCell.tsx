@@ -16,14 +16,30 @@ export interface DayCellProps {
   isOtherMonth: boolean;
   /** Week cells are taller and list more before collapsing into "+n more". */
   isWeek: boolean;
+  /** Part of the range being picked for a bulk log. */
+  isInRange: boolean;
   maxPerCell: number;
-  onOpen: () => void;
+  /** Shift-clicked, which starts a range instead of opening the day. */
+  onOpen: (extend: boolean) => void;
+  onHover: () => void;
 }
 
 /** One day in the grid: its number, and who was worked for. On a phone the names
  *  don't fit, so the cell shows colour dots and the legend under the grid decodes
  *  them; from `md` up it lists the names themselves. */
-export function DayCell({ date, logs, hasNote, isToday, isSelected, isOtherMonth, isWeek, maxPerCell, onOpen }: DayCellProps) {
+export function DayCell({
+  date,
+  logs,
+  hasNote,
+  isToday,
+  isSelected,
+  isOtherMonth,
+  isWeek,
+  isInRange,
+  maxPerCell,
+  onOpen,
+  onHover,
+}: DayCellProps) {
   const { clientName, colorOf } = useData();
   const day = Number(date.slice(8, 10));
   const lines = logs.map((l) => `${labelFor(l.clientId, clientName)} · ${l.hours}h`);
@@ -35,16 +51,20 @@ export function DayCell({ date, logs, hasNote, isToday, isSelected, isOtherMonth
   const totalHours = roundHours(logs.reduce((sum, l) => sum + l.hours, 0));
   return (
     <button
-      onClick={onOpen}
+      onClick={(e) => onOpen(e.shiftKey)}
+      onMouseEnter={onHover}
+      aria-pressed={isInRange || undefined}
       title={lines.length ? lines.join('\n') : undefined}
       className={
         'rounded-[10px] border p-[7px] text-left cursor-pointer flex flex-col gap-[6px] transition-colors ' +
         (isWeek ? 'min-h-[150px] ' : 'min-h-[84px] ') +
-        (isSelected
-          ? 'border-brand-500 bg-brand-225'
-          : isOtherMonth
-            ? 'border-neutral-375 bg-neutral-100 hover:bg-neutral-200 hover:border-neutral-475'
-            : 'border-neutral-375 bg-white hover:bg-neutral-200 hover:border-neutral-475')
+        (isInRange
+          ? 'border-brand-575 bg-brand-250'
+          : isSelected
+            ? 'border-brand-500 bg-brand-225'
+            : isOtherMonth
+              ? 'border-neutral-375 bg-neutral-100 hover:bg-neutral-200 hover:border-neutral-475'
+              : 'border-neutral-375 bg-white hover:bg-neutral-200 hover:border-neutral-475')
       }
     >
       <span className="flex items-center justify-between w-full">

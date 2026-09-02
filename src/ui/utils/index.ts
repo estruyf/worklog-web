@@ -47,6 +47,7 @@ export type {
 } from "./taskFilter";
 export {
   calendarCells,
+  datesInRange,
   deriveWorkedByClient,
   monthCells,
   periodContains,
@@ -54,6 +55,7 @@ export {
   shiftPeriod,
   startOfWeek,
   weekCells,
+  withoutWeekends,
   ymOf,
   EVENT_COLOR,
 } from "./calendar";

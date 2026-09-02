@@ -65,6 +65,10 @@ export interface Task {
    *  written. Queued until ticked off; a ticked one stays as the record of what
    *  was already run. */
   prompts?: TaskPrompt[];
+  /** The steps this task breaks down into, in the order they are worked
+   *  through. Ticking them all off does not close the task — that is what the
+   *  status is for; a checklist is how you remember what "done" involves. */
+  checklist?: TaskChecklistItem[];
   /** Chronological progress notes/comments, oldest first. */
   notes?: TaskNote[];
   /** Absolute path of the file this task was parsed from (for open-on-click). */
@@ -91,6 +95,16 @@ export interface TaskPrompt {
   /** Local timestamp of the tick, "YYYY-MM-DD HH:mm". Separate from `ran` because
    *  a hand-written `- [x]` has no stamp and is still a prompt that was run. */
   ranAt?: string;
+}
+
+/** One step on a task's checklist: a line of text and whether it is ticked.
+ *  Deliberately less than a task — no id, no client, no due date — so a step
+ *  never reaches the day view, the ledger or an invoice. Something that needs
+ *  any of those is a subtask, not a checklist item. */
+export interface TaskChecklistItem {
+  /** One line; a newline in it would serialize as a second item. */
+  text: string;
+  done: boolean;
 }
 
 /** A single timestamped progress note attached to a task. */
@@ -151,7 +165,9 @@ export interface FeatureConfig {
   attachments: boolean;
   /** The task's prompt queue (`### Prompts`). */
   prompts: boolean;
-  /** Reusable checklists (`lists/*.md`) and the tab they live on. Unlike the two
+  /** The task's own steps (`### Checklist`). */
+  checklist: boolean;
+  /** Reusable checklists (`lists/*.md`) and the tab they live on. Unlike the three
    *  above this hides a whole view, not a block inside a task — see the route
    *  fallback in `WorklogApp`. The files keep syncing either way: switching it
    *  off is a UI decision, so turning it back on finds every list intact. */

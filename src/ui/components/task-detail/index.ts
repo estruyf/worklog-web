@@ -11,5 +11,6 @@ export { SubtaskList } from './SubtaskList';
 export { TaskActions } from './TaskActions';
 export { NotesSection } from './NotesSection';
 export { PromptsSection } from './PromptsSection';
+export { TaskChecklistSection } from './TaskChecklistSection';
 export { AttachmentsSection } from './AttachmentsSection';
 export { TaskContentActions } from './TaskContentActions';

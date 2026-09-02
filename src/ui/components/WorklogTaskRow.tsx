@@ -1,6 +1,6 @@
 import React from 'react';
 import type { WorklogRow } from '../model';
-import { CalendarIcon, CheckIcon, EllipsisIcon, EyeIcon, GlobeIcon, Pencil, RefreshCwIcon, Trash } from 'lucide-react';
+import { CalendarIcon, CheckIcon, EllipsisIcon, EyeIcon, GlobeIcon, ListChecksIcon, Pencil, RefreshCwIcon, Trash } from 'lucide-react';
 import { formatDaysLate } from '../../model/overdue';
 import { Button, Chip, Menu, cn } from '../primitives';
 import { fmtShort } from '../utils';
@@ -71,6 +71,27 @@ function ProgressChip({ progress, barWidth }: { progress: NonNullable<WorklogRow
         <span className="block h-full bg-success-500" style={{ width: `${progress.total ? (progress.done / progress.total) * 100 : 0}%` }} />
       </span>
       {progress.done}/{progress.total}
+    </span>
+  );
+}
+
+/** The task's own checklist, as "2/5" beside the title. It rides in the title
+ *  cell rather than taking a lane of its own: it belongs to fewer rows than the
+ *  columns do, and a whole column reserved on every list for the tasks that have
+ *  one is width the titles need. Ticked through, it goes green — the one row in
+ *  a list that is only waiting on nothing. */
+function ChecklistChip({ checklist }: { checklist: NonNullable<WorklogRow['checklist']> }) {
+  const complete = checklist.done === checklist.total;
+  return (
+    <span
+      title={`${checklist.done} of ${checklist.total} checklist ${checklist.total === 1 ? 'item' : 'items'} done`}
+      className={cn(
+        'shrink-0 flex items-center gap-[3px] text-eyebrow tabular-nums',
+        complete ? 'text-success-625' : 'text-neutral-625',
+      )}
+    >
+      <ListChecksIcon size={11} strokeWidth={2} aria-hidden="true" />
+      {checklist.done}/{checklist.total}
     </span>
   );
 }
@@ -309,6 +330,7 @@ export const WorklogTaskRow = React.memo(function WorklogTaskRow({
               {row.progress.total}
             </span>
           )}
+          {row.checklist && <ChecklistChip checklist={row.checklist} />}
           {/* Between @lg and @4xl the tags give up their lane and ride behind the
               title: they are short and few, and 140px of them is 140px the
               titles need more. Everything else keeps its column. */}

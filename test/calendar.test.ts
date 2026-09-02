@@ -3,12 +3,14 @@
 import { describe, it, expect } from 'vitest';
 import {
   calendarCells,
+  datesInRange,
   deriveWorkedByClient,
   monthCells,
   periodLabel,
   shiftPeriod,
   startOfWeek,
   weekCells,
+  withoutWeekends,
 } from '../src/ui/utils/calendar';
 import type { Task, WorklogEntry } from '../src/model/types';
 
@@ -168,5 +170,45 @@ describe('deriveWorkedByClient', () => {
 
   it('reports nothing for an empty period', () => {
     expect(deriveWorkedByClient(calendarCells('week', '2026-06-01', MONDAY), tasks, worklog, deps)).toEqual([]);
+  });
+});
+
+describe('datesInRange', () => {
+  it('returns every day from end to end, inclusive', () => {
+    expect(datesInRange('2026-07-06', '2026-07-09')).toEqual(['2026-07-06', '2026-07-07', '2026-07-08', '2026-07-09']);
+  });
+
+  it('reads the same both ways round — either cell can be clicked first', () => {
+    expect(datesInRange('2026-07-09', '2026-07-06')).toEqual(datesInRange('2026-07-06', '2026-07-09'));
+  });
+
+  it('is one day when both ends are the same', () => {
+    expect(datesInRange('2026-07-06', '2026-07-06')).toEqual(['2026-07-06']);
+  });
+
+  it('crosses month and year boundaries', () => {
+    expect(datesInRange('2026-12-30', '2027-01-02')).toEqual(['2026-12-30', '2026-12-31', '2027-01-01', '2027-01-02']);
+  });
+});
+
+describe('withoutWeekends', () => {
+  it('drops Saturdays and Sundays', () => {
+    // 2026-07-06 is a Monday.
+    expect(withoutWeekends(datesInRange('2026-07-06', '2026-07-19'))).toEqual([
+      '2026-07-06',
+      '2026-07-07',
+      '2026-07-08',
+      '2026-07-09',
+      '2026-07-10',
+      '2026-07-13',
+      '2026-07-14',
+      '2026-07-15',
+      '2026-07-16',
+      '2026-07-17',
+    ]);
+  });
+
+  it('can empty a range that is only a weekend', () => {
+    expect(withoutWeekends(['2026-07-11', '2026-07-12'])).toEqual([]);
   });
 });

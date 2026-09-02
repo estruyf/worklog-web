@@ -24,24 +24,28 @@ import { saveImageAsset } from '../services/assets';
 import { isGeneralTodoClientId } from '../model/todos';
 import {
   addTaskAttachment,
+  addTaskChecklist,
   addTaskNote,
   addTaskPrompt,
   closeTaskById,
   deleteTaskAttachment,
   deleteTaskCascade,
+  deleteTaskChecklistItem,
   deleteTaskNote,
   deleteTaskPrompt,
   endTaskSeries,
+  setTaskChecklistItemDone,
   setTaskCompletedDate,
   setTaskPromptRan,
   setTaskStatus,
   toggleTaskWorkedOn,
   updateTask,
+  updateTaskChecklistItem,
   updateTaskNote,
   updateTaskPrompt,
   type TaskFields,
 } from '../services/taskOps';
-import { removeWorklog, setEventWorklog, setWorklog } from '../services/worklog';
+import { removeWorklog, setEventWorklog, setWorklog, setWorklogRange } from '../services/worklog';
 import { setDayNote } from '../services/dayNotes';
 import {
   addChecklistItemTo,
@@ -723,6 +727,24 @@ class WorklogStore {
     return this.run(() => deleteTaskPrompt(this.store, taskId, index));
   }
 
+  /** Add steps to the task's own checklist — one typed line, or a saved list's
+   *  items copied onto it in a single write. */
+  addTaskChecklist(taskId: string, texts: readonly string[]): Promise<void> {
+    return this.run(() => addTaskChecklist(this.store, taskId, texts));
+  }
+
+  setTaskChecklistItem(taskId: string, index: number, done: boolean): Promise<void> {
+    return this.run(() => setTaskChecklistItemDone(this.store, taskId, index, done));
+  }
+
+  renameTaskChecklistItem(taskId: string, index: number, text: string): Promise<void> {
+    return this.run(() => updateTaskChecklistItem(this.store, taskId, index, text));
+  }
+
+  deleteTaskChecklistItem(taskId: string, index: number): Promise<void> {
+    return this.run(() => deleteTaskChecklistItem(this.store, taskId, index));
+  }
+
   /** Store a picked/dropped file under `assets/` and record it on the task. */
   addAttachment(taskId: string, fileName: string, dataBase64: string): Promise<void> {
     return this.run(() => addTaskAttachment(this.store, taskId, fileName, dataBase64));
@@ -735,6 +757,11 @@ class WorklogStore {
 
   setWorklog(date: string, clientId: string, hours: number, note?: string): Promise<void> {
     return this.run(() => setWorklog(this.store, date, clientId, hours, note));
+  }
+
+  /** Log the same entry across a run of days — the calendar's range selection. */
+  setWorklogRange(dates: string[], clientId: string, hours: number, note?: string): Promise<void> {
+    return this.run(() => setWorklogRange(this.store, dates, clientId, hours, note));
   }
 
   setEventWorklog(date: string, eventType: string, hours: number, note?: string): Promise<void> {

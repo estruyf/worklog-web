@@ -61,6 +61,7 @@ export function SettingsView() {
   const [code, setCode] = useState<CodeTheme>(codeTheme);
   const [attachmentsOn, setAttachmentsOn] = useState(features.attachments);
   const [promptsOn, setPromptsOn] = useState(features.prompts);
+  const [checklistOn, setChecklistOn] = useState(features.checklist);
   const [listsOn, setListsOn] = useState(features.lists);
   const [syncEnabled, setSyncEnabled] = useState(autoSync.enabled);
   const [syncDelay, setSyncDelay] = useState(String(autoSync.delayMinutes));
@@ -110,6 +111,9 @@ export function SettingsView() {
     setPromptsOn(features.prompts);
   }, [features.prompts]);
   useEffect(() => {
+    setChecklistOn(features.checklist);
+  }, [features.checklist]);
+  useEffect(() => {
     setListsOn(features.lists);
   }, [features.lists]);
   useEffect(() => {
@@ -143,6 +147,7 @@ export function SettingsView() {
     code !== codeTheme ||
     attachmentsOn !== features.attachments ||
     promptsOn !== features.prompts ||
+    checklistOn !== features.checklist ||
     listsOn !== features.lists ||
     syncEnabled !== autoSync.enabled ||
     (delayValid && parsedDelay !== autoSync.delayMinutes) ||
@@ -219,7 +224,7 @@ export function SettingsView() {
       todosPerPage: parsedTodoPage,
       defaultTaskSort: { key: sortKey, dir: sortDir },
       codeTheme: code,
-      features: { attachments: attachmentsOn, prompts: promptsOn, lists: listsOn },
+      features: { attachments: attachmentsOn, prompts: promptsOn, checklist: checklistOn, lists: listsOn },
       autoSync: { enabled: syncEnabled, delayMinutes: parsedDelay, events: syncEvents },
       aiAgents: agents,
     });
@@ -239,6 +244,7 @@ export function SettingsView() {
     setCode(codeTheme);
     setAttachmentsOn(features.attachments);
     setPromptsOn(features.prompts);
+    setChecklistOn(features.checklist);
     setListsOn(features.lists);
     setSyncEnabled(autoSync.enabled);
     setSyncDelay(String(autoSync.delayMinutes));
@@ -396,6 +402,18 @@ export function SettingsView() {
                 </div>
               </div>
               <Toggle checked={promptsOn} onChange={setPromptsOn} aria-label="Prompts" />
+            </div>
+
+            <div className="flex items-start justify-between gap-6 px-[18px] py-[18px]">
+              <div>
+                <div className="text-row font-semibold">Checklist</div>
+                <div className="text-control text-neutral-675 mt-[3px]">
+                  The steps a task breaks down into, ticked off as you go — kept on the task itself, so a step never
+                  reaches the day view or the ledger. Off hides the action and the section; the steps already written
+                  stay in your Markdown.
+                </div>
+              </div>
+              <Toggle checked={checklistOn} onChange={setChecklistOn} aria-label="Checklist" />
             </div>
           </Card>
 

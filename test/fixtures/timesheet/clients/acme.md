@@ -23,6 +23,11 @@
 The current export runs synchronously and times out on large date ranges.
 Move it behind a queue and stream the CSV back.
 
+### Checklist
+- [x] Agree the CSV column order with the client
+- [ ] Move the query behind the queue
+- [ ] Stream the file back
+
 ### Prompts
 - [ ] Draft the queue migration checklist
   Read src/export/*.ts and list every synchronous call that has to move behind

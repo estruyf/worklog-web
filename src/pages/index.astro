@@ -1,14 +1,8 @@
 ---
 import Layout from "../layouts/Layout.astro";
 import { CHANGELOG_PATH, CHROME_EXTENSION_URL, ISSUES_URL } from "../model/links";
-import { TOKEN_COOKIE } from "../server/session";
 
 export const prerender = false;
-
-// If a token cookie is present, jump straight to the app.
-if (Astro.cookies.get(TOKEN_COOKIE)?.value) {
-  return Astro.redirect("/app");
-}
 
 const features = [
   {

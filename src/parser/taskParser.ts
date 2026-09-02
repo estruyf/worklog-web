@@ -2,7 +2,7 @@
 // markdown string -> structured Task records, and back. No I/O dependencies, so
 // it is trivially unit-testable and reusable by both full and incremental paths.
 
-import type { Task, TaskLink, TaskNote, TaskPrompt } from "../model/types";
+import type { Task, TaskChecklistItem, TaskLink, TaskNote, TaskPrompt } from "../model/types";
 import { isTaskHeading } from "./taskHeading";
 import {
   formatRecurrence,
@@ -45,6 +45,12 @@ const PROMPT_ENTRY = /^-\s+\[([ xX])\]\s*(.*)$/;
 // entry uses. Only read on `[x]`, so a queued prompt whose title happens to start
 // with a date keeps that date as part of its title.
 const PROMPT_RAN = /^(\d{4}-\d{2}-\d{2}(?:[ T]\d{2}:\d{2})?)\s+—\s+(.*)$/;
+// The third reserved sub-section: the steps the task breaks down into. Checkbox
+// items again, and for the same reason as the prompt queue — ticked in a plain
+// Markdown viewer means what it means in the app. Unlike a prompt an item is
+// only ever its one line, so there is no continuation to collect.
+const CHECKLIST_HEADING = /^###\s+Checklist\s*$/;
+const CHECKLIST_ENTRY = /^-\s+\[([ xX])\]\s*(.*)$/;
 
 /**
  * Parse a client/archive markdown file into tasks.
@@ -74,7 +80,7 @@ export function parseTaskFile(
       return;
     }
     const t = current.task;
-    const { description, prompts, notes } = splitBody(current.descLines);
+    const { description, checklist, prompts, notes } = splitBody(current.descLines);
     result.tasks.push({
       id: t.id ?? "",
       title: (t.title ?? "").trim(),
@@ -93,6 +99,7 @@ export function parseTaskFile(
       repeatOf: t.repeatOf,
       workedOn: t.workedOn,
       tags: t.tags,
+      checklist,
       prompts,
       notes,
       sourceFile,
@@ -302,15 +309,18 @@ function parseLink(value: string): TaskLink | undefined {
  */
 function splitBody(lines: string[]): {
   description?: string;
+  checklist?: TaskChecklistItem[];
   prompts?: TaskPrompt[];
   notes?: TaskNote[];
 } {
-  const marks: { at: number; kind: "prompts" | "notes" }[] = [];
+  const marks: { at: number; kind: "checklist" | "prompts" | "notes" }[] = [];
   lines.forEach((line, at) => {
     if (PROMPTS_HEADING.test(line)) {
       marks.push({ at, kind: "prompts" });
     } else if (NOTES_HEADING.test(line)) {
       marks.push({ at, kind: "notes" });
+    } else if (CHECKLIST_HEADING.test(line)) {
+      marks.push({ at, kind: "checklist" });
     }
   });
   if (marks.length === 0) {
@@ -318,21 +328,41 @@ function splitBody(lines: string[]): {
     return { description: description || undefined };
   }
   const description = lines.slice(0, marks[0].at).join("\n").trim();
+  const checklist: TaskChecklistItem[] = [];
   const prompts: TaskPrompt[] = [];
   const notes: TaskNote[] = [];
   marks.forEach((mark, i) => {
     const body = lines.slice(mark.at + 1, marks[i + 1]?.at ?? lines.length);
     if (mark.kind === "prompts") {
       prompts.push(...parsePrompts(body));
+    } else if (mark.kind === "checklist") {
+      checklist.push(...parseChecklist(body));
     } else {
       notes.push(...parseNotes(body));
     }
   });
   return {
     description: description || undefined,
+    checklist: checklist.length ? checklist : undefined,
     prompts: prompts.length ? prompts : undefined,
     notes: notes.length ? notes : undefined,
   };
+}
+
+/** Parse the lines of a `### Checklist` section: one item per checkbox line,
+ *  and nothing else — a blank separator or a note somebody wrote between two
+ *  steps is not a step. An item with no words is dropped rather than kept as an
+ *  empty row nobody can tick meaningfully. */
+function parseChecklist(lines: string[]): TaskChecklistItem[] {
+  const items: TaskChecklistItem[] = [];
+  for (const line of lines) {
+    const m = CHECKLIST_ENTRY.exec(line);
+    const text = m?.[2].trim();
+    if (m && text) {
+      items.push({ text, done: m[1].toLowerCase() === "x" });
+    }
+  }
+  return items;
 }
 
 /** Parse the lines of a `### Prompts` section into entries. A new entry begins on
@@ -420,6 +450,11 @@ function serializePrompt(prompt: TaskPrompt): string {
   return [head, ...body].join("\n");
 }
 
+/** Serialize one checklist item as a plain GFM checkbox line. */
+function serializeChecklistItem(item: TaskChecklistItem): string {
+  return `- [${item.done ? "x" : " "}] ${item.text}`;
+}
+
 /** Serialize one note as a markdown list item, indenting continuation lines. */
 function serializeNote(note: TaskNote): string {
   const [first = "", ...rest] = note.text.split(/\r?\n/);
@@ -495,6 +530,12 @@ export function serializeTask(task: Task, clientId?: string): string {
   const body: string[] = [];
   if (task.description && task.description.trim()) {
     body.push(task.description.trim());
+  }
+  // Between the description and the queue: the steps are part of what the task
+  // *is*, which is what the description was saying, so they read as its list
+  // rather than as a second log below the prompts.
+  if (task.checklist && task.checklist.length) {
+    body.push(["### Checklist", ...task.checklist.map(serializeChecklistItem)].join("\n"));
   }
   // Above the notes, and below the description: the queue is what you are about
   // to do, the log is what already happened. A blank line between entries because

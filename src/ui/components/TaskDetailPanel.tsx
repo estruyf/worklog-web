@@ -6,7 +6,7 @@ import { Button, IconButton, LinkButton, Modal } from '../primitives';
 import { CopyButton } from './CopyButton';
 import { LinkList } from './LinkList';
 import { DescriptionEditor } from './DescriptionEditor';
-import { AttachmentsSection, NotesSection, PromptsSection, SubtaskList, TaskContentActions, TaskDetailHeader, TaskSidebar, TitleEditor } from './task-detail';
+import { AttachmentsSection, NotesSection, PromptsSection, SubtaskList, TaskChecklistSection, TaskContentActions, TaskDetailHeader, TaskSidebar, TitleEditor } from './task-detail';
 import { useData, useUi } from '../context';
 import { navigateToDashboard, navigateToTask } from '../router';
 
@@ -43,7 +43,7 @@ function useDetailData() {
  * rather than rendering blank. */
 export function TaskDetailPanel() {
   const { saveDescription, saveDescriptionText, editDescription, cancelDescription } = useData();
-  const { descDraft, setDescDraft, descMode, setDescMode, setPromptComposing } = useUi();
+  const { descDraft, setDescDraft, descMode, setDescMode, setPromptComposing, setChecklistComposing } = useUi();
   const { task, parent, subtasks, occurrences, descDirty } = useDetailData();
   // Which phone sheet is up. A link inside one (the parent, an occurrence, a
   // mentioned task) navigates to another task under the sheet — close it, or it
@@ -55,7 +55,8 @@ export function TaskDetailPanel() {
     // A prompt composer opened on the task you left is not open on the one you
     // arrived at — same reasoning as the sheet above.
     setPromptComposing(false);
-  }, [taskId, setPromptComposing]);
+    setChecklistComposing(false);
+  }, [taskId, setPromptComposing, setChecklistComposing]);
   if (!task) {
     return <MissingTask />;
   }
@@ -142,6 +143,10 @@ export function TaskDetailPanel() {
               )}
 
               <TaskContentActions task={task} hasDescription={hasDescription} hasSubtasks={subtasks.length > 0} />
+
+              {/* Keyed by the task for the reason the prompt queue below is:
+                  an open rename doesn't follow you to the next task. */}
+              <TaskChecklistSection key={`checklist-${task.id}`} task={task} />
 
               <AttachmentsSection task={task} />
 

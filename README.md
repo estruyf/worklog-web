@@ -153,7 +153,14 @@ The dashboard has these views:
   every dated task has a home — overdue takes the past and today, upcoming takes the future.
 - **To-dos** — the general to-do list: tasks that belong to no client.
 - **Calendar** — a month grid of logged time; click a day to jump to it, or plan a task with a
-  due date.
+  due date. To fill a stretch of days in one go — two weeks of vacation, a week on one client —
+  hit **Log a range**: click the first day, then the last one (the bar above the grid says which
+  click it is waiting for, the run highlights as you move, and **From**/**To** can be typed
+  instead). A further click moves the nearer end, so overshooting is one click to fix.
+  Shift-clicking a second day does the same without arming anything. Then pick what to log on all
+  of them: an event or a client, full/half day or custom hours, an optional note, and **Skip**
+  weekends on or off. The range can cross months. It adds to those days rather than clearing them
+  — anything already logged stays, unless it is the same client or event, which is replaced.
 - **Clients** — every client and its open tasks. Create/edit clients (name, accent colour, a
   Markdown description and reference links — the repo, the shared drive, the ticket board — shown
   above the client's tasks), add
@@ -498,7 +505,7 @@ in the order the picker offers them — the app writes it, and it is safe to han
   "weekStart": "monday",
   "defaultTaskSort": { "key": "created", "dir": "desc" },
   "codeTheme": "system",
-  "features": { "attachments": true, "prompts": true },
+  "features": { "attachments": true, "prompts": true, "checklist": true, "lists": true },
   "clients": [{ "id": "acme", "name": "Acme Corp", "color": "#2D6CDF" }],
   "statuses": [
     { "id": "open", "label": "Open" },
@@ -509,10 +516,10 @@ in the order the picker offers them — the app writes it, and it is safe to han
 }
 ```
 
-`features` switches the optional task blocks on and off — see **Settings → Task content**. Both are
-on, and an absent key reads as on, so a config written before they existed is unchanged. Switching
-one off only hides it: the `- attachment:` lines and `### Prompts` sections already in your Markdown
-stay put and come back when you switch it on again.
+`features` switches the optional task blocks on and off — see **Settings → Task content**. They are
+all on, and an absent key reads as on, so a config written before they existed is unchanged.
+Switching one off only hides it: the `- attachment:` lines, `### Prompts` and `### Checklist`
+sections already in your Markdown stay put and come back when you switch it on again.
 
 `defaultTaskSort` is the order task lists open in, and what their **Reset** returns to. `key` is one
 of `created`, `due`, `priority`, `title` or `status`; `dir` is `asc` or `desc` — so newest-first is
@@ -550,6 +557,10 @@ A task block looks like:
 - tags: mobile, bug
 
 Free-form description in Markdown.
+
+### Checklist
+- [x] Measure every tap target
+- [ ] Widen the ones under 44px
 
 ### Prompts
 - [ ] Draft the tap-target audit
@@ -623,6 +634,35 @@ offers parents from the client you're already on.
 Nesting is recursive in the format, but the app's parent picker only lists open
 top-level tasks, so what it creates is one level deep. In the app, open a task and
 use **Add subtask** in the header or at the bottom of its subtask list.
+
+### Checklist
+
+The steps a task breaks down into — the two or three things "done" actually involves — ticked off
+as you go. They live in a `### Checklist` section on the task, above its prompts, as a plain GFM
+checkbox list:
+
+```markdown
+### Checklist
+- [x] Measure every tap target
+- [ ] Widen the ones under 44px
+```
+
+A step is deliberately less than a task: no client, no due date, no status, so it never reaches the
+day view, the ledger or an invoice. Something that needs any of those is a [subtask](#subtasks)
+instead. Ticking every step doesn't close the task either — that is what the status is for.
+
+In a task, **Checklist** starts the first step and the section's own **Add an item** adds the next;
+↵ keeps the line open so a list can be typed in one go. Each step's ⋯ renames or removes it. If you
+keep [Lists](#lists), **From a list** copies one of them onto the task, unticked — a copy, not a
+link, so ticking a step here leaves the list alone. Task rows show how far along a checklist is
+("2/5") beside the title, and it goes green when the last box is ticked.
+
+On a repeating task, completing an occurrence carries the steps onto the next one with every box
+cleared — they are the routine — while the ticks stay on the archived snapshot of the occurrence
+that earned them.
+
+Checklists can be switched off entirely under **Settings → Task content**, which hides the action
+and the section; anything already written stays in your Markdown.
 
 ### Prompts
 

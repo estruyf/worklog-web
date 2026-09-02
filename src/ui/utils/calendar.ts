@@ -5,6 +5,7 @@
 import { isGeneralTodoClientId } from '../../model/todos';
 import type { Task, WorklogEntry } from '../../model/types';
 import { isEventWorklogClientId } from '../../model/worklog';
+import { weekdayOf } from '../../util/date';
 import { MONTHS } from './constants';
 import { monthLabel, shiftDate } from './date';
 import { clientIdOf, isDone } from './task';
@@ -84,6 +85,27 @@ export function periodLabel(mode: CalendarMode, cursor: string, weekStart: numbe
   const startDay = String(Number(sd));
   const from = sy === ey ? (sm === em ? startDay : `${startDay} ${MONTHS[Number(sm) - 1]}`) : `${startDay} ${MONTHS[Number(sm) - 1]} ${sy}`;
   return `${from} – ${Number(ed)} ${MONTHS[Number(em) - 1]} ${ey}`;
+}
+
+/** Every day from `a` to `b` inclusive, in date order — whichever end was picked
+ * first, since a range is selected by clicking two cells. */
+export function datesInRange(a: string, b: string): string[] {
+  const [from, to] = a <= b ? [a, b] : [b, a];
+  const dates: string[] = [];
+  for (let d = from; d <= to; d = shiftDate(d, 1)) {
+    dates.push(d);
+  }
+  return dates;
+}
+
+/** Saturdays and Sundays dropped — what "skip weekends" logs. The weekend is
+ * fixed to Sat/Sun: `weekStart` says where the grid begins, not which days are
+ * worked, and the app has nowhere else that records that. */
+export function withoutWeekends(dates: string[]): string[] {
+  return dates.filter((d) => {
+    const day = weekdayOf(d);
+    return day !== 0 && day !== 6;
+  });
 }
 
 /** True when the visible period contains `date`. */

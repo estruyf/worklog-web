@@ -15,10 +15,24 @@ export interface CalendarGridProps {
   datesWithNotes: Set<string>;
   cursor: string;
   isWeek: boolean;
-  onOpenDay: (date: string) => void;
+  /** The days currently picked for a bulk log — including the run under the
+   *  pointer, while the range's last day is still open. */
+  rangeDates: Set<string>;
+  onOpenDay: (date: string, extend: boolean) => void;
+  onHoverDay: (date: string) => void;
 }
 
-export function CalendarGrid({ weekdays, cells, logsByDate, datesWithNotes, cursor, isWeek, onOpenDay }: CalendarGridProps) {
+export function CalendarGrid({
+  weekdays,
+  cells,
+  logsByDate,
+  datesWithNotes,
+  cursor,
+  isWeek,
+  rangeDates,
+  onOpenDay,
+  onHoverDay,
+}: CalendarGridProps) {
   const { today } = useData();
   const { selectedDate } = useUi();
   // A week shows a seventh of the days a month does, so its cells get the room to
@@ -34,7 +48,9 @@ export function CalendarGrid({ weekdays, cells, logsByDate, datesWithNotes, curs
         ))}
       </div>
 
-      <div className="grid grid-cols-7 gap-[6px]">
+      {/* Leaving the grid drops the previewed run; leaving one cell would drop it
+          in the gap between two. */}
+      <div className="grid grid-cols-7 gap-[6px]" onMouseLeave={() => onHoverDay('')}>
         {cells.map((date, i) =>
           date ? (
             <DayCell
@@ -46,8 +62,10 @@ export function CalendarGrid({ weekdays, cells, logsByDate, datesWithNotes, curs
               isSelected={date === selectedDate}
               isOtherMonth={!isWeek && ymOf(date) !== ymOf(cursor)}
               isWeek={isWeek}
+              isInRange={rangeDates.has(date)}
               maxPerCell={maxPerCell}
-              onOpen={() => onOpenDay(date)}
+              onOpen={(extend) => onOpenDay(date, extend)}
+              onHover={() => onHoverDay(date)}
             />
           ) : (
             <div key={`pad-${i}`} className="min-h-[84px] rounded-[10px] bg-neutral-100" />

@@ -15,6 +15,12 @@ Every change to Worklog, by day, newest first.
      both). Links must be absolute — a relative path resolves against /changelog and
      404s. -->
 
+## 2026-09-02
+
+- **The landing page is reachable while signed in** — visiting the homepage no longer bounces you straight into the app, so you can read the feature pages, the changelog link and the setup steps whenever you like. **Sign in** on that page takes you back into the app in one hop instead of sending you through GitHub again.
+- **Break a task into steps** — a task can now carry its own checklist: **Checklist** on a task starts one, ↵ adds the next, and each step is one line you tick off as you go. It is a checklist, not a to-do list — a step has no client, no due date and no status, and ticking them all doesn't close the task. **From a list** copies one of your Lists onto a task unticked, task rows show how far along you are ("2/5"), and a repeating task carries its steps onto the next occurrence with every box cleared. Written into your Markdown as a plain `### Checklist` checkbox list, so ticking one on GitHub means the same thing. Switch it off under **Settings → Task content**.
+- **Log a stretch of days at once** — in the Calendar, **Log a range** takes the run between two days and logs the same thing on all of them: vacation, a public holiday, a week on one client — full or half days, an optional note, and weekends skipped unless you say otherwise. The bar names the click it is waiting for ("now click the last day"), previews the run as you move across the grid, and shows both ends as **From**/**To** fields you can type into; a further click moves the nearer end rather than starting over. A fortnight away is now two clicks and one commit instead of fourteen visits to the Day view.
+
 ## 2026-09-01
 
 - **Undo actually undoes** — the "Undo" on a toast now stays for 8 seconds, and auto-sync waits for it: ticking a task off no longer reaches GitHub while the offer is still on screen, so taking it up stays a local change instead of a second commit undoing the first.

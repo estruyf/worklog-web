@@ -126,6 +126,10 @@ export interface WorklogRow {
   tags: string[];
   /** Subtask completion rollup, present only for tasks that have children. */
   progress?: { done: number; total: number };
+  /** The task's own checklist, present only when it has one and the block is
+   *  switched on. Separate from `progress`, which counts subtasks: a task can
+   *  carry both, and they answer different questions. */
+  checklist?: { done: number; total: number };
   /** Whether this row's subtasks are folded away. Set only on rows that have
    *  subtasks *in the same list* — `progress` counts every child the task has,
    *  including ones a filter removed, so it can't stand in for this. */
