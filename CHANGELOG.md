@@ -15,6 +15,16 @@ Every change to Worklog, by day, newest first.
      both). Links must be absolute — a relative path resolves against /changelog and
      404s. -->
 
+## 2026-09-03
+
+- **Your day is one bar again** — each block on the day bar now carries the client's name and
+  hours inside it, tinted in that client's colour, so there is no separate legend to read
+  against. Blocks too narrow for a name pick it up in a small row underneath, and an empty day
+  says so in the bar itself. Half the height it used to be.
+- **No more drifting gaps around the day** — on a wide window, a to-do list longer than the day
+  itself used to push empty space in above and below the day card, and the emptier the day the
+  wider those gaps grew. The day now sits where it belongs whatever the side column is doing.
+
 ## 2026-09-02
 
 - **A board view for a client's open tasks** — the Clients view now switches between **List** and

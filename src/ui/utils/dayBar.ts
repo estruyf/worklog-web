@@ -1,7 +1,7 @@
-// The day bar's geometry: what slice of the day each ledger entry takes, where
-// the unlogged remainder sits, and the scale drawn under it. Pure — no React, no
-// DOM — so the awkward cases (an over-logged day, an empty one, an unset target)
-// are unit-testable on their own. See test/dayBar.test.ts.
+// The day bar's geometry: what slice of the day each ledger entry takes and
+// where the unlogged remainder sits. Pure — no React, no DOM — so the awkward
+// cases (an over-logged day, an empty one, an unset target) are unit-testable on
+// their own. See test/dayBar.test.ts.
 
 import type { WorklogEntry } from '../../model/types';
 import { shiftDate } from './date';
@@ -13,9 +13,9 @@ export function roundHours(n: number): number {
 }
 
 /** One entry as it is drawn on the track. `left`/`width` are percentages of the
- *  whole track, so a segment is positioned rather than flexed: the tick scale
- *  under the bar only lines up if the gutters come out of the segment's own box
- *  instead of the space between them. */
+ *  whole track, so a segment is positioned rather than flexed: a segment only
+ *  spans the hours it claims if the gutters come out of its own box instead of
+ *  the space between them. */
 export interface DaySegment {
   entry: WorklogEntry;
   left: number;
@@ -42,7 +42,6 @@ export interface DayBarModel {
   /** Where the target falls on the track, as a percentage. 100 unless the day is
    *  over-logged, which is the only time the marker is worth drawing. */
   targetPercent: number;
-  ticks: { hours: number; percent: number }[];
 }
 
 export function deriveDayBar(entries: WorklogEntry[], hoursPerDay: number): DayBarModel {
@@ -73,18 +72,7 @@ export function deriveDayBar(entries: WorklogEntry[], hoursPerDay: number): DayB
     scale,
     unlogged: total === 0 ? { left: 0, width: 100 } : remaining > 0 ? { left, width: (remaining / scale) * 100 } : null,
     targetPercent: over > 0 ? (target / scale) * 100 : 100,
-    ticks: ticksFor(scale),
   };
-}
-
-/** Whole-hour marks along the track, spaced so a normal day gets five of them. */
-function ticksFor(scale: number): { hours: number; percent: number }[] {
-  const step = scale <= 4 ? 1 : scale <= 12 ? 2 : 4;
-  const ticks: { hours: number; percent: number }[] = [];
-  for (let h = 0; h <= scale + 1e-9; h += step) {
-    ticks.push({ hours: h, percent: (h / scale) * 100 });
-  }
-  return ticks;
 }
 
 /** The most recent day before `date` that has any entries, within `lookback`

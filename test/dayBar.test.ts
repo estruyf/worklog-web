@@ -64,11 +64,6 @@ describe('deriveDayBar', () => {
     expect(bar.over).toBe(0);
     expect(bar.targetPercent).toBe(100);
   });
-
-  it('puts a tick at every second hour of a normal day', () => {
-    expect(deriveDayBar([], 8).ticks.map((t) => t.hours)).toEqual([0, 2, 4, 6, 8]);
-    expect(deriveDayBar([], 8).ticks.map((t) => t.percent)).toEqual([0, 25, 50, 75, 100]);
-  });
 });
 
 describe('previousLoggedDay', () => {

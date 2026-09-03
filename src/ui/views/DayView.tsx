@@ -207,7 +207,7 @@ function useDayData(boardOpen: boolean) {
 }
 
 export function DayView() {
-  const { today, worklog, clients, allClients, colorOf, clientName, statusMeta, reopen, openDetail, typeLabel, hoursPerDay, todosPerPage, logState, setLogState, saveLog, removeLog, closeLogForm, editLog, openLogForm, copyDayLogs, openTaskFormForDue, dayNoteDirty, saveDayNote, saveDayNoteText, editDayNote, cancelDayNote, hasDayNote } = useData();
+  const { today, worklog, clients, allClients, colorOf, clientName, statusMeta, reopen, openDetail, hoursPerDay, todosPerPage, logState, setLogState, saveLog, removeLog, closeLogForm, editLog, openLogForm, copyDayLogs, openTaskFormForDue, dayNoteDirty, saveDayNote, saveDayNoteText, editDayNote, cancelDayNote, hasDayNote } = useData();
   const { selectedDate, setSelectedDate, setSelectedClient, setShowArchivedClients, editDayOpen, setEditDayOpen, dayNoteDraft, setDayNoteDraft, dayNoteMode, setDayNoteMode, dayNoteSavedAt } = useUi();
   const [boardOpen, setBoardOpen] = useState(false);
   const {
@@ -292,8 +292,14 @@ export function DayView() {
             * It sticks at `top-0`, not at an inset: any offset here is a gap the
             * panel opens between itself and the top of the day the moment you
             * scroll, which reads as the side column starting lower than the main
-            * one. The scroll area's own `pt-6` is the breathing room. */}
-          <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_320px] xl:gap-x-8">
+            * one. The scroll area's own `pt-6` is the breathing room.
+            *
+            * The last row is `1fr` because the panel spans all three: a spanning
+            * item's height is otherwise shared out evenly across the auto tracks
+            * it covers, so a to-do list taller than the day pushed a third of its
+            * overhang in above the day card and another third in below it. The
+            * flexible track takes the slack instead, where it is just page. */}
+          <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_320px] xl:grid-rows-[auto_auto_1fr] xl:gap-x-8">
             <div className="min-w-0 order-1 xl:col-start-1 xl:row-start-1">
               <OverdueTasksSection overdueRows={overdueRows} />
               <DueTasksSection dueRows={dueRows} />
@@ -318,7 +324,6 @@ export function DayView() {
                   selectedDate={selectedDate}
                   clientName={clientName}
                   colorOf={colorOf}
-                  typeLabel={typeLabel}
                   activeClientId={logState.open ? logState.editingClientId : ''}
                   editLog={onEditLog}
                   logTime={openLogForm}
