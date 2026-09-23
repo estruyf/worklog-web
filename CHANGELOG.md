@@ -22,6 +22,12 @@ Every change to Worklog, by day, newest first.
   pressing Sync used to take its word for it. Pressing Sync now always tries GitHub, and only
   says you're offline if that attempt actually fails.
 
+## 2026-09-16
+
+- **To-dos start level with the day** — on a wide window, a day whose clients had no links to
+  show left the to-do list sitting a step lower than the day card. It now lines up with the top
+  of the day, and sits a normal gap below the links when there are some.
+
 ## 2026-09-03
 
 - **Your day is one bar again** — each block on the day bar now carries the client's name and

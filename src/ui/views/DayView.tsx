@@ -309,7 +309,11 @@ export function DayView() {
               <div className="min-w-0 order-3">
                 <ClientLinksSection groups={linkGroups} onOpenClient={openClient} />
               </div>
-              <div className="min-w-0 order-5 hidden md:block mt-9">
+              {/* The `mt-9` is the stack gap below the Done section on narrower
+                * screens. In the side column it goes: the Links card above carries
+                * its own bottom margin, and when there are no links the to-dos have
+                * to start level with the top of the main column. */}
+              <div className="min-w-0 order-5 hidden md:block mt-9 xl:mt-0">
                 <TodoTasksSection todoRows={todoRows} pageSize={todosPerPage} />
               </div>
             </aside>
