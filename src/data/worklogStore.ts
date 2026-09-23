@@ -429,21 +429,18 @@ class WorklogStore {
     if (!this.repo || this.committing) {
       return;
     }
-    // Offline: don't spend a request to be told so. The edits are already in the
-    // file map and the debounced persist, so this is a deferral, not a failure —
-    // and reporting it as one (a "Sync failed" toast per debounce, all evening)
-    // is what made an offline session look like a broken app.
-    if (isOffline()) {
+    // Offline, a background sync doesn't spend a request to be told so. The edits
+    // are already in the file map and the debounced persist, so this is a
+    // deferral, not a failure — and reporting it as one (a "Sync failed" toast per
+    // debounce, all evening) is what made an offline session look like a broken app.
+    //
+    // A press of Sync always spends the request, though. `navigator.onLine` can stick at false while GitHub is reachable (an installed
+    // PWA after sleep), and then no `online` event ever comes to release it — a
+    // button that believed the flag would refuse forever. The failure path below
+    // gives a genuinely offline press the same treatment.
+    if (silent && isOffline()) {
       this.deferredSync = this.deferredSync || this.fm.dirty.size > 0;
       this.updateSnapshot({ offline: true });
-      if (!silent) {
-        this.emitToast(
-          this.fm.dirty.size > 0
-            ? 'Offline — your changes are saved here and will sync when you reconnect'
-            : 'Offline — nothing to sync until you reconnect',
-          'info',
-        );
-      }
       // Belt and braces for the reconnect: `online` is the fast path, but it does
       // not fire behind every captive portal, and a timesheet must not need one.
       this.scheduleRetry();
@@ -502,6 +499,14 @@ class WorklogStore {
       if (isOffline()) {
         this.deferredSync = true;
         this.updateSnapshot({ offline: true });
+        if (!silent) {
+          this.emitToast(
+            hasLocalChanges
+              ? 'Offline — your changes are saved here and will sync when you reconnect'
+              : 'Offline — nothing to sync until you reconnect',
+            'info',
+          );
+        }
       } else {
         // Failures surface even for background syncs — as the toast that announces
         // this one, and as the standing `syncError` the status bar holds up until

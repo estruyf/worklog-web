@@ -14,3 +14,4 @@ node_modules/
 
 # os
 .DS_Store
+worklog-web.code-workspace

@@ -15,6 +15,13 @@ Every change to Worklog, by day, newest first.
      both). Links must be absolute — a relative path resolves against /changelog and
      404s. -->
 
+## 2026-09-23
+
+- **Sync no longer claims you're offline when you aren't** — the browser's connection flag can
+  get stuck on "offline" (an installed app after the laptop wakes up is the usual case), and
+  pressing Sync used to take its word for it. Pressing Sync now always tries GitHub, and only
+  says you're offline if that attempt actually fails.
+
 ## 2026-09-03
 
 - **Your day is one bar again** — each block on the day bar now carries the client's name and

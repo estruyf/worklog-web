@@ -219,6 +219,24 @@ describe('working offline', () => {
     expect(store.hasPending()).toBe(true);
   });
 
+  it('still syncs on a Sync press when the browser wrongly reports being offline', async () => {
+    // `navigator.onLine` can stick at false (an installed PWA after sleep) while
+    // GitHub is perfectly reachable — the load just proved it. The user asking is
+    // worth one request to find out.
+    await startApp();
+    nav.setOnline(false);
+    const store = await startApp();
+    await store.createTask({ title: 'Pressed Sync', clientId: 'acme' });
+    await flush();
+
+    await store.sync();
+    await flush();
+
+    expect(files['clients/acme.md']).toContain('Pressed Sync');
+    expect(store.hasPending()).toBe(false);
+    expect(store.getSnapshot().offline).toBe(false);
+  });
+
   it('does not push on reconnect when automatic sync is off', async () => {
     // Reopening offline must not become a way for edits to leave unprompted —
     // "nothing syncs unless I press Sync" has to survive it.
