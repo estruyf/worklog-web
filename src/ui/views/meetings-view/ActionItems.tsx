@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { CheckIcon, EllipsisIcon, SquareArrowOutUpRightIcon } from 'lucide-react';
-import type { Meeting, MeetingAction } from '../../../model/types';
+import type { MeetingAction } from '../../../model/types';
 import { Input, LinkButton, Menu, SectionLabel } from '../../primitives';
 import type { MenuOption } from '../../primitives';
 import { useData } from '../../context';
@@ -71,23 +71,25 @@ function LineInput({
 }
 
 function ActionRow({
-  meeting,
+  actions,
   action,
   index,
   onChange,
+  onMakeTask,
 }: {
-  meeting: Meeting;
+  actions: MeetingAction[];
   action: MeetingAction;
   index: number;
   onChange: (actions: MeetingAction[]) => void;
+  onMakeTask: (index: number) => void;
 }) {
-  const { taskById, makeTaskFromAction, openDetail, statusMeta } = useData();
+  const { taskById, openDetail, statusMeta } = useData();
   const [editing, setEditing] = useState(false);
   const task = action.taskId ? taskById.get(action.taskId) : undefined;
   const done = isActionDone(action, taskById);
 
   const replace = (next: MeetingAction | null) =>
-    onChange(meeting.actions.flatMap((a, i) => (i !== index ? [a] : next ? [next] : [])));
+    onChange(actions.flatMap((a, i) => (i !== index ? [a] : next ? [next] : [])));
 
   if (editing) {
     return (
@@ -113,7 +115,7 @@ function ActionRow({
   ];
   const onSelect = (id: string) => {
     if (id === 'task') {
-      void makeTaskFromAction(meeting, index);
+      onMakeTask(index);
     } else if (id === 'open' && task) {
       openDetail(task);
     } else if (id === 'edit') {
@@ -185,22 +187,34 @@ function ActionRow({
 }
 
 /** The meeting's `### Action items`: what came out of it, ticked here or turned
- *  into a task on the meeting's client and tracked from then on as one. */
-export function ActionItems({ meeting, onChange }: { meeting: Meeting; onChange: (actions: MeetingAction[]) => void }) {
+ *  into a task on the meeting's client and tracked from then on as one.
+ *
+ *  Edits go to the editor's draft like everything else on the page. Making a task
+ *  is the exception it can't be — the service reads the item out of the Markdown —
+ *  so `onMakeTask` saves the meeting first. */
+export function ActionItems({
+  actions,
+  onChange,
+  onMakeTask,
+}: {
+  actions: MeetingAction[];
+  onChange: (actions: MeetingAction[]) => void;
+  onMakeTask: (index: number) => void;
+}) {
   return (
     <section className="mt-8">
       <SectionLabel className="mb-[10px]">Action items</SectionLabel>
       <div className="flex flex-col gap-[2px]">
-        {meeting.actions.map((a, i) => (
+        {actions.map((a, i) => (
           // Index keys: an item has no id in the Markdown, and its position is
           // exactly what every edit here addresses it by.
-          <ActionRow key={`${i}:${a.text}`} meeting={meeting} action={a} index={i} onChange={onChange} />
+          <ActionRow key={`${i}:${a.text}`} actions={actions} action={a} index={i} onChange={onChange} onMakeTask={onMakeTask} />
         ))}
         <div className="pt-[6px] px-1">
           <LineInput
             placeholder="Add an action item and press ↵"
             label="Add an action item"
-            onCommit={(text) => onChange([...meeting.actions, { text, done: false }])}
+            onCommit={(text) => onChange([...actions, { text, done: false }])}
           />
         </div>
       </div>

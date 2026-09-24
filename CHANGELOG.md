@@ -17,6 +17,16 @@ Every change to Worklog, by day, newest first.
 
 ## 2026-09-24
 
+- **Meetings now have a Save button** — typing no longer writes to your repo on every pause. What you type
+  is kept on this device as you go (so closing the lid mid-meeting still costs nothing), and **Save** —
+  or `⌘S` — is what writes it into your Markdown and hands it to automatic sync. The header says whether
+  there is anything unsaved.
+- **Delete a meeting from the list** — meeting rows in the Meetings view now carry a `⋯` menu with
+  **Open** and **Delete**, so removing one no longer means opening it first.
+- **A meeting picks its client the same way a task does** — the row of client chips, with **+ Add client**,
+  instead of a dropdown. The date, start and duration fields now fill the width of the card rather than
+  sitting in a mostly empty row.
+
 - **Meeting notes** — press `⇧M` from anywhere (or **New meeting** under New task) and a meeting
   opens with today's date, the current time, the client you're looking at and the people from last
   time already filled in. Notes save as you type; add who was there, how long it took, and action

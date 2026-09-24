@@ -23,6 +23,8 @@ export { ParentPicker } from './ParentPicker';
 export type { ParentPickerProps } from './ParentPicker';
 export { TaskListToolbar } from './task-list-toolbar';
 export type { TaskListToolbarProps, TaskStatusOption } from './task-list-toolbar';
+export { ClientPicker } from './ClientPicker';
+export type { ClientPickerProps } from './ClientPicker';
 export { ClientListItem } from './ClientListItem';
 export type { ClientListItemProps } from './ClientListItem';
 export { DescriptionEditor, MARKDOWN_CHEATSHEET } from './DescriptionEditor';

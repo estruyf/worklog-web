@@ -56,7 +56,7 @@ export function MeetingList() {
           {meetings.length === 0 ? (
             <EmptyState>
               No meetings yet. Start one when a call begins — the date, the time and the client you are looking at
-              are filled in, and the notes save as you type.{' '}
+              are filled in, and what you type is kept on this device until you save it.{' '}
               <LinkButton size="inherit" onClick={() => void startMeetingInContext()} className="italic underline">
                 Start a meeting
               </LinkButton>
@@ -107,7 +107,7 @@ export function MeetingList() {
                   <SectionLabel className="mb-3">{monthLabel(g.ym)}</SectionLabel>
                   <Card padding="list">
                     {g.items.map((m) => (
-                      <MeetingRow key={m.id} meeting={m} showDate />
+                      <MeetingRow key={m.id} meeting={m} showDate showActions />
                     ))}
                   </Card>
                 </section>
