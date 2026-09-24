@@ -21,6 +21,9 @@ Every change to Worklog, by day, newest first.
   is kept on this device as you go (so closing the lid mid-meeting still costs nothing), and **Save** —
   or `⌘S` — is what writes it into your Markdown and hands it to automatic sync. The header says whether
   there is anything unsaved.
+- **The meeting page fits a phone** — the title, Save and Delete no longer share one squeezed line
+  (the actions drop to their own row), and Date, Start and Duration stack instead of clipping the date
+  field into its neighbour.
 - **Delete a meeting from the list** — meeting rows in the Meetings view now carry a `⋯` menu with
   **Open** and **Delete**, so removing one no longer means opening it first.
 - **A meeting picks its client the same way a task does** — the row of client chips, with **+ Add client**,

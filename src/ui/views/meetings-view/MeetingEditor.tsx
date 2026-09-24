@@ -300,30 +300,36 @@ export function MeetingEditor({ meeting }: { meeting: Meeting }) {
 
   return (
     <div className="flex flex-1 flex-col min-h-0">
-      <ViewHeader className="max-w-[920px] xl:max-w-[1280px] flex flex-wrap items-center gap-3">
+      {/* Two rows on a phone, one from `sm` up: five things on one line left the
+          title as "Meet…" and the buttons shoulder to shoulder. The actions group
+          takes a full basis below that breakpoint, which is what forces the wrap —
+          `flex-wrap` alone can't, since the title would rather shrink than break. */}
+      <ViewHeader className="max-w-[920px] xl:max-w-[1280px] flex flex-wrap items-center gap-x-3 gap-y-[10px]">
         <Button variant="neutral" size="xs" onClick={closeMeeting} className="shrink-0">
           ‹ Meetings
         </Button>
         <MeetingTitle key={`title-${meeting.id}`} title={draft.title} onRename={(title) => update({ title })} />
-        <span
-          className="shrink-0 text-status text-neutral-625"
-          title={dirty ? 'Kept on this device until you save' : 'Written to your repo'}
-          aria-live="polite"
-        >
-          {saving ? 'Saving…' : dirty ? 'Unsaved' : 'Saved'}
-        </span>
-        <Button variant="primary" size="xs" onClick={() => void save()} disabled={!dirty || saving} className="shrink-0">
-          Save
-        </Button>
-        <Button
-          variant="danger"
-          size="xs"
-          onClick={() => void deleteMeeting(meeting)}
-          className="shrink-0 inline-flex items-center gap-[5px]"
-        >
-          <Trash2Icon size={13} aria-hidden="true" />
-          Delete
-        </Button>
+        <div className="flex items-center gap-2 basis-full sm:basis-auto sm:ml-auto">
+          <span
+            className="shrink-0 text-status text-neutral-625"
+            title={dirty ? 'Kept on this device until you save' : 'Written to your repo'}
+            aria-live="polite"
+          >
+            {saving ? 'Saving…' : dirty ? 'Unsaved' : 'Saved'}
+          </span>
+          <Button variant="primary" size="xs" onClick={() => void save()} disabled={!dirty || saving} className="shrink-0">
+            Save
+          </Button>
+          <Button
+            variant="danger"
+            size="xs"
+            onClick={() => void deleteMeeting(meeting)}
+            className="shrink-0 inline-flex items-center gap-[5px]"
+          >
+            <Trash2Icon size={13} aria-hidden="true" />
+            Delete
+          </Button>
+        </div>
       </ViewHeader>
 
       <div className="flex-1 overflow-auto px-6 pt-6 pb-20">
@@ -333,8 +339,13 @@ export function MeetingEditor({ meeting }: { meeting: Meeting }) {
               <Card padding="md" className="mb-6">
                 {/* Three fields across, each filling its column: the controls carry
                     no width of their own (see controlStyles), and left to their
-                    intrinsic size they sat in a row of mostly empty card. */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                    intrinsic size they sat in a row of mostly empty card.
+                    The first breakpoint is the date input's, not a device's: two
+                    columns inside this card fall under the ~150px a native date
+                    field needs below roughly 420px, and it overflows its column
+                    rather than shrinking (see `DateInput`). One column until it
+                    fits is the only arrangement that doesn't clip. */}
+                <div className="grid grid-cols-1 min-[420px]:grid-cols-2 sm:grid-cols-3 gap-4">
                   <Field label="Date" labelSize="sm">
                     <DateInput
                       size="sm"
@@ -355,7 +366,7 @@ export function MeetingEditor({ meeting }: { meeting: Meeting }) {
                   <Field
                     label="Duration"
                     labelSize="sm"
-                    className="col-span-2 sm:col-span-1"
+                    className="min-[420px]:col-span-2 sm:col-span-1"
                     action={
                       elapsed !== undefined && (
                         <button
