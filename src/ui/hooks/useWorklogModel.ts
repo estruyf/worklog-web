@@ -26,6 +26,7 @@ import { useTagModel } from "./model/useTagModel";
 import { useTaskActions } from "./model/useTaskActions";
 import { useTaskFormActions } from "./model/useTaskFormActions";
 import { useChecklistModel } from "./model/useChecklistModel";
+import { useMeetingModel } from "./model/useMeetingModel";
 import { useTaskRows } from "./model/useTaskRows";
 import type { WorklogUiState } from "./useWorklogUiState";
 
@@ -35,7 +36,7 @@ const NO_AUTO_SYNC: AutoSyncConfig = { enabled: false, delayMinutes: 5, events: 
 
 /** Same reason as `NO_AUTO_SYNC`, and the same answer a repo with no config.json
  *  gives: both blocks are on until a setting says otherwise. */
-const ALL_FEATURES: FeatureConfig = { attachments: true, prompts: true, checklist: true, lists: true };
+const ALL_FEATURES: FeatureConfig = { attachments: true, prompts: true, checklist: true, lists: true, meetings: true };
 
 /** Same reason as `NO_AUTO_SYNC`: `useTaskListFilter` seeds its state from this
  *  and resets to it, so a fresh object per render would re-seed every list. */
@@ -67,6 +68,7 @@ export function useWorklogModel(
   const worklog = useMemo(() => snap?.worklog ?? [], [snap]);
   const dayNotes = useMemo(() => snap?.dayNotes ?? [], [snap]);
   const checklists = useMemo(() => snap?.checklists ?? [], [snap]);
+  const meetings = useMemo(() => snap?.meetings ?? [], [snap]);
   const statuses = useMemo(() => snap?.statuses ?? [], [snap]);
   const aiAgents = useMemo(() => snap?.aiAgents ?? [], [snap]);
   const today = snap?.today ?? "";
@@ -131,6 +133,7 @@ export function useWorklogModel(
   const logModel = useLogModel(worklog, clients, hoursPerDay, selectedDate, ui);
   const dayNoteModel = useDayNoteModel(dayNotes, selectedDate, ui);
   const checklistModel = useChecklistModel(today, ui);
+  const meetingModel = useMeetingModel(meetings, tasks, today, clientModel.clientName, ui);
 
   const triggerGitSync = () => worklogStore.sync();
 
@@ -141,7 +144,7 @@ export function useWorklogModel(
     defaultTaskSort?: TaskSortPref;
     codeTheme?: CodeTheme;
     autoSync?: { enabled?: boolean; delayMinutes?: number; events?: AutoSyncEvent[] };
-    features?: { attachments?: boolean; prompts?: boolean; checklist?: boolean; lists?: boolean };
+    features?: { attachments?: boolean; prompts?: boolean; checklist?: boolean; lists?: boolean; meetings?: boolean };
     aiAgents?: AiAgent[];
   }) => worklogStore.updateSettings(fields);
 
@@ -155,6 +158,7 @@ export function useWorklogModel(
     worklog,
     dayNotes,
     checklists,
+    meetings,
     clients,
     allClients,
     archivedClients,
@@ -182,6 +186,7 @@ export function useWorklogModel(
     ...logModel,
     ...dayNoteModel,
     ...checklistModel,
+    ...meetingModel,
     triggerGitSync,
     saveSettings,
     gitPending,

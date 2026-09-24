@@ -30,6 +30,12 @@ describe('parseRoute', () => {
     expect(parseRoute('/app/lists/cycling%20trip')).toEqual({ name: 'view', view: 'lists', listId: 'cycling trip' });
   });
 
+  it('reads an open meeting as the Meetings view with that meeting open', () => {
+    expect(parseRoute('/app/meetings')).toEqual({ name: 'view', view: 'meetings' });
+    expect(parseRoute('/app/meetings/m_abc123')).toEqual({ name: 'view', view: 'meetings', meetingId: 'm_abc123' });
+    expect(parseRoute('/app/meetings/m_abc123/')).toEqual({ name: 'view', view: 'meetings', meetingId: 'm_abc123' });
+  });
+
   it('reads a single task', () => {
     expect(parseRoute('/app/task/t-1')).toEqual({ name: 'task', taskId: 't-1' });
     expect(parseRoute('/app/task/t-1/')).toEqual({ name: 'task', taskId: 't-1' });

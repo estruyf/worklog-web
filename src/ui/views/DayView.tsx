@@ -32,6 +32,7 @@ import {
   DoneTasksSection,
   DueTasksSection,
   LogForm,
+  MeetingsSection,
   OpenTasksSection,
   OverdueTasksSection,
   TodoTasksSection,
@@ -207,7 +208,7 @@ function useDayData(boardOpen: boolean) {
 }
 
 export function DayView() {
-  const { today, worklog, clients, allClients, colorOf, clientName, statusMeta, reopen, openDetail, hoursPerDay, todosPerPage, logState, setLogState, saveLog, removeLog, closeLogForm, editLog, openLogForm, copyDayLogs, openTaskFormForDue, dayNoteDirty, saveDayNote, saveDayNoteText, editDayNote, cancelDayNote, hasDayNote } = useData();
+  const { today, worklog, clients, allClients, colorOf, clientName, statusMeta, reopen, openDetail, hoursPerDay, todosPerPage, logState, setLogState, saveLog, removeLog, closeLogForm, editLog, openLogForm, copyDayLogs, openTaskFormForDue, dayNoteDirty, saveDayNote, saveDayNoteText, editDayNote, cancelDayNote, hasDayNote, features, meetings, startMeeting } = useData();
   const { selectedDate, setSelectedDate, setSelectedClient, setShowArchivedClients, editDayOpen, setEditDayOpen, dayNoteDraft, setDayNoteDraft, dayNoteMode, setDayNoteMode, dayNoteSavedAt } = useUi();
   const [boardOpen, setBoardOpen] = useState(false);
   const {
@@ -259,6 +260,11 @@ export function DayView() {
   );
   // Clicking the segment the form is already on closes it: the segment is the
   // entry, so it is the same control either way.
+  // In the order they happened — the snapshot holds them newest first.
+  const dayMeetings = useMemo(
+    () => (features.meetings ? meetings.filter((m) => m.date === selectedDate).reverse() : []),
+    [features.meetings, meetings, selectedDate],
+  );
   const onEditLog = (clientId: string) =>
     logState.open && logState.editingClientId === clientId ? closeLogForm() : editLog(clientId);
 
@@ -364,8 +370,11 @@ export function DayView() {
                   hasNote={hasDayNote}
                   editingNote={dayNoteMode === 'edit'}
                   noteSavedAt={dayNoteSavedAt}
+                  onAddMeeting={features.meetings ? () => void startMeeting({ date: selectedDate }) : undefined}
                 />
               </Card>
+
+              <MeetingsSection meetings={dayMeetings} />
             </div>
 
             <div className="min-w-0 order-4 xl:col-start-1 xl:row-start-3">

@@ -126,6 +126,7 @@ Markdown the parser would choke on. Record keys:
 | File | Key |
 | --- | --- |
 | `clients/*.md`, `archive/**.md` | the task's `- id:` |
+| `meetings/*.md` | the meeting's `- id:` (task-shaped blocks, joined by `joinMeetingFile`) |
 | `worklog/*.md` | date + client id |
 | `.worklog/config.json` arrays | entry `id` |
 

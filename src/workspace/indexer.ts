@@ -6,8 +6,9 @@ import { parseTaskFile } from '../parser/taskParser';
 import { parseWorklogFile } from '../parser/worklogParser';
 import { parseDayNotesFile } from '../parser/dayNotes';
 import { parseChecklistFile } from '../parser/checklistParser';
+import { parseMeetingFile } from '../parser/meetingParser';
 import { Workspace, fileMap, stem, dirName } from './paths';
-import type { Client, DayNote, Task, WorklogEntry } from '../model/types';
+import type { Client, DayNote, Meeting, Task, WorklogEntry } from '../model/types';
 import type { Checklist } from '../model/checklist';
 import { isEventWorklogClientId } from '../model/worklog';
 import { withSeededDue } from '../model/recurringTask';
@@ -18,6 +19,7 @@ export interface RebuildResult {
   worklog: number;
   dayNotes: number;
   checklists: number;
+  meetings: number;
 }
 
 export async function rebuild(db: MemoryDb, ws: Workspace): Promise<RebuildResult> {
@@ -28,6 +30,7 @@ export async function rebuild(db: MemoryDb, ws: Workspace): Promise<RebuildResul
   const worklog: WorklogEntry[] = [];
   const dayNotes: DayNote[] = [];
   const checklists: Checklist[] = [];
+  const meetings: Meeting[] = [];
 
   for (const [path, text] of fm.text) {
     // Open tasks: clients/<id>.md (filename stem is the canonical client id).
@@ -55,6 +58,11 @@ export async function rebuild(db: MemoryDb, ws: Workspace): Promise<RebuildResul
       checklists.push(parseChecklistFile(text, path, stem(path)));
       continue;
     }
+    // Meeting notes: meetings/<YYYY-MM>.md
+    if (/^meetings\/[^/]+\.md$/.test(path)) {
+      meetings.push(...parseMeetingFile(text, path));
+      continue;
+    }
   }
 
   // A recurring task with no due date has no day to appear on. Seed it here so
@@ -66,8 +74,10 @@ export async function rebuild(db: MemoryDb, ws: Workspace): Promise<RebuildResul
   // Day notes belong to no client, so they are deliberately not fed to
   // `mergeClients` — a note must never conjure a client into the pickers.
   // Checklists belong to no client either, and for a stronger reason than a day
-  // note: a list is not work at all, so it must never reach billing.
-  db.load({ clients, tasks: seeded, worklog, dayNotes, checklists });
+  // note: a list is not work at all, so it must never reach billing. A meeting
+  // does name a client, but it is not work logged against one either — an
+  // unknown id in `- client:` must not conjure a client into the pickers.
+  db.load({ clients, tasks: seeded, worklog, dayNotes, checklists, meetings });
 
   return {
     clients: clients.length,
@@ -75,6 +85,7 @@ export async function rebuild(db: MemoryDb, ws: Workspace): Promise<RebuildResul
     worklog: worklog.length,
     dayNotes: dayNotes.length,
     checklists: checklists.length,
+    meetings: meetings.length,
   };
 }
 

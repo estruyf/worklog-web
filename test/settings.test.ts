@@ -138,7 +138,7 @@ describe('updateSettings', () => {
 // key for it — so absence has to keep meaning "on", the same way an absent
 // `defaultTaskSort` has to keep meaning the original order. `checklist` arrived
 // last and is the case that proves it for the ones that come after.
-const ALL_ON = { attachments: true, prompts: true, checklist: true, lists: true };
+const ALL_ON = { attachments: true, prompts: true, checklist: true, lists: true, meetings: true };
 
 describe('feature switches', () => {
   it('reads a config that predates them as all on', async () => {
@@ -153,12 +153,17 @@ describe('feature switches', () => {
 
   it('reads a config written before lists existed as having them on', async () => {
     await mount({ ...CONFIG, features: { attachments: false, prompts: false } });
-    expect((await config()).features).toEqual({ attachments: false, prompts: false, checklist: true, lists: true });
+    expect((await config()).features).toEqual({ attachments: false, prompts: false, checklist: true, lists: true, meetings: true });
   });
 
   it('reads a config written before task checklists existed as having them on', async () => {
     await mount({ ...CONFIG, features: { attachments: false, prompts: false, lists: false } });
-    expect((await config()).features).toEqual({ attachments: false, prompts: false, checklist: true, lists: false });
+    expect((await config()).features).toEqual({ attachments: false, prompts: false, checklist: true, lists: false, meetings: true });
+  });
+
+  it('reads a config written before meetings existed as having them on', async () => {
+    await mount({ ...CONFIG, features: { attachments: true, prompts: true, checklist: false, lists: false } });
+    expect((await config()).features).toEqual({ attachments: true, prompts: true, checklist: false, lists: false, meetings: true });
   });
 
   it('switches one off only on an explicit false', async () => {
@@ -175,9 +180,9 @@ describe('feature switches', () => {
   });
 
   it('writes the switches into config.json', async () => {
-    await updateSettings(store, { features: { attachments: false, prompts: false, checklist: false, lists: false } });
+    await updateSettings(store, { features: { attachments: false, prompts: false, checklist: false, lists: false, meetings: false } });
 
-    const allOff = { attachments: false, prompts: false, checklist: false, lists: false };
+    const allOff = { attachments: false, prompts: false, checklist: false, lists: false, meetings: false };
     expect(writtenFeatures()).toEqual(allOff);
     expect(store.getConfig().features).toEqual(allOff);
   });

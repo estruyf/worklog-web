@@ -5,3 +5,4 @@ export { MobileClientDropdown } from './MobileClientDropdown';
 export type { MobileClientDropdownProps } from './MobileClientDropdown';
 export { ClientInfoCard } from './ClientInfoCard';
 export { CompletedTaskList } from './CompletedTaskList';
+export { ClientMeetings } from './ClientMeetings';

@@ -12,6 +12,7 @@ export type AppView =
   | "upcoming"
   | "todos"
   | "lists"
+  | "meetings"
   | "calendar"
   | "clients"
   | "insights"
@@ -192,7 +193,7 @@ export interface SearchResult {
   /** Which corpus the hit came from. Neither a day note nor a checklist belongs
    *  to a client or has a status, which is why the four fields below are
    *  optional. */
-  kind: "task" | "note" | "list";
+  kind: "task" | "note" | "list" | "meeting";
   /** The task's title, the day's long-form date, or the checklist item. */
   title: string;
   clientName?: string;

@@ -4,11 +4,11 @@
 
 import { useMemo } from 'react';
 import { useData, useUi } from '../context';
-import { navigateToList, navigateToView } from '../router';
-import { appendGroup, clientIdOf, deriveListGroup, deriveNoteGroup, deriveSearch, isDone, linksOf } from '../utils';
+import { navigateToList, navigateToMeeting, navigateToView } from '../router';
+import { appendGroup, clientIdOf, deriveListGroup, deriveMeetingGroup, deriveNoteGroup, deriveSearch, isDone, linksOf } from '../utils';
 
 export function useSearchData() {
-  const { tasks, dayNotes, checklists, features, clientName, colorOf, statusMeta, openDetail } = useData();
+  const { tasks, dayNotes, checklists, meetings, features, clientName, colorOf, statusMeta, openDetail } = useData();
   const { search, searchScope, searchClient, tagFilter, setSelectedDate, setSearchOpen } = useUi();
   return useMemo(() => {
     const filters = { query: search, scope: searchScope, client: searchClient, tags: tagFilter };
@@ -38,15 +38,25 @@ export function useSearchData() {
         setSearchOpen(false);
       },
     });
-    // Lists after notes, for the same reason notes come after tasks: the overlay
-    // renders groups in array order and the shell indexes straight into `flat`.
-    return appendGroup(appendGroup(tasksDerived, notes, { noteCount: dayNotes.length }), lists, {
+    // Off with the feature, for the reason Lists gives above.
+    const meetingHits = deriveMeetingGroup(features.meetings ? meetings : [], filters, {
+      onOpen: (meetingId) => () => {
+        navigateToMeeting(meetingId);
+        setSearchOpen(false);
+      },
+    });
+    // Lists after notes, and meetings last, for the same reason notes come after
+    // tasks: the overlay renders groups in array order and the shell indexes
+    // straight into `flat`.
+    const withLists = appendGroup(appendGroup(tasksDerived, notes, { noteCount: dayNotes.length }), lists, {
       listCount: features.lists ? checklists.length : 0,
     });
+    return appendGroup(withLists, meetingHits);
   }, [
     tasks,
     dayNotes,
     checklists,
+    meetings,
     features,
     search,
     searchScope,

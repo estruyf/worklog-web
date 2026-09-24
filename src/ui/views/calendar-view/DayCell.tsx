@@ -1,5 +1,5 @@
 import React from 'react';
-import { NotebookPenIcon } from 'lucide-react';
+import { NotebookPenIcon, UsersIcon } from 'lucide-react';
 import type { WorklogEntry } from '../../../model/types';
 import { useData } from '../../context';
 import { NOTE_COLOR, roundHours } from '../../utils';
@@ -10,6 +10,8 @@ export interface DayCellProps {
   logs: WorklogEntry[];
   /** The day carries a freeform note. Marked, not shown: the grid is about time. */
   hasNote: boolean;
+  /** How many meetings the day held. Marked like the note, for the same reason. */
+  meetingCount: number;
   isToday: boolean;
   isSelected: boolean;
   /** A month grid pads with the neighbouring months' days; those read back. */
@@ -31,6 +33,7 @@ export function DayCell({
   date,
   logs,
   hasNote,
+  meetingCount,
   isToday,
   isSelected,
   isOtherMonth,
@@ -45,6 +48,9 @@ export function DayCell({
   const lines = logs.map((l) => `${labelFor(l.clientId, clientName)} · ${l.hours}h`);
   if (hasNote) {
     lines.push('Has notes');
+  }
+  if (meetingCount > 0) {
+    lines.push(meetingCount === 1 ? '1 meeting' : `${meetingCount} meetings`);
   }
   // The day's total, in the cell itself: `title` is hover-only, which on touch
   // means never, and "did I log a full day?" is the question the grid is for.
@@ -80,6 +86,7 @@ export function DayCell({
           {totalHours > 0 && (
             <span className="text-eyebrow font-medium text-neutral-675 tabular-nums leading-none">{totalHours}h</span>
           )}
+          {meetingCount > 0 && <UsersIcon size={12} className="shrink-0 text-neutral-625" aria-hidden="true" />}
           {hasNote && <NotebookPenIcon size={12} className="shrink-0 mr-[2px]" style={{ color: NOTE_COLOR }} aria-hidden="true" />}
         </span>
       </span>

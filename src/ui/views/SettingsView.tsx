@@ -63,6 +63,7 @@ export function SettingsView() {
   const [promptsOn, setPromptsOn] = useState(features.prompts);
   const [checklistOn, setChecklistOn] = useState(features.checklist);
   const [listsOn, setListsOn] = useState(features.lists);
+  const [meetingsOn, setMeetingsOn] = useState(features.meetings);
   const [syncEnabled, setSyncEnabled] = useState(autoSync.enabled);
   const [syncDelay, setSyncDelay] = useState(String(autoSync.delayMinutes));
   const [syncEvents, setSyncEvents] = useState<AutoSyncEvent[]>(autoSync.events);
@@ -117,6 +118,9 @@ export function SettingsView() {
     setListsOn(features.lists);
   }, [features.lists]);
   useEffect(() => {
+    setMeetingsOn(features.meetings);
+  }, [features.meetings]);
+  useEffect(() => {
     setSyncEnabled(autoSync.enabled);
   }, [autoSync.enabled]);
   useEffect(() => {
@@ -149,6 +153,7 @@ export function SettingsView() {
     promptsOn !== features.prompts ||
     checklistOn !== features.checklist ||
     listsOn !== features.lists ||
+    meetingsOn !== features.meetings ||
     syncEnabled !== autoSync.enabled ||
     (delayValid && parsedDelay !== autoSync.delayMinutes) ||
     syncEvents.join(',') !== savedEvents ||
@@ -224,7 +229,7 @@ export function SettingsView() {
       todosPerPage: parsedTodoPage,
       defaultTaskSort: { key: sortKey, dir: sortDir },
       codeTheme: code,
-      features: { attachments: attachmentsOn, prompts: promptsOn, checklist: checklistOn, lists: listsOn },
+      features: { attachments: attachmentsOn, prompts: promptsOn, checklist: checklistOn, lists: listsOn, meetings: meetingsOn },
       autoSync: { enabled: syncEnabled, delayMinutes: parsedDelay, events: syncEvents },
       aiAgents: agents,
     });
@@ -246,6 +251,7 @@ export function SettingsView() {
     setPromptsOn(features.prompts);
     setChecklistOn(features.checklist);
     setListsOn(features.lists);
+    setMeetingsOn(features.meetings);
     setSyncEnabled(autoSync.enabled);
     setSyncDelay(String(autoSync.delayMinutes));
     setSyncEvents(savedEvents ? (savedEvents.split(',') as AutoSyncEvent[]) : []);
@@ -420,7 +426,7 @@ export function SettingsView() {
           {/* Its own section rather than a third row above: the two switches up
               there hide a block inside a task, and this one hides a whole tab. */}
           <SectionLabel className="mt-6 mb-[10px]">Views</SectionLabel>
-          <Card>
+          <Card className="divide-y divide-neutral-250">
             <div className="flex items-start justify-between gap-6 px-[18px] py-[18px]">
               <div>
                 <div className="text-row font-semibold">Lists</div>
@@ -431,6 +437,20 @@ export function SettingsView() {
                 </div>
               </div>
               <Toggle checked={listsOn} onChange={setListsOn} aria-label="Lists" />
+            </div>
+
+            <div className="flex items-start justify-between gap-6 px-[18px] py-[18px]">
+              <div>
+                <div className="text-row font-semibold">Meetings</div>
+                <div className="text-control text-neutral-675 mt-[3px]">
+                  Notes taken during a meeting — the client, who was there, what was said and the action items that
+                  came out of it — on the day it happened. Kept in{' '}
+                  <code className="text-meta bg-neutral-250 rounded-chip px-[5px] py-[1px]">meetings/</code>. Off hides
+                  the tab, the ⇧M shortcut and the meetings on a day or a client; the notes stay in your Markdown and
+                  come back with the switch.
+                </div>
+              </div>
+              <Toggle checked={meetingsOn} onChange={setMeetingsOn} aria-label="Meetings" />
             </div>
           </Card>
 

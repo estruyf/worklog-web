@@ -25,6 +25,7 @@ const INITIAL: Files = {
   ) + '\n',
   'clients/acme.md': '# Acme Corp\n\n## Existing task\n- id: t_exist\n- status: open\n- created: 2026-07-01\n',
   'notes/2026-07.md': '# Notes 2026-07\n\n## 2026-07-01\n\nExisting note.\n',
+  'meetings/2026-07.md': '# Meetings 2026-07\n\n## Standup\n- id: m_stand1\n- date: 2026-07-01\n\nExisting meeting.\n',
 };
 
 let github: FakeGitHub;
@@ -211,6 +212,25 @@ describe('two instances syncing the same repo', () => {
 
     expect(noteFor(two, '2026-07-02')).toBe('From instance one.');
     expect(noteFor(two, '2026-07-03')).toBe('From instance two.');
+  });
+
+  it('keeps a meeting started here when the other instance edits another one first', async () => {
+    const one = await openInstance();
+    const two = await openInstance();
+
+    const started = await one.createMeeting({ date: '2026-07-09', title: 'Planning' });
+    await one.updateMeeting(started!.id, { notes: 'From instance one.' });
+
+    await two.updateMeeting('m_stand1', { notes: 'From instance two.' });
+    await two.sync();
+    await one.sync();
+
+    const meetings = one.getSnapshot().data!.meetings;
+    expect(meetings.find((m) => m.id === started!.id)?.notes).toBe('From instance one.');
+    expect(meetings.find((m) => m.id === 'm_stand1')?.notes).toBe('From instance two.');
+    expect(github.files['meetings/2026-07.md']).toContain('From instance one.');
+    expect(github.files['meetings/2026-07.md']).toContain('From instance two.');
+    expect(one.hasPending()).toBe(false);
   });
 
   it('keeps the local text and reports a day both instances wrote', async () => {

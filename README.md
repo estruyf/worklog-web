@@ -157,6 +157,17 @@ The dashboard has these views:
   A recurring task shows its next occurrence, not its whole series. Between this and **Overdue**,
   every dated task has a home — overdue takes the past and today, upcoming takes the future.
 - **To-dos** — the general to-do list: tasks that belong to no client.
+- **Meetings** — notes taken while a meeting runs. **New meeting** (`⇧M` from anywhere, or the
+  button under **New task**) opens one straight away with today's date, the current time, the client
+  you are looking at — an open task's, or the one picked in Clients — and the people from your last
+  meeting with that client. Type the notes; they save as you go. Mark who was there, how long it
+  took (**End now** fills the duration in from the start time), and the **action items** that came
+  out of it — tick them off here, or **Make it a task** to turn one into a task on the meeting's
+  client, tracked there from then on. The last meeting with the same client sits beside the notes,
+  with whatever is still open from it. The list narrows by client, by person and by what was said.
+  A day shows its meetings under the day card (**Add meeting** in its footer starts one on that
+  day), a client lists its recent ones, the calendar marks the days that had one, and search covers
+  them. See [Meetings](#meetings) for the file format.
 - **Calendar** — a month grid of logged time; click a day to jump to it, or plan a task with a
   due date. To fill a stretch of days in one go — two weeks of vacation, a week on one client —
   hit **Log a range**: click the first day, then the last one (the bar above the grid says which
@@ -260,7 +271,7 @@ icons and expands it again; collapsed, every row keeps its name as a tooltip and
 Overdue counts move to the corner of their icon. The choice is remembered per device. On a phone the
 rail is a drawer behind the hamburger instead, so there is nothing to collapse.
 
-**Keyboard shortcuts:** `⌘/Ctrl+N` new task · `⌘/Ctrl+F` or `⌘/Ctrl+S` search · `⌘/Ctrl+L` log time
+**Keyboard shortcuts:** `⌘/Ctrl+N` new task · `⇧M` new meeting · `⌘/Ctrl+F` or `⌘/Ctrl+S` search · `⌘/Ctrl+L` log time
 (Day view) · `⌘/Ctrl+R` reload from GitHub · `Esc` close the top dialog.
 
 **App shortcuts:** with Worklog installed, long-pressing its icon on a phone — or right-clicking it
@@ -505,6 +516,7 @@ archive/<client>/<YYYY-MM>.md  # closed tasks
 worklog/<YYYY-MM>.md           # time entries: - <YYYY-MM-DD> <clientId|event:type> <hours>
 notes/<YYYY-MM>.md             # freeform notes per day (optional)
 lists/<id>.md                  # reusable checklists (optional)
+meetings/<YYYY-MM>.md          # meeting notes, one block per meeting (optional)
 assets/                        # images pasted into notes + files attached to tasks (optional)
 ```
 
@@ -787,6 +799,48 @@ one-line diff.
 Lists can be switched off in **Settings → Views**, which hides the tab and the
 view. The files keep syncing either way — turning it back on finds every list
 where you left it.
+
+### Meetings
+
+A meeting is a dated record of a call: the client, who was there, what was said,
+and what came out of it. It isn't a task (no status, nothing to close) and it isn't
+a day note (it has a client, people and an identity), so it has its own files — one
+per month, `meetings/<YYYY-MM>.md`, one block per meeting:
+
+```markdown
+# Meetings 2026-09
+
+## Acme weekly sync
+- id: m_k3x9qa
+- date: 2026-09-24
+- time: 10:00
+- duration: 45m
+- client: acme
+- people: Sam Jones, Priya Shah
+
+Sam confirmed the CSV column order. Priya wants a preview before the demo.
+
+### Action items
+- [ ] Send Priya a sample export → t_ab12cd
+- [x] Check staging credentials
+```
+
+A block is shaped like a task block — a `## ` title with an `- id:` line under it —
+and syncs the same way: two devices editing different meetings in the same month
+merge cleanly. Everything but `id` and `date` is optional. `duration` takes `45m`,
+`1h`, `1h30m` or `1.5h`. It records how long the meeting took and never adds hours to
+`worklog/` — log the time the usual way.
+
+`### Action items` is the app's only when it is the last thing in the block and holds
+nothing but checkboxes. Anything else under that heading stays part of the notes, so a
+hand-written section never loses a line. `→ t_ab12cd` marks an item that was turned
+into a task: from then on the item shows its task's status and is done when the task
+is closed, and the task links back to the meeting it came from. The task's own
+Markdown isn't touched — the link lives only on the meeting's line.
+
+Changing a meeting's date to another month moves its block to that month's file.
+Meetings can be switched off in **Settings → Views**, which hides the tab, the `⇧M`
+shortcut and the meetings on a day or a client. The files keep syncing either way.
 
 ### Recurring tasks
 

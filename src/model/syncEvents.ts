@@ -19,7 +19,8 @@ export type AutoSyncEvent =
   | 'settings'
   | 'dayNote'
   | 'prompt'
-  | 'list';
+  | 'list'
+  | 'meeting';
 
 export interface AutoSyncEventDef {
   id: AutoSyncEvent;
@@ -80,6 +81,13 @@ export const AUTO_SYNC_EVENTS: AutoSyncEventDef[] = [
     label: 'A list changes',
     description: 'An item on a reusable checklist is ticked, added, edited, moved or removed — or a list is created, renamed, duplicated, deleted or started again.',
   },
+  // Appended for the reason above. Its own event: the notes of a meeting that
+  // just ended are what you want on the branch before the laptop lid closes.
+  {
+    id: 'meeting',
+    label: 'Meeting notes change',
+    description: 'A meeting is started, edited or deleted — its notes, people, action items or times.',
+  },
 ];
 
 /** Rebuild reason → the event it counts as. A reason absent here never triggers a
@@ -133,6 +141,11 @@ const REASON_EVENT: Record<string, AutoSyncEvent> = {
   moveChecklistSection: 'list',
   duplicateChecklist: 'list',
   startChecklistAgain: 'list',
+
+  addMeeting: 'meeting',
+  updateMeeting: 'meeting',
+  deleteMeeting: 'meeting',
+  linkMeetingTask: 'meeting',
 
   addClient: 'settings',
   updateClient: 'settings',

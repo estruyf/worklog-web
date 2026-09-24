@@ -6,7 +6,7 @@ import { Button, IconButton, LinkButton, Modal } from '../primitives';
 import { CopyButton } from './CopyButton';
 import { LinkList } from './LinkList';
 import { DescriptionEditor } from './DescriptionEditor';
-import { AttachmentsSection, NotesSection, PromptsSection, SubtaskList, TaskChecklistSection, TaskContentActions, TaskDetailHeader, TaskSidebar, TitleEditor } from './task-detail';
+import { AttachmentsSection, MeetingOrigin, NotesSection, PromptsSection, SubtaskList, TaskChecklistSection, TaskContentActions, TaskDetailHeader, TaskSidebar, TitleEditor } from './task-detail';
 import { useData, useUi } from '../context';
 import { navigateToDashboard, navigateToTask } from '../router';
 
@@ -91,6 +91,8 @@ export function TaskDetailPanel() {
                   only one of them is ever unmounted — the other's DOM node stays
                   behind, and every navigation stacks another title on the page. */}
               <TitleEditor key={`title-${task.id}`} task={task} />
+
+              <MeetingOrigin taskId={task.id} />
 
               <LinkList links={task.links} className="mb-6" />
 

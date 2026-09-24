@@ -4,7 +4,7 @@
 // the file map and calls {@link load}. Exposes exactly the query surface the
 // services, snapshot builder, and views consume.
 
-import type { Client, DayNote, Task, WorklogEntry } from '../model/types';
+import type { Client, DayNote, Meeting, Task, WorklogEntry } from '../model/types';
 import type { Checklist } from '../model/checklist';
 
 export class MemoryDb {
@@ -13,6 +13,7 @@ export class MemoryDb {
   private worklog: WorklogEntry[] = [];
   private dayNotes: DayNote[] = [];
   private checklists: Checklist[] = [];
+  private meetings: Meeting[] = [];
   private tasksById = new Map<string, Task>();
   private notesByDate = new Map<string, DayNote>();
 
@@ -23,18 +24,20 @@ export class MemoryDb {
     worklog: WorklogEntry[];
     dayNotes: DayNote[];
     checklists: Checklist[];
+    meetings: Meeting[];
   }): void {
     this.clients = [...data.clients].sort((a, b) => a.name.localeCompare(b.name));
     this.tasks = data.tasks.filter((t) => t.id);
     this.worklog = data.worklog;
     this.dayNotes = data.dayNotes;
     this.checklists = data.checklists;
+    this.meetings = data.meetings;
     this.tasksById = new Map(this.tasks.map((t) => [t.id, t]));
     this.notesByDate = new Map(this.dayNotes.map((n) => [n.date, n]));
   }
 
   reset(): void {
-    this.load({ clients: [], tasks: [], worklog: [], dayNotes: [], checklists: [] });
+    this.load({ clients: [], tasks: [], worklog: [], dayNotes: [], checklists: [], meetings: [] });
   }
 
   getClients(): Client[] {
@@ -89,6 +92,17 @@ export class MemoryDb {
   /** Every checklist, by name — the order they are offered in. */
   getAllChecklists(): Checklist[] {
     return [...this.checklists].sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  getMeeting(id: string): Meeting | undefined {
+    return this.meetings.find((m) => m.id === id);
+  }
+
+  /** Every meeting, most recent first — the order every list of them is read in. */
+  getAllMeetings(): Meeting[] {
+    return [...this.meetings].sort(
+      (a, b) => b.date.localeCompare(a.date) || (b.time ?? '').localeCompare(a.time ?? '') || a.title.localeCompare(b.title),
+    );
   }
 }
 

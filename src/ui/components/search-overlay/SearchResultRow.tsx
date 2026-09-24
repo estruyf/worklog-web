@@ -3,7 +3,7 @@ import type { SearchResult } from '../../model';
 import { ExternalLinkIcon } from 'lucide-react';
 import { Chip } from '../../primitives';
 import { useData, useUi } from '../../context';
-import { LIST_COLOR, NOTE_COLOR } from '../../utils';
+import { LIST_COLOR, MEETING_COLOR, NOTE_COLOR } from '../../utils';
 
 export interface SearchResultRowProps {
   row: SearchResult;
@@ -24,11 +24,12 @@ export function SearchResultRow({ row, selected, onOpen, ref }: SearchResultRowP
   const { tagFilter } = useUi();
   const note = row.kind === 'note';
   const list = row.kind === 'list';
+  const meeting = row.kind === 'meeting';
   return (
     <div
       ref={ref}
       onClick={onOpen}
-      title={note ? 'Open day' : list ? 'Open list' : 'Open task'}
+      title={note ? 'Open day' : list ? 'Open list' : meeting ? 'Open meeting' : 'Open task'}
       className={
         'flex items-start gap-[11px] py-[9px] px-[10px] rounded-control-md cursor-pointer border ' +
         (selected ? 'bg-brand-75 border-brand-425' : 'border-transparent hover:bg-neutral-125')
@@ -39,9 +40,9 @@ export function SearchResultRow({ row, selected, onOpen, ref }: SearchResultRowP
         * word in it says why this hit isn't a task. */}
       <span
         className="w-16 shrink-0 mt-[3px] text-status font-bold tracking-status"
-        style={{ color: note ? NOTE_COLOR : list ? LIST_COLOR : row.statusColor }}
+        style={{ color: note ? NOTE_COLOR : list ? LIST_COLOR : meeting ? MEETING_COLOR : row.statusColor }}
       >
-        {note ? 'note' : list ? 'list' : row.statusLabel}
+        {note ? 'note' : list ? 'list' : meeting ? 'meeting' : row.statusLabel}
       </span>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-[8px] flex-wrap">

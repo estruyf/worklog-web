@@ -137,6 +137,38 @@ export interface DayNote {
   sourceLine: number;
 }
 
+/** One meeting, parsed from a `## ` block in `meetings/<YYYY-MM>.md`. Not a task
+ *  (no status, no archive) and not a day note (it has a client, people and an
+ *  identity): a dated record of who was there, what was said and what came of it. */
+export interface Meeting {
+  /** `m_` + a short token — the record key the merge and every edit go by. */
+  id: string;
+  title: string;
+  date: string; // YYYY-MM-DD; also decides which month file holds the block
+  /** Local start time, "HH:mm". */
+  time?: string;
+  /** How long it ran, in minutes. A record only — it never reaches the ledger. */
+  duration?: number;
+  clientId?: string;
+  /** Free-text names, in the order they were written. */
+  people: string[];
+  /** The Markdown body above the action items. */
+  notes: string;
+  actions: MeetingAction[];
+  sourceFile: string;
+  /** 0-based line of the `## ` heading in the source file. */
+  sourceLine: number;
+}
+
+/** One line under `### Action items`. `taskId` is set once it has been turned
+ *  into a task; the link lives only here, so the task's own Markdown is untouched. */
+export interface MeetingAction {
+  /** One line; a newline in it would serialize as a second item. */
+  text: string;
+  done: boolean;
+  taskId?: string;
+}
+
 export interface Client {
   id: string;
   name: string;
@@ -172,6 +204,9 @@ export interface FeatureConfig {
    *  fallback in `WorklogApp`. The files keep syncing either way: switching it
    *  off is a UI decision, so turning it back on finds every list intact. */
   lists: boolean;
+  /** Meeting notes (`meetings/*.md`), their tab, and the places a day or a client
+   *  lists them. Hides views the way `lists` does, and syncs either way. */
+  meetings: boolean;
 }
 
 /** Automatic Git sync after logging time, so a timesheet doesn't sit unpushed. */

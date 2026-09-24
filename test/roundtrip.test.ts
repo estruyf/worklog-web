@@ -14,6 +14,8 @@ import { parseTaskFile, serializeTask } from '../src/parser/taskParser';
 import { parseWorklogFile, serializeWorklogEntry } from '../src/parser/worklogParser';
 import { replaceBlock, extractBlock } from '../src/parser/blocks';
 import { joinDayNotes, splitDayNoteBlocks } from '../src/parser/dayNotes';
+import { joinMeetingFile, parseMeetingFile, serializeMeeting } from '../src/parser/meetingParser';
+import { splitTaskBlocks } from '../src/parser/blocks';
 import type { Task } from '../src/model/types';
 
 const FIXTURES = fileURLToPath(new URL('./fixtures/timesheet', import.meta.url));
@@ -141,6 +143,27 @@ describe('day notes round-trip', () => {
       const content = readFileSync(join(notesDir, f), 'utf-8');
       const { header, blocks } = splitDayNoteBlocks(content);
       expect(joinDayNotes(header, blocks)).toBe(content);
+    });
+  }
+});
+
+describe('meetings round-trip', () => {
+  const meetingsDir = join(DATA, 'meetings');
+  const files = existsSync(meetingsDir) ? readdirSync(meetingsDir).filter((f) => f.endsWith('.md')) : [];
+
+  // Not asserted non-empty against a real repo, for the reason the notes block gives.
+  if (DATA === FIXTURES) {
+    it('finds meetings files to test', () => {
+      expect(files.length).toBeGreaterThan(0);
+    });
+  }
+
+  for (const f of files) {
+    it(`re-serializing every meeting reproduces ${f} byte for byte`, () => {
+      const content = readFileSync(join(meetingsDir, f), 'utf-8');
+      const { header } = splitTaskBlocks(content);
+      const meetings = parseMeetingFile(content, f);
+      expect(joinMeetingFile(header, meetings.map(serializeMeeting))).toBe(content);
     });
   }
 });

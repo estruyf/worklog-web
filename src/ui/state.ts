@@ -3,7 +3,7 @@
 // is small, so the UI holds everything and derives Today / reporting / search /
 // insights client-side — no per-view round trips. Kept DOM- and dependency-free.
 
-import type { AiAgent, AutoSyncConfig, Client, CodeTheme, DayNote, FeatureConfig, StatusDef, Task, TaskSortPref, WorklogEntry } from "../model/types";
+import type { AiAgent, AutoSyncConfig, Client, CodeTheme, DayNote, FeatureConfig, Meeting, StatusDef, Task, TaskSortPref, WorklogEntry } from "../model/types";
 import type { Checklist } from "../model/checklist";
 
 /**
@@ -27,4 +27,5 @@ export interface WorklogState {
   worklog: WorklogEntry[]; // all ledger entries
   dayNotes: DayNote[]; // one freeform Markdown note per day that has one
   checklists: Checklist[]; // reusable checklists from lists/*.md, by name
+  meetings: Meeting[]; // meeting notes from meetings/*.md, most recent first
 }

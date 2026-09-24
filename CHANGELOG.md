@@ -15,6 +15,15 @@ Every change to Worklog, by day, newest first.
      both). Links must be absolute — a relative path resolves against /changelog and
      404s. -->
 
+## 2026-09-24
+
+- **Meeting notes** — press `⇧M` from anywhere (or **New meeting** under New task) and a meeting
+  opens with today's date, the current time, the client you're looking at and the people from last
+  time already filled in. Notes save as you type; add who was there, how long it took, and action
+  items you can tick off or turn into tasks on that client. Last time's open items sit beside the
+  notes. Meetings show up on their day, on their client, in the calendar and in search, and can be
+  switched off in Settings → Views.
+
 ## 2026-09-23
 
 - **Sync no longer claims you're offline when you aren't** — the browser's connection flag can

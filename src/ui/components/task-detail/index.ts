@@ -14,3 +14,4 @@ export { PromptsSection } from './PromptsSection';
 export { TaskChecklistSection } from './TaskChecklistSection';
 export { AttachmentsSection } from './AttachmentsSection';
 export { TaskContentActions } from './TaskContentActions';
+export { MeetingOrigin } from './MeetingOrigin';

@@ -21,6 +21,7 @@
 
 import { splitTaskBlocks } from '../parser/blocks';
 import { joinDayNotes, splitDayNoteBlocks } from '../parser/dayNotes';
+import { joinMeetingFile } from '../parser/meetingParser';
 import { joinChecklist, splitChecklistItems } from '../parser/checklistParser';
 
 /** The three sides of a merge. `undefined` means the file is absent on that side. */
@@ -82,6 +83,9 @@ export function mergeFile(path: string, sides: MergeSides): MergeResult {
   if (/^notes\/[^/]+\.md$/.test(path)) {
     return mergeRecordFile(path, ancestor, local, remote, splitDayNotes);
   }
+  if (/^meetings\/[^/]+\.md$/.test(path)) {
+    return mergeRecordFile(path, ancestor, local, remote, splitMeetings);
+  }
   if (/^lists\/[^/]+\.md$/.test(path)) {
     return mergeRecordFile(path, ancestor, local, remote, splitChecklist);
   }
@@ -130,6 +134,18 @@ function splitTasks(content: string): SplitFile {
       }
       return head ? `${head}\n\n${body}\n` : `${body}\n`;
     },
+  };
+}
+
+/** Meeting files: one record per `## ` block, keyed by its `- id:` — the same
+ *  blocks a task file has, so the same splitter finds them. The join is the
+ *  meeting serializer's own, for the reason `splitDayNotes` gives. */
+function splitMeetings(content: string): SplitFile {
+  const { header, blocks } = splitTaskBlocks(content);
+  return {
+    header,
+    records: blocks.map((b) => ({ key: b.id ? `id:${b.id}` : `text:${b.text.trim()}`, text: b.text })),
+    join: (h, records) => joinMeetingFile(h, records.map((r) => r.text)),
   };
 }
 

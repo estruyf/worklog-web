@@ -24,7 +24,7 @@ export interface SettingsFields {
    *  `events` is the change kinds that sync right away instead of on the delay. */
   autoSync?: { enabled?: boolean; delayMinutes?: number; events?: AutoSyncEvent[] };
   /** Which optional task blocks are offered. Only the provided keys are changed. */
-  features?: { attachments?: boolean; prompts?: boolean; checklist?: boolean; lists?: boolean };
+  features?: { attachments?: boolean; prompts?: boolean; checklist?: boolean; lists?: boolean; meetings?: boolean };
   /** The AI agents a task can be handed to, by id. The whole list, not a delta. */
   aiAgents?: AiAgent[];
 }
@@ -86,6 +86,7 @@ export async function updateSettings(store: Store, fields: SettingsFields): Prom
       prompts: fields.features.prompts ?? config.features.prompts,
       checklist: fields.features.checklist ?? config.features.checklist,
       lists: fields.features.lists ?? config.features.lists,
+      meetings: fields.features.meetings ?? config.features.meetings,
     };
   }
 

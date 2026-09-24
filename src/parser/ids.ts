@@ -12,6 +12,12 @@ export function newTaskId(size = 6): string {
   return 't_' + randomToken(size);
 }
 
+/** A meeting id, e.g. `m_a1b2c3`. Its own prefix so a `→ t_…` link in an action
+ *  item can never be mistaken for one. */
+export function newMeetingId(size = 6): string {
+  return 'm_' + randomToken(size);
+}
+
 function randomToken(size: number): string {
   const bytes = new Uint8Array(size);
   crypto.getRandomValues(bytes);

@@ -28,14 +28,16 @@ import type { TaskLink } from '../model/types';
 const APP_BASE = '/app';
 
 // The routable dashboard views. `day` lives at the base path; the rest hang off it.
-const VIEWS: AppView[] = ['day', 'overdue', 'upcoming', 'todos', 'lists', 'calendar', 'clients', 'insights', 'archive', 'shortcuts', 'settings'];
+const VIEWS: AppView[] = ['day', 'overdue', 'upcoming', 'todos', 'lists', 'meetings', 'calendar', 'clients', 'insights', 'archive', 'shortcuts', 'settings'];
 
 export type Route =
   // `listId` is the one view whose *inside* is addressable: a checklist is a
   // thing you work down over an afternoon, reload, and send someone. It stays a
   // view rather than a route of its own because that is what it is — the Lists
   // view with one of them open, nav rail and all.
-  | { name: 'view'; view: AppView; listId?: string }
+  // `meetingId` is the same arrangement for the Meetings view: one meeting open
+  // across the pane, with the notes you are typing at an address you can reload.
+  | { name: 'view'; view: AppView; listId?: string; meetingId?: string }
   | { name: 'task'; taskId: string }
   // The task form: `taskId` is the task being edited, or null for a new one.
   | { name: 'taskForm'; taskId: string | null }
@@ -60,6 +62,10 @@ export function parseRoute(pathname: string): Route {
   const list = /^\/lists\/([^/]+)\/?$/.exec(rest);
   if (list) {
     return { name: 'view', view: 'lists', listId: decodeURIComponent(list[1]) };
+  }
+  const meeting = /^\/meetings\/([^/]+)\/?$/.exec(rest);
+  if (meeting) {
+    return { name: 'view', view: 'meetings', meetingId: decodeURIComponent(meeting[1]) };
   }
   if (rest === '' || rest === '/') {
     return { name: 'view', view: 'day' };
@@ -96,6 +102,8 @@ const FROM_KEY = 'worklogTaskFrom';
 // in-app and closing it with Back leave the same history behind. A list arrived
 // at by a shared link has no entry of ours and falls back to the board.
 const LIST_KEY = 'worklogList';
+// The same again for an open meeting.
+const MEETING_KEY = 'worklogMeeting';
 // Marks a history entry this app pushed for the task form, so closing the form
 // can walk back off it instead of stranding the user on an unrelated page.
 const FORM_KEY = 'worklogForm';
@@ -241,6 +249,8 @@ let closingForm = false;
 // Same again for an open list: Escape held down would otherwise pop one entry
 // per repeat while the first `history.back()` is still landing.
 let closingList = false;
+// And for an open meeting.
+let closingMeeting = false;
 // A task to show once the form's `history.back()` has landed — see
 // `closeTaskFormOnto`. Held here rather than passed along because the landing is
 // a popstate, and popstate carries nothing of ours.
@@ -256,6 +266,7 @@ function refresh(): void {
   closingTask = false;
   closingForm = false;
   closingList = false;
+  closingMeeting = false;
   const pending = showAfterFormClose;
   showAfterFormClose = null;
   notify();
@@ -378,6 +389,44 @@ export function closeList(): void {
  *  replaces: a pushed entry would leave Back pointing at the same dead id. */
 export function replaceWithLists(): void {
   window.history.replaceState({}, '', viewPath('lists') + window.location.search);
+  refresh();
+}
+
+/** Open one meeting at its own URL — the `navigateToList` arrangement, for the
+ *  same reasons: a reload lands back in the notes, and re-opening the meeting
+ *  already on screen replaces its entry rather than stacking another. */
+export function navigateToMeeting(meetingId: string): void {
+  const path = `${APP_BASE}/meetings/${encodeURIComponent(meetingId)}`;
+  guarded(path, () => {
+    const url = path + window.location.search;
+    if (window.location.pathname === path) {
+      window.history.replaceState({ [MEETING_KEY]: true }, '', url);
+    } else {
+      window.history.pushState({ [MEETING_KEY]: true }, '', url);
+    }
+    refresh();
+  });
+}
+
+/** Leave the open meeting — back off the entry we pushed, or to the Meetings
+ *  list when it was reached by a link. A no-op when none is open. */
+export function closeMeeting(): void {
+  if (closingMeeting || current.name !== 'view' || current.meetingId === undefined) {
+    return;
+  }
+  const state = window.history.state as Record<string, unknown> | null;
+  if (state?.[MEETING_KEY]) {
+    closingMeeting = true;
+    window.history.back();
+  } else {
+    navigate(viewPath('meetings'));
+  }
+}
+
+/** Swap a meeting URL that resolves to nothing for the Meetings list — see
+ *  `replaceWithLists`. */
+export function replaceWithMeetings(): void {
+  window.history.replaceState({}, '', viewPath('meetings') + window.location.search);
   refresh();
 }
 
@@ -597,6 +646,12 @@ export function useDetailId(): string | null {
 export function useOpenListId(): string | null {
   const route = useRoute();
   return route.name === 'view' && route.view === 'lists' ? (route.listId ?? null) : null;
+}
+
+/** The meeting being shown, or null when the Meetings view is on its list. */
+export function useOpenMeetingId(): string | null {
+  const route = useRoute();
+  return route.name === 'view' && route.view === 'meetings' ? (route.meetingId ?? null) : null;
 }
 
 /** The task the entry we are on was opened from, or null. Exported for tests; the

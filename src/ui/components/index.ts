@@ -34,6 +34,8 @@ export type { DescriptionDraftMode, DescriptionEditorProps, DescriptionEditorVar
 export { LinksField } from './LinksField';
 export type { LinksFieldProps } from './LinksField';
 export { LinkList } from './LinkList';
+export { MeetingRow } from './MeetingRow';
+export type { MeetingRowProps } from './MeetingRow';
 export type { LinkListProps } from './LinkList';
 export { Sidebar } from './Sidebar';
 export { TaskFormPage } from './TaskFormPage';

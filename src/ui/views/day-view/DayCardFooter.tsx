@@ -6,7 +6,7 @@
 // quiet row — the note costs no height until it has something in it.
 
 import React from 'react';
-import { NotebookPenIcon, PlusIcon } from 'lucide-react';
+import { NotebookPenIcon, PlusIcon, UsersIcon } from 'lucide-react';
 import { LinkButton } from '../../primitives';
 
 export interface DayCardFooterProps {
@@ -20,9 +20,11 @@ export interface DayCardFooterProps {
   editingNote: boolean;
   /** Local "HH:mm" of the last save in this session, or '' if there wasn't one. */
   noteSavedAt: string;
+  /** Starts a meeting on this day. Absent while Meetings is switched off. */
+  onAddMeeting?: () => void;
 }
 
-export function DayCardFooter({ onLogTime, onEditNote, hasNote, editingNote, noteSavedAt }: DayCardFooterProps) {
+export function DayCardFooter({ onLogTime, onEditNote, hasNote, editingNote, noteSavedAt, onAddMeeting }: DayCardFooterProps) {
   return (
     <div className="flex flex-wrap items-center gap-x-5 gap-y-2 mt-4 pt-3 border-t border-neutral-325">
       <LinkButton size="md" tone="neutral" onClick={onLogTime} className="inline-flex items-center gap-[6px] no-underline hover:no-underline">
@@ -38,6 +40,12 @@ export function DayCardFooter({ onLogTime, onEditNote, hasNote, editingNote, not
         >
           <NotebookPenIcon size={14} aria-hidden="true" />
           {hasNote ? 'Edit note' : 'Add note'}
+        </LinkButton>
+      )}
+      {onAddMeeting && (
+        <LinkButton size="md" tone="neutral" onClick={onAddMeeting} className="inline-flex items-center gap-[6px] no-underline hover:no-underline">
+          <UsersIcon size={14} aria-hidden="true" />
+          Add meeting
         </LinkButton>
       )}
       {noteSavedAt && <span className="ml-auto text-status text-neutral-625">note saved {noteSavedAt}</span>}

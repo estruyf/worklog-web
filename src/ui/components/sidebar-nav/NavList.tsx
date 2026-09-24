@@ -13,6 +13,7 @@ import {
   NavInsightsIcon,
   NavOverdueIcon,
   NavListsIcon,
+  NavMeetingsIcon,
   NavTodosIcon,
   NavUpcomingIcon,
 } from '../icons';
@@ -27,6 +28,7 @@ const NAV_ITEMS: { view: AppView; icon: React.ReactNode }[] = [
   { view: 'upcoming', icon: <NavUpcomingIcon /> },
   { view: 'overdue', icon: <NavOverdueIcon /> },
   { view: 'todos', icon: <NavTodosIcon /> },
+  { view: 'meetings', icon: <NavMeetingsIcon /> },
   { view: 'lists', icon: <NavListsIcon /> },
   { view: 'calendar', icon: <NavCalendarIcon /> },
   { view: 'clients', icon: <NavClientsIcon /> },
@@ -35,7 +37,7 @@ const NAV_ITEMS: { view: AppView; icon: React.ReactNode }[] = [
 ];
 
 /** The view tabs, with counts on the two that would otherwise go unnoticed.
- *  Lists drops out entirely when its feature switch is off — see `FeatureConfig`;
+ *  Lists and Meetings drop out entirely when their switch is off — see `FeatureConfig`;
  *  `WorklogApp` handles the other half, the URL that still names the tab.
  *  Collapsed, a tab is its glyph and its count rides the corner of it — the point
  *  of the badge is that you notice it without reading the row. */
@@ -55,7 +57,7 @@ export function NavList({ onGo, collapsed = false }: { onGo: (view: AppView) => 
 
   return (
     <nav className="flex flex-col gap-[3px] px-[10px]">
-      {NAV_ITEMS.filter((item) => item.view !== 'lists' || features.lists).map((item) => (
+      {NAV_ITEMS.filter((item) => (item.view !== 'lists' || features.lists) && (item.view !== 'meetings' || features.meetings)).map((item) => (
         <button
           key={item.view}
           onClick={() => onGo(item.view)}

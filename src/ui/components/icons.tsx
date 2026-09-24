@@ -75,6 +75,16 @@ export function NavTodosIcon() {
   );
 }
 
+export function NavMeetingsIcon() {
+  return (
+    <NavGlyph>
+      <circle cx="5.5" cy="5.5" r="2.2" />
+      <circle cx="11" cy="6.2" r="1.8" />
+      <path d="M1.8 13.5c.4-2.3 1.9-3.6 3.7-3.6s3.3 1.3 3.7 3.6M9.6 10.2c.5-.3 1-.4 1.4-.4 1.5 0 2.7 1.1 3 3.1" strokeLinecap="round" />
+    </NavGlyph>
+  );
+}
+
 export function NavCalendarIcon() {
   return (
     <NavGlyph>

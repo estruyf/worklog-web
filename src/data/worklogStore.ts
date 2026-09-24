@@ -47,6 +47,7 @@ import {
 } from '../services/taskOps';
 import { removeWorklog, setEventWorklog, setWorklog, setWorklogRange } from '../services/worklog';
 import { setDayNote } from '../services/dayNotes';
+import { createMeeting, createTaskFromAction, deleteMeeting, updateMeeting, type MeetingFields, type NewMeetingInput } from '../services/meetings';
 import {
   addChecklistItemTo,
   addChecklistSectionTo,
@@ -66,7 +67,7 @@ import {
 import { updateSettings, type SettingsFields } from '../services/settings';
 import { createStatus, deleteStatus, moveStatus, updateStatus, type NewStatusInput, type StatusFields } from '../services/statuses';
 import type { WorklogState } from '../ui/state';
-import type { AutoSyncConfig, Client, Task } from '../model/types';
+import type { AutoSyncConfig, Client, Meeting, Task } from '../model/types';
 import type { Checklist } from '../model/checklist';
 import { syncsOnChange } from '../model/syncEvents';
 import { DEFAULT_AUTO_SYNC } from '../workspace/paths';
@@ -850,6 +851,24 @@ class WorklogStore {
     return this.run(() => startChecklistAgain(this.store, id, date));
   }
 
+  /** Start a meeting. Awaited like `createChecklist`, so the caller can open it. */
+  createMeeting(input: NewMeetingInput): Promise<Meeting | undefined> {
+    return this.runFor(() => createMeeting(this.store, input));
+  }
+
+  updateMeeting(id: string, fields: MeetingFields): Promise<void> {
+    return this.run(() => updateMeeting(this.store, id, fields));
+  }
+
+  deleteMeeting(id: string): Promise<void> {
+    return this.run(() => deleteMeeting(this.store, id));
+  }
+
+  /** Resolves to the new task, so the caller can offer to open it. */
+  createTaskFromAction(meetingId: string, index: number): Promise<Task | undefined> {
+    return this.runFor(() => createTaskFromAction(this.store, meetingId, index));
+  }
+
   /** Save a pasted/dropped/picked image and return the markdown ref to insert. */
   async saveImage(dataBase64: string, ext: string): Promise<string> {
     const ref = await saveImageAsset(this.store, dataBase64, ext);
@@ -965,6 +984,7 @@ class WorklogStore {
       worklog: this.store.db.getAllWorklog(),
       dayNotes: this.store.db.getAllDayNotes(),
       checklists: this.store.db.getAllChecklists(),
+      meetings: this.store.db.getAllMeetings(),
     };
   }
 

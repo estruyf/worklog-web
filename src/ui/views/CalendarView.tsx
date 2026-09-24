@@ -19,7 +19,7 @@ function ordered(a: string, b: string): { from: string; to: string } {
  * where past days can be edited and future days can be planned. Picking two days
  * instead selects the run between them, so a fortnight of vacation is one write. */
 export function CalendarView() {
-  const { worklog, tasks, colorOf, clientName, today, weekStart, openDetail, datesWithNotes, logRange } = useData();
+  const { worklog, tasks, colorOf, clientName, today, weekStart, openDetail, datesWithNotes, logRange, meetings, features } = useData();
   const { selectedDate, setSelectedDate } = useUi();
   const [mode, setMode] = useState<CalendarMode>('month');
   // A full date, not a YYYY-MM: switching between month and week then keeps the
@@ -44,6 +44,14 @@ export function CalendarView() {
   }, [worklog]);
 
   const cells = useMemo(() => calendarCells(mode, cursor, weekStart), [mode, cursor, weekStart]);
+
+  const meetingsByDate = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const meeting of features.meetings ? meetings : []) {
+      m.set(meeting.date, (m.get(meeting.date) ?? 0) + 1);
+    }
+    return m;
+  }, [meetings, features.meetings]);
 
   // Colors used across the visible period, deduped by client/event id, so the
   // mobile color-only cells can be decoded via a legend underneath the grid.
@@ -184,6 +192,7 @@ export function CalendarView() {
             cells={cells}
             logsByDate={logsByDate}
             datesWithNotes={datesWithNotes}
+            meetingsByDate={meetingsByDate}
             cursor={cursor}
             isWeek={isWeek}
             rangeDates={highlighted}

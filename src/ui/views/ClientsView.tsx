@@ -7,7 +7,7 @@ import { Badge, Button, Card, EmptyState, IconButton, LinkButton, SectionLabel, 
 import { useData, useUi } from '../context';
 import { useTaskListFilter } from '../hooks';
 import { boardColumns, clientIdOf, fmtLong, fmtShort, isDone, topLevelTasks, BOARD_DONE_LIMIT } from '../utils';
-import { ClientInfoCard, ClientList, CompletedTaskList, MobileClientDropdown } from './clients-view';
+import { ClientInfoCard, ClientList, ClientMeetings, CompletedTaskList, MobileClientDropdown } from './clients-view';
 
 /** How the open tasks are drawn: one ordered list, or a column per status. */
 type TaskLayout = 'list' | 'board';
@@ -147,7 +147,7 @@ function useClientsData(layout: TaskLayout) {
 }
 
 export function ClientsView() {
-  const { openClientEditor, setClientArchived } = useData();
+  const { openClientEditor, setClientArchived, features } = useData();
   const [taskLayout, setTaskLayout] = useTaskLayout();
   const [boardFullWindow, setBoardFullWindow] = useState(false);
   const {
@@ -266,6 +266,10 @@ export function ClientsView() {
                 {selectedOpenRows.length === 0 && <NoOpenTasks total={selectedOpenCount} onReset={openFilter.reset} />}
               </TaskTable>
             </Card>
+          )}
+
+          {features.meetings && selectedClientObj && (
+            <ClientMeetings key={selectedClientObj.id} clientId={selectedClientObj.id} clientName={selectedName} />
           )}
 
           <CompletedTaskList tasks={selectedDone} clientName={selectedName} />

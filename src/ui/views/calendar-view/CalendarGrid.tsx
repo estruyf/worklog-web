@@ -13,6 +13,8 @@ export interface CalendarGridProps {
   logsByDate: Map<string, WorklogEntry[]>;
   /** Dates carrying a freeform day note. */
   datesWithNotes: Set<string>;
+  /** Meetings per date; empty while Meetings is switched off. */
+  meetingsByDate: Map<string, number>;
   cursor: string;
   isWeek: boolean;
   /** The days currently picked for a bulk log — including the run under the
@@ -27,6 +29,7 @@ export function CalendarGrid({
   cells,
   logsByDate,
   datesWithNotes,
+  meetingsByDate,
   cursor,
   isWeek,
   rangeDates,
@@ -58,6 +61,7 @@ export function CalendarGrid({
               date={date}
               logs={logsByDate.get(date) ?? []}
               hasNote={datesWithNotes.has(date)}
+              meetingCount={meetingsByDate.get(date) ?? 0}
               isToday={date === today}
               isSelected={date === selectedDate}
               isOtherMonth={!isWeek && ymOf(date) !== ymOf(cursor)}

@@ -9,6 +9,7 @@ import { OverdueView } from './OverdueView';
 import { UpcomingView } from './UpcomingView';
 import { TodosView } from './TodosView';
 import { ListsView } from './ListsView';
+import { MeetingsView } from './MeetingsView';
 import { CalendarView } from './CalendarView';
 import { ClientsView } from './ClientsView';
 import { ArchiveView } from './ArchiveView';
@@ -35,6 +36,7 @@ export const ROUTES: Record<AppView, React.ComponentType> = {
   upcoming: UpcomingView,
   todos: TodosView,
   lists: ListsView,
+  meetings: MeetingsView,
   calendar: CalendarView,
   clients: ClientsView,
   insights: InsightsView,
@@ -52,6 +54,7 @@ export const VIEW_LABELS: Record<AppView, string> = {
   upcoming: 'Upcoming',
   todos: 'To-dos',
   lists: 'Lists',
+  meetings: 'Meetings',
   calendar: 'Calendar',
   clients: 'Clients',
   insights: 'Insights',

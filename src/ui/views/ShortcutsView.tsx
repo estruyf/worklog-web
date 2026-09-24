@@ -44,6 +44,11 @@ const GROUPS: ShortcutGroup[] = [
         note: `${MOD}N only reaches the app in the installed PWA — a browser tab keeps it for "new window" — and there, with a task's detail panel open, it starts a subtask of that task instead.`,
       },
       {
+        combos: [['⇧', 'M']],
+        label: 'New meeting',
+        note: 'Starts now, with the client you are looking at — an open task’s, or the one picked in Clients — and the people from your last meeting with them. From the Day view it goes on the day shown. Off when Meetings is switched off in Settings.',
+      },
+      {
         combos: [['⇧', 'D'], [MOD, 'D']],
         label: 'Open the day view',
         note: 'Snaps back to today, so a date left over from the calendar is cleared.',

@@ -1,6 +1,6 @@
 import React from 'react';
 import type { AppView } from '../../model';
-import { PanelLeftCloseIcon, PanelLeftOpenIcon, PlusIcon } from 'lucide-react';
+import { PanelLeftCloseIcon, PanelLeftOpenIcon, PlusIcon, UsersIcon } from 'lucide-react';
 import { useData, useUi } from '../../context';
 import { navigateToView } from '../../router';
 import { BrandMark } from './BrandMark';
@@ -24,7 +24,7 @@ export function SidebarContent({
   onToggleCollapsed?: () => void;
 }) {
   const { setSelectedDate } = useUi();
-  const { noClients, today, openTaskForm } = useData();
+  const { noClients, today, openTaskForm, features, startMeetingInContext } = useData();
 
   // Navigating away closes an open task detail overlay on its own — it rides the
   // same history entry the navigation replaces. Picking Day snaps back to today:
@@ -89,6 +89,31 @@ export function SidebarContent({
                     </>
                   )}
                 </button>
+                {/* The quieter of the two: a meeting starts a few times a day, a
+                    task many more — and ⇧M reaches it from anywhere anyway. */}
+                {features.meetings && (
+                  <button
+                    onClick={() => {
+                      void startMeetingInContext();
+                      onNavigate?.();
+                    }}
+                    className={
+                      'flex items-center justify-center gap-[7px] w-full mt-[6px] rounded-control-md text-control font-semibold cursor-pointer border border-neutral-400 bg-white text-neutral-750 hover:bg-neutral-200 ' +
+                      (collapsed ? 'px-0 py-[7px]' : 'px-[14px] py-[7px]')
+                    }
+                    title="New meeting (⇧M)"
+                  >
+                    <UsersIcon size={15} />
+                    {!collapsed && (
+                      <>
+                        New meeting
+                        <kbd className="inline-flex items-center justify-center h-[18px] px-[5px] rounded-chip border border-neutral-400 bg-neutral-200 text-neutral-700 text-eyebrow font-medium leading-none">
+                          ⇧M
+                        </kbd>
+                      </>
+                    )}
+                  </button>
+                )}
               </div>
 
               <NavList onGo={go} collapsed={collapsed} />

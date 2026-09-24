@@ -3,14 +3,14 @@
 // be unit-tested directly and shared between the Search view and the shell's
 // keyboard-nav handler.
 //
-// Day notes and checklists are two further, much simpler corpora, derived by
-// `deriveNoteGroup` / `deriveListGroup` and stapled on with `appendGroup` rather
-// than folded into `deriveSearch`. Neither has a client to group by or an
+// Day notes, checklists and meetings are further, much simpler corpora, derived
+// by `deriveNoteGroup` / `deriveListGroup` / `deriveMeetingGroup` and stapled on
+// with `appendGroup` rather than folded into `deriveSearch`. Neither has a client to group by or an
 // open/archived state to scope by, so pushing them through the task pipeline
 // would mean weakening every rule in it.
 
 import type { Checklist } from '../../model/checklist';
-import type { DayNote, Task } from '../../model/types';
+import type { DayNote, Meeting, Task } from '../../model/types';
 import type { SearchGroup, SearchResult, SearchScope } from '../model';
 import { fmtLong } from './date';
 
@@ -318,6 +318,69 @@ function listRow(title: string, q: string, snippet: string, onEdit: () => void):
     matchBadge: '',
     onEdit,
   };
+}
+
+// ---- meetings ---------------------------------------------------------------
+
+export const MEETING_GROUP_NAME = 'Meetings';
+export const MEETING_COLOR = '#B7791F';
+
+export interface MeetingSearchDeps {
+  /** Builds the row's open handler — showing that meeting. */
+  onOpen: (meetingId: string) => () => void;
+}
+
+/** Meeting hits for the current query: its title, the people in it, its notes and
+ *  its action items. Scoped like day notes, except that a meeting has a client —
+ *  so a lit client chip narrows to that client's meetings instead of hiding them
+ *  all. It carries no tags, so a tag filter still does. */
+export function deriveMeetingGroup(
+  meetings: Meeting[],
+  filters: SearchFilters,
+  deps: MeetingSearchDeps,
+): SearchGroup | undefined {
+  const q = filters.query.trim().toLowerCase();
+  if (!q || filters.scope !== 'all' || filters.tags.length > 0) {
+    return undefined;
+  }
+  const rows: SearchResult[] = [];
+  for (const m of meetings) {
+    if (filters.client && m.clientId !== filters.client) {
+      continue;
+    }
+    const person = m.people.find((p) => p.toLowerCase().includes(q));
+    const action = m.actions.find((a) => a.text.toLowerCase().includes(q));
+    const inNotes = m.notes.toLowerCase().includes(q);
+    if (!m.title.toLowerCase().includes(q) && !person && !action && !inNotes) {
+      continue;
+    }
+    // The snippet is whichever part matched, so the row says *why* it is here; a
+    // match on a name falls through to the line that lists them.
+    const snippet = inNotes
+      ? snippetAround(m.notes, q)
+      : action
+        ? `Action item: ${action.text}`
+        : [fmtLong(m.date), ...(m.people.length ? [m.people.join(', ')] : [])].join(' · ');
+    const sp = splitMatch(m.title, q);
+    rows.push({
+      kind: 'meeting',
+      title: m.title,
+      hasLink: false,
+      link: '',
+      tags: [],
+      pre: sp.pre,
+      mid: sp.mid,
+      post: sp.post,
+      hasMid: sp.hasMid,
+      snippet,
+      matchBadge: '',
+      onEdit: deps.onOpen(m.id),
+    });
+  }
+  if (rows.length === 0) {
+    return undefined;
+  }
+  return { name: MEETING_GROUP_NAME, color: MEETING_COLOR, count: rows.length, rows };
 }
 
 /** Staple a group onto a derivation, keeping `flat` in render order.

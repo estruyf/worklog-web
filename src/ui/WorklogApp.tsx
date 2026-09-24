@@ -38,7 +38,7 @@ function isEditableTarget(target: EventTarget | null): boolean {
 }
 
 export function WorklogApp({ repoProps }: { repoProps?: SidebarRepoProps } = {}) {
-  const { snap, toast, dismissToast, loading, noClients, today, features, openTaskFormInContext, openLogForm } = useData();
+  const { snap, toast, dismissToast, loading, noClients, today, features, openTaskFormInContext, openLogForm, startMeetingInContext } = useData();
   const { view, searchOpen, detailId, clientModalOpen, setSearchOpen, setDetailId, searchSel, setSearchSel, setSelectedDate } = useUi();
   const searchData = useSearchData();
   // The task form and the open task are routes, but both live in the dashboard's
@@ -55,13 +55,14 @@ export function WorklogApp({ repoProps }: { repoProps?: SidebarRepoProps } = {})
   // mount, since the effect below deliberately never re-subscribes.
   // Written after commit, not during render: a render that React discards must not
   // leave the handler pointing at state that was never shown.
-  const stateRef = React.useRef({ view, searchOpen, detailId, clientModalOpen, formOpen, searchSel, searchData, today, openTaskFormInContext, openLogForm });
+  const stateRef = React.useRef({ view, searchOpen, detailId, clientModalOpen, formOpen, searchSel, searchData, today, openTaskFormInContext, openLogForm, startMeetingInContext, meetingsOn: features.meetings });
   React.useEffect(() => {
-    stateRef.current = { view, searchOpen, detailId, clientModalOpen, formOpen, searchSel, searchData, today, openTaskFormInContext, openLogForm };
+    stateRef.current = { view, searchOpen, detailId, clientModalOpen, formOpen, searchSel, searchData, today, openTaskFormInContext, openLogForm, startMeetingInContext, meetingsOn: features.meetings };
   });
 
   // Global shortcuts. ⌘F/⌘S -> open the Search overlay (⌘S also suppresses the
-  // browser's save dialog); ⇧N (or ⌘N in the PWA) -> New task; ⇧D/⌘D -> the Day
+  // browser's save dialog); ⇧N (or ⌘N in the PWA) -> New task; ⇧M -> New meeting;
+  // ⇧D/⌘D -> the Day
   // view; ⌘L on the Day view -> open the in-app log form; Esc
   // closes the top-most dialog; while the Search overlay is open, ↑/↓ move the
   // hit cursor and ↵ opens the selected hit and closes the overlay. The search
@@ -91,6 +92,14 @@ export function WorklogApp({ repoProps }: { repoProps?: SidebarRepoProps } = {})
       if ((meta && key === 'n') || (key === 'n' && e.shiftKey && !e.altKey && idle)) {
         e.preventDefault();
         s.openTaskFormInContext();
+        return;
+      }
+      // ⇧M -> a new meeting, from anywhere — an open task included, which is where
+      // its client comes from (see `startMeetingInContext`). No ⌘ form: ⌘M is the
+      // OS's minimize, and it never reaches the page.
+      if (key === 'm' && e.shiftKey && !e.altKey && !meta && s.meetingsOn && !s.searchOpen && !s.clientModalOpen && !isEditableTarget(e.target)) {
+        e.preventDefault();
+        void s.startMeetingInContext();
         return;
       }
       // ⇧D / ⌘D -> the Day view, snapped back to today the same way the sidebar's
@@ -159,7 +168,9 @@ export function WorklogApp({ repoProps }: { repoProps?: SidebarRepoProps } = {})
   // where a reload lands, and still where you are standing when you switch the
   // feature off from Settings. Falling back to the day view is the other half of
   // what `features.lists` has to mean — see NavList for the tab itself.
-  const ActiveView = view === 'lists' && !features.lists ? ROUTES.day : ROUTES[view];
+  // Meetings the same way, under `features.meetings`.
+  const hidden = (view === 'lists' && !features.lists) || (view === 'meetings' && !features.meetings);
+  const ActiveView = hidden ? ROUTES.day : ROUTES[view];
 
   return (
     // The app is the viewport, not the document: it is exactly one screen tall and
