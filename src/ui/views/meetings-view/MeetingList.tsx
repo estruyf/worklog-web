@@ -56,7 +56,7 @@ export function MeetingList() {
           {meetings.length === 0 ? (
             <EmptyState>
               No meetings yet. Start one when a call begins — the date, the time and the client you are looking at
-              are filled in, and the notes save as you type.{' '}
+              are filled in, ready for your notes.{' '}
               <LinkButton size="inherit" onClick={() => void startMeetingInContext()} className="italic underline">
                 Start a meeting
               </LinkButton>

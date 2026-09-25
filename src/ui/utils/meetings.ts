@@ -1,6 +1,6 @@
 // Pure meeting derivations for the views: whether an action item is finished,
-// the meeting that came before this one, and the Meetings list's filter. Kept
-// free of React so they can be tested directly.
+// and the Meetings list's filter. Kept free of React so they can be tested
+// directly.
 
 import type { Meeting, MeetingAction, Task } from '../../model/types';
 import { isDone } from './task';
@@ -17,19 +17,6 @@ export function isActionDone(action: MeetingAction, taskById: ReadonlyMap<string
 /** How many of a meeting's action items are still open. */
 export function openActionCount(meeting: Meeting, taskById: ReadonlyMap<string, Task>): number {
   return meeting.actions.filter((a) => !isActionDone(a, taskById)).length;
-}
-
-/** The last meeting with the same client before this one — what you want in
- *  front of you walking into the next. `meetings` is most-recent-first, the order
- *  the snapshot holds them in. */
-export function previousMeeting(meetings: readonly Meeting[], meeting: Meeting): Meeting | undefined {
-  if (!meeting.clientId) {
-    return undefined;
-  }
-  const key = `${meeting.date} ${meeting.time ?? ''}`;
-  return meetings.find(
-    (m) => m.id !== meeting.id && m.clientId === meeting.clientId && `${m.date} ${m.time ?? ''}` < key,
-  );
 }
 
 export interface MeetingFilters {

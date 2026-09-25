@@ -1,10 +1,9 @@
 // The pure derivations behind the meeting views: when an action item counts as
-// done, which meeting was "last time", the Meetings list's filter, and the
-// search group. No React — the views only render what these return.
+// done, the Meetings list's filter, and the search group. No React — the views only render what these return.
 
 import { describe, it, expect } from 'vitest';
 import type { Meeting, Task } from '../src/model/types';
-import { filterMeetings, isActionDone, openActionCount, previousMeeting } from '../src/ui/utils/meetings';
+import { filterMeetings, isActionDone, openActionCount } from '../src/ui/utils/meetings';
 import { deriveMeetingGroup, type SearchFilters } from '../src/ui/utils/search';
 
 function meeting(id: string, fields: Partial<Meeting>): Meeting {
@@ -44,17 +43,6 @@ describe('action items', () => {
   it('counts what is still open', () => {
     expect(openActionCount(MEETINGS[1], new Map())).toBe(1);
     expect(openActionCount(MEETINGS[1], tasks)).toBe(0);
-  });
-});
-
-describe('previousMeeting', () => {
-  it('is the last meeting with the same client before this one', () => {
-    expect(previousMeeting(MEETINGS, MEETINGS[0])?.id).toBe('m_b');
-  });
-
-  it('is nothing for the first one, or for a meeting with no client', () => {
-    expect(previousMeeting(MEETINGS, MEETINGS[1])).toBeUndefined();
-    expect(previousMeeting(MEETINGS, meeting('m_x', { date: '2026-10-01' }))).toBeUndefined();
   });
 });
 

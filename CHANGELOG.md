@@ -15,13 +15,22 @@ Every change to Worklog, by day, newest first.
      both). Links must be absolute — a relative path resolves against /changelog and
      404s. -->
 
+## 2026-09-25
+
+- **Name a meeting as you start it** — a new meeting opens with an empty title field ready to
+  type into, instead of sitting as "Meeting" until you click it, and the notes now use the page's
+  full width.
+- **Meeting notes save when you say so** — the notes have Save and Cancel (and `⌘↵`) like a task
+  description, instead of saving — and queueing a sync — on every pause in typing.
+- **Pick a meeting's client the way you pick a task's** — the same row of client chips, with
+  **+ Add client** and a **No client** chip, instead of a dropdown.
+
 ## 2026-09-24
 
 - **Meeting notes** — press `⇧M` from anywhere (or **New meeting** under New task) and a meeting
   opens with today's date, the current time, the client you're looking at and the people from last
   time already filled in. Notes save as you type; add who was there, how long it took, and action
-  items you can tick off or turn into tasks on that client. Last time's open items sit beside the
-  notes. Meetings show up on their day, on their client, in the calendar and in search, and can be
+  items you can tick off or turn into tasks on that client. Meetings show up on their day, on their client, in the calendar and in search, and can be
   switched off in Settings → Views.
 
 ## 2026-09-23

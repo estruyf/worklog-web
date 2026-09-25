@@ -81,7 +81,7 @@ export function useMeetingModel(
         people: last?.people ?? [],
       });
       if (created) {
-        navigateToMeeting(created.id);
+        navigateToMeeting(created.id, { fresh: true });
       }
     },
     [meetings, today, clientName],

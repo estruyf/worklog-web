@@ -5,8 +5,23 @@ import { useData } from '../../context';
 /** Who the task is for, as a row of chips rather than a select: the list is short,
  *  and picking is the single most common thing done in this rail. Can create a
  *  client without leaving the form. Clients only — the general to-do bucket is the
- *  Task/To-do switch's job, and this picker isn't rendered at all for a to-do. */
-export function ClientChipPicker({ value, onChange }: { value: string; onChange: (clientId: string) => void }) {
+ *  Task/To-do switch's job, and this picker isn't rendered at all for a to-do.
+ *
+ *  The meeting editor uses it too, so a client is picked the same way wherever it
+ *  is picked. A meeting may have no client, which `noneLabel` offers as a chip of
+ *  its own (picking it hands back ''), and it sits under the meeting card's own
+ *  label, which `framed={false}` leaves it to. */
+export function ClientChipPicker({
+  value,
+  onChange,
+  noneLabel,
+  framed = true,
+}: {
+  value: string;
+  onChange: (clientId: string) => void;
+  noneLabel?: string;
+  framed?: boolean;
+}) {
   const { clients, allClients, colorOf, createClient } = useData();
   const [addingClient, setAddingClient] = useState(false);
   const [newClientName, setNewClientName] = useState('');
@@ -29,9 +44,14 @@ export function ClientChipPicker({ value, onChange }: { value: string; onChange:
     }
   };
 
-  return (
-    <SidebarSection title="Client" divider={false}>
+  const picker = (
+    <>
       <div className="flex flex-wrap gap-[10px]">
+        {noneLabel && (
+          <Chip variant="select" selected={value === ''} onClick={() => onChange('')}>
+            {noneLabel}
+          </Chip>
+        )}
         {pickableClients.map((c) => (
           <Chip
             key={c.id}
@@ -75,6 +95,14 @@ export function ClientChipPicker({ value, onChange }: { value: string; onChange:
           </LinkButton>
         </div>
       )}
+    </>
+  );
+
+  return framed ? (
+    <SidebarSection title="Client" divider={false}>
+      {picker}
     </SidebarSection>
+  ) : (
+    picker
   );
 }

@@ -67,6 +67,6 @@ export type { ClientLinkGroup } from "./clientLinks";
 export { defaultTaskClientId } from "./newTaskDefaultClient";
 export { addTag, isNewTag, matchExistingTag, normalizeTag, removeTag, suggestTags } from "./tags";
 export { boardColumns, BOARD_DONE_LIMIT } from "./board";
-export { filterMeetings, isActionDone, openActionCount, previousMeeting } from "./meetings";
+export { filterMeetings, isActionDone, openActionCount } from "./meetings";
 export type { MeetingFilters } from "./meetings";
 export type { BoardColumn } from "./board";

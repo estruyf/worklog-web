@@ -104,6 +104,10 @@ const FROM_KEY = 'worklogTaskFrom';
 const LIST_KEY = 'worklogList';
 // The same again for an open meeting.
 const MEETING_KEY = 'worklogMeeting';
+// Set on the entry a just-started meeting opens on, so its title opens as a field
+// ready to type the name into. History state rather than the URL: it describes
+// how you arrived, not the meeting.
+const MEETING_FRESH_KEY = 'worklogMeetingFresh';
 // Marks a history entry this app pushed for the task form, so closing the form
 // can walk back off it instead of stranding the user on an unrelated page.
 const FORM_KEY = 'worklogForm';
@@ -395,17 +399,23 @@ export function replaceWithLists(): void {
 /** Open one meeting at its own URL — the `navigateToList` arrangement, for the
  *  same reasons: a reload lands back in the notes, and re-opening the meeting
  *  already on screen replaces its entry rather than stacking another. */
-export function navigateToMeeting(meetingId: string): void {
+export function navigateToMeeting(meetingId: string, { fresh = false }: { fresh?: boolean } = {}): void {
   const path = `${APP_BASE}/meetings/${encodeURIComponent(meetingId)}`;
   guarded(path, () => {
     const url = path + window.location.search;
+    const state = fresh ? { [MEETING_KEY]: true, [MEETING_FRESH_KEY]: true } : { [MEETING_KEY]: true };
     if (window.location.pathname === path) {
-      window.history.replaceState({ [MEETING_KEY]: true }, '', url);
+      window.history.replaceState(state, '', url);
     } else {
-      window.history.pushState({ [MEETING_KEY]: true }, '', url);
+      window.history.pushState(state, '', url);
     }
     refresh();
   });
+}
+
+/** Whether the entry we are on opened a meeting that was just started. */
+export function isFreshMeetingEntry(): boolean {
+  return (window.history.state as Record<string, unknown> | null)?.[MEETING_FRESH_KEY] === true;
 }
 
 /** Leave the open meeting — back off the entry we pushed, or to the Meetings

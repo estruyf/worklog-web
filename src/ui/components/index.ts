@@ -39,6 +39,7 @@ export type { MeetingRowProps } from './MeetingRow';
 export type { LinkListProps } from './LinkList';
 export { Sidebar } from './Sidebar';
 export { TaskFormPage } from './TaskFormPage';
+export { ClientChipPicker } from './task-form';
 export { TagPicker } from './TagPicker';
 export { TaskDetailPanel } from './TaskDetailPanel';
 export { ClientFormModal } from './ClientFormModal';
