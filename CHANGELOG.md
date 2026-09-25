@@ -18,14 +18,25 @@ Every change to Worklog, by day, newest first.
 ## 2026-09-25
 
 - **Name a meeting as you start it** — a new meeting opens with an empty title field ready to
-  type into, instead of sitting as "Meeting" until you click it, and the notes now use the page's
-  full width.
-- **Meeting notes save when you say so** — the notes have Save and Cancel (and `⌘↵`) like a task
-  description, instead of saving — and queueing a sync — on every pause in typing.
-- **Pick a meeting's client the way you pick a task's** — the same row of client chips, with
-  **+ Add client** and a **No client** chip, instead of a dropdown.
+  type into, instead of sitting as "Meeting" until you click it.
+- **Meetings use the full width of the page** — the "last time" column beside a meeting is gone, so
+  the notes always get the whole page, and the Meetings list now widens on a large screen like every
+  other view.
 
 ## 2026-09-24
+
+- **Meetings now have a Save button** — typing no longer writes to your repo on every pause. What you type
+  is kept on this device as you go (so closing the lid mid-meeting still costs nothing), and **Save** —
+  or `⌘S` — is what writes it into your Markdown and hands it to automatic sync. The header says whether
+  there is anything unsaved.
+- **The meeting page fits a phone** — the title, Save and Delete no longer share one squeezed line
+  (the actions drop to their own row), and Date, Start and Duration stack instead of clipping the date
+  field into its neighbour.
+- **Delete a meeting from the list** — meeting rows in the Meetings view now carry a `⋯` menu with
+  **Open** and **Delete**, so removing one no longer means opening it first.
+- **A meeting picks its client the same way a task does** — the row of client chips, with **+ Add client**,
+  instead of a dropdown. The date, start and duration fields now fill the width of the card rather than
+  sitting in a mostly empty row.
 
 - **Meeting notes** — press `⇧M` from anywhere (or **New meeting** under New task) and a meeting
   opens with today's date, the current time, the client you're looking at and the people from last

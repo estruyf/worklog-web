@@ -160,8 +160,9 @@ The dashboard has these views:
 - **Meetings** — notes taken while a meeting runs. **New meeting** (`⇧M` from anywhere, or the
   button under **New task**) opens one straight away with today's date, the current time, the client
   you are looking at — an open task's, or the one picked in Clients — and the people from your last
-  meeting with that client. Type the notes and press **Save** (or `⌘/Ctrl+↵`); the other fields
-  save as you change them. Mark who was there, how long it
+  meeting with that client. Everything on the page is a draft until you press **Save** (or
+  `⌘/Ctrl+S`) — kept on this device as you type, so closing the lid mid-meeting loses nothing — and
+  Save is what writes it into your Markdown and hands it to sync. Mark who was there, how long it
   took (**End now** fills the duration in from the start time), and the **action items** that came
   out of it — tick them off here, or **Make it a task** to turn one into a task on the meeting's
   client, tracked there from then on. A new meeting opens with an empty title field, so the first

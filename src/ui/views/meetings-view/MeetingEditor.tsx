@@ -2,24 +2,66 @@
 // you are typing in the middle, and what came out of it underneath — one column,
 // so the notes get the full width.
 //
-// The small fields — date, time, client, people, action items — save as they are
-// changed, the way a task's rail does. The notes are a draft with Cancel and Save,
-// the way a task description is: they are the one part written at length, and
-// saving every pause in a sentence would arm a sync for each one.
+// Everything on this page is a *draft* until Save is pressed. Nothing here writes
+// Markdown as you type: a meeting is written during the meeting, and re-parsing
+// the whole file map on every pause made the page announce "Saving…" over and
+// over while someone was still talking. What the typing does reach is the
+// device-side draft (`data/meetingDrafts`), which is why a Save button costs
+// nothing — a closed lid keeps the notes, it just doesn't commit them.
+//
+// Save writes the whole meeting through in one go and drops the draft. That is
+// also the moment auto-sync hears about it, under the `meeting` event.
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { TimerIcon, Trash2Icon } from 'lucide-react';
-import type { Meeting } from '../../../model/types';
+import type { Meeting, MeetingAction } from '../../../model/types';
 import { formatDuration, parseDuration } from '../../../parser/meetingParser';
 import { nowStamp } from '../../../util/date';
 import { Button, Card, DateInput, Field, Input, ViewHeader } from '../../primitives';
-import { ClientChipPicker, DescriptionEditor, MARKDOWN_CHEATSHEET, type DescriptionMode } from '../../components';
+import { ClientPicker, DescriptionEditor, MARKDOWN_CHEATSHEET, type DescriptionDraftMode } from '../../components';
 import { useData } from '../../context';
 import { closeMeeting, isFreshMeetingEntry } from '../../router';
 import { ActionItems } from './ActionItems';
 import { PeopleField } from './PeopleField';
 
+/** How long editing has to pause before the draft is mirrored to the device.
+ *  Only IndexedDB is touched — no parse, no rebuild — so this can be short. */
+const DRAFT_SAVE_DELAY = 500;
+
 const PLACEHOLDER = `What was said, what was decided…\n\n${MARKDOWN_CHEATSHEET}`;
+
+/** Everything about a meeting this page can change, in the shape `saveMeeting`
+ *  takes — so saving is a hand-off, not a translation. */
+type Draft = {
+  title: string;
+  date: string;
+  time: string | null;
+  duration: number | null;
+  clientId: string | null;
+  people: string[];
+  notes: string;
+  actions: MeetingAction[];
+};
+
+function draftOf(meeting: Meeting): Draft {
+  return {
+    title: meeting.title,
+    date: meeting.date,
+    time: meeting.time ?? null,
+    duration: meeting.duration ?? null,
+    clientId: meeting.clientId ?? null,
+    people: meeting.people,
+    notes: meeting.notes,
+    actions: meeting.actions,
+  };
+}
+
+/** Value equality, which is the only kind that means anything here: every
+ *  rebuild anywhere in the app hands this page a freshly parsed `Meeting`, so
+ *  identity would report an edit on someone else's keystroke. */
+function sameDraft(a: Draft, b: Draft): boolean {
+  return JSON.stringify(a) === JSON.stringify(b);
+}
 
 /** A text field that holds its own value while focused and commits on ↵ or blur.
  *  Esc puts the stored value back and stays inside the field — out here, Esc
@@ -120,118 +162,218 @@ function MeetingTitle({ title, onRename }: { title: string; onRename: (title: st
   );
 }
 
-/** The notes, written when you press Save (or ⌘↵) — the arrangement a task
- *  description and a day note have, so notes are committed as the thing you meant
- *  rather than every pause in a sentence. Keyed by the meeting in the parent, so a
- *  draft never follows you into the next one. */
-function MeetingNotes({ meeting }: { meeting: Meeting }) {
-  const { updateMeeting } = useData();
-  const [draft, setDraft] = useState(meeting.notes);
-  // A meeting with nothing written yet opens on the editor: starting one is the
-  // usual way here, and the notes are what you came to type.
-  const [mode, setMode] = useState<DescriptionMode>(meeting.notes.trim() ? 'read' : 'edit');
-  // Reading, the draft is the stored notes — including a change a sync brings in.
-  // Editing, it is yours until Save or Cancel.
-  useEffect(() => {
-    if (mode === 'read') {
-      setDraft(meeting.notes);
-    }
-  }, [meeting.notes, mode]);
-  const dirty = draft !== meeting.notes;
-
-  // Takes the text rather than reading the draft, so a box ticked while reading
-  // saves the line it just flipped.
-  const saveText = (text: string) => {
-    setDraft(text);
-    void updateMeeting(meeting.id, { notes: text });
-    setMode('read');
-  };
-  const cancel = () => {
-    setDraft(meeting.notes);
-    setMode('read');
-  };
-
-  return (
-    <DescriptionEditor
-      value={draft}
-      onChange={setDraft}
-      mode={mode}
-      onModeChange={setMode}
-      title="Notes"
-      placeholder={PLACEHOLDER}
-      onSubmit={dirty ? () => saveText(draft) : undefined}
-      // Reading, a tick is the whole edit and saves itself; mid-edit it is part of
-      // the draft, and Save still decides — the task description's rule.
-      onTaskToggle={mode === 'read' ? saveText : setDraft}
-      action={
-        mode === 'read' ? (
-          draft.trim() !== '' && (
-            <Button variant="neutral" size="xs" onClick={() => setMode('edit')}>
-              Edit
-            </Button>
-          )
-        ) : (
-          <>
-            <Button variant="neutral" size="xs" onClick={cancel}>
-              Cancel
-            </Button>
-            <Button variant="primary" size="xs" onClick={() => saveText(draft)} disabled={!dirty} className="font-semibold">
-              Save
-            </Button>
-          </>
-        )
-      }
-    />
-  );
-}
-
 export function MeetingEditor({ meeting }: { meeting: Meeting }) {
-  const { knownPeople, today, updateMeeting, deleteMeeting } = useData();
-  const save = (fields: Parameters<typeof updateMeeting>[1]) => void updateMeeting(meeting.id, fields);
+  const {
+    knownPeople,
+    today,
+    saveMeeting,
+    meetingDraft,
+    saveMeetingDraft,
+    deleteMeeting,
+    makeTaskFromAction,
+  } = useData();
+  const [mode, setMode] = useState<DescriptionDraftMode>('edit');
+
+  // What is on screen, and the meeting as this page last saw it. The difference
+  // between the two is the whole state of the page: it is what "Unsaved" means,
+  // what gets mirrored to the device, and what Save writes.
+  const [draft, setDraft] = useState<Draft>(() => draftOf(meeting));
+  const [base, setBase] = useState<Draft>(() => draftOf(meeting));
+  const dirty = !sameDraft(draft, base);
+  const [saving, setSaving] = useState(false);
+
+  const latest = useRef(draft);
+  const current = useRef(base);
+  useEffect(() => {
+    latest.current = draft;
+    current.current = base;
+  });
+
+  // Save normalizes on the way in (a title is one line, people lose commas), so
+  // the meeting that comes back is not byte-for-byte what was typed. Adopt it
+  // anyway — otherwise the page would report itself unsaved the moment it saved.
+  // Cleared by the next edit, which is the only thing that outranks it.
+  const adoptNext = useRef(false);
+
+  const update = useCallback((patch: Partial<Draft>) => {
+    adoptNext.current = false;
+    setDraft((d) => ({ ...d, ...patch }));
+  }, []);
+
+  // `DescriptionEditor` wants a setter, because an image drop splices a ref in at
+  // the caret and has to see the text as it is at that moment.
+  const setNotes = useCallback<React.Dispatch<React.SetStateAction<string>>>((value) => {
+    adoptNext.current = false;
+    setDraft((d) => ({ ...d, notes: typeof value === 'function' ? value(d.notes) : value }));
+  }, []);
+
+  // A change from underneath — a pull, the other device, the task an action item
+  // just became — replaces the draft only when there is nothing unsaved in it.
+  useEffect(() => {
+    const next = draftOf(meeting);
+    if (adoptNext.current || sameDraft(latest.current, current.current)) {
+      setDraft(next);
+    }
+    setBase(next);
+  }, [meeting]);
+
+  // What this device was typing when it was last here. Applied only if nothing
+  // has been typed since the page opened — the stored draft is older than that.
+  useEffect(() => {
+    let cancelled = false;
+    void meetingDraft(meeting.id).then((fields) => {
+      if (cancelled || !fields || !sameDraft(latest.current, current.current)) {
+        return;
+      }
+      setDraft({ ...current.current, ...fields });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [meeting.id, meetingDraft]);
+
+  useEffect(() => {
+    if (!dirty) {
+      return;
+    }
+    const timer = setTimeout(() => void saveMeetingDraft(meeting.id, draft), DRAFT_SAVE_DELAY);
+    return () => clearTimeout(timer);
+  }, [dirty, draft, meeting.id, saveMeetingDraft]);
+
+  // Leaving mid-pause — Back, a nav tab, the next meeting — mirrors what the
+  // timer above was about to. The refs are read at unmount on purpose: the latest
+  // draft is the one to keep, not the one this effect first saw.
+  useEffect(() => {
+    const id = meeting.id;
+    const refs = { latest, current };
+    return () => {
+      if (!sameDraft(refs.latest.current, refs.current.current)) {
+        void saveMeetingDraft(id, refs.latest.current);
+      }
+    };
+  }, [meeting.id, saveMeetingDraft]);
+
+  const save = useCallback(async () => {
+    if (sameDraft(latest.current, current.current)) {
+      return;
+    }
+    setSaving(true);
+    adoptNext.current = true;
+    try {
+      await saveMeeting(meeting.id, latest.current);
+    } finally {
+      setSaving(false);
+    }
+  }, [meeting.id, saveMeeting]);
+
+  // ⌘S is the reflex for a page with a Save button, and the browser's own Save
+  // is not what anyone means while typing meeting notes.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        void save();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [save]);
+
+  // An action item only becomes a task once the block holds it, so this saves
+  // first. The task's id is then written onto the item by the service, and the
+  // effect above adopts it.
+  const onMakeTask = useCallback(
+    async (index: number) => {
+      await save();
+      await makeTaskFromAction(meeting, index);
+    },
+    [save, makeTaskFromAction, meeting],
+  );
 
   // "End now" works the duration out from the start time, so the one thing you
   // have to do as the meeting ends is press it. Only today has a now.
   const elapsed = useMemo(() => {
-    if (meeting.date !== today || !meeting.time || meeting.duration) {
+    if (draft.date !== today || !draft.time || draft.duration) {
       return undefined;
     }
-    const [h, m] = meeting.time.split(':').map(Number);
+    const [h, m] = draft.time.split(':').map(Number);
     const [nh, nm] = nowStamp().slice(11, 16).split(':').map(Number);
     const minutes = nh * 60 + nm - (h * 60 + m);
     return minutes > 0 ? minutes : undefined;
-  }, [meeting.date, meeting.time, meeting.duration, today]);
+  }, [draft.date, draft.time, draft.duration, today]);
 
   return (
     <div className="flex flex-1 flex-col min-h-0">
-      <ViewHeader className="max-w-[920px] xl:max-w-[1280px] flex items-center gap-3">
+      {/* Two rows on a phone, one from `sm` up: five things on one line left the
+          title as "Meet…" and the buttons shoulder to shoulder. The actions group
+          takes a full basis below that breakpoint, which is what forces the wrap —
+          `flex-wrap` alone can't, since the title would rather shrink than break. */}
+      <ViewHeader className="max-w-[920px] xl:max-w-[1280px] flex flex-wrap items-center gap-x-3 gap-y-[10px]">
         <Button variant="neutral" size="xs" onClick={closeMeeting} className="shrink-0">
           ‹ Meetings
         </Button>
-        <MeetingTitle key={`title-${meeting.id}`} title={meeting.title} onRename={(title) => save({ title })} />
-        <Button variant="danger" size="xs" onClick={() => void deleteMeeting(meeting)} className="shrink-0 inline-flex items-center gap-[5px]">
-          <Trash2Icon size={13} aria-hidden="true" />
-          Delete
-        </Button>
+        <MeetingTitle key={`title-${meeting.id}`} title={draft.title} onRename={(title) => update({ title })} />
+        <div className="flex items-center gap-2 basis-full sm:basis-auto sm:ml-auto">
+          <span
+            className="shrink-0 text-status text-neutral-625"
+            title={dirty ? 'Kept on this device until you save' : 'Written to your repo'}
+            aria-live="polite"
+          >
+            {saving ? 'Saving…' : dirty ? 'Unsaved' : 'Saved'}
+          </span>
+          <Button variant="primary" size="xs" onClick={() => void save()} disabled={!dirty || saving} className="shrink-0">
+            Save
+          </Button>
+          <Button
+            variant="danger"
+            size="xs"
+            onClick={() => void deleteMeeting(meeting)}
+            className="shrink-0 inline-flex items-center gap-[5px]"
+          >
+            <Trash2Icon size={13} aria-hidden="true" />
+            Delete
+          </Button>
+        </div>
       </ViewHeader>
 
       <div className="flex-1 overflow-auto px-6 pt-6 pb-20">
         <div className="max-w-[920px] xl:max-w-[1280px] mx-auto">
           <Card padding="md" className="mb-6">
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            {/* Three fields across, each filling its column: the controls carry
+                no width of their own (see controlStyles), and left to their
+                intrinsic size they sat in a row of mostly empty card.
+                The first breakpoint is the date input's, not a device's: two
+                columns inside this card fall under the ~150px a native date
+                field needs below roughly 420px, and it overflows its column
+                rather than shrinking (see `DateInput`). One column until it
+                fits is the only arrangement that doesn't clip. */}
+            <div className="grid grid-cols-1 min-[420px]:grid-cols-2 sm:grid-cols-3 gap-4">
               <Field label="Date" labelSize="sm">
-                <DateInput size="sm" value={meeting.date} onChange={(e) => e.target.value && save({ date: e.target.value })} />
+                <DateInput
+                  size="sm"
+                  className="w-full"
+                  value={draft.date}
+                  onChange={(e) => e.target.value && update({ date: e.target.value })}
+                />
               </Field>
               <Field label="Start" labelSize="sm">
-                <Input size="sm" type="time" value={meeting.time ?? ''} onChange={(e) => save({ time: e.target.value || null })} />
+                <Input
+                  size="sm"
+                  type="time"
+                  className="w-full"
+                  value={draft.time ?? ''}
+                  onChange={(e) => update({ time: e.target.value || null })}
+                />
               </Field>
               <Field
                 label="Duration"
                 labelSize="sm"
+                className="min-[420px]:col-span-2 sm:col-span-1"
                 action={
                   elapsed !== undefined && (
                     <button
                       type="button"
-                      onClick={() => save({ duration: elapsed })}
+                      onClick={() => update({ duration: elapsed })}
                       title={`Set the duration to ${formatDuration(elapsed)}, from the start time to now`}
                       className="inline-flex items-center gap-[3px] text-meta font-medium text-info cursor-pointer hover:underline"
                     >
@@ -243,36 +385,49 @@ export function MeetingEditor({ meeting }: { meeting: Meeting }) {
               >
                 <CommitInput
                   size="sm"
-                  value={meeting.duration ? formatDuration(meeting.duration) : ''}
+                  className="w-full"
+                  value={draft.duration ? formatDuration(draft.duration) : ''}
                   placeholder="45m"
                   // Something unreadable leaves the stored value alone rather
                   // than clearing it; an emptied field is how you clear it.
                   onCommit={(text) => {
                     const minutes = parseDuration(text);
                     if (minutes || !text.trim()) {
-                      save({ duration: minutes ?? null });
+                      update({ duration: minutes ?? null });
                     }
                   }}
                 />
               </Field>
             </div>
-            {/* A row of its own: the chips need the width a grid cell doesn't have. */}
+            {/* The same chip row a task is filed with, so "which client" is
+                one control in this app and not two. */}
             <Field label="Client" labelSize="sm" className="mt-4">
-              <ClientChipPicker
-                value={meeting.clientId ?? ''}
-                onChange={(clientId) => save({ clientId: clientId || null })}
+              <ClientPicker
+                value={draft.clientId ?? ''}
+                onChange={(clientId) => update({ clientId: clientId || null })}
                 noneLabel="No client"
-                framed={false}
               />
             </Field>
             <Field label="People" labelSize="sm" className="mt-4">
-              <PeopleField value={meeting.people} onChange={(people) => save({ people })} suggestions={knownPeople} />
+              <PeopleField value={draft.people} onChange={(people) => update({ people })} suggestions={knownPeople} />
             </Field>
           </Card>
 
-          <MeetingNotes key={meeting.id} meeting={meeting} />
+          <DescriptionEditor
+            value={draft.notes}
+            onChange={setNotes}
+            mode={mode}
+            onModeChange={setMode}
+            title="Notes"
+            placeholder={PLACEHOLDER}
+            onTaskToggle={setNotes}
+          />
 
-          <ActionItems meeting={meeting} onChange={(actions) => save({ actions })} />
+          <ActionItems
+            actions={draft.actions}
+            onChange={(actions) => update({ actions })}
+            onMakeTask={(index) => void onMakeTask(index)}
+          />
         </div>
       </div>
     </div>

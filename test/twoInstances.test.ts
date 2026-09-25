@@ -219,9 +219,9 @@ describe('two instances syncing the same repo', () => {
     const two = await openInstance();
 
     const started = await one.createMeeting({ date: '2026-07-09', title: 'Planning' });
-    await one.updateMeeting(started!.id, { notes: 'From instance one.' });
+    await one.saveMeeting(started!.id, { notes: 'From instance one.' });
 
-    await two.updateMeeting('m_stand1', { notes: 'From instance two.' });
+    await two.saveMeeting('m_stand1', { notes: 'From instance two.' });
     await two.sync();
     await one.sync();
 

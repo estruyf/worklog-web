@@ -1,5 +1,6 @@
-// The IndexedDB plumbing the two device-side stores share: `pendingStore` (edits
-// that haven't reached GitHub) and `repoCache` (the branch as it was last seen).
+// The IndexedDB plumbing the device-side stores share: `pendingStore` (edits
+// that haven't reached GitHub), `repoCache` (the branch as it was last seen) and
+// `meetingDrafts` (what is typed into a meeting before Save is pressed).
 //
 // One module owns the database because one database can only be opened at one
 // version: two modules calling `indexedDB.open('worklog', …)` with versions of
@@ -15,15 +16,17 @@ const DB_NAME = 'worklog';
 
 /** v1: one `pending` record per repo. v2: `snapshots`, one record per repo *per
  *  browser instance*. v3: adds `trees` — the cached branch contents an offline
- *  open renders from. Bumping this means adding to `onupgradeneeded` below, not
- *  replacing it: a user arrives at v3 from either of the earlier versions. */
-const DB_VERSION = 3;
+ *  open renders from. v4: adds `drafts` — meeting text typed but not yet saved.
+ *  Bumping this means adding to `onupgradeneeded` below, not replacing it: a user
+ *  arrives at v4 from any of the earlier versions. */
+const DB_VERSION = 4;
 
 /** v1's store. Read once on open so a snapshot written by the old build is still
  *  recoverable, never written. */
 export const LEGACY_PENDING_STORE = 'pending';
 export const SNAPSHOT_STORE = 'snapshots';
 export const TREE_STORE = 'trees';
+export const DRAFT_STORE = 'drafts';
 
 export function openDb(): Promise<IDBDatabase | null> {
   return new Promise((resolve) => {
@@ -45,6 +48,9 @@ export function openDb(): Promise<IDBDatabase | null> {
       }
       if (!db.objectStoreNames.contains(TREE_STORE)) {
         db.createObjectStore(TREE_STORE, { keyPath: 'repoKey' });
+      }
+      if (!db.objectStoreNames.contains(DRAFT_STORE)) {
+        db.createObjectStore(DRAFT_STORE, { keyPath: 'key' });
       }
       // The v1 store is left in place; `loadPending` drains it on the next open.
     };

@@ -99,7 +99,15 @@ export function useMeetingModel(
     });
   }, [detailId, tasks, view, selectedDate, selectedClient, today, startMeeting]);
 
-  const updateMeeting = useCallback((id: string, fields: MeetingFields) => worklogStore.updateMeeting(id, fields), []);
+  /** Write a meeting's draft into its Markdown block. Until this runs, what has
+   *  been typed lives only in the device-side draft (`data/meetingDrafts`) — which
+   *  is what lets the editor have a Save button without a closed lid costing
+   *  anything. Saving is what arms auto-sync, under the `meeting` event. */
+  const saveMeeting = useCallback((id: string, fields: MeetingFields) => worklogStore.saveMeeting(id, fields), []);
+
+  const meetingDraft = useCallback((id: string) => worklogStore.meetingDraft(id), []);
+  const saveMeetingDraft = useCallback((id: string, fields: MeetingFields) => worklogStore.saveMeetingDraft(id, fields), []);
+  const discardMeetingDraft = useCallback((id: string) => worklogStore.discardMeetingDraft(id), []);
 
   /** The block is the only copy — the same reason deleting a task asks. */
   const deleteMeeting = useCallback(
@@ -129,7 +137,10 @@ export function useMeetingModel(
     meetingOfTask,
     startMeeting,
     startMeetingInContext,
-    updateMeeting,
+    saveMeeting,
+    meetingDraft,
+    saveMeetingDraft,
+    discardMeetingDraft,
     deleteMeeting,
     makeTaskFromAction,
   };

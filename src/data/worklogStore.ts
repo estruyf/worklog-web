@@ -77,6 +77,7 @@ import { commitFiles, fetchAsset, fetchHead, fetchRepo, type LoadResponse, type 
 import { fileMapOf, markPushed, mergeRemoteInto, outgoingFiles } from './fileSync';
 import { applySnapshot, snapshotOf } from './recovery';
 import { loadResponseOf, loadTree, saveTree } from './repoCache';
+import { clearMeetingDraft, loadMeetingDraft, saveMeetingDraft } from './meetingDrafts';
 import { RemoteWatcher } from './remoteWatcher';
 
 /** True only when the browser positively reports having no connection.
@@ -856,12 +857,35 @@ class WorklogStore {
     return this.runFor(() => createMeeting(this.store, input));
   }
 
-  updateMeeting(id: string, fields: MeetingFields): Promise<void> {
-    return this.run(() => updateMeeting(this.store, id, fields));
+  async deleteMeeting(id: string): Promise<void> {
+    await this.run(() => deleteMeeting(this.store, id));
+    await clearMeetingDraft(this.repoKey(), id);
   }
 
-  deleteMeeting(id: string): Promise<void> {
-    return this.run(() => deleteMeeting(this.store, id));
+  // ---- meeting drafts -------------------------------------------------------
+  //
+  // Straight pass-throughs to `data/meetingDrafts`, here only because the repo
+  // key is this class's to know. A draft is not repo state: it never touches the
+  // file map, never marks the tree dirty and never arms a sync. See that module.
+
+  /** What was typed into this meeting and not saved, or null. */
+  meetingDraft(id: string): Promise<MeetingFields | null> {
+    return loadMeetingDraft(this.repoKey(), id).then((draft) => draft?.fields ?? null);
+  }
+
+  saveMeetingDraft(id: string, fields: MeetingFields): Promise<void> {
+    return saveMeetingDraft(this.repoKey(), id, fields);
+  }
+
+  /** Save a draft into the Markdown, and drop it. One call so the two can't come
+   *  apart: a cleared draft over an unwritten meeting is the one losing order. */
+  async saveMeeting(id: string, fields: MeetingFields): Promise<void> {
+    await this.run(() => updateMeeting(this.store, id, fields));
+    await clearMeetingDraft(this.repoKey(), id);
+  }
+
+  discardMeetingDraft(id: string): Promise<void> {
+    return clearMeetingDraft(this.repoKey(), id);
   }
 
   /** Resolves to the new task, so the caller can offer to open it. */
