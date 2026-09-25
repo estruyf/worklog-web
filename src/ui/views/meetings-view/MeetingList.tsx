@@ -38,7 +38,7 @@ export function MeetingList() {
 
   return (
     <div className="flex flex-1 flex-col min-h-0">
-      <ViewHeader className="max-w-[920px] flex items-center justify-between gap-3">
+      <ViewHeader className="max-w-[920px] xl:max-w-[1280px] flex items-center justify-between gap-3">
         <div className="flex items-center gap-[10px]">
           <h1 className="text-[24px] font-bold m-0">Meetings</h1>
           <span className="text-control text-neutral-675">
@@ -52,7 +52,7 @@ export function MeetingList() {
       </ViewHeader>
 
       <div className="flex-1 overflow-auto px-6 pt-[18px] pb-20">
-        <div className="max-w-[920px] mx-auto">
+        <div className="max-w-[920px] xl:max-w-[1280px] mx-auto">
           {meetings.length === 0 ? (
             <EmptyState>
               No meetings yet. Start one when a call begins — the date, the time and the client you are looking at

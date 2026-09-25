@@ -334,7 +334,14 @@ export function MeetingEditor({ meeting }: { meeting: Meeting }) {
 
       <div className="flex-1 overflow-auto px-6 pt-6 pb-20">
         <div className="max-w-[920px] xl:max-w-[1280px] mx-auto">
-          <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_320px] gap-x-8 gap-y-8">
+          {/* The side column only when there is something to put in it: a first
+              meeting with a client has no "last time", and a 320px track reserved
+              for it left the notes in two thirds of the page beside empty space. */}
+          <div
+            className={
+              previous ? 'grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_320px] gap-x-8 gap-y-8' : 'grid grid-cols-1'
+            }
+          >
             <div className="min-w-0">
               <Card padding="md" className="mb-6">
                 {/* Three fields across, each filling its column: the controls carry

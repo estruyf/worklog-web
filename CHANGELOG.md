@@ -15,6 +15,12 @@ Every change to Worklog, by day, newest first.
      both). Links must be absolute — a relative path resolves against /changelog and
      404s. -->
 
+## 2026-09-25
+
+- **Meetings use the full width of the page** — a meeting with no earlier one to show beside it no
+  longer keeps an empty column on the right, and the Meetings list now widens on a large screen like
+  every other view.
+
 ## 2026-09-24
 
 - **Meetings now have a Save button** — typing no longer writes to your repo on every pause. What you type
