@@ -1,6 +1,13 @@
 // One meeting, open across the pane: when and with whom along the top, the notes
-// you are typing in the middle, and what came out of it underneath — one column,
-// so the notes get the full width.
+// in the middle, and what came out of it underneath — one column, so the notes
+// get the full width.
+//
+// It opens as a read: an old meeting is looked up far more often than it is
+// changed, and a page that is all fields invites an edit nobody meant. Edit puts
+// the editor up; Done saves and puts the read back. A meeting that was just
+// started, or that has unsaved notes on this device, opens in the editor instead —
+// the first is there to be typed into, and the second would otherwise hide the
+// notes it is keeping.
 //
 // Everything on this page is a *draft* until Save is pressed. Nothing here writes
 // Markdown as you type: a meeting is written during the meeting, and re-parsing
@@ -13,14 +20,15 @@
 // also the moment auto-sync hears about it, under the `meeting` event.
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { TimerIcon, Trash2Icon } from 'lucide-react';
+import { PencilIcon, TimerIcon, Trash2Icon, UsersIcon } from 'lucide-react';
 import type { Meeting, MeetingAction } from '../../../model/types';
 import { formatDuration, parseDuration } from '../../../parser/meetingParser';
 import { nowStamp } from '../../../util/date';
-import { Button, Card, DateInput, Field, Input, ViewHeader } from '../../primitives';
-import { ClientPicker, DescriptionEditor, MARKDOWN_CHEATSHEET, type DescriptionDraftMode } from '../../components';
+import { Button, Card, DateInput, Field, Input, SectionLabel, ViewHeader } from '../../primitives';
+import { ClientPicker, DescriptionEditor, MARKDOWN_CHEATSHEET, MarkdownView, type DescriptionDraftMode } from '../../components';
 import { useData } from '../../context';
 import { closeMeeting, isFreshMeetingEntry } from '../../router';
+import { fmtLong } from '../../utils';
 import { ActionItems } from './ActionItems';
 import { PeopleField } from './PeopleField';
 
@@ -128,9 +136,9 @@ function CommitInput({
  *  keeps the name the meeting was created with ("Meeting", or "<Client> meeting"):
  *  a `## ` heading with nothing after it stops being a heading the moment an
  *  editor strips the trailing space, and the block would stop being a meeting. */
-function MeetingTitle({ title, onRename }: { title: string; onRename: (title: string) => void }) {
-  const [editing, setEditing] = useState(isFreshMeetingEntry);
-  const [blank, setBlank] = useState(isFreshMeetingEntry);
+function MeetingTitle({ title, fresh, onRename }: { title: string; fresh: boolean; onRename: (title: string) => void }) {
+  const [editing, setEditing] = useState(fresh);
+  const [blank, setBlank] = useState(fresh);
   if (editing) {
     return (
       <CommitInput
@@ -162,6 +170,50 @@ function MeetingTitle({ title, onRename }: { title: string; onRename: (title: st
   );
 }
 
+/** The meeting as it is stored: when, whose and who as one line, the notes
+ *  rendered, and the action items. Ticking a box in the notes saves on the spot —
+ *  there is no draft open to hold it. */
+function MeetingRead({ draft, onTaskToggle, onEdit }: { draft: Draft; onTaskToggle: (notes: string) => void; onEdit: () => void }) {
+  const { clientName, colorOf } = useData();
+  const when = [fmtLong(draft.date), draft.time, draft.duration ? formatDuration(draft.duration) : null].filter(Boolean).join(' · ');
+  return (
+    <>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mb-6 text-meta text-neutral-675">
+        <span className="tabular-nums">{when}</span>
+        {draft.clientId && (
+          <span className="flex items-center gap-[6px]">
+            <span className="w-[7px] h-[7px] rounded-full" style={{ background: colorOf(draft.clientId) }} />
+            {clientName(draft.clientId)}
+          </span>
+        )}
+        {draft.people.length > 0 && (
+          <span className="flex items-center gap-[5px] min-w-0">
+            <UsersIcon size={12} className="shrink-0" aria-hidden="true" />
+            {draft.people.join(', ')}
+          </span>
+        )}
+      </div>
+
+      <SectionLabel className="mb-[10px]">Notes</SectionLabel>
+      {draft.notes.trim() ? (
+        <Card tone="muted" padding="md" radius="panel">
+          <MarkdownView text={draft.notes} onTextChange={onTaskToggle} />
+        </Card>
+      ) : (
+        <button
+          type="button"
+          onClick={onEdit}
+          className="block w-full text-left text-body text-neutral-625 italic cursor-text border border-dashed border-neutral-450 rounded-panel px-[18px] py-[22px]"
+        >
+          No notes yet. Click to add some.
+        </button>
+      )}
+
+      {draft.actions.length > 0 && <ActionItems actions={draft.actions} />}
+    </>
+  );
+}
+
 export function MeetingEditor({ meeting }: { meeting: Meeting }) {
   const {
     knownPeople,
@@ -173,6 +225,10 @@ export function MeetingEditor({ meeting }: { meeting: Meeting }) {
     makeTaskFromAction,
   } = useData();
   const [mode, setMode] = useState<DescriptionDraftMode>('edit');
+  // Read once: the history entry stays fresh for as long as it is the one on
+  // screen, and a second trip into the editor must not blank the title again.
+  const [fresh, setFresh] = useState(isFreshMeetingEntry);
+  const [editing, setEditing] = useState(fresh);
 
   // What is on screen, and the meeting as this page last saw it. The difference
   // between the two is the whole state of the page: it is what "Unsaved" means,
@@ -226,6 +282,7 @@ export function MeetingEditor({ meeting }: { meeting: Meeting }) {
         return;
       }
       setDraft({ ...current.current, ...fields });
+      setEditing(true);
     });
     return () => {
       cancelled = true;
@@ -265,6 +322,23 @@ export function MeetingEditor({ meeting }: { meeting: Meeting }) {
       setSaving(false);
     }
   }, [meeting.id, saveMeeting]);
+
+  const edit = useCallback(() => {
+    setMode('edit');
+    setEditing(true);
+  }, []);
+
+  const done = useCallback(async () => {
+    await save();
+    setFresh(false);
+    setEditing(false);
+  }, [save]);
+
+  // A tick in the read is a save of its own: there is no draft open to hold it.
+  const toggleTask = useCallback(
+    (notes: string) => void saveMeeting(meeting.id, { ...current.current, notes }),
+    [meeting.id, saveMeeting],
+  );
 
   // ⌘S is the reflex for a page with a Save button, and the browser's own Save
   // is not what anyone means while typing meeting notes.
@@ -312,18 +386,34 @@ export function MeetingEditor({ meeting }: { meeting: Meeting }) {
         <Button variant="neutral" size="xs" onClick={closeMeeting} className="shrink-0">
           ‹ Meetings
         </Button>
-        <MeetingTitle key={`title-${meeting.id}`} title={draft.title} onRename={(title) => update({ title })} />
+        {editing ? (
+          <MeetingTitle key={`title-${meeting.id}`} title={draft.title} fresh={fresh} onRename={(title) => update({ title })} />
+        ) : (
+          <h1 className="flex-1 min-w-0 m-0 text-[22px] font-bold truncate">{draft.title}</h1>
+        )}
         <div className="flex items-center gap-2 basis-full sm:basis-auto sm:ml-auto">
-          <span
-            className="shrink-0 text-status text-neutral-625"
-            title={dirty ? 'Kept on this device until you save' : 'Written to your repo'}
-            aria-live="polite"
-          >
-            {saving ? 'Saving…' : dirty ? 'Unsaved' : 'Saved'}
-          </span>
-          <Button variant="primary" size="xs" onClick={() => void save()} disabled={!dirty || saving} className="shrink-0">
-            Save
-          </Button>
+          {editing ? (
+            <>
+              <span
+                className="shrink-0 text-status text-neutral-625"
+                title={dirty ? 'Kept on this device until you save' : 'Written to your repo'}
+                aria-live="polite"
+              >
+                {saving ? 'Saving…' : dirty ? 'Unsaved' : 'Saved'}
+              </span>
+              <Button variant="primary" size="xs" onClick={() => void save()} disabled={!dirty || saving} className="shrink-0">
+                Save
+              </Button>
+              <Button variant="neutral" size="xs" onClick={() => void done()} disabled={saving} className="shrink-0">
+                Done
+              </Button>
+            </>
+          ) : (
+            <Button variant="primary" size="xs" onClick={edit} className="shrink-0 inline-flex items-center gap-[5px]">
+              <PencilIcon size={13} aria-hidden="true" />
+              Edit
+            </Button>
+          )}
           <Button
             variant="danger"
             size="xs"
@@ -338,96 +428,102 @@ export function MeetingEditor({ meeting }: { meeting: Meeting }) {
 
       <div className="flex-1 overflow-auto px-6 pt-6 pb-20">
         <div className="max-w-[920px] xl:max-w-[1280px] mx-auto">
-          <Card padding="md" className="mb-6">
-            {/* Three fields across, each filling its column: the controls carry
-                no width of their own (see controlStyles), and left to their
-                intrinsic size they sat in a row of mostly empty card.
-                The first breakpoint is the date input's, not a device's: two
-                columns inside this card fall under the ~150px a native date
-                field needs below roughly 420px, and it overflows its column
-                rather than shrinking (see `DateInput`). One column until it
-                fits is the only arrangement that doesn't clip. */}
-            <div className="grid grid-cols-1 min-[420px]:grid-cols-2 sm:grid-cols-3 gap-4">
-              <Field label="Date" labelSize="sm">
-                <DateInput
-                  size="sm"
-                  className="w-full"
-                  value={draft.date}
-                  onChange={(e) => e.target.value && update({ date: e.target.value })}
-                />
-              </Field>
-              <Field label="Start" labelSize="sm">
-                <Input
-                  size="sm"
-                  type="time"
-                  className="w-full"
-                  value={draft.time ?? ''}
-                  onChange={(e) => update({ time: e.target.value || null })}
-                />
-              </Field>
-              <Field
-                label="Duration"
-                labelSize="sm"
-                className="min-[420px]:col-span-2 sm:col-span-1"
-                action={
-                  elapsed !== undefined && (
-                    <button
-                      type="button"
-                      onClick={() => update({ duration: elapsed })}
-                      title={`Set the duration to ${formatDuration(elapsed)}, from the start time to now`}
-                      className="inline-flex items-center gap-[3px] text-meta font-medium text-info cursor-pointer hover:underline"
-                    >
-                      <TimerIcon size={12} aria-hidden="true" />
-                      End now
-                    </button>
-                  )
-                }
-              >
-                <CommitInput
-                  size="sm"
-                  className="w-full"
-                  value={draft.duration ? formatDuration(draft.duration) : ''}
-                  placeholder="45m"
-                  // Something unreadable leaves the stored value alone rather
-                  // than clearing it; an emptied field is how you clear it.
-                  onCommit={(text) => {
-                    const minutes = parseDuration(text);
-                    if (minutes || !text.trim()) {
-                      update({ duration: minutes ?? null });
+          {editing ? (
+            <>
+              <Card padding="md" className="mb-6">
+                {/* Three fields across, each filling its column: the controls carry
+                    no width of their own (see controlStyles), and left to their
+                    intrinsic size they sat in a row of mostly empty card.
+                    The first breakpoint is the date input's, not a device's: two
+                    columns inside this card fall under the ~150px a native date
+                    field needs below roughly 420px, and it overflows its column
+                    rather than shrinking (see `DateInput`). One column until it
+                    fits is the only arrangement that doesn't clip. */}
+                <div className="grid grid-cols-1 min-[420px]:grid-cols-2 sm:grid-cols-3 gap-4">
+                  <Field label="Date" labelSize="sm">
+                    <DateInput
+                      size="sm"
+                      className="w-full"
+                      value={draft.date}
+                      onChange={(e) => e.target.value && update({ date: e.target.value })}
+                    />
+                  </Field>
+                  <Field label="Start" labelSize="sm">
+                    <Input
+                      size="sm"
+                      type="time"
+                      className="w-full"
+                      value={draft.time ?? ''}
+                      onChange={(e) => update({ time: e.target.value || null })}
+                    />
+                  </Field>
+                  <Field
+                    label="Duration"
+                    labelSize="sm"
+                    className="min-[420px]:col-span-2 sm:col-span-1"
+                    action={
+                      elapsed !== undefined && (
+                        <button
+                          type="button"
+                          onClick={() => update({ duration: elapsed })}
+                          title={`Set the duration to ${formatDuration(elapsed)}, from the start time to now`}
+                          className="inline-flex items-center gap-[3px] text-meta font-medium text-info cursor-pointer hover:underline"
+                        >
+                          <TimerIcon size={12} aria-hidden="true" />
+                          End now
+                        </button>
+                      )
                     }
-                  }}
-                />
-              </Field>
-            </div>
-            {/* The same chip row a task is filed with, so "which client" is
-                one control in this app and not two. */}
-            <Field label="Client" labelSize="sm" className="mt-4">
-              <ClientPicker
-                value={draft.clientId ?? ''}
-                onChange={(clientId) => update({ clientId: clientId || null })}
-                noneLabel="No client"
+                  >
+                    <CommitInput
+                      size="sm"
+                      className="w-full"
+                      value={draft.duration ? formatDuration(draft.duration) : ''}
+                      placeholder="45m"
+                      // Something unreadable leaves the stored value alone rather
+                      // than clearing it; an emptied field is how you clear it.
+                      onCommit={(text) => {
+                        const minutes = parseDuration(text);
+                        if (minutes || !text.trim()) {
+                          update({ duration: minutes ?? null });
+                        }
+                      }}
+                    />
+                  </Field>
+                </div>
+                {/* The same chip row a task is filed with, so "which client" is
+                    one control in this app and not two. */}
+                <Field label="Client" labelSize="sm" className="mt-4">
+                  <ClientPicker
+                    value={draft.clientId ?? ''}
+                    onChange={(clientId) => update({ clientId: clientId || null })}
+                    noneLabel="No client"
+                  />
+                </Field>
+                <Field label="People" labelSize="sm" className="mt-4">
+                  <PeopleField value={draft.people} onChange={(people) => update({ people })} suggestions={knownPeople} />
+                </Field>
+              </Card>
+
+              <DescriptionEditor
+                value={draft.notes}
+                onChange={setNotes}
+                mode={mode}
+                onModeChange={setMode}
+                title="Notes"
+                placeholder={PLACEHOLDER}
+                onTaskToggle={setNotes}
               />
-            </Field>
-            <Field label="People" labelSize="sm" className="mt-4">
-              <PeopleField value={draft.people} onChange={(people) => update({ people })} suggestions={knownPeople} />
-            </Field>
-          </Card>
 
-          <DescriptionEditor
-            value={draft.notes}
-            onChange={setNotes}
-            mode={mode}
-            onModeChange={setMode}
-            title="Notes"
-            placeholder={PLACEHOLDER}
-            onTaskToggle={setNotes}
-          />
-
-          <ActionItems
-            actions={draft.actions}
-            onChange={(actions) => update({ actions })}
-            onMakeTask={(index) => void onMakeTask(index)}
-          />
+              <ActionItems
+                actions={draft.actions}
+                onChange={(actions) => update({ actions })}
+                onMakeTask={(index) => void onMakeTask(index)}
+              />
+            </>
+          ) : (
+            <MeetingRead draft={draft} onTaskToggle={toggleTask} onEdit={edit} />
+          )}
         </div>
       </div>
     </div>

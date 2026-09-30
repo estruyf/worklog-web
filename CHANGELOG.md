@@ -15,6 +15,12 @@ Every change to Worklog, by day, newest first.
      both). Links must be absolute — a relative path resolves against /changelog and
      404s. -->
 
+## 2026-09-30
+
+- **Meetings open to read** — opening a meeting shows its notes rendered and its details as one
+  line; **Edit** puts the editor up and **Done** saves and goes back. A meeting you just started,
+  or one with unsaved notes on this device, still opens straight in the editor.
+
 ## 2026-09-25
 
 - **Name a meeting as you start it** — a new meeting opens with an empty title field ready to

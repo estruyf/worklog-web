@@ -80,16 +80,19 @@ function ActionRow({
   actions: MeetingAction[];
   action: MeetingAction;
   index: number;
-  onChange: (actions: MeetingAction[]) => void;
-  onMakeTask: (index: number) => void;
+  /** Absent in the meeting's read: the row shows its state and its task, and
+   *  changes nothing. */
+  onChange?: (actions: MeetingAction[]) => void;
+  onMakeTask?: (index: number) => void;
 }) {
   const { taskById, openDetail, statusMeta } = useData();
   const [editing, setEditing] = useState(false);
   const task = action.taskId ? taskById.get(action.taskId) : undefined;
   const done = isActionDone(action, taskById);
 
+  const readOnly = !onChange;
   const replace = (next: MeetingAction | null) =>
-    onChange(actions.flatMap((a, i) => (i !== index ? [a] : next ? [next] : [])));
+    onChange?.(actions.flatMap((a, i) => (i !== index ? [a] : next ? [next] : [])));
 
   if (editing) {
     return (
@@ -115,7 +118,7 @@ function ActionRow({
   ];
   const onSelect = (id: string) => {
     if (id === 'task') {
-      onMakeTask(index);
+      onMakeTask?.(index);
     } else if (id === 'open' && task) {
       openDetail(task);
     } else if (id === 'edit') {
@@ -132,14 +135,14 @@ function ActionRow({
           task is where that work is closed now. */}
       <button
         type="button"
-        disabled={!!task}
+        disabled={!!task || readOnly}
         onClick={() => replace({ ...action, done: !action.done })}
         aria-pressed={done}
         aria-label={task ? `${action.text} — tracked as a task` : done ? `Untick ${action.text}` : `Tick off ${action.text}`}
-        title={task ? 'Tracked as a task — close it there' : done ? 'Put it back' : 'Tick it off'}
+        title={task ? 'Tracked as a task — close it there' : readOnly ? undefined : done ? 'Put it back' : 'Tick it off'}
         className={
           'w-[16px] h-[16px] shrink-0 rounded-full p-0 flex items-center justify-center ' +
-          (task ? 'cursor-default ' : 'cursor-pointer ') +
+          (task || readOnly ? 'cursor-default ' : 'cursor-pointer ') +
           (done
             ? 'bg-success-500 border-[1.5px] border-success-500 text-white'
             : 'bg-white border-[1.5px] border-neutral-575 text-neutral-500 enabled:hover:border-success-500 enabled:hover:text-success-500')
@@ -147,17 +150,23 @@ function ActionRow({
       >
         <CheckIcon size={10} strokeWidth={2.5} aria-hidden="true" />
       </button>
-      <button
-        type="button"
-        onClick={() => setEditing(true)}
-        title="Edit"
-        className={
-          'text-body text-left flex-1 min-w-0 bg-transparent border-none p-0 cursor-text ' +
-          (done ? 'line-through decoration-neutral-550 text-neutral-700' : 'text-neutral-825')
-        }
-      >
-        {action.text}
-      </button>
+      {readOnly ? (
+        <span className={'text-body flex-1 min-w-0 ' + (done ? 'line-through decoration-neutral-550 text-neutral-700' : 'text-neutral-825')}>
+          {action.text}
+        </span>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setEditing(true)}
+          title="Edit"
+          className={
+            'text-body text-left flex-1 min-w-0 bg-transparent border-none p-0 cursor-text ' +
+            (done ? 'line-through decoration-neutral-550 text-neutral-700' : 'text-neutral-825')
+          }
+        >
+          {action.text}
+        </button>
+      )}
       {task && meta && (
         <LinkButton
           size="sm"
@@ -172,16 +181,18 @@ function ActionRow({
           <SquareArrowOutUpRightIcon size={12} aria-hidden="true" />
         </LinkButton>
       )}
-      <Menu
-        kind="action"
-        align="end"
-        label={`Actions for “${action.text}”`}
-        options={options}
-        onSelect={onSelect}
-        className="w-[22px] h-[22px] shrink-0 flex items-center justify-center rounded-control text-neutral-625 opacity-100 sm:opacity-0 sm:group-hover/item:opacity-100 sm:group-focus-within/item:opacity-100 sm:focus-visible:opacity-100 hover:text-neutral-825 hover:bg-neutral-250"
-      >
-        <EllipsisIcon size={14} aria-hidden="true" />
-      </Menu>
+      {!readOnly && (
+        <Menu
+          kind="action"
+          align="end"
+          label={`Actions for “${action.text}”`}
+          options={options}
+          onSelect={onSelect}
+          className="w-[22px] h-[22px] shrink-0 flex items-center justify-center rounded-control text-neutral-625 opacity-100 sm:opacity-0 sm:group-hover/item:opacity-100 sm:group-focus-within/item:opacity-100 sm:focus-visible:opacity-100 hover:text-neutral-825 hover:bg-neutral-250"
+        >
+          <EllipsisIcon size={14} aria-hidden="true" />
+        </Menu>
+      )}
     </div>
   );
 }
@@ -191,15 +202,16 @@ function ActionRow({
  *
  *  Edits go to the editor's draft like everything else on the page. Making a task
  *  is the exception it can't be — the service reads the item out of the Markdown —
- *  so `onMakeTask` saves the meeting first. */
+ *  so `onMakeTask` saves the meeting first. Without `onChange` it is the
+ *  meeting's read: the items and their tasks, and nothing to change. */
 export function ActionItems({
   actions,
   onChange,
   onMakeTask,
 }: {
   actions: MeetingAction[];
-  onChange: (actions: MeetingAction[]) => void;
-  onMakeTask: (index: number) => void;
+  onChange?: (actions: MeetingAction[]) => void;
+  onMakeTask?: (index: number) => void;
 }) {
   return (
     <section className="mt-8">
@@ -210,13 +222,15 @@ export function ActionItems({
           // exactly what every edit here addresses it by.
           <ActionRow key={`${i}:${a.text}`} actions={actions} action={a} index={i} onChange={onChange} onMakeTask={onMakeTask} />
         ))}
-        <div className="pt-[6px] px-1">
-          <LineInput
-            placeholder="Add an action item and press ↵"
-            label="Add an action item"
-            onCommit={(text) => onChange([...actions, { text, done: false }])}
-          />
-        </div>
+        {onChange && (
+          <div className="pt-[6px] px-1">
+            <LineInput
+              placeholder="Add an action item and press ↵"
+              label="Add an action item"
+              onCommit={(text) => onChange([...actions, { text, done: false }])}
+            />
+          </div>
+        )}
       </div>
     </section>
   );
