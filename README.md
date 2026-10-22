@@ -27,14 +27,15 @@ insights. Every edit is committed straight back to your repo.
 8. [Offline](#offline)
 9. [Quick capture — task deeplinks](#quick-capture--task-deeplinks)
 10. [Hand a task to an AI agent](#hand-a-task-to-an-ai-agent)
-11. [Testing](#testing)
-12. [Deploying to Cloudflare](#deploying-to-cloudflare)
-13. [Environment variables](#environment-variables)
-14. [Expected repository layout](#expected-repository-layout)
-15. [How it works](#how-it-works)
-16. [Project structure](#project-structure)
-17. [Troubleshooting](#troubleshooting)
-18. [Known limitations](#known-limitations)
+11. [Log work from an agent — the CLI](#log-work-from-an-agent--the-cli)
+12. [Testing](#testing)
+13. [Deploying to Cloudflare](#deploying-to-cloudflare)
+14. [Environment variables](#environment-variables)
+15. [Expected repository layout](#expected-repository-layout)
+16. [How it works](#how-it-works)
+17. [Project structure](#project-structure)
+18. [Troubleshooting](#troubleshooting)
+19. [Known limitations](#known-limitations)
 
 ---
 
@@ -456,6 +457,50 @@ Worth knowing:
 - **Nothing is stored on the task.** No issue is created, no branch, no link written back. This is a
   handoff, not an integration.
 - **Desktop only.** On a phone there is no VS Code to open, so the rows do nothing there.
+
+---
+
+## Log work from an agent — the CLI
+
+The way back: an agent that finished a piece of work records it on your timesheet with one command,
+and the task shows up as worked the next time you open Worklog. The CLI never talks to the site. It
+edits a **local clone of your timesheet repo** and pushes with your own git credentials; the app
+picks the commit up like any other.
+
+```bash
+npx @estruyf/worklog-cli log --client acme --title "Fix the mobile picker" \
+  --link https://github.com/acme/app/issues/12 --note "Widened the tap targets"
+```
+
+From a checkout of this repo, `npm run --silent log-work -- <options>` runs the same CLI from source.
+The package is built from `cli/` with `npm run build:cli` — one bundled file with no dependencies,
+compiled from the app's own parser and services, so publish it again whenever the Markdown format
+changes.
+
+| Option | Meaning |
+| --- | --- |
+| `--client` | Client id from `.worklog/config.json`. Required. |
+| `--title` | Title for a new task, or of an open task to log on. Required. |
+| `--link` | Issue or ticket url. The task is found again by it on later runs, archived tasks included. |
+| `--id` | Log on this exact task id instead. |
+| `--note` | Progress note added under the task's `### Notes`. |
+| `--date` | The day worked, `YYYY-MM-DD`. Defaults to today. |
+| `--repo` | The clone. Defaults to `$WORKLOG_REPO`. |
+| `--dry-run` | Print the diff, commit nothing. |
+
+The task is matched by `--id`, then `--link`, then an open task of the same title; with no match it
+is created. The day is marked worked (which moves an open task to in progress, as in the app) and the
+note added — each only when not already there, so running the same command twice changes nothing.
+The edit goes through the app's own services, so the Markdown is exactly what the app would write.
+
+Worth knowing:
+
+- **The clone has to be clean.** Uncommitted changes or unpushed commits stop the CLI — on a lost
+  push race it resets the clone to the remote and replays the edit, and that reset may only ever
+  throw away its own commit.
+- **No merge, no conflict markers.** That replay is the whole race strategy: the app's commit stays
+  as it is and the CLI's edit lands on top of it.
+- **Hours are not logged.** It records that you worked on a task, not for how long.
 
 ---
 

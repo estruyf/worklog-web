@@ -13,7 +13,7 @@ import reactHooks from 'eslint-plugin-react-hooks';
 
 export default tseslint.config(
   {
-    ignores: ['dist/**', '.astro/**', '.wrangler/**', 'node_modules/**', 'public/**'],
+    ignores: ['dist/**', 'cli/dist/**', '.astro/**', '.wrangler/**', 'node_modules/**', 'public/**'],
   },
   js.configs.recommended,
   tseslint.configs.recommended,

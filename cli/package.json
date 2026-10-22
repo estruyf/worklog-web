@@ -1,0 +1,29 @@
+{
+  "name": "@estruyf/worklog-cli",
+  "version": "0.1.0",
+  "description": "Log work on a task in your Worklog timesheet repo from the command line or an AI agent.",
+  "license": "MIT",
+  "author": "Elio Struyf",
+  "type": "module",
+  "bin": {
+    "worklog": "dist/worklog.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/estruyf/worklog-web.git",
+    "directory": "cli"
+  },
+  "homepage": "https://github.com/estruyf/worklog-web#log-work-from-an-agent--the-cli",
+  "keywords": [
+    "worklog",
+    "timesheet",
+    "cli",
+    "ai-agent"
+  ]
+}

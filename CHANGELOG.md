@@ -15,6 +15,13 @@ Every change to Worklog, by day, newest first.
      both). Links must be absolute — a relative path resolves against /changelog and
      404s. -->
 
+## 2026-10-22
+
+- **Log work from an agent** — `npx @estruyf/worklog-cli log` records work on a task (marks the day worked, adds
+  a note, creates the task when it's new) in a local clone of your timesheet repo and pushes it, so
+  work your AI agents did shows up in Worklog without you retyping it. See
+  [the README](https://github.com/estruyf/worklog-web#log-work-from-an-agent--the-cli).
+
 ## 2026-09-30
 
 - **Meetings open to read** — opening a meeting shows its notes rendered and its details as one
