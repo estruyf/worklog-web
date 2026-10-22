@@ -1,0 +1,6 @@
+{
+  "name": "worklog",
+  "owner": { "name": "Elio Struyf" },
+  "description": "Worklog timesheet tools for AI agents, by Elio Struyf.",
+  "plugins": [{ "name": "worklog", "source": "./" }]
+}

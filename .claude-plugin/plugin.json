@@ -1,0 +1,15 @@
+{
+  "name": "worklog",
+  "version": "0.1.0",
+  "description": "Log the work an agent did on your Worklog timesheet: finds or creates the task for the issue, marks today worked and adds a note.",
+  "icon": "./public/worklog-512x512.png",
+  "author": {
+    "name": "Elio Struyf"
+  },
+  "homepage": "https://github.com/estruyf/worklog-web#log-work-from-an-agent--the-cli",
+  "repository": "https://github.com/estruyf/worklog-web",
+  "license": "MIT",
+  "skills": [
+    "./skills/worklog"
+  ]
+}

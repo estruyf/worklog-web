@@ -21,6 +21,9 @@ Every change to Worklog, by day, newest first.
   a note, creates the task when it's new) in a local clone of your timesheet repo and pushes it, so
   work your AI agents did shows up in Worklog without you retyping it. See
   [the README](https://github.com/estruyf/worklog-web#log-work-from-an-agent--the-cli).
+- **A `worklog` skill for your agent** — install it in Claude Code as a plugin, or in other agents
+  with `npx skills add`, and the agent logs the work it finished on your timesheet by itself.
+  See [the README](https://github.com/estruyf/worklog-web#let-your-agent-do-it--the-worklog-skill).
 
 ## 2026-09-30
 

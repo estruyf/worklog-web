@@ -502,6 +502,42 @@ Worth knowing:
   as it is and the CLI's edit lands on top of it.
 - **Hours are not logged.** It records that you worked on a task, not for how long.
 
+### Let your agent do it — the `worklog` skill
+
+The repo ships a skill that teaches an agent to run the CLI by itself when it finishes a piece of
+work: it picks the client from the folder you're in, takes the task title and link from the GitHub
+issue, writes a one-line note and logs it. Ask for it with `/worklog`, or let the agent use it at the
+end of a task.
+
+In **Claude Code**, as a plugin:
+
+```
+/plugin marketplace add estruyf/worklog-web
+/plugin install worklog@worklog
+```
+
+In **other agents** (GitHub Copilot, Codex, Cursor, …), with the
+[skills](https://github.com/vercel-labs/skills) installer:
+
+```bash
+npx skills add estruyf/worklog-web --skill worklog
+```
+
+The skill reads `~/.config/worklog/config.json` — where your timesheet clone is, and which client
+each folder of code belongs to. The longest matching `path` wins; `issues` names the repo that holds a
+folder's issues when it isn't the repo itself. The first time there is no file, the agent asks and
+writes it for you.
+
+```json
+{
+  "repo": "~/timesheet",
+  "clients": [
+    { "path": "~/code/acme/", "client": "acme" },
+    { "path": "~/code/globex/portal", "client": "globex", "issues": "globex/tracker" }
+  ]
+}
+```
+
 ---
 
 ## Testing
