@@ -63,6 +63,24 @@ Cloudflare Workers) and report back once the deploy has finished, including the 
 from wrangler's output. **Only on an explicit request** — never publish as part of finishing
 a change, and finishing work never implies publishing.
 
+### The CLI and the `worklog` skill
+
+`cli/worklog.ts` (published as `@estruyf/worklog-cli`) bundles the app's own services, and
+`skills/worklog/SKILL.md` (shipped as the `worklog` plugin) teaches agents to run it. Users only
+pick up a change when a version moves, so when either changes, as part of finishing the work:
+
+- **CLI changed** — `cli/`, or anything under `src/` it imports: bump `version` in
+  `cli/package.json`. Behaviour the skill relies on changing counts, not just new options.
+- **Skill changed** — bump `version` in `.claude-plugin/plugin.json`. `claude plugin update`
+  compares it; a changed skill under the old version never reaches anyone.
+- **New or changed commands** — update the skill, `cli/README.md` and the README's CLI section
+  together, and keep the changelog line pointing people at "Updating the skill".
+
+Bump once per release, not once per edit: if the version is already ahead of what's published
+(`npm view @estruyf/worklog-cli version`), leave it. Publishing the CLI (`npm run build:cli`,
+then `npm publish` in `cli/`) is the user's call, like the site, and has to happen **before** a
+skill that uses new commands is pushed — tell them so rather than doing it.
+
 ---
 
 ## Architecture — the layering is the point

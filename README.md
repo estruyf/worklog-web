@@ -494,6 +494,17 @@ source. The package is built from `cli/` with `npm run build:cli` — one bundle
 dependencies, compiled from the app's own parser and services, so publish it again whenever the
 Markdown format changes.
 
+**Releasing a change to the CLI or the skill.** Users only get a change when a version number moves:
+
+1. **CLI changed** (`cli/`, or anything in `src/` it bundles): bump `version` in `cli/package.json`,
+   run `npm run build:cli`, and publish from `cli/` with `npm publish`.
+2. **Skill changed** (`skills/worklog/`): bump `version` in `.claude-plugin/plugin.json`. Claude Code
+   compares that number to decide whether `claude plugin update` has anything to install, so a changed
+   skill under the same version may never reach anyone.
+3. **Publish the CLI before you push a skill that uses it.** The skill runs `npx @estruyf/worklog-cli`,
+   which resolves to whatever is on npm; a skill pushed first calls commands that don't exist yet.
+4. Add a line to the changelog telling people to [update the skill](#let-your-agent-do-it--the-worklog-skill).
+
 Worth knowing:
 
 - **The clone has to be clean.** Uncommitted changes or unpushed commits stop the CLI — on a lost
