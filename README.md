@@ -463,35 +463,36 @@ Worth knowing:
 ## Log work from an agent — the CLI
 
 The way back: an agent that finished a piece of work records it on your timesheet with one command,
-and the task shows up as worked the next time you open Worklog. The CLI never talks to the site. It
-edits a **local clone of your timesheet repo** and pushes with your own git credentials; the app
-picks the commit up like any other.
+and the task shows up as worked the next time you open Worklog. The same CLI adds to-dos, changes and
+closes tasks, lists what's open, and sets the hours worked on a day. It never talks to the site. It edits a **local clone of your
+timesheet repo** and pushes with your own git credentials; the app picks the commit up like any other.
 
 ```bash
 npx @estruyf/worklog-cli log --client acme --title "Fix the mobile picker" \
   --link https://github.com/acme/app/issues/12 --note "Widened the tap targets"
+
+npx @estruyf/worklog-cli add --client acme --title "Email Sam about the workshop" \
+  --due 2026-11-13 --priority high --description "Ask whether it becomes a roundtable or a session"
 ```
 
-From a checkout of this repo, `npm run --silent log-work -- <options>` runs the same CLI from source.
-The package is built from `cli/` with `npm run build:cli` — one bundled file with no dependencies,
-compiled from the app's own parser and services, so publish it again whenever the Markdown format
-changes.
-
-| Option | Meaning |
+| Command | Does |
 | --- | --- |
-| `--client` | Client id from `.worklog/config.json`. Required. |
-| `--title` | Title for a new task, or of an open task to log on. Required. |
-| `--link` | Issue or ticket url. The task is found again by it on later runs, archived tasks included. |
-| `--id` | Log on this exact task id instead. |
-| `--note` | Progress note added under the task's `### Notes`. |
-| `--date` | The day worked, `YYYY-MM-DD`. Defaults to today. |
-| `--repo` | The clone. Defaults to `$WORKLOG_REPO`. |
-| `--dry-run` | Print the diff, commit nothing. |
+| `log` | Work done: marks the day worked on a task (creating it when it's new) and adds a note. |
+| `add` | A to-do: an open task with a due date, priority, description, tags or parent. Nothing is marked worked. Without `--client` it goes on the general to-do list. |
+| `update` | Changes an existing task: title, due date, priority, description, status, tags, parent. |
+| `done` | Closes a task and its subtasks; a recurring one rolls on to its next occurrence. |
+| `list` | Prints the open tasks, filtered by client, due date or tag. Read-only. |
+| `hours` | Sets the hours worked for a client, or a day off, on a day — the same line the day editor writes. Without `--hours`, prints the day. |
 
-The task is matched by `--id`, then `--link`, then an open task of the same title; with no match it
-is created. The day is marked worked (which moves an open task to in progress, as in the app) and the
-note added — each only when not already there, so running the same command twice changes nothing.
-The edit goes through the app's own services, so the Markdown is exactly what the app would write.
+Every option is in the [CLI's README](https://github.com/estruyf/worklog-web/tree/main/cli#readme).
+Each command refuses options it doesn't have, so a to-do's due date can't end up as a day worked, and
+running the same command twice changes nothing. Every edit goes through the app's own services, so
+the Markdown is exactly what the app would write.
+
+From a checkout of this repo, `npm run --silent worklog -- <command> <options>` runs the same CLI from
+source. The package is built from `cli/` with `npm run build:cli` — one bundled file with no
+dependencies, compiled from the app's own parser and services, so publish it again whenever the
+Markdown format changes.
 
 Worth knowing:
 
@@ -500,14 +501,17 @@ Worth knowing:
   throw away its own commit.
 - **No merge, no conflict markers.** That replay is the whole race strategy: the app's commit stays
   as it is and the CLI's edit lands on top of it.
-- **Hours are not logged.** It records that you worked on a task, not for how long.
+- **`log` doesn't log hours.** It records that you worked on a task, not for how long. Hours go
+  through `hours`, per client per day, and the skill only uses it when you give the hours yourself.
 
 ### Let your agent do it — the `worklog` skill
 
 The repo ships a skill that teaches an agent to run the CLI by itself when it finishes a piece of
 work: it picks the client from the folder you're in, takes the task title and link from the GitHub
-issue, writes a one-line note and logs it. Ask for it with `/worklog`, or let the agent use it at the
-end of a task.
+issue, writes a one-line note and logs it. It handles your to-dos too: "create a task for Friday to …"
+adds an open task due that day instead of logging work, and "make it urgent", "I sent it, close it" or
+"what's due this week?" change, close and list them. Ask for it with `/worklog`, or let the agent use
+it at the end of a task.
 
 In **Claude Code**, as a plugin:
 
@@ -522,6 +526,27 @@ In **other agents** (GitHub Copilot, Codex, Cursor, …), with the
 ```bash
 npx skills add estruyf/worklog-web --skill worklog
 ```
+
+**Updating the skill.** An installed skill doesn't update itself, and an old copy keeps teaching your
+agent the old commands. Update it whenever the [changelog](https://github.com/estruyf/worklog-web/blob/main/CHANGELOG.md) mentions
+the skill or the CLI.
+
+In **Claude Code**, refresh the marketplace, update the plugin, then restart Claude Code:
+
+```bash
+claude plugin marketplace update worklog
+claude plugin update worklog@worklog
+```
+
+In **other agents**:
+
+```bash
+npx skills update worklog
+```
+
+The CLI needs no update: the skill runs it with `npx`, which fetches the latest version. The exception
+is a copy you installed globally yourself (`npm install -g @estruyf/worklog-cli`), which `npx` uses as
+it is. Update that one with `npm install -g @estruyf/worklog-cli@latest`, or uninstall it.
 
 The skill reads `~/.config/worklog/config.json` — where your timesheet clone is, and which client
 each folder of code belongs to. The longest matching `path` wins; `issues` names the repo that holds a

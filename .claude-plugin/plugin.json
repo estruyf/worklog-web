@@ -1,7 +1,7 @@
 {
   "name": "worklog",
-  "version": "0.1.0",
-  "description": "Log the work an agent did on your Worklog timesheet: finds or creates the task for the issue, marks today worked and adds a note.",
+  "version": "0.2.0",
+  "description": "Let your agent work with your Worklog timesheet: log work done, add, change and close to-dos, list what's open, and log hours you give it.",
   "icon": "./public/worklog-512x512.png",
   "author": {
     "name": "Elio Struyf"

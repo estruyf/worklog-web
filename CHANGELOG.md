@@ -15,6 +15,26 @@ Every change to Worklog, by day, newest first.
      both). Links must be absolute — a relative path resolves against /changelog and
      404s. -->
 
+## 2026-10-27
+
+- **Add to-dos from an agent** — `npx @estruyf/worklog-cli add` puts an open task on your list with a due
+  date, priority, description, tags or parent, without marking any day worked — for a client, or,
+  without `--client`, on the general to-do list. The `worklog` skill now tells a to-do ("create a task
+  for the 13th to …") apart from work done, so a due date no longer lands on your timesheet as a day
+  worked.
+- **Change, close and list tasks from an agent** — `update` moves a due date, changes the priority,
+  description, status, tags or parent; `done` closes a task (a recurring one rolls on); `list` shows
+  what's open, filtered by client, due date or tag. A title that matches tasks of several clients is
+  refused rather than guessed. See
+  [the CLI's README](https://github.com/estruyf/worklog-web/tree/main/cli#readme).
+- **Log hours from an agent** — `hours --client acme --hours 4` sets a client's hours for a day, and
+  `--event vacation` a day off, with the day editor's own rules for full and half days; without
+  `--hours` it shows what's logged that day. The agent only logs hours you give it, never its own
+  estimate.
+- **Update your `worklog` skill** to get all of the above: an installed skill keeps the old commands
+  until you update it. See
+  [Updating the skill](https://github.com/estruyf/worklog-web#let-your-agent-do-it--the-worklog-skill).
+
 ## 2026-10-22
 
 - **Log work from an agent** — `npx @estruyf/worklog-cli log` records work on a task (marks the day worked, adds

@@ -60,7 +60,12 @@ export async function logWork(store: Store, input: LogWorkInput): Promise<LogWor
   return { task: store.db.getTask(task.id) ?? task, created, markedWorked, noteAdded };
 }
 
-function findTask(store: Store, input: LogWorkInput): Task | undefined {
+/** The task an agent means: by id, then by link, then an open task of the same
+ *  title for the client. Shared with `addTask`, so both commands agree on it. */
+export function findTask(
+  store: Store,
+  input: Pick<LogWorkInput, 'clientId' | 'title' | 'taskId' | 'link'>,
+): Task | undefined {
   if (input.taskId) {
     const byId = store.db.getTask(input.taskId);
     if (!byId) {
@@ -79,6 +84,6 @@ function findTask(store: Store, input: LogWorkInput): Task | undefined {
   return byLink ?? all.find((t) => !t.completed && t.title.trim().toLowerCase() === title);
 }
 
-function normalizeUrl(url: string): string {
+export function normalizeUrl(url: string): string {
   return url.trim().replace(/\/+$/, '');
 }

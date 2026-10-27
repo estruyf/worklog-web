@@ -4,7 +4,7 @@
 
 import { useCallback } from "react";
 import type { Client, WorklogEntry } from "../../../model/types";
-import { eventTypeFromClientId, eventWorklogClientId, isEventWorklogClientId } from "../../../model/worklog";
+import { eventTypeFromClientId, eventWorklogClientId, isEventWorklogClientId, resolveHours } from "../../../model/worklog";
 import { worklogStore } from "../../../data/worklogStore";
 import type { LogState } from "../../model";
 import { roundHours } from "../../utils";
@@ -88,11 +88,9 @@ export function useLogModel(
       return;
     }
     const hours =
-      ui.logType === "full"
-        ? hoursPerDay
-        : ui.logType === "half"
-          ? hoursPerDay / 2
-          : roundHours(Math.max(0, parseFloat(String(ui.logHours)) || 0));
+      ui.logType === "full" || ui.logType === "half"
+        ? (resolveHours(ui.logType, hoursPerDay) ?? 0)
+        : roundHours(Math.max(0, parseFloat(String(ui.logHours)) || 0));
     const note = ui.logNote.trim() || undefined;
     const from = ui.logEditingClientId;
     closeLogForm();

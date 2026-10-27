@@ -16,6 +16,7 @@
     "test:watch": "vitest",
     "publish": "npm run build && npx wrangler@latest deploy",
     "log-work": "tsx cli/worklog.ts log",
+    "worklog": "tsx cli/worklog.ts",
     "build:cli": "esbuild cli/worklog.ts --bundle --platform=node --format=esm --target=node20 --outfile=cli/dist/worklog.js --banner:js='#!/usr/bin/env node'"
   },
   "dependencies": {

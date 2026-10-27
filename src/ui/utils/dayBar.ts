@@ -4,13 +4,10 @@
 // their own. See test/dayBar.test.ts.
 
 import type { WorklogEntry } from '../../model/types';
+import { roundHours } from '../../model/worklog';
 import { shiftDate } from './date';
 
-/** Hours are half-hours in practice, but a sum of them is still floating point:
- *  0.1 + 0.2 has no business reaching a label. */
-export function roundHours(n: number): number {
-  return Math.round(n * 100) / 100;
-}
+export { roundHours };
 
 /** One entry as it is drawn on the track. `left`/`width` are percentages of the
  *  whole track, so a segment is positioned rather than flexed: a segment only
