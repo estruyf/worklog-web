@@ -549,6 +549,42 @@ body {
   border-color: #eceef1;
   text-decoration: line-through;
 }
+/* A table wider than the column scrolls inside its own box rather than pushing
+   the card wider. */
+.wl-md .wl-md-table-wrap {
+  margin: 0 0 12px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+.wl-md .wl-md-table {
+  border-collapse: collapse;
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+.wl-md .wl-md-table th,
+.wl-md .wl-md-table td {
+  padding: 5px 10px;
+  border: 1px solid #eceef1;
+  text-align: left;
+  vertical-align: top;
+  /* The card's `anywhere` shrinks min-content, which would squeeze a column to
+     one letter wide before the wrapper ever scrolled. `break-word` still breaks
+     a pasted URL, but only once the table is already as wide as it can get. */
+  overflow-wrap: break-word;
+}
+.wl-md .wl-md-table th {
+  font-weight: 600;
+  background: #f6f8fa;
+}
+.wl-md .wl-md-table tbody tr:nth-child(even) {
+  background: #fbfbfc;
+}
+.wl-md .wl-md-table .wl-md-align-center {
+  text-align: center;
+}
+.wl-md .wl-md-table .wl-md-align-right {
+  text-align: right;
+}
 .wl-md .wl-md-img {
   max-width: 100%;
   height: auto;

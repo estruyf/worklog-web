@@ -212,3 +212,52 @@ describe('toggleTaskLine', () => {
     expect(toggleTaskLine(DOC, 99)).toBeNull();
   });
 });
+
+// A pasted PR description or measurement is often a table, and before tables
+// existed every row rendered as one paragraph of pipes.
+describe('renderMarkdown tables', () => {
+  const wrap = (inner: string) => `<div class="wl-md-table-wrap"><table class="wl-md-table">${inner}</table></div>`;
+
+  it('renders a header, delimiter and body rows as a table', () => {
+    expect(renderMarkdown('| | today | this PR |\n|---|---|---|\n| New tab | 7 | **1** |')).toBe(
+      wrap(
+        '<thead><tr><th></th><th>today</th><th>this PR</th></tr></thead>' +
+          '<tbody><tr><td>New tab</td><td>7</td><td><strong>1</strong></td></tr></tbody>',
+      ),
+    );
+  });
+
+  it('accepts rows without outer pipes and maps alignment to classes', () => {
+    expect(renderMarkdown('a | b | c\n:-- | :-: | --:\n1 | 2 | 3')).toBe(
+      wrap(
+        '<thead><tr><th class="wl-md-align-left">a</th><th class="wl-md-align-center">b</th><th class="wl-md-align-right">c</th></tr></thead>' +
+          '<tbody><tr><td class="wl-md-align-left">1</td><td class="wl-md-align-center">2</td><td class="wl-md-align-right">3</td></tr></tbody>',
+      ),
+    );
+  });
+
+  it('pads short rows, cuts long ones, and reads `\\|` as a literal pipe', () => {
+    const html = renderMarkdown('| a | b |\n|---|---|\n| only |\n| 1 | 2 | 3 |\n| `x \\| y` | z |');
+    expect(html).toContain('<tr><td>only</td><td></td></tr>');
+    expect(html).toContain('<tr><td>1</td><td>2</td></tr>');
+    expect(html).toContain('<td><code class="wl-md-code">x | y</code></td>');
+  });
+
+  it('ends at the first line without a pipe and leaves the blocks around it alone', () => {
+    expect(renderMarkdown('Intro\n| a |\n|---|\n| 1 |\nAfter')).toBe(
+      ['<p>Intro</p>', wrap('<thead><tr><th>a</th></tr></thead><tbody><tr><td>1</td></tr></tbody>'), '<p>After</p>'].join('\n'),
+    );
+  });
+
+  it('is not a table without a matching delimiter row', () => {
+    expect(renderMarkdown('a | b\n---')).toBe('<p>a | b</p>\n<hr class="wl-md-hr" />');
+    expect(renderMarkdown('a | b\n|---|')).not.toContain('<table');
+    expect(renderMarkdown('a | b\nc | d')).toBe('<p>a | b c | d</p>');
+  });
+
+  it('escapes cell text', () => {
+    const html = renderMarkdown('| <b> |\n|---|\n| <script>x</script> |');
+    expect(html).not.toContain('<script>');
+    expect(html).toContain('<th>&lt;b&gt;</th>');
+  });
+});

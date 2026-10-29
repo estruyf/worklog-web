@@ -15,6 +15,12 @@ Every change to Worklog, by day, newest first.
      both). Links must be absolute — a relative path resolves against /changelog and
      404s. -->
 
+## 2026-10-29
+
+- **Tables in Markdown** — a pipe table (`| a | b |` over `|---|---|`) in a description, note or
+  meeting now renders as a table instead of a paragraph of pipes, with `:--:` alignment and a
+  sideways scroll when it's wider than the card.
+
 ## 2026-10-27
 
 - **Add to-dos from an agent** — `npx @estruyf/worklog-cli add` puts an open task on your list with a due

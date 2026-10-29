@@ -1,6 +1,6 @@
 // A tiny, dependency-free Markdown -> HTML renderer for task descriptions.
 // Deliberately minimal (headings, emphasis, code, links and bare URLs, lists,
-// task lists, quotes, rules).
+// task lists, quotes, rules, pipe tables).
 // Block structure is detected on the raw lines; all user text is escaped inside
 // inline() before any formatting, so the output is safe to inject into the
 // app. The source of truth stays the markdown body in the client file.
@@ -269,6 +269,37 @@ function checkbox(
   return `<input type="checkbox" class="wl-md-check"${checked}${state} aria-label="${escapeHtml(plainText(text, resolveTaskRef))}" />`;
 }
 
+/**
+ * The cells of a pipe-table row. The outer pipes are optional, as in GitHub's
+ * tables, and `\|` is a pipe inside a cell rather than a column break — which is
+ * also the only way to put one in a code span there, the same as on GitHub.
+ */
+function tableCells(line: string): string[] {
+  const row = line.trim().replace(/^\|/, "").replace(/(?<!\\)\|$/, "");
+  return row.split(/(?<!\\)\|/).map((cell) => cell.trim().replace(/\\\|/g, "|"));
+}
+
+type Align = "left" | "center" | "right" | null;
+
+/**
+ * The `|---|:---:|` line under a table's header, as one alignment per column, or
+ * `null` when the line is not one. It needs a pipe of its own and one cell per
+ * header column, so `a | b` over a lone `---` stays the paragraph and rule it
+ * was always rendered as.
+ */
+function tableAlignments(line: string, columns: number): Align[] | null {
+  if (!line.includes("|")) {
+    return null;
+  }
+  const cells = tableCells(line);
+  if (cells.length !== columns || !cells.every((c) => /^:?-+:?$/.test(c))) {
+    return null;
+  }
+  return cells.map((c) =>
+    c.startsWith(":") && c.endsWith(":") ? "center" : c.endsWith(":") ? "right" : c.startsWith(":") ? "left" : null,
+  );
+}
+
 export interface MarkdownOptions {
   /**
    * Render task list items as live checkboxes carrying their source line index,
@@ -475,6 +506,35 @@ export function renderMarkdown(
         html.push(`<li>${inline(item, resolveImage, refs)}`);
       }
       stack[stack.length - 1].itemOpen = true;
+      continue;
+    }
+
+    const header = line.includes("|") ? tableCells(line) : null;
+    const aligns = header && i + 1 < lines.length ? tableAlignments(lines[i + 1], header.length) : null;
+    if (header && aligns) {
+      flushParagraph();
+      closeList();
+      // Alignment is a class, not a `style`, so nothing user-typed reaches an
+      // attribute. Rows run until the first line with no pipe in it — a blank
+      // one included.
+      const cell = (tag: "th" | "td", text: string, col: number) => {
+        const cls = aligns[col] ? ` class="wl-md-align-${aligns[col]}"` : "";
+        return `<${tag}${cls}>${inline(text, resolveImage, refs)}</${tag}>`;
+      };
+      // GitHub's rule for ragged rows: short ones are padded, long ones cut.
+      const row = (tag: "th" | "td", cells: string[]) =>
+        `<tr>${header.map((_, col) => cell(tag, cells[col] ?? "", col)).join("")}</tr>`;
+      const body: string[] = [];
+      i += 2;
+      while (i < lines.length && lines[i].includes("|")) {
+        body.push(row("td", tableCells(lines[i])));
+        i++;
+      }
+      i--;
+      const tbody = body.length ? `<tbody>${body.join("")}</tbody>` : "";
+      html.push(
+        `<div class="wl-md-table-wrap"><table class="wl-md-table"><thead>${row("th", header)}</thead>${tbody}</table></div>`,
+      );
       continue;
     }
 
