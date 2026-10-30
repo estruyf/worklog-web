@@ -1,6 +1,6 @@
 {
   "name": "@estruyf/worklog-cli",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Log work on a task, or add a to-do, in your Worklog timesheet repo from the command line or an AI agent.",
   "license": "MIT",
   "author": "Elio Struyf",

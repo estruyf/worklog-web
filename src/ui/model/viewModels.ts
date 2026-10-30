@@ -131,6 +131,9 @@ export interface WorklogRow {
    *  switched on. Separate from `progress`, which counts subtasks: a task can
    *  carry both, and they answer different questions. */
   checklist?: { done: number; total: number };
+  /** Time spent on the task on the selected day, formatted (`1h30m`); omitted
+   *  when none was recorded. */
+  time?: string;
   /** Whether this row's subtasks are folded away. Set only on rows that have
    *  subtasks *in the same list* — `progress` counts every child the task has,
    *  including ones a filter removed, so it can't stand in for this. */

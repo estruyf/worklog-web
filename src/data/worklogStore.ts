@@ -39,6 +39,7 @@ import {
   setTaskPromptRan,
   setTaskStatus,
   toggleTaskWorkedOn,
+  setTaskWorkedTime,
   updateTask,
   updateTaskChecklistItem,
   updateTaskNote,
@@ -693,6 +694,11 @@ class WorklogStore {
 
   toggleWorked(taskId: string, date: string): Promise<void> {
     return this.run(() => toggleTaskWorkedOn(this.store, taskId, date));
+  }
+
+  /** Minutes spent on the task that day; `undefined` clears it. */
+  setWorkedTime(taskId: string, date: string, minutes: number | undefined): Promise<void> {
+    return this.run(() => setTaskWorkedTime(this.store, taskId, date, minutes));
   }
 
   /** Same contract as `closeTask`: the resulting task, or undefined on failure. */

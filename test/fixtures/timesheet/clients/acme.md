@@ -17,7 +17,7 @@
 - created: 2026-07-14
 - due: 2026-08-07
 - worked: 2026-07-14
-- worked: 2026-07-16
+- worked: 2026-07-16 1h30m
 - tags: question, billing
 
 The current export runs synchronously and times out on large date ranges.

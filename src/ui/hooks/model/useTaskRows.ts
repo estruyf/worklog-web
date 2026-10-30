@@ -8,6 +8,7 @@ import { isGeneralTodoClientId } from "../../../model/todos";
 import { describeRecurrence } from "../../../model/recurrence";
 import { isMarkedPriority, priorityDef } from "../../../model/priority";
 import { daysSinceEpoch } from "../../../util/date";
+import { formatDuration } from "../../../parser/meetingParser";
 import type { StatusChoice, StatusMetaFn, WorklogRow } from "../../model";
 import { clientIdOf, dueOn, isDone, linksOf, planTaskRows, plansFold, workedLabels, workedOnDate } from "../../utils";
 
@@ -106,6 +107,7 @@ export function useTaskRows(deps: TaskRowDeps) {
         tags: t.tags ?? [],
         progress,
         checklist,
+        time: t.workedTime?.[selectedDate] ? formatDuration(t.workedTime[selectedDate]) : undefined,
         onView: () => openDetail(t),
         onDone: () => markDone(t),
         onWorked: todo ? undefined : () => toggleWorked(t),

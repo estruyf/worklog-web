@@ -1,6 +1,6 @@
 import React from 'react';
 import type { WorklogRow } from '../model';
-import { CalendarIcon, CheckIcon, EllipsisIcon, EyeIcon, GlobeIcon, ListChecksIcon, Pencil, RefreshCwIcon, Trash } from 'lucide-react';
+import { CalendarIcon, CheckIcon, ClockIcon, EllipsisIcon, EyeIcon, GlobeIcon, ListChecksIcon, Pencil, RefreshCwIcon, Trash } from 'lucide-react';
 import { formatDaysLate } from '../../model/overdue';
 import { Button, Chip, Menu, cn } from '../primitives';
 import { fmtShort } from '../utils';
@@ -92,6 +92,17 @@ function ChecklistChip({ checklist }: { checklist: NonNullable<WorklogRow['check
     >
       <ListChecksIcon size={11} strokeWidth={2} aria-hidden="true" />
       {checklist.done}/{checklist.total}
+    </span>
+  );
+}
+
+/** Time spent on the task on the selected day — beside the title, at every
+ *  width, because it is what the day view is for. */
+function TimeChip({ time }: { time: string }) {
+  return (
+    <span title={`${time} spent on this day`} className="shrink-0 flex items-center gap-[3px] text-eyebrow text-neutral-625 tabular-nums">
+      <ClockIcon size={11} strokeWidth={2} aria-hidden="true" />
+      {time}
     </span>
   );
 }
@@ -331,6 +342,7 @@ export const WorklogTaskRow = React.memo(function WorklogTaskRow({
             </span>
           )}
           {row.checklist && <ChecklistChip checklist={row.checklist} />}
+          {row.time && <TimeChip time={row.time} />}
           {/* Between @lg and @4xl the tags give up their lane and ride behind the
               title: they are short and few, and 140px of them is 140px the
               titles need more. Everything else keeps its column. */}

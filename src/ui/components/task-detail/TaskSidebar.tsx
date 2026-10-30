@@ -11,6 +11,7 @@ import { TaskActions } from './TaskActions';
 import { PriorityEditor } from './PriorityEditor';
 import { TagsEditor } from './TagsEditor';
 import { RepeatSummary } from './RepeatSummary';
+import { TimeEditor } from './TimeEditor';
 
 export interface TaskSidebarProps {
   task: Task;
@@ -70,6 +71,10 @@ export function TaskSidebar({ task, parent, isTodo, occurrences, onOpenTask }: T
           `DueEditor` renders nothing and the repeat block states it instead. */}
       <DueEditor task={task} />
       {!done && <RepeatSummary task={task} occurrences={occurrences} overdue={isOverdue(task, selectedDate)} />}
+
+      {/* Under the dates, which are the other "when": to-dos have no worked days
+          to put time on. */}
+      {!isTodo && <TimeEditor task={task} />}
 
       <TagsEditor task={task} />
 

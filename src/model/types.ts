@@ -59,6 +59,10 @@ export interface Task {
   repeatOf?: string;
   /** Dates the task was actively worked on (YYYY-MM-DD), independent from completion. */
   workedOn?: string[];
+  /** Minutes spent on the task, per worked day — written after the date on that
+   *  day's `- worked:` line, so every key is also in `workedOn`. A record only:
+   *  it never reaches the ledger, which bills per client per day. */
+  workedTime?: Record<string, number>;
   /** Freeform labels for cross-client grouping/filtering. */
   tags?: string[];
   /** Prompts written to be run against this task later, in the order they were

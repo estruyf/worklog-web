@@ -4,6 +4,7 @@
 
 import type { Task, TaskChecklistItem, TaskLink, TaskNote, TaskPrompt } from "../model/types";
 import { isTaskHeading } from "./taskHeading";
+import { formatDuration, parseDuration } from "./meetingParser";
 import {
   formatRecurrence,
   parseRecurrence,
@@ -98,6 +99,7 @@ export function parseTaskFile(
       lastDone: t.lastDone,
       repeatOf: t.repeatOf,
       workedOn: t.workedOn,
+      workedTime: t.workedTime,
       tags: t.tags,
       checklist,
       prompts,
@@ -261,10 +263,19 @@ function applyMeta(task: TaskDraft, key: string, value: string): void {
       if (!value) {
         break;
       }
-      const dates = value
-        .split(/[\s,]+/)
-        .map((d) => d.trim())
-        .filter(Boolean);
+      // `2026-07-14 1h30m`: a duration belongs to the date in front of it. Only
+      // a token with a unit counts as one — anything else is read as a date, as
+      // it always was, so a line written before time existed parses unchanged.
+      const dates: string[] = [];
+      for (const token of value.split(/[\s,]+/).filter(Boolean)) {
+        const minutes = /[hm]/i.test(token) ? parseDuration(token) : undefined;
+        const date = dates[dates.length - 1];
+        if (minutes !== undefined && date) {
+          task.workedTime = { ...task.workedTime, [date]: minutes };
+        } else {
+          dates.push(token);
+        }
+      }
       if (dates.length === 0) {
         break;
       }
@@ -522,7 +533,8 @@ export function serializeTask(task: Task, clientId?: string): string {
     out.push(`- repeatOf: ${task.repeatOf}`);
   }
   for (const worked of task.workedOn ?? []) {
-    out.push(`- worked: ${worked}`);
+    const minutes = task.workedTime?.[worked];
+    out.push(`- worked: ${worked}${minutes ? ` ${formatDuration(minutes)}` : ""}`);
   }
   if (task.tags && task.tags.length) {
     out.push(`- tags: ${task.tags.join(", ")}`);

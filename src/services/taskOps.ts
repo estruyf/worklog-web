@@ -86,6 +86,9 @@ export async function toggleTaskWorkedOn(
     existing.delete(date);
   }
   const workedOn = [...existing].sort();
+  // The time lives on the day's `- worked:` line, so taking the day off takes
+  // its time with it.
+  const workedTime = marking ? task.workedTime : withoutDay(task.workedTime, date);
   // Marking a task as worked on a day also moves it into the in-progress
   // status (unless it's already closed). Un-marking leaves the status alone.
   const wip =
@@ -95,10 +98,41 @@ export async function toggleTaskWorkedOn(
   await updateInPlace(store, task, (t) => ({
     ...t,
     workedOn,
+    workedTime,
     status: wip ?? t.status,
   }));
   await store.rebuild("toggleWorked");
-  return { ...task, workedOn, status: wip ?? task.status };
+  return { ...task, workedOn, workedTime, status: wip ?? task.status };
+}
+
+/** Record how long was spent on a task on one day, or clear it with `undefined`.
+ *  Time on a day the task wasn't marked worked marks it, the way the toggle
+ *  would; clearing the time leaves the day marked. */
+export async function setTaskWorkedTime(
+  store: Store,
+  taskId: string,
+  date: string,
+  minutes: number | undefined,
+): Promise<Task> {
+  let task = store.db.getTask(taskId);
+  if (!task) {
+    throw new Error(`Task ${taskId} not found.`);
+  }
+  if (minutes && !(task.workedOn ?? []).includes(date)) {
+    task = await toggleTaskWorkedOn(store, taskId, date);
+  }
+  const workedTime = minutes ? { ...task.workedTime, [date]: minutes } : withoutDay(task.workedTime, date);
+  await updateInPlace(store, task, (t) => ({ ...t, workedTime }));
+  await store.rebuild("setWorkedTime");
+  return { ...task, workedTime };
+}
+
+function withoutDay(time: Task["workedTime"], date: string): Task["workedTime"] {
+  if (!time || !(date in time)) {
+    return time;
+  }
+  const { [date]: _gone, ...rest } = time;
+  return Object.keys(rest).length ? rest : undefined;
 }
 
 /** Set/adjust the completed date for a closed task (used for backfills/planning). */
@@ -628,6 +662,7 @@ async function rollOccurrence(store: Store, args: RollArgs): Promise<Task> {
     // them and stay on its snapshot.
     checklist: untickedChecklist(source.checklist),
     workedOn: undefined,
+    workedTime: undefined,
   };
 
   const replaced = replaceBlock(
@@ -743,6 +778,7 @@ async function undoOccurrence(
     prompts: snapshot.prompts,
     checklist: snapshot.checklist,
     workedOn: snapshot.workedOn,
+    workedTime: snapshot.workedTime,
   }));
   await store.rebuild("undoOccurrence");
   return store.db.getTask(template.id) ?? template;

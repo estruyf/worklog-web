@@ -15,6 +15,14 @@ Every change to Worklog, by day, newest first.
      both). Links must be absolute — a relative path resolves against /changelog and
      404s. -->
 
+## 2026-10-30
+
+- **Time per task** — a task's detail panel now has a **Time** field for the selected day (`1h30m`,
+  `45m`) and shows the total across every day you worked on it; the day view shows that day's time
+  beside the task. It's a record only, so your billed hours per client stay as you logged them. The
+  CLI reads the new `- worked:` lines from 0.2.1 on, so update it before running it on a repo that
+  has them.
+
 ## 2026-10-29
 
 - **Tables in Markdown** — a pipe table (`| a | b |` over `|---|---|`) in a description, note or

@@ -259,6 +259,12 @@ Every open list can sort by priority and filter to one level, and the filter onl
 something in that list has a priority — a picker whose one option is "Normal" would say nothing.
 See [Priority](#priority) for what it looks like in the files.
 
+**Time on a task:** the detail panel's rail has a **Time** field for the selected day — type `45m`,
+`1h` or `1h30m` — and shows the task's total and how many days it went over. Time on a day you hadn't
+marked worked marks it; the day's time also shows beside the task's title on the day view. It's a
+record of where the hours went, not billing: it never adds to a client's hours or checks against
+them. In the file it rides on the day's line, `- worked: 2026-06-30 1h30m`.
+
 **Tags:** the task form picks from the tags already in use — type to filter them, `↑/↓` and `↵` to
 choose, and **Create "…"** appears only when nothing existing matches, so the vocabulary doesn't
 drift into typos. A re-spelling folds onto the tag that exists (typing `Mobile` reuses `mobile`).
@@ -696,7 +702,7 @@ A task block looks like:
 - attachment: assets/picker-crash.log
 - created: 2026-06-30
 - due: 2026-07-05
-- worked: 2026-06-30
+- worked: 2026-06-30 1h30m
 - tags: mobile, bug
 
 Free-form description in Markdown.

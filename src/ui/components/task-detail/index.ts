@@ -7,6 +7,7 @@ export type { TaskSidebarProps } from './TaskSidebar';
 export { PriorityEditor } from './PriorityEditor';
 export { ParentEditor } from './ParentEditor';
 export { TagsEditor } from './TagsEditor';
+export { TimeEditor } from './TimeEditor';
 export { SubtaskList } from './SubtaskList';
 export { TaskActions } from './TaskActions';
 export { NotesSection } from './NotesSection';
