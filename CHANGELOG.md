@@ -15,6 +15,12 @@ Every change to Worklog, by day, newest first.
      both). Links must be absolute — a relative path resolves against /changelog and
      404s. -->
 
+## 2026-11-03
+
+- **Sync works for large timesheets** — once a repo held more than about 47 Markdown files, a sync
+  that had to pull someone else's changes failed with "Too many subrequests". Loading and committing
+  now use a fixed handful of GitHub requests however many files you have.
+
 ## 2026-10-30
 
 - **Time per task** — a task's detail panel now has a **Time** field for the selected day (`1h30m`,

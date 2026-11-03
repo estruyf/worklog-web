@@ -170,17 +170,64 @@ export async function loadRepo(token: string, owner: string, repo: string, branc
   // and none of its meaning; shipping them here made the first load wait on
   // every screenshot ever pasted. The client fetches them by sha on first
   // render instead.
-  await Promise.all(
-    blobs
-      .filter((e) => TEXT_PATH.test(e.path))
-      .map(async (e) => {
-        const blob = await gh<{ content: string; encoding: string }>(token, `/repos/${owner}/${repo}/git/blobs/${e.sha}`);
-        const raw = blob.encoding === 'base64' ? blob.content.replace(/\n/g, '') : blob.content;
-        text[e.path] = blob.encoding === 'base64' ? decodeBase64Utf8(raw) : raw;
-      }),
-  );
+  const textBlobs = blobs.filter((e) => TEXT_PATH.test(e.path));
+  const contents = await loadTextBlobs(token, owner, repo, [...new Set(textBlobs.map((e) => e.sha))]);
+  for (const e of textBlobs) {
+    text[e.path] = contents.get(e.sha)!;
+  }
 
   return { owner, repo, branch, baseCommitSha, text, sha };
+}
+
+/** Blobs per GraphQL query. Keeps each request and response modest while a
+ *  timesheet of a thousand files still loads in ten subrequests. */
+const BLOBS_PER_QUERY = 100;
+
+/** Text of each blob, keyed by sha. One REST call per blob put the load over the
+ *  Workers subrequest cap (50 on the free plan) once a repo held ~47 Markdown
+ *  files — and a timesheet only grows — so blobs are read in batches through
+ *  aliased GraphQL `object(oid:)` lookups instead. A blob GraphQL won't return
+ *  whole (truncated, or judged binary) falls back to the REST read; that is the
+ *  rare large file, not the common case, so it stays outside the bound. */
+async function loadTextBlobs(token: string, owner: string, repo: string, shas: string[]): Promise<Map<string, string>> {
+  const out = new Map<string, string>();
+  const chunks: string[][] = [];
+  for (let i = 0; i < shas.length; i += BLOBS_PER_QUERY) {
+    chunks.push(shas.slice(i, i + BLOBS_PER_QUERY));
+  }
+  await Promise.all(
+    chunks.map(async (chunk) => {
+      const vars = chunk.map((_, i) => `$s${i}: GitObjectID!`).join(', ');
+      const fields = chunk.map((_, i) => `b${i}: object(oid: $s${i}) { ... on Blob { text isTruncated } }`).join('\n');
+      const variables: Record<string, string> = { owner, name: repo };
+      chunk.forEach((s, i) => (variables[`s${i}`] = s));
+      const res = await gh<{
+        data?: { repository: Record<string, { text: string | null; isTruncated: boolean } | null> | null };
+        errors?: Array<{ message: string }>;
+      }>(token, '/graphql', {
+        method: 'POST',
+        body: JSON.stringify({ query: `query($owner: String!, $name: String!, ${vars}) { repository(owner: $owner, name: $name) { ${fields} } }`, variables }),
+      });
+      // GraphQL reports failure in a 200 body, so `gh` can't catch it.
+      if (!res.data?.repository) {
+        throw new GitHubError(`GitHub GraphQL blob read failed: ${res.errors?.map((e) => e.message).join('; ') ?? 'no data'}`, 502);
+      }
+      const repository = res.data.repository;
+      await Promise.all(
+        chunk.map(async (s, i) => {
+          const blob = repository[`b${i}`];
+          out.set(s, blob && blob.text !== null && !blob.isTruncated ? blob.text : await loadTextBlobRest(token, owner, repo, s));
+        }),
+      );
+    }),
+  );
+  return out;
+}
+
+async function loadTextBlobRest(token: string, owner: string, repo: string, blobSha: string): Promise<string> {
+  const blob = await gh<{ content: string; encoding: string }>(token, `/repos/${owner}/${repo}/git/blobs/${blobSha}`);
+  const raw = blob.encoding === 'base64' ? blob.content.replace(/\n/g, '') : blob.content;
+  return blob.encoding === 'base64' ? decodeBase64Utf8(raw) : raw;
 }
 
 /** Raw bytes of one blob, for /api/asset. Sha-addressed rather than
@@ -239,16 +286,20 @@ export async function commitFiles(
   }
   const baseCommit = await gh<{ tree: { sha: string } }>(token, `/repos/${owner}/${repo}/git/commits/${baseCommitSha}`);
 
+  // Text goes inline in the tree (the trees API writes the blob itself), so a
+  // commit costs a fixed handful of subrequests however many files it touches.
+  // Only binary assets need a blob of their own — `content` is UTF-8 only.
   const treeEntries = await Promise.all(
     files.map(async (f) => {
       if (f.deleted) {
         return { path: f.path, mode: '100644', type: 'blob', sha: null };
       }
+      if (f.base64 === undefined) {
+        return { path: f.path, mode: '100644', type: 'blob', content: f.content ?? '' };
+      }
       const blob = await gh<{ sha: string }>(token, `/repos/${owner}/${repo}/git/blobs`, {
         method: 'POST',
-        body: JSON.stringify(
-          f.base64 !== undefined ? { content: f.base64, encoding: 'base64' } : { content: f.content ?? '', encoding: 'utf-8' },
-        ),
+        body: JSON.stringify({ content: f.base64, encoding: 'base64' }),
       });
       return { path: f.path, mode: '100644', type: 'blob', sha: blob.sha };
     }),
