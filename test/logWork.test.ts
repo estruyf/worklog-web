@@ -131,6 +131,30 @@ describe('logWork', () => {
     expect(r.task.notes?.map((n) => n.text)).toEqual(['First pass', 'Second pass']);
   });
 
+  it('records the time on the day worked, and sets it rather than adding to it', async () => {
+    const input = { clientId: 'acme', title: 'x', taskId: 't_acme02', date: DATE, minutes: 60 };
+    const first = await logWork(store, input);
+    fm.clearDirty();
+    const replay = await logWork(store, input);
+    const changed = await logWork(store, { ...input, minutes: 90 });
+
+    expect(first).toMatchObject({ markedWorked: true, timeSet: true });
+    expect(replay).toMatchObject({ markedWorked: false, timeSet: false });
+    expect(changed.timeSet).toBe(true);
+    expect(changed.task.workedTime).toEqual({ [DATE]: 90 });
+    expect(fm.text.get('clients/acme.md')).toContain(`- worked: ${DATE} 1h30m`);
+  });
+
+  it('clears the time with null and keeps the day worked', async () => {
+    await logWork(store, { clientId: 'acme', title: 'x', taskId: 't_acme02', date: DATE, minutes: 60 });
+
+    const r = await logWork(store, { clientId: 'acme', title: 'x', taskId: 't_acme02', date: DATE, minutes: null });
+
+    expect(r.timeSet).toBe(true);
+    expect(r.task.workedOn).toEqual([DATE]);
+    expect(r.task.workedTime).toBeUndefined();
+  });
+
   it('rejects an unknown task id and an unknown client', async () => {
     await expect(logWork(store, { clientId: 'acme', title: 'x', taskId: 't_nope00' })).rejects.toThrow(/not found/);
     await expect(logWork(store, { clientId: 'globex', title: 'x' })).rejects.toThrow(/Unknown client/);

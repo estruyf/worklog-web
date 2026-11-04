@@ -10,7 +10,7 @@ import { Store } from '../store';
 import type { Task } from '../model/types';
 import { createTask } from './tasks';
 import { findTask } from './logWork';
-import { requireParent } from './editTask';
+import { readRecurrence, requireParent } from './editTask';
 
 export interface AddTaskInput {
   clientId: string;
@@ -25,6 +25,9 @@ export interface AddTaskInput {
   tags?: string[];
   /** The parent task's id, making this one a subtask. */
   parentId?: string;
+  /** A `- repeat:` rule (`weekly on mon`). Without a due date, its first
+   *  occurrence becomes the due date. */
+  repeat?: string;
 }
 
 export interface AddTaskResult {
@@ -40,6 +43,7 @@ export async function addTask(store: Store, input: AddTaskInput): Promise<AddTas
   if (input.parentId) {
     requireParent(store, input.parentId);
   }
+  const repeat = input.repeat ? readRecurrence(input.repeat) : undefined;
   const task = await createTask(store, {
     clientId: input.clientId,
     title: input.title,
@@ -49,6 +53,7 @@ export async function addTask(store: Store, input: AddTaskInput): Promise<AddTas
     description: input.description,
     tags: input.tags,
     parentId: input.parentId,
+    repeat,
   });
   return { task: store.db.getTask(task.id) ?? task, created: true };
 }

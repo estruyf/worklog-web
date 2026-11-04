@@ -15,6 +15,21 @@ Every change to Worklog, by day, newest first.
      both). Links must be absolute — a relative path resolves against /changelog and
      404s. -->
 
+## 2026-11-04
+
+- **Time per task from an agent** — `worklog log --time 1h` records how long you spent on a task
+  that day, the same as the Time field in the app. Run it again with another value to correct it,
+  or `--time none` to clear it. Your billed hours per client stay as you logged them. The agent only
+  passes time you give it.
+- **Undo a log from an agent** — `worklog unlog` takes a day worked (with its time) or a note back
+  off a task, so a log on the wrong task or day can be fixed without opening the app.
+- **Repeating to-dos from an agent** — `add` and `update` take `--repeat "weekly on mon"`, so
+  "remind me every Monday" makes a task that comes back, and `--repeat none` stops it.
+- **`list` from an agent** — `--tag` given twice now keeps the tasks with both tags (it used to
+  ignore the second), and `--json` shows the days worked and the time per day.
+- Update the CLI to 0.2.1 and your `worklog` skill to get all of the above. See
+  [Updating the skill](https://github.com/estruyf/worklog-web#let-your-agent-do-it--the-worklog-skill).
+
 ## 2026-11-03
 
 - **Sync works for large timesheets** — once a repo held more than about 47 Markdown files, a sync

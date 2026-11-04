@@ -483,9 +483,10 @@ npx @estruyf/worklog-cli add --client acme --title "Email Sam about the workshop
 
 | Command | Does |
 | --- | --- |
-| `log` | Work done: marks the day worked on a task (creating it when it's new) and adds a note. |
-| `add` | A to-do: an open task with a due date, priority, description, tags or parent. Nothing is marked worked. Without `--client` it goes on the general to-do list. |
-| `update` | Changes an existing task: title, due date, priority, description, status, tags, parent. |
+| `log` | Work done: marks the day worked on a task (creating it when it's new), adds a note and, with `--time`, the time spent that day. |
+| `unlog` | Takes a mistaken log back off: a day worked (with its time), a note, or both. |
+| `add` | A to-do: an open task with a due date, priority, description, tags, parent or repeat rule. Nothing is marked worked. Without `--client` it goes on the general to-do list. |
+| `update` | Changes an existing task: title, due date, priority, description, status, tags, parent, repeat rule. |
 | `done` | Closes a task and its subtasks; a recurring one rolls on to its next occurrence. |
 | `list` | Prints the open tasks, filtered by client, due date or tag. Read-only. |
 | `hours` | Sets the hours worked for a client, or a day off, on a day — the same line the day editor writes. Without `--hours`, prints the day. |
@@ -518,8 +519,9 @@ Worth knowing:
   throw away its own commit.
 - **No merge, no conflict markers.** That replay is the whole race strategy: the app's commit stays
   as it is and the CLI's edit lands on top of it.
-- **`log` doesn't log hours.** It records that you worked on a task, not for how long. Hours go
-  through `hours`, per client per day, and the skill only uses it when you give the hours yourself.
+- **`log --time` isn't billed time.** It records how long you spent on a task that day, like the
+  Time field in the app. The hours you bill go through `hours`, per client per day. The skill only
+  passes either one when you give the time yourself.
 
 ### Let your agent do it — the `worklog` skill
 

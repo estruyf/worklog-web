@@ -11,19 +11,20 @@ export interface TaskFilter {
   clientId?: string;
   /** Only tasks due on or before this YYYY-MM-DD; undated tasks drop out. */
   dueBy?: string;
-  tag?: string;
+  /** Only tasks carrying every one of these tags. */
+  tags?: string[];
 }
 
 /** Open tasks matching the filter: dated ones first by due date, then by
  *  priority, then oldest first. */
 export function listTasks(store: Store, filter: TaskFilter = {}): Task[] {
-  const tag = filter.tag?.trim().toLowerCase();
+  const tags = (filter.tags ?? []).map((t) => t.trim().toLowerCase()).filter(Boolean);
   return store.db
     .getAllTasks()
     .filter((t) => !t.completed)
     .filter((t) => !filter.clientId || t.clientIds.includes(filter.clientId))
     .filter((t) => !filter.dueBy || (!!t.due && t.due <= filter.dueBy))
-    .filter((t) => !tag || (t.tags ?? []).some((x) => x.toLowerCase() === tag))
+    .filter((t) => tags.every((tag) => (t.tags ?? []).some((x) => x.toLowerCase() === tag)))
     .sort(
       (a, b) =>
         (a.due ?? '￿').localeCompare(b.due ?? '￿') ||

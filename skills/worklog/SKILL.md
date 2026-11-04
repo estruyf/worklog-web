@@ -1,6 +1,6 @@
 ---
 name: worklog
-description: Read and write the user's Worklog timesheet (https://github.com/estruyf/worklog-web) with the @estruyf/worklog-cli package, which pushes to their timesheet repo. Logs work done (marks the day worked on the issue's task and adds a one-line note), adds to-dos with a due date, priority and description (for a client, or on the general to-do list that belongs to no client), changes or closes existing tasks, lists what's open, and sets the hours worked for a client on a day when the user gives them. Use when the user runs /worklog; asks to log or record work in their worklog or timesheet; asks to create, add, plan, change, move, reprioritise or close a task or to-do there ("create a task for Friday to …", "remind me on the 13th to …", "make it high priority", "I sent it, close it"); asks what's open or due ("what's on my list this week?"); or says how long they worked or that they're off ("log 4 hours on Acme today", "I'm on vacation Friday"). Also use it unprompted at the end of a piece of client work, once it is committed or a PR is opened, so the work shows up in Worklog without the user retyping it; that unprompted use never logs hours.
+description: Read and write the user's Worklog timesheet (https://github.com/estruyf/worklog-web) with the @estruyf/worklog-cli package, which pushes to their timesheet repo. Logs work done (marks the day worked on the issue's task, adds a one-line note and, when the user says how long it took, the time spent), takes a mistaken log back off, adds to-dos with a due date, priority, description or repeat (for a client, or on the general to-do list that belongs to no client), changes or closes existing tasks, lists what's open, and sets the hours worked for a client on a day when the user gives them. Use when the user runs /worklog; asks to log or record work in their worklog or timesheet; asks to create, add, plan, change, move, reprioritise or close a task or to-do there ("create a task for Friday to …", "remind me on the 13th to …", "every Monday, remind me to …", "make it high priority", "I sent it, close it"); says something was logged on the wrong task or day; asks what's open or due ("what's on my list this week?"); or says how long they worked or that they're off ("log 4 hours on Acme today", "I'm on vacation Friday"). Also use it unprompted at the end of a piece of client work, once it is committed or a PR is opened, so the work shows up in Worklog without the user retyping it; that unprompted use never logs hours.
 ---
 
 # Work with the user's Worklog
@@ -22,6 +22,7 @@ Decide this first. Getting it wrong puts work on the timesheet that never happen
 | The user… | Command | A date means |
 | --- | --- | --- |
 | finished something, or you did the work in this session | [`log`](#log-work-done) | the day it was worked (`--date`) |
+| says a log went on the wrong task or day | [`unlog`](#undo-a-log) | the day to take off (`--date`) |
 | asks to create, add, plan or be reminded of something for later | [`add`](#add-a-to-do) | the day it is due (`--due`) |
 | wants an existing task moved, reprioritised, renamed, retagged… | [`update`](#change-a-task) | the new due date (`--due`) |
 | says a task is finished ("I sent it", "close it", "that's done") | [`done`](#close-a-task) | — |
@@ -91,15 +92,31 @@ npx --yes @estruyf/worklog-cli log --repo <repo> --client <client> \
   --title "<title>" --link <url> --note "<note>"
 ```
 
-Add `--date YYYY-MM-DD` only when the work was on a day other than today. It prints one line:
+Add `--date YYYY-MM-DD` only when the work was on a day other than today.
+
+Add `--time <duration>` (`1h`, `45m`, `1h30m`) when the user says how long the task took ("log 1h on Remote DEV"). Like `hours`, it sets the day's time on that task, it doesn't add to it, so a correction is the same command with the right value, and `--time none` clears it. Never estimate it from how long the session took. It's a record on the task only and doesn't change the hours the user bills (see [Log hours](#log-hours)). It prints one line:
 
 ```
-t_zkmzac "Fix the mobile picker" (clients/acme.md): created, marked worked 2026-10-22, note added — pushed 3a2a9e3
+t_zkmzac "Fix the mobile picker" (clients/acme.md): created, marked worked 2026-10-22, time 1h, note added — pushed 3a2a9e3
 ```
 
 Pass it on to the user as is: whether the task was created or found, and the note. "nothing new to write" means the day was already recorded with that note. That's fine, not an error.
 
 If the work finished the task (the PR is merged, the issue closed), also [close it](#close-a-task).
+
+## Undo a log
+
+When a log landed on the wrong task or the wrong day, take it off that task, then [log it](#log-work-done) where it belongs:
+
+```bash
+npx --yes @estruyf/worklog-cli unlog --repo <repo> --id <t_…> --date <YYYY-MM-DD> --note "<the note's exact text>"
+```
+
+- Name the task like `update`: the `t_…` id the CLI printed is best.
+- `--date` takes that day worked off the task, with its time. `--note` removes the note with exactly that text. Pass the ones you need; nothing else is removed.
+- It never deletes the task and leaves its status alone. A task the wrong log created stays: tell the user, so they can delete it in the app.
+
+It prints what it took off. "wasn't marked worked" or "no note with that text" means there was nothing to remove: check the id, date and text against what the `log` printed.
 
 ## Add a to-do
 
@@ -115,6 +132,7 @@ Check that list's open tasks first (`list --client <client>`, or `list --client 
 - **Priority**: `urgent`, `high` or `low`, only when the user said so. No flag means normal.
 - **Tags**: `--tag`, once per tag, only when the user gave them.
 - **Subtask**: `--parent <t_…>` when it belongs under an existing task.
+- **Repeat**: `--repeat "<rule>"` when the user says it comes back ("every Monday", "on the 1st of each month"): `daily`, `weekdays`, `every 3 days`, `weekly on mon,thu`, `every 2 weeks on thu`, `monthly on 15`, `monthly on last`, `yearly on 03-14`. Without `--due`, its first occurrence becomes the due date.
 - **Link**: the issue url, when the to-do comes from one.
 
 ```bash
@@ -139,7 +157,7 @@ npx --yes @estruyf/worklog-cli update --repo <repo> --id <t_…> --due 2026-11-2
 ```
 
 - **Naming it**: `--id` when you have it (the CLI printed it, or `list` shows it). Otherwise `--link`, or `--title` with the exact title. A title shared by open tasks of several clients is refused with their ids: add `--client`, or ask the user which one.
-- **Changes**: `--rename "<title>"`, `--due <date>` (`none` clears it), `--priority <level>` (`normal` clears it), `--description "<text>"` (`""` clears it), `--tag` / `--untag` (repeatable), `--parent <t_…>` (`none` makes it top-level), `--status <id>` (one of the statuses in `<repo>/.worklog/config.json`).
+- **Changes**: `--rename "<title>"`, `--due <date>` (`none` clears it), `--priority <level>` (`normal` clears it), `--description "<text>"` (`""` clears it), `--tag` / `--untag` (repeatable), `--parent <t_…>` (`none` makes it top-level), `--repeat "<rule>"` (`none` stops it repeating), `--status <id>` (one of the statuses in `<repo>/.worklog/config.json`).
 
 It prints the fields that changed, or "already up to date".
 
@@ -157,11 +175,11 @@ Named like `update`. Its subtasks close with it. A recurring task isn't closed: 
 npx --yes @estruyf/worklog-cli list --repo <repo> --due-by 2026-11-30 --json
 ```
 
-Read-only; it fetches the latest first. `--client <id>` narrows it to one client (`todos` for the general list), `--due-by <date>` to tasks due by then (undated ones drop out), `--tag <tag>` to one tag. Use `--json` when you read the result yourself, and answer the user in a short list, not the raw output. Without `--json` it prints one tab-separated line per task: id, due, priority, client, status, title.
+Read-only; it fetches the latest first. `--client <id>` narrows it to one client (`todos` for the general list), `--due-by <date>` to tasks due by then (undated ones drop out), `--tag <tag>` to tasks with that tag (repeat it for tasks with all of them). Use `--json` when you read the result yourself, and answer the user in a short list, not the raw output. The JSON also has each task's `worked` days and its `minutes` per day, which answers "how long have I spent on …?" for an open task. Without `--json` it prints one tab-separated line per task: id, due, priority, client, status, title.
 
 ## Log hours
 
-Time is tracked **per client per day**, not per task: one line per client per day, which the app adds up against the working day. Log hours only when the user gives them. Never estimate them from how long a session took, and never log them on your own at the end of a piece of work: the timesheet is what the user bills from.
+Billed time is tracked **per client per day**: one line per client per day, which the app adds up against the working day. Time on a single task is a separate record (`log --time`), and neither one changes the other. Log hours only when the user gives them. Never estimate them from how long a session took, and never log them on your own at the end of a piece of work: the timesheet is what the user bills from.
 
 ```bash
 npx --yes @estruyf/worklog-cli hours --repo <repo> --client <client> --hours 4 --note "<what it went to>"

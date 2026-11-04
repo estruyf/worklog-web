@@ -1,12 +1,13 @@
-// editTask, closeTask and listTasks, the services behind the CLI's `update`,
-// `done` and `list`. They never create a task, so a pointer that matches nothing
+// editTask, closeTask, unlogWork and listTasks, the services behind the CLI's
+// `update`, `done`, `unlog` and `list`. They never create a task, so a pointer that matches nothing
 // or several is an error; and, because the CLI replays them after a lost push
 // race, a second identical run must change nothing.
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { Store } from '../src/store';
 import { FileMap, mountFileMap } from '../src/workspace/paths';
-import { closeTask, editTask } from '../src/services/editTask';
+import { closeTask, editTask, unlogWork } from '../src/services/editTask';
+import { logWork } from '../src/services/logWork';
 import { listTasks } from '../src/services/listTasks';
 import { addTask } from '../src/services/addTask';
 import { today } from '../src/util/date';
@@ -49,6 +50,7 @@ Ask about the workshop
 - created: 2026-07-03
 - due: 2026-07-31
 - repeat: monthly on last
+- repeatFrom: completion
 `;
 
 const GLOBEX_MD = `# Globex
@@ -129,6 +131,26 @@ describe('editTask', () => {
     await expect(editTask(store, { taskId: 't_acme01' }, { parentId: 't_acme02' })).rejects.toThrow(/its subtasks/);
   });
 
+  it('sets a repeat rule, keeps its repeatFrom when it changes, and stops it with null', async () => {
+    const set = await editTask(store, { taskId: 't_acme02' }, { repeat: 'Weekly on mon' });
+    expect(set.changed).toEqual(['repeat']);
+    expect(fm.text.get('clients/acme.md')).toContain('- repeat: weekly on mon');
+    expect(set.task.due).toBeDefined();
+
+    expect((await editTask(store, { taskId: 't_acme02' }, { repeat: 'weekly on mon' })).changed).toEqual([]);
+
+    const changed = await editTask(store, { taskId: 't_acme03' }, { repeat: 'monthly on 15' });
+    expect(changed.task.repeat).toMatchObject({ monthDay: 15, anchor: 'completion' });
+
+    const stopped = await editTask(store, { taskId: 't_acme03' }, { repeat: null });
+    expect(stopped.changed).toEqual(['repeat']);
+    expect(stopped.task.repeat).toBeUndefined();
+  });
+
+  it('refuses a repeat rule it cannot read', async () => {
+    await expect(editTask(store, { taskId: 't_acme02' }, { repeat: 'now and then' })).rejects.toThrow(/Can't read the repeat/);
+  });
+
   it('changes nothing when the same edit runs twice', async () => {
     const edit = { due: '2026-11-20', addTags: ['client'] };
     await editTask(store, { taskId: 't_acme01' }, edit);
@@ -137,6 +159,45 @@ describe('editTask', () => {
     const r = await editTask(store, { taskId: 't_acme01' }, edit);
 
     expect(r.changed).toEqual([]);
+    expect(fm.text.get('clients/acme.md')).toBe(after);
+  });
+});
+
+describe('addTask', () => {
+  it('creates a repeating to-do, its first occurrence as the due date', async () => {
+    const r = await addTask(store, { clientId: 'todos', title: 'Water the plants', repeat: 'weekly on mon' });
+
+    expect(r.task.repeat).toMatchObject({ unit: 'week', weekdays: [1] });
+    expect(r.task.due).toBeDefined();
+  });
+});
+
+describe('unlogWork', () => {
+  const DATE = '2026-07-10';
+
+  it('takes the day off with its time, and removes the note by its text', async () => {
+    await logWork(store, { clientId: 'acme', title: 'x', taskId: 't_acme02', date: DATE, minutes: 60, note: 'Wrong task' });
+
+    const r = await unlogWork(store, { taskId: 't_acme02' }, { date: DATE, note: 'Wrong task' });
+
+    expect(r).toMatchObject({ unmarked: true, noteRemoved: true });
+    expect(r.task.workedOn ?? []).toEqual([]);
+    expect(r.task.workedTime).toBeUndefined();
+    expect(r.task.notes ?? []).toEqual([]);
+    expect(fm.text.get('clients/acme.md')).not.toContain(`- worked: ${DATE}`);
+  });
+
+  it('removes only what it names, and changes nothing the second time', async () => {
+    await logWork(store, { clientId: 'acme', title: 'x', taskId: 't_acme02', date: DATE, note: 'Keep me' });
+    await unlogWork(store, { taskId: 't_acme02' }, { date: DATE });
+    const after = fm.text.get('clients/acme.md');
+    fm.clearDirty();
+
+    const r = await unlogWork(store, { taskId: 't_acme02' }, { date: DATE, note: 'Not there' });
+
+    expect(r).toMatchObject({ unmarked: false, noteRemoved: false });
+    expect(r.task.notes?.map((n) => n.text)).toEqual(['Keep me']);
+    expect(fm.dirty.size).toBe(0);
     expect(fm.text.get('clients/acme.md')).toBe(after);
   });
 });
@@ -171,7 +232,14 @@ describe('listTasks', () => {
     expect(listTasks(store).map((t) => t.id).slice(0, 3)).toEqual(['t_acme03', 't_glob01', 't_acme01']);
     expect(listTasks(store, { clientId: 'todos' }).map((t) => t.title)).toEqual(['Renew the passport']);
     expect(listTasks(store, { dueBy: '2026-08-01' }).map((t) => t.id)).toEqual(['t_acme03', 't_glob01']);
-    expect(listTasks(store, { tag: 'MAIL' }).map((t) => t.id)).toEqual(['t_acme01']);
+    expect(listTasks(store, { tags: ['MAIL'] }).map((t) => t.id)).toEqual(['t_acme01']);
+  });
+
+  it('keeps only tasks carrying every tag asked for', async () => {
+    await editTask(store, { taskId: 't_acme02' }, { addTags: ['mail', 'billing'] });
+
+    expect(listTasks(store, { tags: ['mail'] }).map((t) => t.id)).toEqual(['t_acme01', 't_acme02']);
+    expect(listTasks(store, { tags: ['mail', 'Billing'] }).map((t) => t.id)).toEqual(['t_acme02']);
   });
 
   it('leaves closed tasks out', async () => {

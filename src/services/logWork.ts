@@ -1,14 +1,15 @@
 // "I worked on this today", recorded from outside the app — the entry point the
 // agent CLI (scripts/log-work.ts) calls on a timesheet clone. It finds the task by
-// id, link or title, creates it when none matches, marks the day worked and adds
-// the note, all through the same services the app's buttons call.
+// id, link or title, creates it when none matches, marks the day worked, records
+// the time spent and adds the note, all through the same services the app's
+// buttons call.
 //
 // It has to be idempotent: the CLI replays it on a fresh copy of the branch when
 // its push loses a race, so a second run with the same input must change nothing.
 
 import { Store } from '../store';
 import type { Task } from '../model/types';
-import { addTaskNote, toggleTaskWorkedOn } from './taskOps';
+import { addTaskNote, setTaskWorkedTime, toggleTaskWorkedOn } from './taskOps';
 import { createTask } from './tasks';
 import { today } from '../util/date';
 
@@ -22,12 +23,17 @@ export interface LogWorkInput {
   note?: string;
   /** Defaults to today. */
   date?: string;
+  /** Minutes spent on the task that day, or null to clear them. Sets the day's
+   *  time, like the app's Time field: it doesn't add to what's there. */
+  minutes?: number | null;
 }
 
 export interface LogWorkResult {
   task: Task;
   created: boolean;
   markedWorked: boolean;
+  /** The day's time changed; unchanged or not given is false. */
+  timeSet: boolean;
   noteAdded: boolean;
 }
 
@@ -48,6 +54,12 @@ export async function logWork(store: Store, input: LogWorkInput): Promise<LogWor
     task = await toggleTaskWorkedOn(store, task.id, date);
   }
 
+  const timeSet =
+    input.minutes === null ? !!task.workedTime?.[date] : !!input.minutes && task.workedTime?.[date] !== input.minutes;
+  if (timeSet) {
+    task = await setTaskWorkedTime(store, task.id, date, input.minutes ?? undefined);
+  }
+
   // Same text stamped today counts as already written — that is what makes a
   // replay after a lost push a no-op instead of a duplicate note. Today, not
   // `date`: addTaskNote stamps the note with now, whatever day was worked.
@@ -57,7 +69,7 @@ export async function logWork(store: Store, input: LogWorkInput): Promise<LogWor
     task = await addTaskNote(store, task.id, note);
   }
 
-  return { task: store.db.getTask(task.id) ?? task, created, markedWorked, noteAdded };
+  return { task: store.db.getTask(task.id) ?? task, created, markedWorked, timeSet, noteAdded };
 }
 
 /** The task an agent means: by id, then by link, then an open task of the same

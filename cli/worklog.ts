@@ -1,16 +1,18 @@
 // The `worklog` CLI (published as @estruyf/worklog-cli, bundled by build:cli):
-// log work on a task, add a to-do, change or close a task, straight into a local
+// log work on a task (and the time it took) or take it off again, add a to-do,
+// change or close a task, straight into a local
 // clone of the timesheet repo and push it, so the online app shows it on its next
 // load; set the hours worked on a day; or list the open tasks. It talks to GitHub only through `git` and the
 // user's own credentials — the site and its OAuth session are not involved.
 //
 //   worklog log --client icefire --title "Fix the picker" \
-//     --link https://github.com/owner/repo/issues/12 --note "Widened the tap targets"
+//     --link https://github.com/owner/repo/issues/12 --note "Widened the tap targets" --time 1h30m
 //
 //   worklog add --client icefire --title "Email the client" --due 2026-11-13 \
 //     --priority high --description "About the session and the roundtable"
 //
-//   worklog update --id t_469p6i --due 2026-11-20
+//   worklog unlog --id t_zkmzac --date 2026-11-03 --note "Widened the tap targets"
+//   worklog update --id t_469p6i --due 2026-11-20 --repeat "weekly on mon"
 //   worklog done --title "Email the client"
 //   worklog list --due-by 2026-11-30 --json
 //   worklog hours --client icefire --hours 4 --note "Picker fixes"
@@ -30,23 +32,35 @@ import { FileMap, mountFileMap } from '../src/workspace/paths';
 import { isWorklogPath } from '../src/server/github';
 import { logWork, type LogWorkInput, type LogWorkResult } from '../src/services/logWork';
 import { addTask, type AddTaskResult } from '../src/services/addTask';
-import { closeTask, editTask, type CloseTaskResult, type EditTaskResult, type TaskRef } from '../src/services/editTask';
+import {
+  closeTask,
+  editTask,
+  unlogWork,
+  type CloseTaskResult,
+  type EditTaskResult,
+  type TaskRef,
+  type UnlogWorkInput,
+  type UnlogWorkResult,
+} from '../src/services/editTask';
 import { listTasks } from '../src/services/listTasks';
 import { dayEntries, logHours, targetLabel, type LogHoursResult } from '../src/services/logHours';
 import { EVENT_TYPES } from '../src/model/worklog';
 import { PRIORITIES } from '../src/model/priority';
+import { formatRecurrence } from '../src/model/recurrence';
 import { GENERAL_TODO_CLIENT_ID } from '../src/model/todos';
+import { formatDuration, parseDuration } from '../src/parser/meetingParser';
 import { isValidISODate, today } from '../src/util/date';
 
 const TEXT_PATH = /\.(md|json)$|\.worklog$/;
 const PUSH_ATTEMPTS = 3;
-/** The value that clears an optional field: `--due none`, `--parent none`. */
+/** The value that clears an optional field: `--due none`, `--parent none`, `--time none`. */
 const NONE = 'none';
 
 const USAGE = `Usage: worklog <command> [options]
 
   log     Work that was done: marks the day worked on a task (creating the task
-          when it's new) and adds the note.
+          when it's new), records the time spent and adds the note.
+  unlog   Undoes a log: takes a day worked off a task, removes a note.
   add     Something still to do: creates an open task. No day is marked worked.
           Without --client it goes on the general to-do list.
   update  Changes an existing task: due date, priority, description, ...
@@ -62,7 +76,7 @@ Every command:
   --client <id>         client id from .worklog/config.json; "todos" is the
                         general to-do list
 
-Naming a task (log, update, done):
+Naming a task (log, unlog, update, done):
   --id <t_xxxxxx>       this exact task
   --link <url>          the task linked to this issue/ticket url
   --title <title>       the open task with this title
@@ -70,6 +84,13 @@ Naming a task (log, update, done):
 log --client <id> --title <title>:
   --note <text>         progress note added to the task
   --date <date>         day worked, YYYY-MM-DD (default: today)
+  --time <duration>     time spent on the task that day: 1h, 45m, 1h30m, or
+                        none to clear it. Sets the day's time, it doesn't add.
+                        A record only: billed hours stay with "hours"
+
+unlog (at least one of):
+  --date <date>         take this day worked off the task, with its time
+  --note <text>         remove the note with exactly this text
 
 add --title <title>:
   --link <url>          issue/ticket url
@@ -78,6 +99,8 @@ add --title <title>:
   --description <text>  what the task is about
   --tag <tag>           repeat for several tags
   --parent <t_xxxxxx>   make it a subtask of this task
+  --repeat <rule>       daily, weekdays, every 3 days, weekly on mon,thu,
+                        monthly on 15, monthly on last, yearly on 03-14
 
 update:
   --rename <title>      new title
@@ -88,6 +111,7 @@ update:
   --tag <tag>           add a tag (repeatable)
   --untag <tag>         remove a tag (repeatable)
   --parent <id|none>    move it under this task, or none to make it top-level
+  --repeat <rule|none>  a new repeat rule (as for add), or none to stop it
 
 hours --client <id> | --event <type>:
   --hours <amount>      full, half, or a number of hours; 0 removes the entry.
@@ -98,21 +122,23 @@ hours --client <id> | --event <type>:
 
 list:
   --due-by <date>       only tasks due on or before this day
-  --tag <tag>           only tasks with this tag
-  --json                print JSON instead of one line per task
+  --tag <tag>           only tasks with this tag; repeat it for tasks with all
+  --json                print JSON instead of one line per task, with the
+                        days worked and the minutes per day
 
-log, add, update, done, hours:
+log, unlog, add, update, done, hours:
   --dry-run             show the change, commit nothing`;
 
 /** The options each command takes, beyond --repo and --help. Anything else is
  *  refused — so a to-do's due date can't silently end up as a day worked, or a
  *  day worked as a due date. */
 const OPTIONS: Record<string, string[]> = {
-  log: ['client', 'id', 'link', 'title', 'note', 'date', 'dry-run'],
-  add: ['client', 'link', 'title', 'due', 'priority', 'description', 'tag', 'parent', 'dry-run'],
+  log: ['client', 'id', 'link', 'title', 'note', 'date', 'time', 'dry-run'],
+  unlog: ['client', 'id', 'link', 'title', 'date', 'note', 'dry-run'],
+  add: ['client', 'link', 'title', 'due', 'priority', 'description', 'tag', 'parent', 'repeat', 'dry-run'],
   update: [
     'client', 'id', 'link', 'title', 'rename', 'due', 'priority', 'description',
-    'status', 'tag', 'untag', 'parent', 'dry-run',
+    'status', 'tag', 'untag', 'parent', 'repeat', 'dry-run',
   ],
   done: ['client', 'id', 'link', 'title', 'dry-run'],
   list: ['client', 'due-by', 'tag', 'json'],
@@ -122,6 +148,7 @@ const OPTIONS: Record<string, string[]> = {
 /** Where a misplaced option probably meant to go. */
 const HINTS: Record<string, string> = {
   date: 'A to-do\'s date is --due; --date is the day worked, for "worklog log" and "worklog hours".',
+  time: 'Time on a task is "worklog log --time"; a client\'s hours for the day are "worklog hours --hours".',
   due: 'The day worked is --date; --due is when a to-do is due.',
 };
 
@@ -140,6 +167,7 @@ async function main(): Promise<void> {
       id: { type: 'string' },
       note: { type: 'string' },
       date: { type: 'string' },
+      time: { type: 'string' },
       due: { type: 'string' },
       'due-by': { type: 'string' },
       priority: { type: 'string' },
@@ -149,6 +177,7 @@ async function main(): Promise<void> {
       tag: { type: 'string', multiple: true },
       untag: { type: 'string', multiple: true },
       parent: { type: 'string' },
+      repeat: { type: 'string' },
       event: { type: 'string' },
       hours: { type: 'string' },
       json: { type: 'boolean' },
@@ -192,6 +221,11 @@ function validate(values: Values): void {
       throw new Error(`--${option} must be YYYY-MM-DD, got "${value}".`);
     }
   }
+  // A unit is required: a bare `1` would read as one minute, never what was meant.
+  const time = values.time;
+  if (typeof time === 'string' && time !== NONE && !(/[hm]/i.test(time) && parseDuration(time))) {
+    throw new Error(`--time must be a duration like 1h, 45m or 1h30m, or none, got "${time}".`);
+  }
   const priority = values.priority;
   if (typeof priority === 'string' && !PRIORITIES.some((p) => p.id === priority.trim().toLowerCase())) {
     throw new Error(`--priority must be one of ${PRIORITIES.map((p) => p.id).join(', ')}, got "${priority}".`);
@@ -211,8 +245,25 @@ function toEdit(command: string, values: Values): Edit {
       if (!clientId || !title) {
         throw new Error(`--client and --title are required.\n\n${USAGE}`);
       }
-      const input: LogWorkInput = { clientId, title, taskId: ref.taskId, link: ref.link, note: str('note'), date: str('date') };
+      const time = str('time');
+      const input: LogWorkInput = {
+        clientId,
+        title,
+        taskId: ref.taskId,
+        link: ref.link,
+        note: str('note'),
+        date: str('date'),
+        minutes: time === NONE ? null : time ? parseDuration(time) : undefined,
+      };
       return async (store) => describeLog(await logWork(store, input), input);
+    }
+    case 'unlog': {
+      requireRef(ref);
+      const input: UnlogWorkInput = { date: str('date'), note: str('note') };
+      if (!input.date && !input.note) {
+        throw new Error('Nothing to take off: pass --date, --note or both.');
+      }
+      return async (store) => describeUnlog(await unlogWork(store, ref, input), input);
     }
     case 'add': {
       const title = str('title');
@@ -229,6 +280,7 @@ function toEdit(command: string, values: Values): Edit {
         description: str('description'),
         tags: list('tag'),
         parentId: str('parent'),
+        repeat: str('repeat'),
       };
       return async (store) => describeAdd(await addTask(store, input));
     }
@@ -243,9 +295,10 @@ function toEdit(command: string, values: Values): Edit {
         addTags: list('tag'),
         removeTags: list('untag'),
         parentId: orNull(str('parent')),
+        repeat: orNull(str('repeat')),
       };
       if (Object.values(edit).every((v) => v === undefined)) {
-        throw new Error(`Nothing to change: pass at least one of --rename, --due, --priority, --description, --status, --tag, --untag, --parent.`);
+        throw new Error(`Nothing to change: pass at least one of --rename, --due, --priority, --description, --status, --tag, --untag, --parent, --repeat.`);
       }
       return async (store) => describeUpdate(await editTask(store, ref, edit));
     }
@@ -338,7 +391,7 @@ async function list(repo: string, values: Values): Promise<void> {
   const tasks = listTasks(store, {
     clientId: values.client as string | undefined,
     dueBy: values['due-by'] as string | undefined,
-    tag: (values.tag as string[] | undefined)?.[0],
+    tags: values.tag as string[] | undefined,
   });
   if (values.json) {
     console.log(JSON.stringify(tasks.map(toJson), null, 2));
@@ -378,6 +431,8 @@ function toJson(t: Task) {
     links: t.links.map((l) => l.url),
     parent: t.parentId ?? null,
     repeats: !!t.repeat,
+    worked: t.workedOn ?? [],
+    minutes: t.workedTime ?? {},
     created: t.created ?? null,
     description: t.description ?? null,
     file: t.sourceFile,
@@ -432,11 +487,20 @@ function label(task: Task): string {
   return `${task.id} "${task.title}" (${task.sourceFile})`;
 }
 
-function describeLog({ task, created, markedWorked, noteAdded }: LogWorkResult, input: LogWorkInput): string {
+function describeLog({ task, created, markedWorked, timeSet, noteAdded }: LogWorkResult, input: LogWorkInput): string {
   const what = [
     created ? 'created' : 'found',
     markedWorked ? `marked worked ${input.date ?? today()}` : undefined,
+    timeSet ? (input.minutes ? `time ${formatDuration(input.minutes)}` : 'time cleared') : undefined,
     noteAdded ? 'note added' : undefined,
+  ].filter(Boolean);
+  return `${label(task)}: ${what.join(', ')}`;
+}
+
+function describeUnlog({ task, unmarked, noteRemoved }: UnlogWorkResult, input: UnlogWorkInput): string {
+  const what = [
+    input.date ? (unmarked ? `took ${input.date} off` : `${input.date} wasn't marked worked`) : undefined,
+    input.note ? (noteRemoved ? 'note removed' : 'no note with that text') : undefined,
   ].filter(Boolean);
   return `${label(task)}: ${what.join(', ')}`;
 }
@@ -446,6 +510,7 @@ function describeAdd({ task, created }: AddTaskResult): string {
     created ? 'created' : 'already exists, left as is',
     task.due ? `due ${task.due}` : undefined,
     task.priority ? `priority ${task.priority}` : undefined,
+    task.repeat ? `repeats ${formatRecurrence(task.repeat)}` : undefined,
   ].filter(Boolean);
   return `${label(task)}: ${what.join(', ')}`;
 }

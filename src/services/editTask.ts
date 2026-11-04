@@ -1,5 +1,5 @@
-// Change or close a task from outside the app — behind the CLI's `update` and
-// `done` commands. Unlike logWork and addTask these never create a task: the
+// Change or close a task from outside the app — behind the CLI's `update`,
+// `done` and `unlog` commands. Unlike logWork and addTask these never create a task: the
 // caller points at one that exists (by id, link or title), and a pointer that
 // matches nothing, or more than one open task, is an error rather than a guess.
 //
@@ -10,7 +10,16 @@
 import { Store } from '../store';
 import type { Task } from '../model/types';
 import { writablePriority } from '../model/priority';
-import { closeTaskById, setTaskStatus, updateTask, type TaskFields } from './taskOps';
+import { formatRecurrence, parseRecurrence, type Recurrence } from '../model/recurrence';
+import {
+  closeTaskById,
+  deleteTaskNote,
+  setTaskRecurrence,
+  setTaskStatus,
+  toggleTaskWorkedOn,
+  updateTask,
+  type TaskFields,
+} from './taskOps';
 import { normalizeUrl } from './logWork';
 import { today } from '../util/date';
 
@@ -37,6 +46,8 @@ export interface TaskEdit {
   removeTags?: string[];
   /** The parent task's id, or null to make it a top-level task again. */
   parentId?: string | null;
+  /** A `- repeat:` rule (`weekly on mon`), or null to stop it repeating. */
+  repeat?: string | null;
 }
 
 export interface EditTaskResult {
@@ -48,6 +59,19 @@ export interface EditTaskResult {
 export interface CloseTaskResult {
   task: Task;
   closed: boolean;
+}
+
+export interface UnlogWorkInput {
+  /** The day to take off the task. Its time goes with it. */
+  date?: string;
+  /** The exact text of a note to remove. */
+  note?: string;
+}
+
+export interface UnlogWorkResult {
+  task: Task;
+  unmarked: boolean;
+  noteRemoved: boolean;
 }
 
 /** The one task `ref` points at. Open tasks win; a closed one is only found
@@ -140,6 +164,20 @@ export async function editTask(store: Store, ref: TaskRef, edit: TaskEdit): Prom
     task = await updateTask(store, task.id, fields);
   }
 
+  // Before the status: a closing status archives the task, and only open tasks
+  // can repeat. The rule's repeatFrom and repeatUntil are kept, since `--repeat`
+  // only names the rule itself.
+  if (edit.repeat !== undefined) {
+    const next: Recurrence | undefined =
+      edit.repeat === null
+        ? undefined
+        : { ...readRecurrence(edit.repeat), anchor: task.repeat?.anchor ?? 'schedule', until: task.repeat?.until };
+    if ((next && formatRecurrence(next)) !== (task.repeat && formatRecurrence(task.repeat))) {
+      task = await setTaskRecurrence(store, task.id, next);
+      changed.push('repeat');
+    }
+  }
+
   if (edit.status !== undefined && edit.status !== task.status) {
     const statuses = store.getConfig().statuses;
     if (!statuses.some((s) => s.id === edit.status)) {
@@ -161,6 +199,35 @@ export async function closeTask(store: Store, ref: TaskRef): Promise<CloseTaskRe
   }
   const closed = await closeTaskById(store, task.id);
   return { task: store.db.getTask(task.id) ?? closed, closed: true };
+}
+
+/** The undo for logWork, for a day or note logged on the wrong task. Each part
+ *  removes only what it names. It never deletes the task, and leaves its status
+ *  alone, the way un-marking a day in the app does. */
+export async function unlogWork(store: Store, ref: TaskRef, input: UnlogWorkInput): Promise<UnlogWorkResult> {
+  let task = requireTask(store, ref, { includeClosed: true });
+  const unmarked = !!input.date && (task.workedOn ?? []).includes(input.date);
+  if (input.date && unmarked) {
+    task = await toggleTaskWorkedOn(store, task.id, input.date);
+  }
+  // The latest of identical notes: that is the one the mistaken log wrote.
+  const note = input.note?.trim();
+  const index = note ? (task.notes ?? []).map((n) => n.text).lastIndexOf(note) : -1;
+  if (index >= 0) {
+    task = await deleteTaskNote(store, task.id, index);
+  }
+  return { task: store.db.getTask(task.id) ?? task, unmarked, noteRemoved: index >= 0 };
+}
+
+/** A `- repeat:` rule as the app reads it, or an error naming the forms it takes. */
+export function readRecurrence(text: string): Recurrence {
+  const rule = parseRecurrence(text);
+  if (!rule) {
+    throw new Error(
+      `Can't read the repeat "${text}". Use daily, weekdays, every 3 days, weekly on mon,thu, monthly on 15, monthly on last or yearly on 03-14.`,
+    );
+  }
+  return rule;
 }
 
 /** A parent has to exist, and can't be the task itself or one of its own subtasks. */

@@ -34,10 +34,24 @@ Each command refuses options it doesn't have, so a to-do's due date can never en
 | `--id` | Log on this exact task id instead. |
 | `--note` | Progress note added under the task's `### Notes`. |
 | `--date` | The day worked, `YYYY-MM-DD`. Defaults to today. |
+| `--time` | Time spent on the task that day: `1h`, `45m`, `1h30m`, or `none` to clear it. Sets the day's time, the same as the app's Time field. |
+
+`--time` is a record on the task only. The hours you bill a client for stay with [`hours`](#hours--time-worked).
 
 The task is matched by `--id`, then `--link`, then an **open task of the same title** for that
 client — so a task you typed into the app yourself is picked up rather than duplicated. With no match
 it is created.
+
+## `unlog` — take a log back off
+
+For a log that went on the wrong task or day. Name the task like `update`, then pass what to remove:
+
+| Option | Meaning |
+| --- | --- |
+| `--date` | Take this day worked off the task, with its time. |
+| `--note` | Remove the note with exactly this text. |
+
+Each option removes only what it names. The task itself and its status stay as they are.
 
 ## `add` — a to-do
 
@@ -52,6 +66,7 @@ Creates an **open task**: nothing is marked worked and no note is written.
 | `--description` | What the task is about, written under its fields. |
 | `--tag` | A tag. Repeat it for several. |
 | `--parent` | A task id, making the new task its subtask. |
+| `--repeat` | A repeat rule, as the app's `- repeat:` line takes it: `weekly on mon`, `monthly on last`, … Without `--due`, the first occurrence is the due date. |
 | `--link` | Issue or ticket url. |
 
 An open task with the same link or title is left as it is rather than duplicated.
@@ -70,6 +85,7 @@ several clients have one), then pass only what changes:
 | `--status` | A status id from `.worklog/config.json`. A closing one closes the task. |
 | `--tag` / `--untag` | Add or remove a tag. Repeatable. |
 | `--parent` | Move it under this task id, or `none` to make it top-level. |
+| `--repeat` | A new repeat rule, or `none` to stop it repeating. Its `repeatFrom` and `repeatUntil` are kept. |
 
 A title that matches open tasks of several clients is refused, with their ids, rather than guessed.
 
@@ -87,8 +103,8 @@ due, priority, client, status, title), soonest due first.
 | --- | --- |
 | `--client` | Only this client's tasks; `todos` for the general to-do list. |
 | `--due-by` | Only tasks due on or before this day. |
-| `--tag` | Only tasks with this tag. |
-| `--json` | Print JSON instead, with descriptions, tags and links. |
+| `--tag` | Only tasks with this tag. Repeat it for tasks with all of them. |
+| `--json` | Print JSON instead, with descriptions, tags, links, the days worked and the minutes per day. |
 
 ## `hours` — time worked
 
