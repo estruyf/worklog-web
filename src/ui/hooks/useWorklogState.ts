@@ -6,7 +6,7 @@ import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import { UNDO_WINDOW_MS, worklogStore, type ToastMessage } from '../../data/worklogStore';
 
 export function useWorklogState() {
-  const { data, loading, gitPending, pendingCount, offline, syncError, lastSyncedAt } = useSyncExternalStore(
+  const { data, loading, gitPending, pendingCount, offline, sessionExpired, syncError, lastSyncedAt } = useSyncExternalStore(
     worklogStore.subscribe,
     worklogStore.getSnapshot,
     worklogStore.getSnapshot,
@@ -31,5 +31,5 @@ export function useWorklogState() {
 
   const dismissToast = useCallback(() => setToast(null), []);
 
-  return { snap: data, loading, toast, dismissToast, gitPending, pendingCount, offline, syncError, lastSyncedAt };
+  return { snap: data, loading, toast, dismissToast, gitPending, pendingCount, offline, sessionExpired, syncError, lastSyncedAt };
 }

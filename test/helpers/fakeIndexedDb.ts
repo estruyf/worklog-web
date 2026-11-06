@@ -23,8 +23,9 @@ interface FakeDbState {
 /** Installs the fake as `globalThis.indexedDB` and returns a reset for it. The
  *  data outlives a `vi.resetModules()`, which is the point: that is how a test
  *  simulates closing the app and opening it again on the same device. */
-export function installFakeIndexedDb(): { reset: () => void } {
+export function installFakeIndexedDb(): { reset: () => void; failWrites: (fail: boolean) => void } {
   const state: FakeDbState = { version: 0, stores: new Map() };
+  let writesFail = false;
 
   function makeRequest<T>(run: () => T) {
     const req: { result: T | undefined; onsuccess: (() => void) | null; onerror: (() => void) | null } = {
@@ -43,7 +44,12 @@ export function installFakeIndexedDb(): { reset: () => void } {
     const store = state.stores.get(name)!;
     const keyOf = (value: unknown) => String((value as Record<string, unknown>)[store.keyPath]);
     return {
-      put: (value: unknown) => makeRequest(() => void store.rows.set(keyOf(value), structuredClone(value))),
+      put: (value: unknown) => {
+        if (writesFail) {
+          throw new Error('QuotaExceededError');
+        }
+        return makeRequest(() => void store.rows.set(keyOf(value), structuredClone(value)));
+      },
       get: (key: string) => makeRequest(() => structuredClone(store.rows.get(key))),
       getAll: () => makeRequest(() => structuredClone([...store.rows.values()])),
       delete: (key: string) => makeRequest(() => void store.rows.delete(key)),
@@ -99,6 +105,9 @@ export function installFakeIndexedDb(): { reset: () => void } {
     reset: () => {
       state.version = 0;
       state.stores.clear();
+    },
+    failWrites: (fail) => {
+      writesFail = fail;
     },
   };
 }

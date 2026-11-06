@@ -46,6 +46,27 @@ export function snapshotOf(fm: FileMap, repo: RepoContext, repoKey: string, save
   };
 }
 
+/** Would restoring this snapshot change anything? False when every edit in it is
+ *  already on the branch `fm` was loaded from, which is what a snapshot left behind
+ *  by an interrupted cleanup looks like — and asking "recover these?" about work
+ *  that landed days ago teaches people to distrust the one prompt that matters.
+ *
+ *  A conflict counts as true even when the merge would settle on the branch's text:
+ *  that is a decision the person should see, not one to take by deleting their copy.
+ *  An asset is on the branch if its path is, since asset names are single-use. */
+export function holdsUnsyncedWork(fm: FileMap, saved: PendingSnapshot): boolean {
+  const deleted = new Set(saved.deleted ?? []);
+  return saved.dirty.some((path) => {
+    if (Object.prototype.hasOwnProperty.call(saved.binary, path)) {
+      return !fm.remote.has(path);
+    }
+    const local = deleted.has(path) ? undefined : (saved.text[path] ?? '');
+    const remote = fm.text.get(path);
+    const merged = mergeFile(path, { base: saved.baseText?.[path], local, remote });
+    return merged.conflicts.length > 0 || merged.text !== remote;
+  });
+}
+
 /** Re-apply a snapshot's dirty files over a freshly-loaded file map and mark them
  *  for the next sync. Returns the conflict messages worth showing.
  *

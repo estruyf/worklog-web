@@ -2,6 +2,27 @@
 // Everything GitHub-facing goes through /api/* so the token stays server-side —
 // nothing here knows about authentication, and nothing here touches app state.
 
+/** The server answered, and the answer was no. Its own type because a request
+ *  that got a response and one that never did mean opposite things to the store:
+ *  this one proves the connection works, so calling it "offline" would be a lie —
+ *  and one that sends people looking at their wifi for a problem with their login. */
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
+
+/** A 401 is the route's own (no session cookie) or GitHub's (the token in it was
+ *  revoked), and the raw text of neither says what to do about it. */
+async function apiErrorOf(res: Response): Promise<ApiError> {
+  const message = res.status === 401 ? 'GitHub no longer accepts this session — sign in again' : await res.text();
+  return new ApiError(message, res.status);
+}
+
 /** Which branch of which repo is mounted, and the commit it was loaded at. */
 export interface RepoContext {
   owner: string;
@@ -43,7 +64,7 @@ export async function fetchRepo(owner: string, repo: string, branch?: string): P
   }
   const res = await fetch(`/api/load?${params}`);
   if (!res.ok) {
-    throw new Error(await res.text());
+    throw await apiErrorOf(res);
   }
   return (await res.json()) as LoadResponse;
 }
@@ -55,7 +76,7 @@ export async function fetchAsset(repo: { owner: string; repo: string }, path: st
   const params = new URLSearchParams({ owner: repo.owner, repo: repo.repo, path, sha });
   const res = await fetch(`/api/asset?${params}`);
   if (!res.ok) {
-    throw new Error(await res.text());
+    throw await apiErrorOf(res);
   }
   return new Uint8Array(await res.arrayBuffer());
 }
@@ -66,7 +87,7 @@ export async function fetchHead(repo: RepoContext): Promise<string> {
   const params = new URLSearchParams({ owner: repo.owner, repo: repo.repo, branch: repo.branch });
   const res = await fetch(`/api/head?${params}`);
   if (!res.ok) {
-    throw new Error(await res.text());
+    throw await apiErrorOf(res);
   }
   return ((await res.json()) as { commitSha: string }).commitSha;
 }
@@ -83,7 +104,7 @@ export async function commitFiles(repo: RepoContext, message: string, files: Out
     return { conflict: true };
   }
   if (!res.ok) {
-    throw new Error(await res.text());
+    throw await apiErrorOf(res);
   }
   const result = (await res.json()) as { commitSha: string };
   return { conflict: false, commitSha: result.commitSha };

@@ -72,11 +72,11 @@ import type { AutoSyncConfig, Client, Meeting, Task } from '../model/types';
 import type { Checklist } from '../model/checklist';
 import { syncsOnChange } from '../model/syncEvents';
 import { DEFAULT_AUTO_SYNC } from '../workspace/paths';
-import { clearPending, clearSnapshot, loadPending, repoKeyOf, savePending, type PendingSnapshot } from './pendingStore';
+import { clearPending, clearSnapshot, instanceId, loadPending, repoKeyOf, savePending, snapshotKeyOf, type PendingSnapshot } from './pendingStore';
 import { AssetUrlCache } from './assetUrls';
-import { commitFiles, fetchAsset, fetchHead, fetchRepo, type LoadResponse, type RepoContext } from './repoApi';
+import { ApiError, commitFiles, fetchAsset, fetchHead, fetchRepo, type LoadResponse, type RepoContext } from './repoApi';
 import { fileMapOf, markPushed, mergeRemoteInto, outgoingFiles } from './fileSync';
-import { applySnapshot, snapshotOf } from './recovery';
+import { applySnapshot, holdsUnsyncedWork, snapshotOf } from './recovery';
 import { loadResponseOf, loadTree, saveTree } from './repoCache';
 import { clearMeetingDraft, loadMeetingDraft, saveMeetingDraft } from './meetingDrafts';
 import { RemoteWatcher } from './remoteWatcher';
@@ -115,6 +115,10 @@ export interface WorklogSnapshot {
    *  indicator — the store emits no toast for it, because going offline is a
    *  state to show, not an event to announce once and lose. */
   offline: boolean;
+  /** GitHub refused the session: the cookie is gone or the token in it was revoked.
+   *  Apart from `syncError` because no retry fixes it, so the UI offers a way to
+   *  sign in rather than another go at the same request. */
+  sessionExpired: boolean;
   /** The message of the last sync attempt that failed while online. Standing
    *  state, unlike the toast that announced it once: a sync that has been failing
    *  all day must stay visible all day. Cleared only when GitHub is reached again
@@ -181,14 +185,17 @@ class WorklogStore {
   private deferredSync = false;
   private watcher = new RemoteWatcher(
     () => this.checkRemote(),
-    () => !!this.repo && this.loaded && !this.committing && this.fm.dirty.size === 0 && !isOffline(),
+    // Showing a blocked state, the check is how it ends, so it runs whatever is
+    // dirty and whatever the browser's flag says. Nothing else would: `online` only
+    // fires on a transition, and a load that failed with the flag true has none coming.
+    () => !!this.repo && this.loaded && !this.committing && (this.isBlocked() || (this.fm.dirty.size === 0 && !isOffline())),
   );
 
   private subscribers = new Set<Subscriber>();
   private toastListeners = new Set<ToastListener>();
   // Cached immutable snapshot: `getSnapshot` must return a stable reference between
   // changes so `useSyncExternalStore` doesn't loop. Rebuilt only on transitions.
-  private snapshot: WorklogSnapshot = { data: null, loading: false, gitPending: false, pendingCount: 0, offline: isOffline(), syncError: null, lastSyncedAt: null };
+  private snapshot: WorklogSnapshot = { data: null, loading: false, gitPending: false, pendingCount: 0, offline: isOffline(), sessionExpired: false, syncError: null, lastSyncedAt: null };
 
   constructor() {
     // Every persisted edit re-derives the state, flags the tree dirty, and arms
@@ -238,12 +245,16 @@ class WorklogStore {
       void this.checkRemote();
       return;
     }
+    this.pushWaitingEdits();
+  };
+
+  private pushWaitingEdits(options: { reachable?: boolean } = {}): void {
     const autoSync = this.autoSyncConfig();
     if (this.deferredSync || autoSync.enabled || autoSync.events.length > 0) {
       this.deferredSync = false;
-      void this.sync({ silent: true });
+      void this.sync({ silent: true, ...options });
     }
-  };
+  }
 
   // ---- reactive subscription (consumed by ui/hooks/useWorklogState) ---------
 
@@ -300,7 +311,7 @@ class WorklogStore {
     try {
       data = await fetchRepo(owner, repo, branch);
     } catch (err) {
-      if (await this.openFromCache(owner, repo, branch)) {
+      if (await this.openFromCache(owner, repo, branch, err)) {
         return;
       }
       this.updateSnapshot({ loading: false });
@@ -310,7 +321,7 @@ class WorklogStore {
     this.applyLoad(data);
     await this.store.rebuild('open');
     this.loaded = true;
-    this.updateSnapshot({ data: this.deriveState(), loading: false, ...this.dirtyPatch(), offline: false, syncError: null, lastSyncedAt: Date.now() });
+    this.updateSnapshot({ data: this.deriveState(), loading: false, ...this.dirtyPatch(), offline: false, sessionExpired: false, syncError: null, lastSyncedAt: Date.now() });
     this.scheduleDateRollover();
     this.watcher.start();
     void this.saveTreeCache();
@@ -327,8 +338,11 @@ class WorklogStore {
    *  something going wrong, and being asked to justify your own unsent work
    *  before you can see it would be the wrong first screen. Everything else about
    *  them is unchanged — they are still dirty, still snapshotted, and still merge
-   *  record by record on the way out. */
-  private async openFromCache(owner: string, repo: string, branch?: string): Promise<boolean> {
+   *  record by record on the way out.
+   *
+   *  The cache is what to show whatever went wrong, but what to *say* depends on
+   *  `failure`: only a request that got no response at all is being offline. */
+  private async openFromCache(owner: string, repo: string, branch: string | undefined, failure: unknown): Promise<boolean> {
     const tree = await loadTree(owner, repo, branch);
     if (!tree) {
       return false;
@@ -338,13 +352,17 @@ class WorklogStore {
     this.loaded = true;
     this.recovered = undefined;
 
-    const saved = await loadPending(this.repoKey());
-    const conflicts = saved && saved.dirty.length > 0 ? applySnapshot(this.fm, saved) : [];
-    if (saved && saved.dirty.length > 0) {
+    const saved = await this.findUnsyncedSnapshot();
+    const conflicts = saved ? applySnapshot(this.fm, saved) : [];
+    if (saved) {
       await this.store.rebuild('restore');
+      await this.adoptSnapshot(saved);
     }
 
     this.updateSnapshot({ data: this.deriveState(), loading: false, ...this.dirtyPatch(), offline: true });
+    if (failure instanceof ApiError) {
+      this.reportFailure(failure);
+    }
     this.scheduleDateRollover();
     this.watcher.start();
     this.reportConflicts(conflicts, 'local changes conflicted — kept your versions');
@@ -377,9 +395,33 @@ class WorklogStore {
     if (!this.repo) {
       return;
     }
-    const saved = await loadPending(this.repoKey());
-    if (saved && saved.dirty.length > 0) {
-      this.recovered = saved;
+    this.recovered = (await this.findUnsyncedSnapshot()) ?? undefined;
+  }
+
+  /** The first snapshot for this repo holding something the loaded branch lacks.
+   *  The ones passed over are deleted: their edits are on the branch, so they can
+   *  never mean anything again, and left in place they would only ever cost a
+   *  fresh comparison on every open. */
+  private async findUnsyncedSnapshot(): Promise<PendingSnapshot | null> {
+    for (const saved of await loadPending(this.repoKey())) {
+      if (holdsUnsyncedWork(this.fm, saved)) {
+        return saved;
+      }
+      await clearSnapshot(saved.key);
+    }
+    return null;
+  }
+
+  /** The edits in `saved` now live in this instance, so its record is the one that
+   *  speaks for them. `pushDirty` only ever clears this instance's own record — a
+   *  rule that protects other tabs' work — so a source record left in place outlives
+   *  the sync that delivers its edits, and the next open offers to "recover" them.
+   *
+   *  In this order, and only if the write landed: there is never a moment when the
+   *  edits exist in memory alone. */
+  private async adoptSnapshot(saved: PendingSnapshot): Promise<void> {
+    if ((await this.persistNow()) && saved.key !== snapshotKeyOf(this.repoKey(), instanceId())) {
+      await clearSnapshot(saved.key);
     }
   }
 
@@ -407,6 +449,7 @@ class WorklogStore {
     // Re-parse the merged file map; onDidChange refreshes the snapshot, re-persists
     // and arms auto-sync.
     await this.store.rebuild('restore');
+    await this.adoptSnapshot(saved);
     this.reportConflicts(conflicts, 'recovered changes conflicted — kept your versions');
   }
 
@@ -427,9 +470,16 @@ class WorklogStore {
    *  Used by the Sync button and the background debounce. Both report progress
    *  ("Syncing changes…" → "Changes synced") and failures; `silent` only
    *  suppresses the notices a background sync has no reason to announce. */
-  async sync(options: { silent?: boolean } = {}): Promise<void> {
-    const { silent = false } = options;
+  async sync(options: { silent?: boolean; reachable?: boolean } = {}): Promise<void> {
+    // `reachable`: a head check just got through, so neither gate below applies.
+    const { silent = false, reachable = false } = options;
     if (!this.repo || this.committing) {
+      return;
+    }
+    // A background sync with a refused session would only fail again and raise a
+    // toast per debounce. The bar is already asking for a sign-in, and the watcher
+    // lets the waiting edits go if the session comes back.
+    if (silent && !reachable && this.snapshot.sessionExpired) {
       return;
     }
     // Offline, a background sync doesn't spend a request to be told so. The edits
@@ -441,7 +491,7 @@ class WorklogStore {
     // PWA after sleep), and then no `online` event ever comes to release it — a
     // button that believed the flag would refuse forever. The failure path below
     // gives a genuinely offline press the same treatment.
-    if (silent && isOffline()) {
+    if (silent && !reachable && isOffline()) {
       this.deferredSync = this.deferredSync || this.fm.dirty.size > 0;
       this.updateSnapshot({ offline: true });
       // Belt and braces for the reconnect: `online` is the fast path, but it does
@@ -463,9 +513,7 @@ class WorklogStore {
       // Reaching GitHub is the only proof of connectivity worth trusting, and the
       // only one that clears the indicator when `online` never fired.
       this.deferredSync = false;
-      if (this.snapshot.offline) {
-        this.updateSnapshot({ offline: false });
-      }
+      this.markReachable();
       // This is a head check like the watcher's — don't let one follow the other.
       this.watcher.markChecked();
       const remoteMoved = head !== this.repo.baseCommitSha;
@@ -498,8 +546,9 @@ class WorklogStore {
     } catch (err) {
       // The connection can drop mid-sync as easily as before one. That reads as a
       // failed request here, but it is the offline case, and it gets the offline
-      // treatment: keep the work, show the state, say nothing.
-      if (isOffline()) {
+      // treatment: keep the work, show the state, say nothing. Unless the server
+      // answered: then the flag is wrong, not the connection.
+      if (!(err instanceof ApiError) && isOffline()) {
         this.deferredSync = true;
         this.updateSnapshot({ offline: true });
         if (!silent) {
@@ -515,7 +564,7 @@ class WorklogStore {
         // this one, and as the standing `syncError` the status bar holds up until
         // an attempt lands. The toast alone was the whole story once, and a sync
         // that failed all day looked like four seconds of trouble.
-        this.updateSnapshot({ syncError: err instanceof Error ? err.message : String(err) });
+        this.reportFailure(err);
         this.emitToast(`Sync failed: ${err instanceof Error ? err.message : String(err)}`, 'error');
       }
     } finally {
@@ -605,8 +654,18 @@ class WorklogStore {
   private async checkRemote(): Promise<void> {
     try {
       const head = await fetchHead(this.repo!);
+      const wasBlocked = this.isBlocked();
+      this.markReachable();
       // Re-check the guards: an edit or a sync may have started in flight.
-      if (this.committing || this.fm.dirty.size > 0) {
+      if (this.committing) {
+        return;
+      }
+      if (this.fm.dirty.size > 0) {
+        // Edits waiting behind a state that just ended. Same policy as a reconnect,
+        // which is what this is when the browser never announced one.
+        if (wasBlocked) {
+          this.pushWaitingEdits({ reachable: true });
+        }
         return;
       }
       if (head === this.repo!.baseCommitSha) {
@@ -617,9 +676,13 @@ class WorklogStore {
       await this.pull();
       this.markSynced();
       this.emitToast('Pulled changes from GitHub', 'success');
-    } catch {
+    } catch (err) {
       // Offline or a transient GitHub failure. A background check has no reason
-      // to interrupt with a toast — the next tick tries again.
+      // to interrupt with a toast — the next tick tries again. A refused session is
+      // neither: no tick will fix it, and it is worth saying before an edit needs it.
+      if (err instanceof ApiError && err.status === 401) {
+        this.reportFailure(err);
+      }
     }
   }
 
@@ -1057,6 +1120,27 @@ class WorklogStore {
     this.updateSnapshot({ syncError: null, lastSyncedAt: Date.now() });
   }
 
+  /** Showing a state only a successful request can end. */
+  private isBlocked(): boolean {
+    return this.snapshot.offline || this.snapshot.sessionExpired;
+  }
+
+  /** A head check got through: whatever was in the way isn't any more. Reaching
+   *  GitHub is the only proof of connectivity worth trusting. */
+  private markReachable(): void {
+    if (this.isBlocked()) {
+      this.updateSnapshot({ offline: false, sessionExpired: false });
+    }
+  }
+
+  /** Stand up the failure state for a request that went wrong. A response of any
+   *  kind proves the connection works, so it stands down `offline` too; one that
+   *  never came says nothing either way and leaves it alone. */
+  private reportFailure(err: unknown): void {
+    const syncError = err instanceof Error ? err.message : String(err);
+    this.updateSnapshot(err instanceof ApiError ? { syncError, offline: false, sessionExpired: err.status === 401 } : { syncError });
+  }
+
   private emitToast(message: string, tone: ToastTone): void {
     const toast: ToastMessage = { message, tone };
     for (const l of this.toastListeners) {
@@ -1228,13 +1312,14 @@ class WorklogStore {
 
   /** Mirror the current dirty files to IndexedDB. A no-op when nothing is dirty —
    *  clearing the store happens only on a successful sync or an explicit discard,
-   *  so a freshly-loaded (clean) repo never wipes a recoverable snapshot. */
-  private async persistNow(): Promise<void> {
+   *  so a freshly-loaded (clean) repo never wipes a recoverable snapshot. Resolves
+   *  to whether what's dirty is now durable. */
+  private async persistNow(): Promise<boolean> {
     this.clearPersistTimer();
     if (!this.repo || this.fm.dirty.size === 0) {
-      return;
+      return true;
     }
-    await savePending(snapshotOf(this.fm, this.repo, this.repoKey(), Date.now()));
+    return savePending(snapshotOf(this.fm, this.repo, this.repoKey(), Date.now()));
   }
 }
 

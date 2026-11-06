@@ -2,6 +2,22 @@ import React from 'react';
 import { CloudOffIcon, RefreshCwIcon, TriangleAlertIcon } from 'lucide-react';
 import { Button } from '../primitives';
 import { useData } from '../context';
+import { confirmNavGuard } from '../router';
+
+/** Back through GitHub without leaving the app the long way round. The cookie has
+ *  to go first: /api/auth/login sends anyone holding one straight back to /app, and
+ *  it can't tell a token GitHub revoked from a good one. Cached and unsynced data
+ *  stay — unlike signing out, this is the same person coming straight back. */
+function signInAgain(): void {
+  void confirmNavGuard().then((ok) => {
+    if (!ok) {
+      return;
+    }
+    fetch('/api/auth/logout', { method: 'POST' }).finally(() => {
+      window.location.href = '/api/auth/login';
+    });
+  });
+}
 
 /** A standing reminder that work hasn't reached GitHub, above the view.
  *
@@ -27,11 +43,31 @@ import { useData } from '../context';
  *  on screen without needing to be `sticky` at an offset that depends on what
  *  chrome happens to sit above it. */
 export function SyncStatusBar() {
-  const { offline, gitPending, pendingCount, autoSync, syncError, triggerGitSync } = useData();
+  const { offline, sessionExpired, gitPending, pendingCount, autoSync, syncError, triggerGitSync } = useData();
   const willSyncItself = autoSync.enabled || autoSync.events.length > 0;
   // Offline outranks a stale failure: the error was likely the connection going,
   // and "Offline" both explains it and promises the reconnect behaviour.
   const failed = !offline && syncError !== null;
+
+  if (sessionExpired) {
+    return (
+      <div
+        role="alert"
+        className="shrink-0 flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-danger-225 bg-danger-100 px-4 py-2 text-control text-danger-700"
+      >
+        <TriangleAlertIcon size={15} className="shrink-0" />
+        <span className="font-semibold">Signed out of GitHub</span>
+        <span>
+          {gitPending
+            ? 'Your changes are saved on this device — sign in again to sync them.'
+            : 'Showing the timesheet as it was last synced.'}
+        </span>
+        <Button variant="primary" size="xs" onClick={signInAgain} className="ml-auto shrink-0">
+          Sign in again
+        </Button>
+      </div>
+    );
+  }
 
   if (!offline && !failed && (!gitPending || willSyncItself)) {
     return null;

@@ -98,19 +98,22 @@ function randomId(): string {
 }
 
 /** Persist (overwrite) this instance's snapshot for its repo. Resolves even on
- *  failure. Other instances' snapshots are untouched. */
-export async function savePending(snapshot: PendingSnapshot): Promise<void> {
+ *  failure, to whether the write landed — a caller about to drop another copy of
+ *  these edits has to know. Other instances' snapshots are untouched. */
+export async function savePending(snapshot: PendingSnapshot): Promise<boolean> {
   const db = await openDb();
   if (!db) {
-    return;
+    return false;
   }
-  await withStore(db, SNAPSHOT_STORE, 'readwrite', undefined, (store) => {
+  const saved = await withStore(db, SNAPSHOT_STORE, 'readwrite', false, (store, done) => {
     store.put(snapshot);
+    done(true);
   });
   db.close();
+  return saved;
 }
 
-/** The recoverable snapshot for a repo, or `null` if there is none.
+/** The recoverable snapshots for a repo, the one to offer first at the head.
  *
  *  This instance's own snapshot (a reload of this tab) wins. Failing that, the
  *  newest snapshot another instance left behind is offered: it usually comes
@@ -118,11 +121,15 @@ export async function savePending(snapshot: PendingSnapshot): Promise<void> {
  *  is for. It can also come from a tab that is still open — restoring then
  *  duplicates that tab's edits into this one, which the sync merge reconciles
  *  record by record, so the cost of the occasional double offer is far below the
- *  cost of dropping unsynced work on the floor. */
-export async function loadPending(repoKey: string): Promise<PendingSnapshot | null> {
+ *  cost of dropping unsynced work on the floor.
+ *
+ *  An installed app gets a new instance id on every cold start (sessionStorage
+ *  doesn't outlive the process), so on a phone nearly every snapshot it finds is
+ *  "another instance's" — see the store's `adoptSnapshot` for what that demands. */
+export async function loadPending(repoKey: string): Promise<PendingSnapshot[]> {
   const db = await openDb();
   if (!db) {
-    return null;
+    return [];
   }
   const rows = await withStore<PendingSnapshot[]>(db, SNAPSHOT_STORE, 'readonly', [], (store, done) => {
     const req = store.getAll();
@@ -133,7 +140,7 @@ export async function loadPending(repoKey: string): Promise<PendingSnapshot | nu
 
   const mine = snapshotKeyOf(repoKey, instanceId());
   const candidates = [...rows.filter((r) => r.repoKey === repoKey), ...legacy];
-  return candidates.find((r) => r.key === mine) ?? candidates.sort((a, b) => b.savedAt - a.savedAt)[0] ?? null;
+  return candidates.sort((a, b) => Number(b.key === mine) - Number(a.key === mine) || b.savedAt - a.savedAt);
 }
 
 /** Read (and remove) a snapshot written by the pre-instance-id build, so work

@@ -15,6 +15,17 @@ Every change to Worklog, by day, newest first.
      both). Links must be absolute — a relative path resolves against /changelog and
      404s. -->
 
+## 2026-11-06
+
+- **"Recover unsynced changes?" only when there is something to recover** — on an installed app
+  the prompt could keep coming back for edits that had already synced, because the saved copy
+  outlived the sync that delivered it. Copies whose edits are already on GitHub now clear
+  themselves when the app opens.
+- **"Offline" now means offline** — the app used to say so whenever it couldn't load, even when
+  the connection was fine and GitHub had refused your sign-in or had an error. A refused sign-in now
+  says so and offers **Sign in again**, without losing what's on the device, and a false "Offline"
+  clears itself as soon as GitHub can be reached.
+
 ## 2026-11-04
 
 - **Time per task from an agent** — `worklog log --time 1h` records how long you spent on a task
